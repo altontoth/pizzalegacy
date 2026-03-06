@@ -1,0 +1,673 @@
+/*
+ * SPDX-FileCopyrightText: 2014 Cowomaly <cowomaly@nullium.net>
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+#include "core/food/Pizza.h"
+
+#include <algorithm>
+#include <cmath>
+#include <set>
+#include <utility>
+#include "core/food/Ingredient.h"
+
+constexpr int MAX_SCORE = 100;
+
+namespace {
+// Pizza center coordinates
+constexpr int PIZZA_CENTER_X = 116 * 2;
+constexpr int PIZZA_CENTER_Y = 117 * 2;
+
+// Appearance calculation
+constexpr int APPEARANCE_DISTANCE_THRESHOLD = 60 * 2;
+constexpr int APPEARANCE_PENALTY_DIVISOR = 8;
+
+// Weight thresholds for normality
+constexpr int DOUGH_BASELINE_WEIGHT = 250;
+constexpr int WEIGHT_THRESHOLD_LIGHT = 700;
+constexpr int WEIGHT_THRESHOLD_VERY_LIGHT = 400;
+
+// Normality penalties
+constexpr int NORMALITY_MIN_CATEGORIES = 5;
+constexpr int NORMALITY_CATEGORY_BASE = 70;
+constexpr int NORMALITY_CATEGORY_STEP = 10;
+
+// Refinement calculation
+constexpr int REFINEMENT_DIVISOR = 2;
+
+// Judge scoring
+constexpr int JUDGE_MAX_SCORE = 20;
+constexpr int JUDGE_INGREDIENT_THRESHOLD = 10;
+constexpr int JUDGE_TOPPING_THRESHOLD = 28;
+constexpr int JUDGE_FLAVOR_DIVISOR = 10; // Scale flavors from 0-100 to 0-10
+
+// Demographic scoring
+constexpr int DEMOGRAPHIC_APPEARANCE_THRESHOLD = 60;
+constexpr int DEMOGRAPHIC_FLAVOR_DIVISOR = 10;
+} // namespace
+
+namespace core::food {
+
+auto operator<<(std::ostream& os, const Pizza& pizza) -> std::ostream& {
+  os << "Pizza:\n";
+  os << "  name = " << pizza.name_ << "\n";
+  os << "  toppings = " << "\n";
+  for (const auto& topping : pizza.toppings_) {
+    std::cout << "topping " << *topping;
+    os << "    " << *topping;
+  }
+
+  return os;
+}
+
+Pizza::Pizza() : Pizza("") { scores_.fill(0xFF); }
+
+Pizza::Pizza(std::string name) : name_(std::move(name)) { scores_.fill(0xFF); }
+
+void Pizza::add_topping(std::unique_ptr<Topping> topping) {
+  // Logger::debug("Adding topping to Pizza {}", name.c_str());
+  toppings_.push_back(std::move(topping));
+}
+
+std::unique_ptr<Topping> Pizza::remove_latest_topping() {
+  if (!toppings_.empty()) {
+    auto t = std::move(toppings_.back());
+    toppings_.pop_back();
+    return t;
+  }
+  return nullptr;
+}
+
+void Pizza::set_scores_from_canonical(const Pizza& canonical) {
+  // Compare this pizza to the canonical one
+  int mismatch = compare_to_other_pizza(canonical);
+
+  // Convert mismatch to a score (0 = perfect match, 100 = worst)
+  // Higher mismatch means lower score
+  int total_score = MAX_SCORE - mismatch;
+  total_score = std::clamp(total_score, 0, MAX_SCORE);
+
+  // Set imitation percentage (how well this pizza matches the canonical)
+  imitation_ = total_score;
+
+  // Distribute the score across judges using integer division
+  // Example: 93 / 5 = 18 remainder 3
+  // So: 2 judges give 18, and 3 judges give 19
+  int base_score = total_score / NUMBER_OF_JUDGES;
+  int remainder = total_score % NUMBER_OF_JUDGES;
+  int num_lower = NUMBER_OF_JUDGES - remainder;
+  int num_higher = remainder;
+
+  // First num_lower judges get base_score, then num_higher get base_score+1
+  for (int i = 0; i < NUMBER_OF_JUDGES; ++i) {
+    if (i < num_lower) {
+      scores_[i] = base_score;
+    }
+    else {
+      scores_[i] = base_score + 1;
+    }
+  }
+}
+
+void Pizza::finalize(const std::string& name) {
+  if (name != "") {
+    name_ = name;
+  }
+  // Calculate flavor percentages, calories, and all scores
+  update_stats();
+
+  finalized_ = true;
+}
+
+void Pizza::update_stats() {
+  flavors_ = calculate_flavor_percentages();
+
+  float calories_sum = 0;
+  for (const auto& topping : toppings()) {
+    calories_sum += topping->calories();
+  }
+  calories_ = static_cast<int>(calories_sum);
+
+  appearance_ = calculate_appearance();
+  refinement_ = calculate_refinement();
+  normality_ = calculate_normality();
+  herb_score_ = calculate_herb_score();
+
+  calculate_judge_scores();
+
+  calculate_demographic_scores();
+}
+
+const std::vector<std::unique_ptr<Topping>>& Pizza::toppings() const {
+  return toppings_;
+}
+
+const std::array<int, NUMBER_OF_JUDGES>& Pizza::scores() const {
+  return scores_;
+}
+
+int Pizza::compare_to_other_pizza(const Pizza& other) const {
+  const auto& other_toppings = other.toppings();
+  const auto& this_toppings = this->toppings();
+
+  int mismatch_total = 0;
+  int ref_count = 0; // how many reference toppings we actually compare
+
+  // The original loops up to 96 toppings from the reference pizza
+  std::size_t count = std::min<std::size_t>(96, other_toppings.size());
+
+  for (std::size_t i = 0; i < count; ++i) {
+    const auto& ref_topping = other_toppings[i];
+    int best_so_far = MAX_SCORE;
+
+    // Compare it to every topping in "this" pizza
+    for (const auto& user_topping : this_toppings) {
+      int diff = topping_comparison_score(*ref_topping.get(), *user_topping);
+      best_so_far = std::min(diff, best_so_far);
+      // If we ever find a 0 difference, we can early-out:
+      if (best_so_far == 0) {
+        break;
+      }
+    }
+
+    mismatch_total += best_so_far;
+    ++ref_count;
+  }
+
+  if (ref_count > 0) {
+    // Average mismatch in [0..100]
+    int average_mismatch = mismatch_total / ref_count;
+    return average_mismatch;
+  }
+  // No toppings in reference pizza => no mismatch
+  return 0;
+}
+
+int Pizza::topping_comparison_score(const Topping& ref_topping,
+                                    const Topping& user_topping) {
+  // Check if ingredients differ entirely, if they differ
+  // the mismatch is 100 right away.)
+  if (ref_topping.ingredient()->name() != user_topping.ingredient()->name()) {
+    return MAX_SCORE;
+  }
+
+  // Compare chop state & rotation state
+  int ref_chop = ref_topping.chopped_state();
+  int ref_rot = ref_topping.rotation_state();
+  int usr_chop = user_topping.chopped_state();
+  int usr_rot = user_topping.rotation_state();
+
+  int difference = 0;
+  bool same_chop = (ref_chop == usr_chop);
+  bool same_rot = (ref_rot == usr_rot);
+  if (same_chop && same_rot) { // exact match
+    difference = 0;
+  }
+  else if (same_chop ^ same_rot) { // exactly one is true
+    difference = 20;
+  }
+  else {
+    difference = 60;
+  }
+
+  WorldDelta dp = ref_topping.origin() - user_topping.origin();
+  difference += std::abs(dp.dx) / 2;
+  difference += std::abs(dp.dy) / 2;
+
+  // Clamp to [0..100] just in case
+  difference = std::clamp(difference, 0, 100);
+
+  return difference;
+}
+
+Flavors Pizza::calculate_flavor_percentages() const {
+  int sum_fat = 0;
+  int sum_sweet = 0;
+  int sum_salty = 0;
+  int sum_hot = 0;
+
+  int total_weight = 250; // dough baseline
+
+  for (const auto& ut : toppings()) {
+    if (!ut) {
+      continue;
+    }
+    const auto& t = *ut;
+    const auto* ing = t.ingredient();
+    const int w = t.weight();
+    if (w <= 0) {
+      continue;
+    }
+    const int scale = (ing->intensity() >> 1); // same as SAR 1 in the exe
+
+    sum_fat += ing->fat() * w * scale;
+    sum_sweet += ing->sweet() * w * scale;
+    sum_salty += ing->salty() * w * scale;
+    sum_hot += ing->hot() * w * scale;
+
+    total_weight += w;
+  }
+
+  auto bucket10 = [total_weight](int s) -> int {
+    if (total_weight <= 0) {
+      return 0;
+    }
+    const double v = static_cast<double>(s) / static_cast<double>(total_weight);
+    int b = static_cast<int>(std::lround(v * 10.0)); // round to nearest
+    b = (b / 10) * 10;
+    return std::clamp(b, 0, 100);
+  };
+
+  Flavors out;
+  out.fat = bucket10(sum_fat);
+  out.sweet = bucket10(sum_sweet);
+  out.salty = bucket10(sum_salty);
+  out.hot = bucket10(sum_hot);
+  return out;
+}
+
+int Pizza::calculate_appearance() const {
+  // Logger::debug("=== APPEARANCE CALCULATION ===");
+  // Logger::debug("  Pizza center: ({}, {})", PIZZA_CENTER_X, PIZZA_CENTER_Y);
+  // Logger::debug("  Number of toppings: {}", toppings_.size());
+
+  // Empty pizza has poor appearance
+  if (toppings_.empty()) {
+    // Logger::debug("  No toppings, appearance = 0");
+    return 0;
+  }
+
+  int penalty = 0;
+
+  auto excess_over_threshold = [](int v) -> int {
+    v = std::abs(v);
+    return (v > APPEARANCE_DISTANCE_THRESHOLD)
+               ? (v - APPEARANCE_DISTANCE_THRESHOLD)
+               : 0;
+  };
+
+  for (const auto& topping : toppings_) {
+    if (!topping) {
+      continue;
+    }
+    const auto origin = topping->origin();
+    int dx_excess = excess_over_threshold(origin.x - PIZZA_CENTER_X);
+    int dy_excess = excess_over_threshold(origin.y - PIZZA_CENTER_Y);
+    // Logger::debug("    Topping {} at ({}, {}) - dx_excess={}, dy_excess={}",
+    //               topping->ingredient()->name(), origin.x, origin.y,
+    //               dx_excess, dy_excess);
+    penalty += dx_excess + dy_excess;
+  }
+
+  // appearance = clamp(100 - (penalty >> 3), 0, 100)
+  int appearance = 100 - (penalty / APPEARANCE_PENALTY_DIVISOR);
+  appearance = std::clamp(appearance, 0, 100);
+  // Logger::debug("  Total penalty: {}", penalty);
+  // Logger::debug("  Final appearance: {}", appearance);
+  return appearance;
+}
+
+int Pizza::calculate_refinement() const {
+  // Logger::debug("=== REFINEMENT CALCULATION ===");
+
+  if (toppings_.empty()) {
+    // Logger::debug("  No toppings, refinement = 0");
+    return 0;
+  }
+
+  unsigned sum_chop = 0;
+  for (const auto& topping : toppings_) {
+    if (!topping) {
+      continue;
+    }
+    int chop_state = topping->chopped_state();
+    // Logger::debug("    {} - chop state: {}", topping->ingredient()->name(),
+    //               chop_state);
+    sum_chop += chop_state; // 0=whole, 1=chopped, 2=minced
+  }
+
+  // refinement = clamp((sum_of_chop_quarters * 100) / (2 *
+  // number_of_placements), 0, 100)
+  unsigned placements = static_cast<unsigned>(toppings_.size());
+  unsigned denom = REFINEMENT_DIVISOR * placements;
+  unsigned nom = 100u * sum_chop;
+  unsigned pct = nom / denom;
+
+  int refinement = (pct > 100) ? 100 : static_cast<int>(pct);
+  // Logger::debug("  Sum chop states: {}", sum_chop);
+  // Logger::debug("  Placements: {}", placements);
+  // Logger::debug("  Formula: ({} * 100) / ({} * {}) = {}", sum_chop,
+  //               REFINEMENT_DIVISOR, placements, refinement);
+  // Logger::debug("  Final refinement: {}", refinement);
+
+  return refinement;
+}
+
+int Pizza::calculate_normality() const {
+  // Logger::debug("=== NORMALITY CALCULATION ===");
+
+  // Start at 100%
+  int normality = 100;
+
+  // Count unique ingredient types
+  std::set<std::string> ingredient_types;
+  int total_weight = DOUGH_BASELINE_WEIGHT;
+
+  for (const auto& topping : toppings_) {
+    if (!topping) {
+      continue;
+    }
+    const auto* ingredient = topping->ingredient();
+    int category = static_cast<int>(ingredient->category());
+    const char* cat_name[] = {"vegetables", "meat", "fruit", "cheese/herbs"};
+    // Logger::debug("    {} -> category {} ({})", ingredient->name(), category,
+    //               category < 4 ? cat_name[category] : "unknown");
+    ingredient_types.insert(ingredient->name());
+    total_weight += topping->weight();
+  }
+
+  int ingredient_type_count = static_cast<int>(ingredient_types.size());
+  // Logger::debug("  Unique ingredient categories: {}", ingredient_type_count);
+  // Logger::debug("  Total weight: {}g (dough={}g + toppings)", total_weight,
+  //               DOUGH_BASELINE_WEIGHT);
+  // Logger::debug("  Starting normality: {}", normality);
+
+  // If ingredient type count < NORMALITY_MIN_CATEGORIES: reduce by percentage
+  // Original: reduceField52ByPercentage(pizza, 70 - count*10)
+  // which does: normality = normality * (100 - penalty) / 100
+  if (ingredient_type_count < NORMALITY_MIN_CATEGORIES) {
+    int penalty = NORMALITY_CATEGORY_BASE -
+                  (NORMALITY_CATEGORY_STEP * ingredient_type_count);
+    int old_normality = normality;
+    normality = (normality * (100 - penalty)) / 100;
+    // Logger::debug("  < {} categories penalty: {} * (100 - {}) / 100 = {} (was
+    // {})",
+    //               NORMALITY_MIN_CATEGORIES, old_normality, penalty,
+    //               normality, old_normality);
+  }
+
+  // If weight < WEIGHT_THRESHOLD_LIGHT: reduce by 20%
+  if (total_weight < WEIGHT_THRESHOLD_LIGHT) {
+    int old_normality = normality;
+    normality = (normality * 80) / 100;
+    // Logger::debug("  < {}g penalty: {} * 80 / 100 = {} (was {})",
+    //               WEIGHT_THRESHOLD_LIGHT, old_normality, normality,
+    //               old_normality);
+  }
+
+  // If weight < WEIGHT_THRESHOLD_VERY_LIGHT: reduce by 50% (additional)
+  if (total_weight < WEIGHT_THRESHOLD_VERY_LIGHT) {
+    int old_normality = normality;
+    normality = (normality * 50) / 100;
+    // Logger::debug("  < {}g penalty: {} * 50 / 100 = {} (was {})",
+    //               WEIGHT_THRESHOLD_VERY_LIGHT, old_normality, normality,
+    //               old_normality);
+  }
+
+  int final = std::clamp(normality, 0, 100);
+  // Logger::debug("  Final normality: {}", final);
+  return final;
+}
+
+int Pizza::calculate_herb_score() const {
+  // Original: ingredients at indices >= 0x50 (80) are herbs
+  // Herbs in our enum: PARSLEY(80), LEMON_BALM(81), SAGE(82), GINGER(83),
+  // OREGANO(84)
+  // herb_score = clamp(total_herb_weight / 3, 0, 10)
+
+  int herb_weight = 0;
+  for (const auto& topping : toppings_) {
+    if (!topping) {
+      continue;
+    }
+    const auto* ingredient = topping->ingredient();
+    // Check if category is CHEESE and the ingredient is one of the known herbs;
+    // parsley is the first of the herbs and there are no ingredients after it:
+    if (ingredient->category() == IngredientCategory::CHEESE) {
+      auto type = ingredient->type();
+      if (static_cast<int>(type) >= static_cast<int>(IngredientType::PARSLEY)) {
+        herb_weight += topping->weight();
+      }
+    }
+  }
+
+  return std::clamp(herb_weight / 3, 0, 10);
+}
+
+void Pizza::calculate_demographic_scores() {
+  // Logger::debug("=== DEMOGRAPHIC SCORING ===");
+
+  // {fat, sweet, salty, hot}
+  static constexpr int profiles[6][4] = {
+      {3, 10, 3, 1}, // children
+      {5, 6, 5, 3},  // young people
+      {7, 1, 5, 10}, // blue collar
+      {6, 3, 9, 6},  // white collar
+      {4, 4, 8, 1},  // business people
+      {8, 0, 7, 10}, // senior citizens
+  };
+
+  static const char* demographic_names[] = {
+      "Children",     "Young People",    "Blue Collar",
+      "White Collar", "Business People", "Senior Citizens"};
+
+  const int normality = normality_;   // Use cached value
+  const int imitation = imitation_;   // Use cached value
+  const int appearance = appearance_; // Already calculated in update_stats
+  const bool is_user_recipe = (origin_ == Origin::User);
+
+  // Get pizza's flavor profile (these are already 0-100 percentages bucketed to
+  // 10s)
+  const auto pizza_flavors = flavors_;
+
+  // Logger::debug("  Pizza flavors: fat={}, sweet={}, salty={}, hot={}",
+  //               pizza_flavors.fat, pizza_flavors.sweet, pizza_flavors.salty,
+  //               pizza_flavors.hot);
+  // Logger::debug("  Pizza appearance: {}", appearance);
+  // Logger::debug("  Pizza normality: {}", normality);
+  // Logger::debug("  Pizza origin: {}", is_user_recipe ? "User" : "Canonical");
+
+  // For each demographic
+  for (int i = 0; i < 6; ++i) {
+    // Logger::debug("  [{}] Target profile: fat={}, sweet={}, salty={},
+    // hot={}",
+    //               demographic_names[i], profiles[i][0], profiles[i][1],
+    //               profiles[i][2], profiles[i][3]);
+
+    // Calculate taste match
+    // Profile values are 0-10, pizza flavors are 0-100, so divide pizza by
+    // DEMOGRAPHIC_FLAVOR_DIVISOR
+    int fat_diff = std::abs(profiles[i][0] -
+                            pizza_flavors.fat / DEMOGRAPHIC_FLAVOR_DIVISOR);
+    int sweet_diff = std::abs(profiles[i][1] -
+                              pizza_flavors.sweet / DEMOGRAPHIC_FLAVOR_DIVISOR);
+    int salty_diff = std::abs(profiles[i][2] -
+                              pizza_flavors.salty / DEMOGRAPHIC_FLAVOR_DIVISOR);
+    int hot_diff = std::abs(profiles[i][3] -
+                            pizza_flavors.hot / DEMOGRAPHIC_FLAVOR_DIVISOR);
+
+    int sum = fat_diff + sweet_diff + salty_diff + hot_diff;
+
+    // Logger::debug("    Differences: fat={}, sweet={}, salty={}, hot={},
+    // sum={}",
+    //               fat_diff, sweet_diff, salty_diff, hot_diff, sum);
+
+    int si = 100 - (4 * sum);
+    // Logger::debug("    Base score (100 - 4*{}): {}", sum, si);
+
+    const auto floor_div2 = [](int x) -> int {
+      return (x >= 0) ? (x / 2) : ((x - 1) / 2);
+    };
+    // Apply appearance penalty ONLY for user recipes (index >= 14 in original)
+    if (is_user_recipe) {
+      const int adj = floor_div2(DEMOGRAPHIC_APPEARANCE_THRESHOLD - appearance);
+      si -= adj; // adds if appearance > 60, subtracts if < 60
+      // Logger::debug(
+      //     "    Appearance adjustment (60 - {} -> floor/2 = {}): si -> {}",
+      //     appearance, adj, si);
+    }
+    else if (!is_user_recipe) {
+      // Logger::debug("    No appearance penalty (canonical recipe)");
+    }
+
+    // Clamp to 0
+    si = std::max(0, si);
+    // Logger::debug("    After clamp: {}", si);
+
+    // Scale by normality (user recipes) or imitation (canonical recipes)
+    int scaling_factor = is_user_recipe ? normality : imitation;
+    int demographic_score = (si * scaling_factor) / 100;
+    // Logger::debug("    Final score ({} * {} / 100): {}", si, scaling_factor,
+    //               demographic_score);
+
+    // Store in popularity array (indexed by ConsumerType)
+    popularity_.values[i] =
+        static_cast<uint8_t>(std::clamp(demographic_score, 0, 100));
+  }
+
+  // Logger::debug("=== END DEMOGRAPHIC SCORING ===");
+}
+
+void Pizza::calculate_judge_scores() {
+  // Logger::debug("=== JUDGE SCORING ===");
+
+  const int normality = normality_; // Use cached value
+  const int imitation = imitation_; // Use cached value
+
+  // Get flavor values (these are 0-100 percentages)
+  const auto flavors = flavors_;
+
+  // Count ingredients and calculate mass_byte approximation
+  int ingredient_count = static_cast<int>(toppings_.size());
+
+  // Calculate total weight for mass_byte approximation
+  int total_weight = 0;
+  for (const auto& topping : toppings_) {
+    if (!topping) {
+      continue;
+    }
+    total_weight += topping->weight();
+  }
+
+  // mass_byte approximation: scale weight down to byte range
+  int mass_byte = (total_weight >> 7) & 0xFF;
+
+  // count2 seems to be topping count (used in Judge 1)
+  int count2 = ingredient_count;
+
+  // Logger::debug("  Normality: {}", normality);
+  // Logger::debug("  Ingredient count: {}", ingredient_count);
+  // Logger::debug("  Total weight: {}g", total_weight);
+  // Logger::debug("  Mass byte: {}", mass_byte);
+  // Logger::debug("  Appearance: {}, Refinement: {}", appearance_,
+  // refinement_);
+
+  // Judge 0: Emphasizes salty, penalizes fat and few ingredients
+  {
+    int salty_scaled = flavors.salty / JUDGE_FLAVOR_DIVISOR;
+    int fat_scaled = flavors.fat / JUDGE_FLAVOR_DIVISOR;
+    int raw = salty_scaled + mass_byte - (fat_scaled / 2);
+    if (ingredient_count < JUDGE_INGREDIENT_THRESHOLD) {
+      raw -= (JUDGE_INGREDIENT_THRESHOLD - ingredient_count) / 2;
+    }
+    int score = std::clamp(raw, 0, JUDGE_MAX_SCORE);
+    score = (score * normality) / 100;
+    score = (score * imitation) / 100;
+    scores_[0] = std::clamp(score, 0, JUDGE_MAX_SCORE);
+    // Logger::debug(
+    //     "  Judge 0 (salty lover): raw={}, after_normality={}, final={}", raw,
+    //     score, scores_[0]);
+  }
+
+  // Judge 1: Emphasizes appearance and refinement
+  {
+    int raw = (appearance_ + refinement_) / 10;
+    if (count2 < JUDGE_TOPPING_THRESHOLD) {
+      raw -= (JUDGE_TOPPING_THRESHOLD - count2) / 2;
+    }
+    int score = std::clamp(raw, 0, JUDGE_MAX_SCORE);
+    score = (score * normality) / 100;
+    score = (score * imitation) / 100;
+    scores_[1] = std::clamp(score, 0, JUDGE_MAX_SCORE);
+    // Logger::debug("  Judge 1 (appearance/refinement): raw={}, "
+    //               "after_normality={}, final={}",
+    //               raw, score, scores_[1]);
+  }
+
+  // Judge 2: Emphasizes hot and herbs
+  // Original: score = hot + (herb_score / 10)
+  {
+    int hot_scaled = flavors.hot / JUDGE_FLAVOR_DIVISOR;
+    int raw = hot_scaled + (herb_score_ / 10);
+    int score = std::clamp(raw, 0, JUDGE_MAX_SCORE);
+    score = (score * normality) / 100;
+    score = (score * imitation) / 100;
+    scores_[2] = std::clamp(score, 0, JUDGE_MAX_SCORE);
+    // Logger::debug("  Judge 2 (hot/herbs): raw={}, after_normality={},
+    // final={}",
+    //               raw, score, scores_[2]);
+  }
+
+  // Judge 3: Emphasizes sweet (with random noise, but we'll skip that)
+  {
+    int sweet_scaled = flavors.sweet / JUDGE_FLAVOR_DIVISOR;
+    int raw = 2 * sweet_scaled;
+    // In original: subtract random 0 or 1, we'll skip that for consistency
+    int score = std::clamp(raw, 0, JUDGE_MAX_SCORE);
+    score = (score * normality) / 100;
+    score = (score * imitation) / 100;
+    scores_[3] = std::clamp(score, 0, JUDGE_MAX_SCORE);
+    // Logger::debug(
+    //     "  Judge 3 (sweet tooth): raw={}, after_normality={}, final={}", raw,
+    //     score, scores_[3]);
+  }
+
+  // Judge 4: Emphasizes fat
+  {
+    int fat_scaled = flavors.fat / JUDGE_FLAVOR_DIVISOR;
+    int raw = fat_scaled + mass_byte;
+    int score = std::clamp(raw, 0, JUDGE_MAX_SCORE);
+    score = (score * normality) / 100;
+    score = (score * imitation) / 100;
+    scores_[4] = std::clamp(score, 0, JUDGE_MAX_SCORE);
+    // Logger::debug("  Judge 4 (fat lover): raw={}, after_normality={},
+    // final={}",
+    //               raw, score, scores_[4]);
+  }
+
+  // Logger::debug("  Final scores: [{}, {}, {}, {}, {}]", scores_[0],
+  // scores_[1],
+  //               scores_[2], scores_[3], scores_[4]);
+  // Logger::debug("=== END JUDGE SCORING ===");
+}
+
+void Pizza::set_disk_stats(const Flavors& flavors, int appearance,
+                           int refinement, int normality) {
+  // Logger::debug("=== SETTING DISK STATS ===");
+  // Logger::debug("  Flavors: fat={}, sweet={}, salty={}, hot={}", flavors.fat,
+  //               flavors.sweet, flavors.salty, flavors.hot);
+  // Logger::debug("  Appearance: {}, Refinement: {}, Normality: {}",
+  // appearance,
+  //               refinement, normality);
+
+  flavors_ = flavors;
+  appearance_ = appearance;
+  refinement_ = refinement;
+  normality_ = normality;
+
+  // Still need to calculate calories from toppings
+  float calories_sum = 0;
+  for (const auto& topping : toppings()) {
+    calories_sum += topping->calories();
+  }
+  calories_ = static_cast<int>(calories_sum);
+
+  // Recalculate judge and demographic scores with the new stats
+  calculate_judge_scores();
+  calculate_demographic_scores();
+
+  // Logger::debug("=== END SETTING DISK STATS ===");
+}
+
+} // namespace core::food

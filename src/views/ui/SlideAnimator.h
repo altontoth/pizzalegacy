@@ -1,0 +1,39 @@
+/*
+ * SPDX-FileCopyrightText: 2025 Cowomaly <cowomaly@nullium.net>
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+#pragma once
+
+class SlideAnimator {
+public:
+  enum class SlideState {
+    HIDDEN,
+    APPEARING,
+    VISIBLE,
+    DISAPPEARING,
+  };
+
+  SlideAnimator(int screen_height, int target_offset);
+  void start_show();
+  void start_hide();
+  bool update();
+  int offset() const;
+  SlideState state() const;
+  bool is_visible() const;
+  bool is_animating() const;
+  void reset();
+  void push();
+  void pop();
+  bool bg_visible() const;
+
+private:
+  void snap_visible();
+  void snap_hidden();
+  int screen_height_;
+  int target_offset_;
+  int offset_;
+  SlideState state_;
+  bool bg_visible_{false};
+};

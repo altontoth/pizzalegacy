@@ -1,0 +1,1333 @@
+/*
+ * SPDX-FileCopyrightText: 2010 Cowomaly <cowomaly@nullium.net>
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+#include "core/state/GameState.h"
+
+#include <algorithm>
+#include <cassert>
+#include <ranges>
+
+#include <magic_enum/magic_enum.hpp>
+#include <utility>
+#include "core/character/Awards.h"
+#include "core/character/Player.h"
+#include "core/city/District.h"
+#include "core/city/Property.h"
+#include "core/init/NewGameConfig.h"
+#include "core/restaurant/AIEconomy.h"
+#include "core/restaurant/Restaurant.h"
+#include "core/util/ConfigManager.h"
+#include "core/util/GameContext.h"
+#include "engine/Fatal.h"
+#include "engine/Logger.h"
+#include "engine/geom/Spaces.h"
+#include "factories/CharacterFactory.h"
+#include "factories/CityFactory.h"
+#include "factories/PizzaFactory.h"
+#include "factories/RestaurantLayoutFactory.h"
+#include "resources/BobSizeFn.h"
+#include "resources/util/Platform.h"
+#include "views/screens/StatusDisplay.h"
+#include "views/ui/PopupManager.h"
+#include "views/ui/finance/FinanceComponents.h"
+#include "views/ui/popups/InvoicePopup.h"
+
+// Constructor and destructor defined here to allow unique_ptr<StatusDisplay>
+// with forward declaration
+GameState::GameState() = default;
+GameState::~GameState() = default;
+
+std::ostream& operator<<(std::ostream& os, const GameState& state) {
+  os << "GameState:\n";
+  os << "  active_player=" << state.active_player_ << "\n";
+  os << "  active_city=" << state.active_city_ << "\n";
+  for (std::size_t i = 0; i < NUMBER_OF_PLAYERS; i++) {
+    if (state.players_[i]) {
+      os << "  players[" << i << "]: " << *state.players_[i];
+    }
+    else {
+      os << "  players[" << i << "] : false?! " << "\n";
+    }
+  }
+  for (std::size_t i = 0; i < NUMBER_OF_PLAYERS; ++i) {
+    if (state.cities_[i]) {
+      os << "  city[" << i << "]: " << *state.cities_[i];
+    }
+  }
+
+  os << "UIStates (";
+  // os << ui_;
+  os << "UIStates )" << "\n";
+
+  return os;
+}
+
+Player* GameState::player(core::PlayerId player_id) const {
+  assert(player_id.value >= 0 && player_id.value < NUMBER_OF_PLAYERS);
+
+  return players_[player_id.value].get();
+}
+
+Player* GameState::active_player() const {
+  return players_[active_player_.value].get();
+}
+
+bool GameState::spend_cash(Player& player, Account to, Money amount) {
+  if (player.spend_cash(time().current_date(), to, amount)) {
+    return true;
+  }
+
+  status_hub_.post({
+      .payload = "YOU DON'T HAVE ENOUGH MONEY!!!",
+      .scope = StatusScope::Global,
+      .type = TransientType::Ephemeral,
+      .ttl = std::chrono::milliseconds{3000},
+      .coalesce_key = "insufficient_funds",
+  });
+  return false;
+}
+
+bool GameState::spend_cash(Account to, Money amount) {
+  auto* player = active_player();
+  if (!player) {
+    return false;
+  }
+  return spend_cash(*player, to, amount);
+}
+
+bool GameState::spend_cash(Account to, Money amount,
+                           core::RestaurantId restaurant_id) {
+  auto* player = active_player();
+  if (!player) {
+    return false;
+  }
+
+  if (player->spend_cash(time().current_date(), to, amount, restaurant_id)) {
+    return true;
+  }
+
+  status_hub_.post({
+      .payload = "YOU DON'T HAVE ENOUGH MONEY!!!",
+      .scope = StatusScope::Global,
+      .type = TransientType::Ephemeral,
+      .ttl = std::chrono::milliseconds{3000},
+      .coalesce_key = "insufficient_funds",
+  });
+  return false;
+}
+
+void GameState::deduct_staff_wages_for_restaurant(
+    core::RestaurantId restaurant_id) {
+  auto* restaurant = this->restaurant(restaurant_id);
+  if (!restaurant) {
+    return;
+  }
+
+  Money total_wages{0};
+
+  // Calculate total weekly wages
+  for (const auto& cook : restaurant->cooks()) {
+    if (cook) {
+      total_wages = total_wages + cook->payment();
+    }
+  }
+  for (const auto& waiter : restaurant->waiters()) {
+    if (waiter) {
+      total_wages = total_wages + waiter->payment();
+    }
+  }
+  if (restaurant->manager()) {
+    total_wages = total_wages + restaurant->manager()->payment();
+  }
+
+  // Deduct wages (this will show insufficient funds message if needed)
+  spend_cash(Account::Staff, total_wages, restaurant_id);
+}
+
+void GameState::show_staff_invoice_popup(core::RestaurantId restaurant_id) {
+  auto* rest = restaurant(restaurant_id);
+  if (!rest || !context_) {
+    return;
+  }
+
+  views::ui::finance::InvoiceConfig cfg;
+  cfg.subtitle = "for " + rest->name();
+  cfg.on_dismiss = [this, restaurant_id] {
+    deduct_staff_wages_for_restaurant(restaurant_id);
+  };
+  const auto empty_line =
+      views::ui::finance::InvoiceLine{.label = "", .value = std::nullopt};
+
+  cfg.lines.push_back({"staff expenses", std::nullopt});
+  cfg.lines.push_back(empty_line);
+
+  Money total;
+  for (const auto& cook : rest->cooks()) {
+    if (cook) {
+      auto payment = cook->payment();
+      cfg.lines.push_back(
+          {cook->character().first_name() + " " + cook->character().last_name(),
+           payment});
+
+      total += payment;
+      cfg.lines.push_back(empty_line);
+    }
+  }
+  for (const auto& waiter : rest->waiters()) {
+    if (waiter) {
+      auto payment = waiter->payment();
+      cfg.lines.push_back({waiter->character().first_name() + " " +
+                               waiter->character().last_name(),
+                           payment});
+      total += payment;
+      cfg.lines.push_back(empty_line);
+    }
+  }
+  if (rest->manager()) {
+    auto payment = rest->manager()->payment();
+    cfg.lines.push_back({rest->manager()->character().first_name() + " " +
+                             rest->manager()->character().last_name(),
+                         payment});
+    total += payment;
+    cfg.lines.push_back(empty_line);
+  }
+
+  if (cfg.lines.empty()) {
+    cfg.lines.push_back({"", Money{0}});
+  }
+  else {
+    cfg.lines.push_back({"", total});
+  }
+
+  context_->popup->origin({74, 40});
+  context_->popup->create<InvoicePopup>(std::move(cfg));
+}
+
+void GameState::show_monthly_invoice_popup(core::PlayerId player_id) {
+  auto* player = this->player(player_id);
+  if (!player || !context_) {
+    return;
+  }
+
+  auto loan_costs = player->monthly_loan_costs();
+
+  // Collect rent from all rented restaurant properties
+  Money total_rent{0};
+  struct RentEntry {
+    core::RestaurantId restaurant_id;
+    Money amount;
+  };
+  std::vector<RentEntry> rents;
+  for (auto* rest : restaurants_for(player->id())) {
+    if (rest && rest->property() && rest->property()->is_rented()) {
+      Money rent = rest->property()->get_monthly_rent();
+      if (rent.cents > 0) {
+        rents.push_back({rest->id(), rent});
+        total_rent += rent;
+      }
+    }
+  }
+
+  Money total = loan_costs.repayment + loan_costs.interest + total_rent;
+
+  views::ui::finance::InvoiceConfig cfg;
+  cfg.subtitle = "for " + player->name();
+  const auto empty_line =
+      views::ui::finance::InvoiceLine{.label = "", .value = std::nullopt};
+
+  cfg.lines.push_back({"costs per month", std::nullopt});
+  cfg.lines.push_back(empty_line);
+
+  // TODO: Figure out investments and which is which
+  cfg.lines.push_back({"LOAN REPAYMENT:", loan_costs.repayment});
+  cfg.lines.push_back({"LOAN INTEREST:", loan_costs.interest});
+  cfg.lines.push_back({"RENT:", total_rent});
+  cfg.lines.push_back(empty_line);
+  cfg.lines.push_back({"TOTAL:", total});
+
+  cfg.on_dismiss = [this, player, rents = std::move(rents)]() {
+    const auto& date = time_.current_date();
+    player->apply_monthly_loan_payments(date);
+    for (const auto& entry : rents) {
+      player->financials().transfer(date, Account::Cash, Account::Rents,
+                                    entry.amount, entry.restaurant_id,
+                                    AccountingScope::Operational);
+    }
+    if (status_display_) {
+      status_display_->mark_dirty();
+    }
+  };
+
+  context_->popup->origin({74, 40});
+  context_->popup->create<InvoicePopup>(std::move(cfg));
+}
+
+City* GameState::city(core::CityId city_id) const {
+  assert(city_id.value >= 0 && city_id.value < NUMBER_OF_CITIES);
+  return cities_[city_id.value].get();
+}
+
+std::vector<City*> GameState::visited_cities() const {
+  std::vector<City*> result;
+  for (const auto& city_ptr : cities_) {
+    if (city_ptr) {
+      result.push_back(city_ptr.get());
+    }
+  }
+  return result;
+}
+
+bool GameState::is_city_loaded(core::CityId city_id) const {
+  assert(city_id.value >= 0 && city_id.value < NUMBER_OF_CITIES);
+  return cities_[city_id.value] != nullptr;
+}
+
+core::CityId GameState::active_city_id() const { return active_city_; }
+
+City* GameState::active_city() const {
+  assert(active_city_.value >= 0 && active_city_.value < NUMBER_OF_CITIES);
+
+  return cities_[active_city_.value].get();
+}
+
+void GameState::active_city(core::CityId city_id) {
+  active_city_ = city_id;
+  if (cities_[city_id.value] == nullptr) {
+    cities_[city_id.value] = CityFactory::create_city(city_id);
+  }
+}
+
+void GameState::ensure_city_loaded(core::CityId city_id) {
+  // Create city if it doesn't exist, but don't change active_city_
+  if (cities_[city_id.value] == nullptr) {
+    Logger::info("Creating city {} during ensure_city_loaded", city_id.value);
+    cities_[city_id.value] = CityFactory::create_city(city_id);
+  }
+}
+
+void GameState::city_position(ViewPoint p) { city_position_ = p; }
+
+ViewPoint GameState::city_position() const { return city_position_; }
+
+void GameState::window_size(int width, int height) {
+  window_width_ = width;
+  window_height_ = height;
+}
+
+int GameState::window_height() const { return window_height_; }
+
+int GameState::window_width() const { return window_width_; }
+
+std::array<Player*, NUMBER_OF_PLAYERS> GameState::players() const {
+  auto raw_view =
+      players_ | std::views::transform(
+                     [](const std::unique_ptr<Player>& p) { return p.get(); });
+  std::array<Player*, NUMBER_OF_PLAYERS> raw_players;
+  std::ranges::copy(raw_view, raw_players.begin());
+  return raw_players;
+}
+
+void GameState::players(
+    std::array<std::unique_ptr<Player>, NUMBER_OF_PLAYERS> players) {
+  players_ = std::move(players);
+}
+
+void GameState::last_clicked_property_index(int index) {
+  last_clicked_property_index_ = index;
+}
+
+std::optional<int> GameState::last_clicked_property_index() const {
+  return last_clicked_property_index_;
+}
+
+void GameState::advance_game_time() {
+  time_.advance_10_minutes();
+
+  using core::time::TimeOfDay;
+  const auto now = time_.time_of_day();
+
+  if (now == TimeOfDay{9, 0}) {
+    status_hub_.post(StatusMsg{
+        .payload = "It's 9 am. The restaurants are opening.",
+        .scope = StatusScope::Global,
+        .type = TransientType::Temporary,
+        .coalesce_key = "restaurant_open_close",
+    });
+  }
+  else if (now == TimeOfDay{21, 0}) {
+    status_hub_.post(StatusMsg{
+        .payload = "It's 9 pm. The restaurants are closing.",
+        .scope = StatusScope::Global,
+        .type = TransientType::Temporary,
+        .coalesce_key = "restaurant_open_close",
+    });
+  }
+
+  // Check for pending fullscreen messages after time advances
+  auto* player = active_player();
+  if (player && player->is_human_controlled()) {
+    auto pending = message_manager_.get_pending_for_player(player->id());
+    for (auto msg_id : pending) {
+      ui_.push<FullscreenStatusState>(msg_id);
+      message_manager_.mark_as_shown(msg_id, player->id());
+    }
+  }
+}
+
+void GameState::pause_time_advancement() { time_advancement_enabled_ = false; }
+
+void GameState::resume_time_advancement() {
+  time_advancement_enabled_ = true;
+
+  // Immediately check if we should end the turn - don't wait for the
+  // next accumulator tick. This handles the case where time advanced
+  // past closing during furniture placement.
+  if (is_past_closing_time()) {
+    request_end_of_turn();
+  }
+}
+
+bool GameState::is_past_closing_time() const {
+  if (prevent_end_of_day_) {
+    return false;
+  }
+  if (active_player_.value < 0) {
+    return false;
+  }
+  auto end_time = players_[active_player_.value]->end_of_day_time();
+  return time_.is_past_time(end_time.hour, end_time.minute);
+}
+
+bool GameState::advance_time_blocks(int n) {
+  for (int i = 0; i < n; ++i) {
+    advance_game_time();
+
+    if (is_past_closing_time()) {
+      // Reached closing time - stop advancing but don't auto-trigger
+      // end_of_turn. This matches original behavior where terminal
+      // conversations can continue past closing time.
+      return true;
+    }
+  }
+  return false;
+}
+
+const GameTime& GameState::time() const { return time_; }
+
+void GameState::request_end_of_turn() { should_end_of_turn_ = true; }
+
+void GameState::update(uint32_t elapsed_ms) {
+  if (active_player_.value < 0) {
+    return;
+  }
+
+  status_hub_.update(elapsed_ms);
+
+  // Handle end-of-turn processing delay between restaurants
+  if (end_of_turn_state_ && end_of_turn_state_->delay_frames > 0) {
+    if (--end_of_turn_state_->delay_frames == 0) {
+      process_next_restaurant();
+    }
+    return; // Don't advance game time while processing end of turn
+  }
+
+  // Only accumulate time when advancement is enabled
+  if (time_advancement_enabled_) {
+    time_accumulator_ += elapsed_ms;
+
+    constexpr uint8_t PASS_TEN_MINUTES_IN_SECONDS = 10;
+    if (time_accumulator_ >= PASS_TEN_MINUTES_IN_SECONDS * 1000) {
+      advance_game_time();
+
+      if (is_past_closing_time()) {
+        request_end_of_turn();
+      }
+      time_accumulator_ = 0;
+    }
+  }
+
+  if (should_end_of_turn_) {
+    end_of_turn();
+    should_end_of_turn_ = false;
+  }
+}
+
+void GameState::end_of_turn() {
+  pause_time_advancement();
+  // This is called at the end of a player's turn (when they reach their closing
+  // time or the user clicks the 'end turn' button). Each player has their own
+  // start/end times during the same calendar day. Only after all players finish
+  // their turns do we actually end the calendar day.
+  //
+  // Processing is done one restaurant at a time, with daily reports shown
+  // between each (if enabled), so status messages are associated with the
+  // correct restaurant.
+
+  auto* current_player = active_player();
+
+  // Process player end of day accounting FIRST (includes advertising costs,
+  // campaign updates, financial warnings)
+  current_player->end_of_day(*this);
+
+  auto player_restaurants = restaurants_for(current_player->id());
+
+  // Set up state for multi-step processing.
+  // Holiday players are treated as non-interactive (no reports, no delays)
+  // so the entire end-of-turn completes synchronously within one frame.
+  bool interactive =
+      current_player->is_human_controlled() && !current_player->is_on_holiday();
+  end_of_turn_state_ = EndOfTurnState{
+      .restaurants = player_restaurants,
+      .current_index = 0,
+      .is_human = interactive,
+  };
+
+  // Start processing the first restaurant
+  process_next_restaurant();
+}
+
+void GameState::process_next_restaurant() {
+  constexpr int DELAY_FRAMES_BETWEEN_RESTAURANTS = 2;
+  auto& state = *end_of_turn_state_;
+
+  // Skip null entries
+  while (state.current_index < state.restaurants.size() &&
+         state.restaurants[state.current_index] == nullptr) {
+    state.current_index++;
+  }
+
+  // Check if we're done
+  if (state.current_index >= state.restaurants.size()) {
+    finish_end_of_turn();
+    return;
+  }
+
+  auto* restaurant = state.restaurants[state.current_index];
+
+  // Process this restaurant
+  restaurant->end_of_day(*this);
+
+  // Recalculate demographics for next day (in case they changed)
+  if (restaurant->property()) {
+    restaurant->property()->calculate_demographics(restaurant);
+  }
+
+  // Mark status display dirty so money updates show
+  if (status_display_) {
+    status_display_->mark_dirty();
+  }
+
+  // Show daily report if enabled and restaurant is open for business
+  if (state.is_human && !options().automatic_report &&
+      restaurant->wants_open() && !restaurant->is_force_closed()) {
+    ui().push<RestaurantStatsState>(restaurant->id(), std::nullopt, true);
+    // View will call on_restaurant_processed() when dismissed
+    return;
+  }
+
+  // No report shown - move to next restaurant
+  state.current_index++;
+  if (state.current_index < state.restaurants.size()) {
+    if (state.is_human) {
+      // Short delay lets the status display update between restaurants
+      state.delay_frames = DELAY_FRAMES_BETWEEN_RESTAURANTS;
+    }
+    else {
+      // AI and holiday turns process all restaurants in one frame
+      // to avoid exposing the city view behind the turn card.
+      process_next_restaurant();
+    }
+  }
+  else {
+    finish_end_of_turn();
+  }
+}
+
+void GameState::on_restaurant_processed() {
+  if (!end_of_turn_state_) {
+    return;
+  }
+
+  // Move to next restaurant
+  end_of_turn_state_->current_index++;
+  process_next_restaurant();
+}
+
+void GameState::finish_end_of_turn() {
+  auto& state = *end_of_turn_state_;
+
+  // Freeze status display header for human players
+  // This prevents AI players' money from being shown during turn cycling
+  if (status_display_ && active_player()->is_human_controlled()) {
+    status_display_->freeze();
+  }
+
+  StatusMsg m{
+      .payload = "Please wait...",
+      .scope = StatusScope::Global,
+      .type = TransientType::Temporary,
+      .coalesce_key = "please_wait",
+  };
+  status_hub_.post(m);
+
+  // Move to next player and check if we wrapped around
+  auto previous_player_id = active_player_;
+  next_player();
+
+  // If we wrapped around to player 0, all players have finished their turns.
+  // Run end-of-day and weekly/monthly checks on the current (ending) date
+  // before advancing to the next day.
+  bool wrapped_to_player_zero =
+      (previous_player_id.value > 0 && active_player_.value == 0);
+  if (wrapped_to_player_zero) {
+    request_fade_transition(20);
+    end_of_day();
+  }
+
+  // PlayerTurnCard needs the upcoming day's date, but we haven't advanced yet
+  // (reports still need the current date). Compute it without mutating state.
+  GameDate next_date = wrapped_to_player_zero ? time_.current_date().add_days(1)
+                                              : time_.current_date();
+
+  // Push PlayerTurnCard first so it sits below reports on the stack (shown
+  // last)
+  ui().push<PlayerTurnCardState>(active_player_, next_date);
+
+  // Weekly/monthly reports pushed on top, shown before PlayerTurnCard.
+  // Checks run on the current (ending) date, which is still set here.
+  if (state.is_human) {
+    // Weekly reports on Saturday (pushed after monthly, shown before monthly)
+    if (time_.current_date().is_end_of_week()) {
+      // Show for ALL restaurants (not just open ones) - staff gets paid
+      // regardless Open restaurants: WeeksTakings shown first, creates invoice
+      // popup on dismiss Closed restaurants: invoice popup shown directly
+      for (auto it = state.restaurants.rbegin(); it != state.restaurants.rend();
+           ++it) {
+        if (!*it) {
+          continue;
+        }
+
+        if ((*it)->wants_open() && !(*it)->is_force_closed()) {
+          // WeeksTakings will create the invoice popup when dismissed
+          ui().push<WeeksTakingsState>((*it)->id());
+        }
+        else {
+          // No WeeksTakings for closed restaurants, show invoice directly
+          show_staff_invoice_popup((*it)->id());
+        }
+      }
+    }
+    // Monthly costs invoice on last day of month (loan repayment + rent)
+    if (time_.current_date().is_end_of_month()) {
+      show_monthly_invoice_popup(previous_player_id);
+    }
+  }
+
+  // Now advance time to the next player's start time
+  auto start_time = players_[active_player_.value]->start_of_day_time();
+  if (wrapped_to_player_zero) {
+    time_.time_on_next_day(start_time.hour, start_time.minute);
+  }
+  else {
+    time_.set_time_of_day(start_time.hour, start_time.minute);
+  }
+
+  // Clear end-of-turn state before starting next player's day
+  end_of_turn_state_.reset();
+
+  // Restaurant open state is now derived from wants_open, forced closure,
+  // and business hour. No manual open/close sync needed at turn boundaries.
+  auto next_player_restaurants = restaurants_for(active_player_);
+  for (auto* restaurant : next_player_restaurants) {
+    if (restaurant) {
+      restaurant->start_of_day(*this);
+    }
+  }
+
+  // Mark if this is an AI player that should auto-end after card is shown
+  pending_ai_auto_end_turn_ =
+      !players_[active_player_.value]->is_human_controlled();
+  resume_time_advancement();
+}
+
+void GameState::end_of_day() {
+  // This is called only after all players have finished their turns.
+  // This handles the actual day transition and day-level operations.
+
+  // Process end of day for all cities
+  for (auto& city : cities_) {
+    if (city) {
+      city->end_of_day(active_city_ == city->id());
+      // Run newspaper event system for each loaded city
+      city->newspaper_event_system().daily_update(*this, *city);
+    }
+  }
+
+  // End of week processing on Saturday (tbd if that's right, probably not)
+  // The original uses day_of_week == 6 which is Saturday
+  if (time_.current_date().is_end_of_week()) {
+    for (auto& city : cities_) {
+      if (city) {
+        city->reset_weekly_vendor_spending();
+      }
+    }
+
+    // Pay weekly staff salaries and show weekly reports on Saturday
+    for (auto& player : players_) {
+      if (player) {
+        player->end_of_week(*this);
+      }
+    }
+    business_week_nr++;
+  }
+
+  if (time_.current_date().is_end_of_year()) {
+    business_week_nr = 1;
+    for (auto& player : players_) {
+      if (player) {
+        auto& ch = player->character();
+        ch.age(static_cast<uint8_t>(std::min(255, (int)ch.age() + 1)));
+      }
+    }
+  }
+
+  // Update AI menu slot history for pizza charts
+  for (auto& player : players_) {
+    if (player && !player->is_human_controlled()) {
+      int rest_count = static_cast<int>(restaurants_for(player->id()).size());
+      ai::update_ai_menu(*player, rest_count);
+    }
+  }
+
+  // Rebuild pizza charts and control map for active city
+  if (auto* city = active_city()) {
+    city->pizza_charts().build(*this);
+    city->control_map().build(*this, *city);
+    check_market_share_milestones(*city);
+  }
+
+  // Clear actor refused calls (realtors cool down overnight)
+  clear_all_refused_calls();
+}
+
+void GameState::check_market_share_milestones(const City& city) {
+  using core::events::LeventId;
+  const auto& pcts = city.control_map().player_percentages();
+  for (int p = 0; p < NUMBER_OF_PLAYERS; ++p) {
+    auto pid = core::PlayerId{p};
+    if (!player(pid)) {
+      continue;
+    }
+    int pct = pcts[p];
+    // Original game bug: checks 5% but displays "10% market share" message
+    int first_threshold = options().fix_legacy_bugs ? 10 : 5;
+    if (pct >= 50) {
+      message_manager_.schedule_message(
+          LeventId::Achieved50PctMarketShareInCity, pid, time_.current_date());
+    }
+    if (pct >= 20) {
+      message_manager_.schedule_message(
+          LeventId::Achieved20PctMarketShareInCity, pid, time_.current_date());
+    }
+    if (pct >= first_threshold) {
+      message_manager_.schedule_message(
+          LeventId::Achieved10PctMarketShareInCity, pid, time_.current_date());
+    }
+  }
+}
+
+void GameState::active_player(core::PlayerId player_id) {
+  active_player_ = player_id;
+}
+
+void GameState::active_district_id(core::DistrictId id) {
+  active_district_id_ = id;
+}
+
+void GameState::clear_active_district() { active_district_id_.reset(); }
+
+std::optional<core::DistrictId> GameState::active_district_id() const {
+  return active_district_id_;
+}
+
+void GameState::active_restaurant(core::RestaurantId r_id) {
+  active_restaurant_ = r_id;
+}
+
+Restaurant* GameState::active_restaurant() const {
+  if (active_restaurant_) {
+    return restaurant(*active_restaurant_);
+  }
+  return nullptr;
+}
+
+void GameState::begin_initialization() { initializer_ = init::Config{}; }
+
+init::Config& GameState::initializer() {
+  if (!initializer_) {
+    initializer_.emplace();
+  }
+  return *initializer_;
+}
+
+void GameState::finalize_initialization(GameContext& context) {
+  if (!initializer_) {
+    return;
+  }
+
+  context_ = &context;
+  init::Config cfg = *initializer_;
+
+  // Use initializer to set permanent state
+  game_mode_ = cfg.mode;
+  active_city(cfg.city_id); // Set the active city before pushing UI state
+  ui().push<CityViewState>(cfg.city_id);
+  difficulty_level_ = static_cast<int>(cfg.difficulty);
+
+  for (int i = 0; i < NUMBER_OF_PLAYERS; ++i) {
+    auto player_item = initializer_->players.at(i);
+
+    players_[i] = std::make_unique<Player>(
+        core::PlayerId{i},
+        core::character::Character(
+            CharacterFactory::create_character(player_item.character_id)),
+        player_item.is_human);
+
+    players_[i]->name(player_item.name);
+    city_view_view_state_[i] = CityViewMapState{core::PlayerId{i}};
+
+    if (cfg.mode == GameMode::QUICKSTART) {
+      // Build candidate layout ID based on requested size.
+      const bool big = (initializer_->size == init::RestaurantSize::BIG);
+      const int idx4 = engine::random::rand_max_n(4); // 0 to 3
+      const int layout_id = big ? (idx4 * 2 + 1)      // 1,3,5,7
+                                : (idx4 * 2 + 2);     // 2,4,6,8
+
+      // Create restaurant with layout using the helper method
+      // (it will find a random available property in the city)
+      auto* rest = create_restaurant_with_layout(*players_[i], *active_city(),
+                                                 layout_id, big);
+
+      if (!rest) {
+        Logger::warn("Failed to create restaurant for player {}", i);
+        continue;
+      }
+
+      // Load the first 3 pizzas for QuickStart mode
+      load_initial_pizzas(context, core::PlayerId{i});
+    }
+  }
+
+  // Initialize AI player menu slots for pizza charts
+  for (auto& player : players_) {
+    if (player && !player->is_human_controlled()) {
+      ai::init_ai_menu(*player);
+    }
+  }
+
+  // Load article database
+  article_database_.load_articles();
+
+  // We start at 9 in the morning on the first day, so 9 times 6 time blocks:
+  time_.time_blocks(9 * 6);
+
+  // Run start_of_day for all restaurants so popularity, demographics, and
+  // economy metrics are initialized before the player's first turn.
+  for (int i = 0; i < NUMBER_OF_PLAYERS; ++i) {
+    active_player(core::PlayerId{i});
+    for (auto* restaurant : restaurants_for(core::PlayerId{i})) {
+      if (restaurant) {
+        restaurant->start_of_day(*this);
+      }
+    }
+  }
+  active_player(core::PlayerId{0});
+
+  // Build initial pizza charts so they're not empty on the first day.
+  // AI menu slots are pre-warmed so they'll populate the chart immediately.
+  if (auto* city = active_city()) {
+    city->pizza_charts().build(*this);
+  }
+
+  initializer_.reset(); // Clear after use
+}
+
+bool GameState::buy_restaurant(Property& property, Player& buyer) {
+  Money price = property.get_purchase_price();
+  GameDate today = time().current_date();
+
+  // Property purchase is Capital, use transfer directly
+  if (buyer.cash_balance() < price) {
+    return false;
+  }
+  buyer.financials().transfer(today, Account::Cash, Account::Property, price,
+                              AccountingScope::Capital);
+
+  property.buy(buyer.id());
+  create_restaurant(buyer, property);
+  return true;
+}
+
+// When you're renting a property you pay the first month immediately,
+// regardless of which day of the month it is. The lease is free
+// (at least initial payment) if this is a quick start.
+Restaurant* GameState::rent_restaurant(Property& property, Player& player,
+                                       bool free) {
+  Money price = property.get_monthly_rent();
+  GameDate today = time().current_date();
+
+  // Mark property as rented and create restaurant first
+  property.rent(player.id());
+  auto* restaurant = create_restaurant(player, property);
+
+  if (!restaurant) {
+    return nullptr;
+  }
+
+  // Pay first month's rent (with restaurant_id for proper accounting)
+  // spend_cash is always operational
+  if (!free &&
+      !player.spend_cash(today, Account::Rents, price, restaurant->id())) {
+    // If payment fails, we should probably clean up the restaurant
+    // but for now match original behavior
+    return nullptr;
+  }
+
+  return restaurant;
+}
+
+bool GameState::buy_depot(Property& property, Player& buyer) {
+  Money price = property.get_purchase_price();
+  GameDate today = time().current_date();
+
+  // Property purchase is Capital, use transfer directly
+  if (buyer.cash_balance() < price) {
+    return false;
+  }
+  buyer.financials().transfer(today, Account::Cash, Account::Property, price,
+                              AccountingScope::Capital);
+
+  property.buy(buyer.id());
+
+  // Add depot capacity to player's central depot in this city
+  auto* city = const_cast<City*>(property.city());
+  int capacity = property.size().w * property.size().h * 100;
+  city->central_depot(buyer.id().value).add_capacity(capacity);
+
+  return true;
+}
+
+bool GameState::rent_depot(Property& property, Player& player, bool free) {
+  Money price = property.get_monthly_rent();
+  GameDate today = time().current_date();
+
+  if (!free && !player.spend_cash(today, Account::Rents, price)) {
+    return false;
+  }
+
+  property.rent(player.id());
+
+  // Add depot capacity to player's central depot in this city
+  auto* city = const_cast<City*>(property.city());
+  int capacity = property.size().w * property.size().h;
+  city->central_depot(player.id().value).add_capacity(capacity);
+
+  return true;
+}
+
+Restaurant* GameState::create_restaurant(Player& player, Property& property) {
+  // For now let's assume a random size between 12 and 20:
+  int kitchen_w = engine::random::rand_max_n(8) + 12;
+  int kitchen_h = engine::random::rand_max_n(8) + 12;
+  auto restaurant_id = next_restaurant_id_++;
+  auto restaurant_name =
+      player.name() + " No. " +
+      std::to_string(restaurants_for(player.id()).size() + 1);
+  property.restaurant_id(restaurant_id);
+
+  auto restaurant = std::make_unique<Restaurant>(
+      &property, Size{kitchen_w, kitchen_h}, restaurant_id, restaurant_name);
+  restaurants_.push_back(std::move(restaurant));
+  property.calculate_demographics(restaurant.get());
+  return restaurants_.back().get();
+}
+
+void GameState::add_restaurant(std::unique_ptr<Restaurant> restaurant) {
+  restaurants_.push_back(std::move(restaurant));
+}
+
+void GameState::clear_restaurants_for_load() {
+  // Clear all restaurant references from properties in all loaded cities
+  for (auto& city_ptr : cities_) {
+    if (city_ptr) {
+      for (auto* property : city_ptr->properties()) {
+        if (property && property->has_restaurant()) {
+          // Clear the restaurant link from the property
+          property->clear_restaurant();
+        }
+      }
+    }
+  }
+
+  // Clear the restaurants list
+  restaurants_.clear();
+  next_restaurant_id_ = core::RestaurantId{0};
+}
+
+bool GameState::sell_property(Property&, Player&) { return false; }
+
+bool GameState::end_property_lease(Property& property, Player& player) {
+  if (!property.is_rented()) {
+    return false;
+  }
+
+  auto owner = property.owner_or_tenant();
+  if (!owner || *owner != player.id()) {
+    return false;
+  }
+
+  // If this is a depot, remove capacity from central depot
+  if (property.type() == PropertyType::DEPOT) {
+    auto* city = const_cast<City*>(property.city());
+    int capacity = property.size().w * property.size().h * 100;
+    city->central_depot(player.id().value).remove_capacity(capacity);
+  }
+
+  property.clear_owner();
+  return true;
+}
+
+const CityViewMapState& GameState::city_view_view_state() const {
+  return city_view_view_state_[active_player_.value];
+}
+void GameState::city_view_view_state(const CityViewMapState cmvs) {
+  city_view_view_state_[active_player_.value] = cmvs;
+}
+
+void GameState::initiate_arrest(ArrestReason reason) {}
+
+Restaurant* GameState::restaurant(core::RestaurantId r_id) const {
+  for (const auto& r : restaurants_) {
+    if (r->id() == r_id) {
+      return r.get();
+    }
+  }
+  return nullptr;
+}
+
+std::vector<Restaurant*> GameState::restaurants_for(core::PlayerId pid) const {
+  std::vector<Restaurant*> result;
+  for (const auto& uptr : restaurants_) {
+    auto owner = uptr->property()->owner_or_tenant();
+    if (owner && *owner == pid) {
+      result.push_back(uptr.get());
+    }
+  }
+  return result;
+}
+
+std::vector<const Restaurant*> GameState::all_restaurants() const {
+  std::vector<const Restaurant*> result;
+  for (const auto& uptr : restaurants_) {
+    if (uptr) {
+      result.push_back(uptr.get());
+    }
+  }
+  return result;
+}
+
+void GameState::bootstrap_minimal_playable_world(GameContext& context) {
+  // Only bootstrap once - if already initialized, just return
+  if (!initializer_ && !restaurants_.empty()) {
+    return;
+  }
+
+  begin_initialization();
+  auto& cfg = initializer();
+  cfg.mode = GameMode::QUICKSTART;
+  cfg.size = init::RestaurantSize::BIG;
+  cfg.difficulty = init::DifficultyLevel::PUSHOVER;
+  cfg.city_id = core::CityId{6}; // Madrid because that's where I like to start
+
+  cfg.players.resize(NUMBER_OF_PLAYERS);
+  for (int i = 0; i < NUMBER_OF_PLAYERS; ++i) {
+    auto* character = CharacterFactory::create_character(i);
+    cfg.players[i].name = character->last_name + " Pizza";
+    cfg.players[i].character_id = i;
+    cfg.players[i].is_human = (i == 0);
+  }
+  // goes through the normal flow, pushes CityView:
+  finalize_initialization(context);
+  active_restaurant({0}); // first restaurant of first player
+
+  // Pop the CityView that finalize_initialization pushed, since the caller
+  // will push their own desired view
+  ui().pop();
+}
+
+Restaurant* GameState::create_restaurant_with_layout(Player& player, City& city,
+                                                     int layout_id,
+                                                     bool is_big) {
+  // Build the layout filename from the layout_id
+  std::string filename = compat::format("q/f{}.pc", layout_id);
+  std::unique_ptr<RestaurantLayout> layout = nullptr;
+  if (platform::is_amiga()) {
+    layout = std::make_unique<RestaurantLayout>(Size{16, 16}, Size{16, 16});
+  }
+  else {
+    layout = RestaurantLayoutFactory::create_layout(filename);
+  }
+
+  if (!layout) {
+    return nullptr;
+  }
+
+  // Get all business premises in the city
+  auto properties = city.business_premises();
+  if (properties.empty()) {
+    return nullptr;
+  }
+
+  // Try to find an available property (not already a restaurant) up to 10 times
+  Property* available_property = nullptr;
+  const int max_attempts = 10;
+  for (int attempt = 0; attempt < max_attempts; ++attempt) {
+    auto try_index = engine::random::rand_max_n(properties.size());
+    auto* candidate = properties.at(try_index);
+
+    // Check if this property is available (no owner/tenant or no restaurant)
+    if (!candidate->has_restaurant()) {
+      available_property = candidate;
+      break;
+    }
+  }
+
+  // If we couldn't find an available property after 10 attempts, give up
+  if (!available_property) {
+    return nullptr;
+  }
+
+  available_property->size(layout->restaurant_size());
+
+  // Rent the property (first month free for quickstart)
+  auto* rest = rent_restaurant(*available_property, player,
+                               /*free=*/true);
+
+  if (rest) {
+    // Apply financial transactions for furniture and ovens
+    player.financials().transfer(
+        time().current_date(), Account::Capital, Account::Furniture,
+        layout->furniture_value() / 2, AccountingScope::Capital);
+    player.financials().transfer(time().current_date(), Account::Capital,
+                                 Account::Machines, layout->oven_value() / 2,
+                                 AccountingScope::Capital);
+
+    rest->kitchen_size(layout->kitchen_size());
+    rest->layout(std::move(layout));
+
+    // AI restaurants need some members initialized from their character stats
+    if (!player.is_human_controlled()) {
+      rest->init_ai_economy(player);
+    }
+  }
+
+  return rest;
+}
+
+void GameState::restaurant_placement(std::vector<FurnitureBatch> batch) {
+  furniture_placement_ = std::move(batch);
+}
+std::vector<FurnitureBatch>& GameState::restaurant_placement() {
+  return furniture_placement_;
+}
+
+std::optional<core::RestaurantId>
+GameState::next_restaurant(core::PlayerId pid, core::RestaurantId from) const {
+  auto list = restaurants_for(pid);
+  if (list.empty()) {
+    return std::nullopt;
+  }
+
+  // find current index; if not found, just take the first
+  std::size_t idx = 0;
+  bool found = false;
+  for (std::size_t i = 0; i < list.size(); ++i) {
+    if (list[i]->id() == from) {
+      idx = i;
+      found = true;
+      break;
+    }
+  }
+
+  const std::size_t next_idx = found ? (idx + 1) % list.size() : 0;
+  return list[next_idx]->id();
+}
+
+std::optional<core::RestaurantId>
+GameState::prev_restaurant(core::PlayerId pid, core::RestaurantId from) const {
+  auto list = restaurants_for(pid);
+  if (list.empty()) {
+    return std::nullopt;
+  }
+
+  std::size_t idx = 0;
+  bool found = false;
+  for (std::size_t i = 0; i < list.size(); ++i) {
+    if (list[i]->id() == from) {
+      idx = i;
+      found = true;
+      break;
+    }
+  }
+
+  const std::size_t prev_idx =
+      found ? (idx + list.size() - 1) % list.size() : 0;
+  return list[prev_idx]->id();
+}
+
+void GameState::load_initial_pizzas(GameContext& context,
+                                    core::PlayerId player_id) {
+  Player* player = this->player(player_id);
+  if (!player) {
+    Logger::warn("Could not find player {} to load initial pizzas",
+                 player_id.value);
+    return;
+  }
+
+  auto& recipes = player->recipes();
+
+  // Get the bob resource and create the pizza size function
+  auto& zutaten_bob = context.bob->get("bob/zutaten.bob");
+  auto get_bob_size =
+      make_ingredient_bob_size_fn<Bob, core::food::Topping>(zutaten_bob);
+
+  const int number_of_canonical_pizzas_to_load = 4;
+  for (int i = 0; i < number_of_canonical_pizzas_to_load; ++i) {
+    const auto cid = static_cast<core::food::CanonicalPizza>(i);
+
+    // Create pizza from disk
+    auto pizza = PizzaFactory::create_pizza(i, get_bob_size);
+    if (!pizza) {
+      Logger::warn("Failed to load canonical pizza {}", i);
+      continue;
+    }
+
+    // Add to player's recipes
+    auto rid = recipes.create_from_canonical(cid, std::move(*pizza));
+    // Logger::info("Loaded initial pizza {} for player {} into recipe slot {}",
+    // i, player_id.value, rid.value);
+  }
+}
+
+// Game options delegates to ConfigManager (single source of truth)
+GameOptions& GameState::options() {
+  auto* config = ConfigManager::instance();
+  if (!config) {
+    fatal("ConfigManager not initialized when accessing GameState::options()");
+  }
+  return config->options();
+}
+
+const GameOptions& GameState::options() const {
+  auto* config = ConfigManager::instance();
+  if (!config) {
+    fatal("ConfigManager not initialized when accessing GameState::options()");
+  }
+  return config->options();
+}
+
+// Actor call management (for angry realtors/etc refusing calls)
+void GameState::refuse_calls_from(int actor_id) {
+  actors_refusing_calls_.insert(actor_id);
+}
+
+bool GameState::is_refusing_calls(int actor_id) const {
+  return actors_refusing_calls_.contains(actor_id);
+}
+
+void GameState::clear_all_refused_calls() { actors_refusing_calls_.clear(); }
+
+StatusDisplay* GameState::status_display(GameContext& context) {
+  if (!status_display_) {
+    status_display_ =
+        std::make_unique<StatusDisplay>(context, *this, status_hub_);
+  }
+  return status_display_.get();
+}
+
+void GameState::next_player() {
+  if (++active_player_.value >= NUMBER_OF_PLAYERS) {
+    active_player_.value = 0;
+  }
+}
+
+void GameState::on_player_turn_card_finished() {
+  // Only unfreeze for human players - keep frozen for AI to hide their money
+  if (status_display_ && active_player()->is_human_controlled()) {
+    status_display_->unfreeze();
+  }
+
+  if (pending_ai_auto_end_turn_) {
+    pending_ai_auto_end_turn_ = false;
+    end_of_turn();
+    return;
+  }
+
+  auto* player = active_player();
+  if (player && player->is_on_holiday()) {
+    player->decrement_holiday_day();
+    end_of_turn();
+  }
+}
+
+void GameState::request_fade_transition(int duration_frames) {
+  fade_requested_ = true;
+  fade_duration_frames_ = duration_frames;
+}
+
+bool GameState::fade_requested() const { return fade_requested_; }
+
+int GameState::fade_duration_frames() const { return fade_duration_frames_; }
+
+void GameState::clear_fade_request() { fade_requested_ = false; }
+
+void GameState::request_resolution_change(ScreenResolution res) {
+  pending_resolution_ = res;
+}
+
+std::optional<ScreenResolution> GameState::pending_resolution_change() const {
+  return pending_resolution_;
+}
+
+void GameState::clear_resolution_request() { pending_resolution_.reset(); }
+
+core::food::IngredientDemand
+GameState::total_ingredient_need_for_player(core::PlayerId player_id) const {
+  core::food::IngredientDemand demand_grams{};
+
+  for (auto* restaurant : restaurants_for(player_id)) {
+    if (!restaurant) {
+      continue;
+    }
+
+    demand_grams += restaurant->calculate_daily_ingredient_demand_grams(
+        player(player_id)->recipes());
+  }
+
+  return demand_grams;
+}
+
+GameMode GameState::game_mode() const { return game_mode_; }
+
+int GameState::human_player_count() const {
+  int h_count = 0;
+  for (const auto& player : players_) {
+    if (player->is_human_controlled()) {
+      h_count++;
+    }
+  }
+  return h_count;
+}

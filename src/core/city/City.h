@@ -1,0 +1,386 @@
+/*
+ * SPDX-FileCopyrightText: 2010 Cowomaly <cowomaly@nullium.net>
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+#pragma once
+
+#include <array>
+#include <cassert>
+#include <cstdint>
+#include <map>
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <vector>
+#include "core/city/CentralDepot.h"
+#include "core/city/CityTypes.h"
+#include "core/city/ControlMap.h"
+#include "core/city/EconomyTrend.h"
+#include "core/city/IngredientTrendSystem.h"
+#include "core/city/MayorOffice.h"
+#include "core/city/PizzaCharts.h"
+#include "core/common/Ids.h"
+#include "core/economy/WeaponMarket.h"
+#include "core/food/Ingredient.h"
+#include "core/food/IngredientCategoryType.h"
+#include "core/marketing/AdvertisingCampaign.h"
+#include "core/newspaper/NewspaperEventSystem.h"
+#include "core/newspaper/NewspaperState.h"
+#include "core/settings/BankSettings.h"
+#include "core/settings/RealtorSettings.h"
+#include "core/supply/FoodSupplier.h"
+
+using IngredientPrices = core::food::IngredientArray<Money>;
+#include "core/util/Constants.h"
+#include "engine/Size.h"
+
+#define NUMBER_OF_TYPES 256
+#define NUMBER_OF_ACTOR_TYPES 5
+
+enum class MapTileType {
+  TILE_TYPE_SPECIAL = 0,
+  TILE_TYPE_NATURE,
+  TILE_TYPE_WATER,
+  TILE_TYPE_BUILDING,
+  TILE_TYPE_PATH,
+  TILE_TYPE_ROAD,
+  TILE_TYPE_VILLA,
+  TILE_TYPE_RESIDENTIAL_BUILDING,
+  TILE_TYPE_OTHER,
+};
+
+struct PropertyInfo {
+  std::string description{"BUILDING"};
+  PremiseStatus status{PremiseStatus::NOT_AVAILABLE};
+  Size size{0, 0};
+  int sale_price{0};
+  int rent_price{0};
+};
+
+class Actor;
+class District;
+class Property;
+namespace core::city {
+class CentralDepot;
+}
+
+class City {
+  friend std::ostream& operator<<(std::ostream& os, const City& city);
+
+public:
+  City(core::CityId id);
+  ~City();
+
+  core::CityId id() const;
+  std::string name() const;
+
+  uint8_t type(int index) const;
+  int data_length() const;
+  bool is_business_premise_by_index(int index) const;
+  static bool is_business_premise_by_type(uint8_t type);
+  static bool is_property_by_type(uint8_t type);
+  MapTileType tile_category(int index) const;
+  bool is_road_tile(int index) const;
+  std::string description(int index) const;
+  std::string building_name(int index) const;
+  std::string tile_description(int index) const;
+  const std::vector<std::unique_ptr<District>>& districts() const;
+  const District& district(core::DistrictId district_id) const;
+  void end_of_day(bool is_active);
+  static constexpr int index_to_x(int index) {
+    return index % MAP_TILES_PER_ROW;
+  }
+  static constexpr int index_to_y(int index) {
+    return index / MAP_TILES_PER_ROW;
+  }
+  static constexpr int x_y_to_index(int x, int y) {
+    return (y * MAP_TILES_PER_ROW) + x;
+  }
+
+  // Setters for factory:
+  void data_length(int length);
+  void map_data(const std::vector<uint8_t>& d);
+  void named_buildings(const std::map<int, std::string>& nb);
+  void city_name(const std::string& cn);
+  void building_names(const std::array<std::array<std::string, 24>, 8>& bn,
+                      const std::array<int, 8>& counts);
+  void actors(std::map<uint8_t, std::unique_ptr<Actor>> actors);
+  void properties(std::map<int, std::unique_ptr<Property>> bm);
+  std::vector<Property*> business_premises() const;
+  std::vector<Property*> properties() const;
+  Property* property_by_index(int index) const;
+  void districts(std::vector<std::unique_ptr<District>> d);
+  void suppliers(std::vector<std::unique_ptr<FoodSupplier>> s);
+  void types(const std::array<uint8_t, NUMBER_OF_TYPES>& types);
+  void
+  type_names(const std::array<std::string, /*NUMBER_OF_TYPES*/ 10>& type_names);
+  void district_bez(std::array<uint8_t, 300>);
+  void bank_settings(std::unordered_map<int, BankSettings> bank_settings) {
+    bank_settings_ = std::move(bank_settings);
+  };
+  void
+  realtor_settings(std::unordered_map<int, RealtorSettings> realtor_settings) {
+    realtor_settings_ = std::move(realtor_settings);
+  };
+
+  std::vector<const Actor*> actors(ActorType type) const;
+  std::vector<const FoodSupplier*> food_suppliers(ActorType type) const;
+  const std::vector<std::unique_ptr<FoodSupplier>>& suppliers() const {
+    return suppliers_;
+  }
+  Actor* actor_by_id(uint8_t actor_id) const;
+  Actor* mayor() const { return actor_by_id(mayor_id_); }
+  Actor* police() const { return actor_by_id(police_id_); }
+  void mayor_id(int id) { mayor_id_ = id; }
+  void police_id(int id) { police_id_ = id; }
+  void first_bank_id(int id) { first_bank_id_ = id; }
+  int first_bank_id() const { return first_bank_id_; }
+  static BuildingType building_type(uint8_t type);
+  BuildingType building_type_by_index(int index) const;
+
+  static bool is_named_building(uint8_t type);
+  bool is_named_building_by_index(int index) const;
+  PropertyInfo property_info_by_index(uint8_t index);
+
+  // District methods
+  core::DistrictId district_by_district_index(int district_index) const;
+  core::DistrictId district_by_xy_index(int tile_x, int tile_y) const;
+  static int district_index_by_xy_index(int tile_x, int tile_y);
+  core::DistrictId district_by_index(int index) const;
+
+  IngredientTrendSystem& ingredient_trend_system() {
+    return ingredient_trend_system_;
+  }
+  const IngredientTrendSystem& ingredient_trend_system() const {
+    return ingredient_trend_system_;
+  }
+
+  const core::food::IngredientTrends& ingredient_trends() const {
+    return ingredient_trend_system_.trends();
+  }
+
+  // Spoilage rate (normal = 1, heat wave = 8)
+  void spoilage_rate(int rate) { spoilage_rate_ = rate; }
+  int spoilage_rate() const { return spoilage_rate_; }
+
+  void spoilage_duration_counter(int days) {
+    spoilage_duration_counter_ = days;
+  }
+  int spoilage_duration_counter() const { return spoilage_duration_counter_; }
+
+  // Trade embargo counters (4 slots)
+  void trade_embargo_counter(IngredientCategory cat, int days) {
+    trade_embargo_counters_[static_cast<int>(cat)] = days;
+  }
+
+  int trade_embargo_counter(IngredientCategory cat) const {
+    return trade_embargo_counters_[static_cast<int>(cat)];
+  }
+
+  // Advertising effectiveness per channel (for popularity Component 3)
+  struct AdvertisingEffectiveness {
+    uint8_t flyers{0};
+    uint8_t posters{0};
+    uint8_t newspaper{0};
+    uint8_t tv_ads{0};
+  };
+
+  const AdvertisingEffectiveness& advertising_effectiveness() const {
+    return advertising_effectiveness_;
+  }
+
+  void advertising_effectiveness(const AdvertisingEffectiveness& eff) {
+    advertising_effectiveness_ = eff;
+  }
+
+  // Advertising campaign options (randomized at city init)
+  void poster_rates(const std::array<AdvertisingRate, 9>& rates) {
+    poster_rates_ = rates;
+  }
+
+  void tv_ad_rates(const std::array<AdvertisingRate, 9>& rates) {
+    tv_ad_rates_ = rates;
+  }
+
+  static uint8_t district_index_by_index(int index);
+
+  static std::optional<BuildingType> decode_special_building_type(uint8_t type);
+
+  const AdvertisingRate& poster_option(int index) const {
+    return poster_rates_.at(index);
+  }
+
+  const AdvertisingRate& tv_ad_option(int index) const {
+    return tv_ad_rates_.at(index);
+  }
+  const std::unordered_map<int, BankSettings>& bank_settings() const {
+    return bank_settings_;
+  }
+
+  const std::unordered_map<int, RealtorSettings>& realtor_settings() const {
+    return realtor_settings_;
+  }
+
+  const BankSettings& bank_settings(int actor_id) const {
+    auto it = bank_settings_.find(actor_id);
+    assert(it != bank_settings_.end() && "Invalid bank actor_id");
+    return it->second;
+  }
+
+  const RealtorSettings& realtor_settings(int actor_id) const {
+    auto it = realtor_settings_.find(actor_id);
+    assert(it != realtor_settings_.end() && "Invalid realtor actor_id");
+    return it->second;
+  }
+  WeaponMarket& weapon_market();
+
+  void ingredient_base_prices(const IngredientPrices& prices) {
+    ingredient_base_prices_ = prices;
+  }
+  const IngredientPrices& ingredient_base_prices() const {
+    return ingredient_base_prices_;
+  }
+  Money ingredient_base_price(core::food::IngredientType ingredient) const {
+    return ingredient_base_prices_[ingredient];
+  }
+
+  // Blacklist management (for fired staff)
+  void add_to_blacklist(uint8_t character_id, int days = 30);
+  void remove_from_blacklist(uint8_t character_id);
+  bool is_blacklisted(uint8_t character_id) const;
+  int blacklist_days_remaining(uint8_t character_id) const;
+  const std::unordered_map<uint8_t, int>& blacklist() const {
+    return staff_blacklist_;
+  }
+
+  // Vendor spending tracking (resets weekly, per-player)
+  void record_vendor_purchase(core::PlayerId player_id, uint8_t vendor_id,
+                              Money amount);
+  Money vendor_spending_this_week(core::PlayerId player_id,
+                                  uint8_t vendor_id) const;
+  void reset_weekly_vendor_spending();
+
+  // Arms dealer visibility tracking (per-player)
+  // Used to hide/reveal arms dealers in terminal OTHERS category
+  const std::vector<ActorId>&
+  known_arms_dealers(core::PlayerId player_id) const;
+  uint8_t known_arms_dealer_count(core::PlayerId player_id) const;
+  bool is_arms_dealer_known(core::PlayerId player_id, ActorId id) const;
+  void add_known_arms_dealer(core::PlayerId player_id, ActorId id);
+  void clear_known_arms_dealers(core::PlayerId player_id);
+  void initialize_known_arms_dealers(core::PlayerId player_id);
+
+  core::city::CentralDepot& central_depot(int player_id);
+  MayorOffice& mayor_office() { return mayor_office_; }
+
+  PizzaCharts& pizza_charts() { return pizza_charts_; }
+  const PizzaCharts& pizza_charts() const { return pizza_charts_; }
+
+  ControlMap& control_map() { return control_map_; }
+  const ControlMap& control_map() const { return control_map_; }
+
+  EconomyTrend& economy_trend() { return economy_trend_; }
+  const EconomyTrend& economy_trend() const { return economy_trend_; }
+
+  core::newspaper::NewspaperState& newspaper_state() {
+    return newspaper_state_;
+  }
+  const core::newspaper::NewspaperState& newspaper_state() const {
+    return newspaper_state_;
+  }
+  core::newspaper::NewspaperEventSystem& newspaper_event_system() {
+    return newspaper_event_system_;
+  }
+  const core::newspaper::NewspaperEventSystem& newspaper_event_system() const {
+    return newspaper_event_system_;
+  }
+
+private:
+  void init_advertising_options();
+  void init_supplier_stock_levels();
+  void replenish_supplier_stock_levels();
+
+  core::CityId id_;
+  std::string name_;
+
+  int data_length_ = 0;
+  std::vector<uint8_t> data_;
+
+  // Actor lists: 5 categories, each a vector of unique_ptr<Actor>
+  std::map<uint8_t, std::unique_ptr<Actor>> actors_;
+
+  // Suppliers:
+  std::vector<std::unique_ptr<FoodSupplier>> suppliers_;
+  std::array<AdvertisingRate, 9> poster_rates_;
+  std::array<AdvertisingRate, 9> tv_ad_rates_;
+
+  // Named buildings and related info:
+  std::map<int, std::string> named_buildings_;
+  std::array<std::array<std::string, 24>, 8> building_names_;
+  std::array<int, 8> building_name_count_{};
+  std::array<std::string, /*NUMBER_OF_TYPES*/ 10> type_names_{};
+  std::array<uint8_t, NUMBER_OF_TYPES> types_{};
+  std::vector<std::unique_ptr<District>> districts_;
+  std::map<int, std::unique_ptr<Property>> properties_;
+  std::array<uint8_t, 300> district_bez_{};
+  std::unordered_map<int, BankSettings> bank_settings_;
+  std::unordered_map<int, RealtorSettings> realtor_settings_;
+  WeaponMarket weapon_market_;
+  int mayor_id_ = -1;
+  int police_id_ = -1;
+  int first_bank_id_ = -1;
+  // Blacklist: character_id -> days_remaining
+  std::unordered_map<uint8_t, int> staff_blacklist_;
+  // Vendor spending tracking (resets weekly, per-player): vendor_id -> total
+  // spent this week
+  std::array<std::unordered_map<uint8_t, Money>, NUMBER_OF_PLAYERS>
+      weekly_vendor_spending_;
+  IngredientPrices ingredient_base_prices_;
+
+  // Advertising campaign effectiveness percentages per city
+  // Used in popularity Component 3 calculation
+  AdvertisingEffectiveness advertising_effectiveness_;
+
+  // Unified ingredient trend system (replaces old separate arrays)
+  IngredientTrendSystem ingredient_trend_system_;
+
+  // Spoilage system (for heat wave event)
+  int spoilage_rate_{1};
+  int spoilage_duration_counter_{0};
+
+  // Trade embargo counters
+  std::array<int, 4> trade_embargo_counters_{};
+  std::array<core::city::CentralDepot, NUMBER_OF_PLAYERS> central_depots_;
+
+  // Arms dealer visibility tracking: per-player known arms dealers
+  // Used to implement "hidden contacts" feature for arms dealers in OTHERS
+  // category
+  struct KnownArmsDealer {
+    uint8_t known_count{0};
+    std::vector<ActorId> known_actor_ids; // Max 10 in original
+  };
+
+  std::array<KnownArmsDealer, NUMBER_OF_PLAYERS> known_arms_dealers_;
+  MayorOffice mayor_office_;
+  PizzaCharts pizza_charts_;
+  ControlMap control_map_;
+  EconomyTrend economy_trend_;
+
+  core::newspaper::NewspaperState newspaper_state_;
+  core::newspaper::NewspaperEventSystem newspaper_event_system_;
+};
+
+/*
+[ Business Premises ]
+5 bits for premise W
+5 bits for premise H
+3 bits for realtor
+3 bits for status (Not Available/Sale/Rent/Combo/Owned)
+    32 bits for price
+    16 bits for rent
+Initial Rent = W x H x 15 (madrid)
+Initial Price = Rent x 80 (madrid)
+Paris is rent x 20 but price x 40
+*/

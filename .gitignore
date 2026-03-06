@@ -1,0 +1,7 @@
+.DS_Store
+build/
+# Tags and formatting tools
+tags
+
+# === CMake build artifacts ===
+CMakeUserPresets.json

@@ -1,0 +1,143 @@
+/*
+ * SPDX-FileCopyrightText: 2010 Cowomaly <cowomaly@nullium.net>
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+#pragma once
+
+#include <map>
+#include <vector>
+#include "core/character/AiMenuSlot.h"
+#include "core/character/Awards.h"
+#include "core/character/Character.h"
+#include "core/common/Ids.h"
+#include "core/finance/Investment.h"
+#include "core/finance/Loan.h"
+#include "core/finance/PlayerFinancials.h"
+#include "core/food/PlayerRecipes.h"
+#include "core/inventory/Inventory.h"
+#include "core/marketing/AdvertisingCampaign.h"
+#include "core/time/TimeOfDay.h"
+
+class Player {
+  friend std::ostream& operator<<(std::ostream& os, const Player& player);
+
+public:
+  Player(core::PlayerId pid, core::character::Character character,
+         bool is_human = true);
+  ~Player();
+  core::PlayerId id() const;
+  std::string name() const;
+  void name(std::string name);
+  void character(core::character::Character character);
+  core::time::TimeOfDay start_of_day_time() const;
+  core::time::TimeOfDay end_of_day_time() const;
+  uint8_t start_of_day_hour() const { return start_of_day_hour_; }
+  void start_of_day_hour(uint8_t h) { start_of_day_hour_ = h; }
+  bool is_human_controlled() const;
+  int contract_count_for_city(core::CityId city) const { return 0; }
+  int restaurant_count_for_city(core::CityId city) const { return 1; }
+  int recipe_count() const {
+    return static_cast<int>(recipes_.recipe_count());
+  };
+  int jail_time() const;
+  void jail_time(uint8_t jail_time);
+  void end_of_day(class GameState& game_state);
+  void end_of_week(class GameState& game_state);
+  void on_food_shop_visit();
+  void add_loan(core::CityId city_id, Loan loan, GameDate date);
+  std::vector<Loan>& loans_in_city(core::CityId city_id);
+  const std::vector<Loan>& loans_in_city(core::CityId city_id) const;
+  const std::map<core::CityId, std::vector<Loan>>& loans() const {
+    return loans_;
+  }
+  int number_of_loans() const;
+  bool has_loan_with_bank(core::CityId city_id, core::BankId bank_id) const;
+  void add_investment(core::CityId city_id, Investment investment);
+  std::vector<Investment>& investments_in_city(core::CityId city_id);
+  const std::vector<Investment>&
+  investments_in_city(core::CityId city_id) const;
+  int number_of_investments() const;
+  core::character::Character& character() { return character_; }
+  const core::character::Character& character() const { return character_; }
+  PlayerFinancials& financials() { return financials_; }
+  const PlayerFinancials& financials() const { return financials_; }
+
+  [[nodiscard]] bool
+  spend_cash(const GameDate& date, Account to, Money amount,
+             std::optional<core::RestaurantId> restaurant_id = std::nullopt);
+  Money cash_balance() const;
+  core::inventory::Inventory& inventory();
+  const core::inventory::Inventory& inventory() const;
+  core::food::PlayerRecipes& recipes() { return recipes_; };
+  const core::food::PlayerRecipes& recipes() const { return recipes_; };
+  const std::array<Money, 52>& liquidity_snapshots();
+  void add_liquidity_snapshot(Money amount, int week_nr);
+
+  // Advertising campaigns
+  void add_campaign(const AdvertisingCampaign& campaign);
+  std::optional<AdvertisingCampaign>
+  get_campaign(AdvertisingChannel channel) const;
+  bool has_active_campaign(AdvertisingChannel channel) const;
+  void update_campaigns(); // Called daily to decrement days_remaining
+  uint8_t total_advertising_effectiveness() const;
+  const std::array<std::optional<AdvertisingCampaign>, 4>&
+  get_campaigns() const {
+    return campaigns_;
+  }
+
+  std::array<std::optional<AdvertisingCampaign>, 4>& get_campaigns() {
+    return campaigns_;
+  }
+  const Awards& awards() const;
+  void award(AwardCategory, AwardLevel);
+
+  std::array<AiMenuSlot, 10>& ai_menu_slots() { return ai_menu_slots_; }
+  const std::array<AiMenuSlot, 10>& ai_menu_slots() const {
+    return ai_menu_slots_;
+  }
+
+  int negotiation_skill() const;
+
+  struct MonthlyLoanCosts {
+    Money repayment;
+    Money interest;
+  };
+  MonthlyLoanCosts monthly_loan_costs() const;
+  void apply_monthly_loan_payments(const GameDate& date);
+
+  int score() const { return score_; }
+  void add_score(int points);
+  void holiday(int days) { holiday_days_left_ = days; }
+  bool is_on_holiday() const {
+    return holiday_days_left_.has_value() && *holiday_days_left_ > 0;
+  }
+  std::optional<int> holiday_days_left() const { return holiday_days_left_; }
+  void decrement_holiday_day();
+
+private:
+  core::PlayerId id_;
+  core::character::Character character_;
+  PlayerFinancials financials_;
+  int jail_time_{0};
+  std::string name_;
+  std::map<core::CityId, std::vector<Loan>> loans_;
+  std::map<core::CityId, std::vector<Investment>> investments_;
+  core::inventory::Inventory inventory_;
+  core::food::PlayerRecipes recipes_;
+  bool is_human_{true};
+  int score_{0};
+  std::array<Money, 52> liquidity_snapshots_{};
+  Awards awards_;
+  std::optional<int> holiday_days_left_;
+  uint8_t start_of_day_hour_{9};
+
+  // days until next restaurant expansion check
+  int ai_expansion_cooldown_{3};
+  // 10 pizza slots with production history
+  std::array<AiMenuSlot, 10> ai_menu_slots_{};
+  void check_ai_expansion(class GameState& game_state);
+
+  std::array<std::optional<AdvertisingCampaign>, 4> campaigns_;
+};

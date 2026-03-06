@@ -1,0 +1,195 @@
+/*
+ * SPDX-FileCopyrightText: 2025 Cowomaly <cowomaly@nullium.net>
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+#pragma once
+
+#include <algorithm>
+#include <array>
+#include <unordered_map>
+#include <vector>
+#include "core/common/Ids.h"
+#include "core/finance/Money.h"
+
+class GameDate;
+
+namespace core::restaurant {
+
+// Per-pizza sales tracking for detailed week's takings report.
+struct PizzaSalesData {
+  core::RecipeId pizza_id{0};
+  int count_sold{0};
+  Money revenue{0};
+  Money ingredient_cost{0};
+  Money profit{0};
+
+  void add_sale(Money price, Money cost) {
+    count_sold++;
+    revenue = revenue + price;
+    ingredient_cost = ingredient_cost + cost;
+    profit = profit + (price - cost);
+  }
+};
+
+// Daily operational statistics for a restaurant.
+// Tracks orders, revenue, costs, and performance metrics.
+struct DailyStats {
+  // Order tracking
+  int orders_generated{0}; // Total demand
+  int orders_fulfilled{0}; // Actually served
+  int orders_lost{0};
+  int lost_due_to_capacity{0};
+  int lost_due_to_ingredients{0};
+
+  // Financial
+  Money revenue{0};          // Total sales
+  Money ingredient_costs{0}; // Cost of ingredients USED
+  Money gross_profit{0};     // revenue - ingredient_costs
+
+  // Ingredient consumption broken down by category (for daily stats)
+  // Tracks ingredients USED in pizzas made
+  // Indexed by IngredientCategory: VEGETABLES=0, MEAT=1, FRUIT=2, CHEESE=3
+  std::array<Money, 4> ingredient_costs_by_category{Money{0}, Money{0},
+                                                    Money{0}, Money{0}};
+
+  // Ingredient purchases broken down by category (for weekly expenses report)
+  // Tracks actual spending
+  std::array<Money, 4> ingredient_purchases_by_category{Money{0}, Money{0},
+                                                        Money{0}, Money{0}};
+
+  // Total ingredient purchases (sum of all categories)
+  Money ingredient_purchases{0};
+
+  // Furniture purchases (for weekly expenses report)
+  Money furniture_purchases{0};
+
+  Money fixed_costs{0}; // Staff wages + rent + utilities
+  Money net_profit{0};  // gross_profit - fixed_costs
+
+  // Total expenditure including all costs (fixed + ingredients + furniture)
+  Money total_expenditure() const {
+    return fixed_costs + ingredient_purchases + furniture_purchases;
+  }
+
+  // Operational
+  int avg_quality{0};          // Average quality of pizzas served (0-100)
+  int capacity_utilization{0}; // Percentage of capacity used (0-100)
+
+  // Pizza-specific breakdown (for week's takings report)
+  std::unordered_map<core::RecipeId, PizzaSalesData, core::RecipeId::Hasher>
+      pizza_sales;
+
+  // Demand value calculation (average price of orders including unfulfilled)
+  Money total_order_value{0}; // Sum of all order prices (including lost orders)
+  int order_value_count{0};   // Orders contributing to total_order_value
+
+  void record_sale(core::RecipeId pizza_id, Money price, Money cost) {
+    pizza_sales[pizza_id].add_sale(price, cost);
+  }
+
+  void record_order(Money price) {
+    total_order_value = total_order_value + price;
+    order_value_count++;
+  }
+
+  Money avg_order_value() const {
+    if (order_value_count == 0) {
+      return Money{0};
+    }
+    return Money{total_order_value.cents / order_value_count};
+  }
+
+  Money avg_sale_price() const {
+    if (orders_fulfilled == 0) {
+      return Money{0};
+    }
+    return Money{revenue.cents / orders_fulfilled};
+  }
+
+  int delivery_capacity_percent() const {
+    if (orders_generated == 0) {
+      return 0;
+    }
+    return (orders_fulfilled * 100) / orders_generated;
+  }
+
+  void reset() {
+    orders_generated = 0;
+    orders_fulfilled = 0;
+    orders_lost = 0;
+    lost_due_to_capacity = 0;
+    lost_due_to_ingredients = 0;
+    revenue = Money{0};
+    ingredient_costs = Money{0};
+    gross_profit = Money{0};
+    ingredient_costs_by_category = {Money{0}, Money{0}, Money{0}, Money{0}};
+    ingredient_purchases_by_category = {Money{0}, Money{0}, Money{0}, Money{0}};
+    ingredient_purchases = Money{0};
+    furniture_purchases = Money{0};
+    fixed_costs = Money{0};
+    net_profit = Money{0};
+    avg_quality = 0;
+    capacity_utilization = 0;
+    pizza_sales.clear();
+    total_order_value = Money{0};
+    order_value_count = 0;
+  }
+
+  // Calculate derived metrics
+  void finalize(int total_capacity) {
+    gross_profit = revenue - ingredient_costs;
+    net_profit = gross_profit - fixed_costs;
+
+    if (total_capacity > 0) {
+      capacity_utilization = (orders_fulfilled * 100) / total_capacity;
+      capacity_utilization = std::min(capacity_utilization, 100);
+    }
+  }
+
+  friend std::ostream& operator<<(std::ostream& os, const DailyStats& stats) {
+    os << "DailyStats: ";
+    os << "Gen: " << stats.orders_generated;
+    os << ", Fulfilled: " << stats.orders_fulfilled;
+    os << ", Lost: " << stats.orders_lost;
+
+    os << " | Fin: ";
+    // Assuming your Money class also overloads <<, otherwise convert to
+    // string/double
+    os << "Rev: " << stats.revenue;
+    os << ", Cost: " << stats.ingredient_costs;
+    os << ", Profit: " << stats.gross_profit;
+
+    return os;
+  }
+};
+
+// Historical statistics tracking for a restaurant
+// Maintains running totals and full history
+struct RestaurantStats {
+  // Current and recent days
+  DailyStats today;
+  DailyStats yesterday;
+  DailyStats day_before_yesterday;
+
+  // All-time totals
+  int total_pizzas_sold{0};
+  Money total_revenue{0};
+  Money total_profit{0};
+
+  // Complete history
+  std::vector<DailyStats> history;
+
+  // Archive today's stats to history and reset for new day.
+  void end_of_day(int total_capacity);
+  std::vector<DailyStats> last_n_days(int n) const;
+  std::vector<DailyStats> last_week() const;
+  std::vector<DailyStats> last_month() const;
+  std::vector<DailyStats> current_week(const GameDate& current_date) const;
+  int avg_daily_sales(int days = 7) const;
+  int profit_margin_percent() const;
+  int days_in_operation() const;
+};
+
+} // namespace core::restaurant

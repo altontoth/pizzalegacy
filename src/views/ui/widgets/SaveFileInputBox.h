@@ -1,0 +1,54 @@
+/*
+ * SPDX-FileCopyrightText: 2025 Cowomaly <cowomaly@nullium.net>
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+#pragma once
+
+#include <functional>
+#include <optional>
+#include <string>
+#include <vector>
+#include "engine/DebugLabel.h"
+#include "engine/geom/Spaces.h"
+#include "views/ui/widgets/MenuItem.h"
+
+class SaveFileInputBox : public MenuItem,
+                         public input::InputListener,
+                         public debug::AutoLabel<SaveFileInputBox> {
+public:
+  SaveFileInputBox(GameContext& gc, std::vector<std::string>& save_files,
+                   int* scroll_offset,
+                   std::function<void(const std::string&)> on_save_callback)
+      : MenuItem(gc), save_files_(save_files), scroll_offset_(scroll_offset),
+        on_save_callback_(std::move(on_save_callback)) {}
+
+  void draw(Surface& screen, ViewPoint p, bool is_selected) override;
+  void handle_action() override;
+  Size measure() const override;
+  bool handles_keyboard_events() override { return keyboard_enabled_; }
+  bool handles_mouse_events() override { return true; }
+  bool on_interaction(views::ui::InteractionEvent ie) override;
+  void begin_keyboard_session(input::InputManager* input,
+                              std::function<void()> inv) override;
+
+  bool on_text(const input::TextEvent& ev) override;
+  bool on_action(const input::ActionEvent& ev) override;
+
+  void end_input();
+
+private:
+  void mark_dirty();
+
+  std::vector<std::string>& save_files_;
+  int* scroll_offset_;
+  std::function<void(const std::string&)> on_save_callback_;
+  int hovered_index_ = -1;
+
+  bool input_active_ = false;
+  bool keyboard_enabled_ = false;
+  std::string new_filename_;
+  std::optional<input::TextSession> text_session_;
+  std::function<void()> invalidate_;
+};
