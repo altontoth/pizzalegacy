@@ -57,8 +57,8 @@ Example:
                                  ? " -"
                                  : compat::format("{:>2}", e.previous_position);
           result.add_message(compat::format("{:>2}. {:>4}  {:>5}  {:<19}  {}",
-                                         i + 1, prev, e.score, e.pizza_name,
-                                         e.player_name));
+                                            i + 1, prev, e.score, e.pizza_name,
+                                            e.player_name));
         }
         return result;
       },
@@ -107,7 +107,8 @@ Examples:
         }
 
         CommandResult result = CommandResult::success();
-        result.add_message(compat::format("Pizza Chart Debug - {}", city->name()));
+        result.add_message(
+            compat::format("Pizza Chart Debug - {}", city->name()));
         result.add_message("");
 
         auto players = ctx.state.players();
@@ -158,9 +159,9 @@ Examples:
                         });
               for (const auto& [rid, total] : sorted) {
                 const auto* recipe = player->recipes().find(rid);
-                std::string name = recipe
-                                       ? std::string(recipe->display_name())
-                                       : compat::format("(recipe {})", rid.value);
+                std::string name =
+                    recipe ? std::string(recipe->display_name())
+                           : compat::format("(recipe {})", rid.value);
                 result.add_message(
                     compat::format("  Score {:>5}  {}", total, name));
               }
@@ -178,9 +179,9 @@ Examples:
               any = true;
               result.add_message(
                   compat::format("  Slot {:>2}: recipe_id={:>3}  prod={:>3}  "
-                              "max_prod={:>3}  chart_score={:>5}",
-                              i, slot.recipe_id, slot.production_counter,
-                              slot.max_production, slot.chart_score()));
+                                 "max_prod={:>3}  chart_score={:>5}",
+                                 i, slot.recipe_id, slot.production_counter,
+                                 slot.max_production, slot.chart_score()));
             }
             if (!any) {
               result.add_message("  (no active menu slots)");
