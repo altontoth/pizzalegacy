@@ -556,6 +556,72 @@ void GameState::on_restaurant_processed() {
   process_next_restaurant();
 }
 
+void GameState::deliver_depot_stock(core::PlayerId player_id) {
+  auto* city = active_city();
+  if (!city) {
+    return;
+  }
+
+  auto* player = players_[player_id.value].get();
+  if (!player) {
+    return;
+  }
+
+  std::vector<core::RestaurantId> city_rest_ids;
+  for (auto* r : restaurants_for(player_id)) {
+    if (r && r->property() && r->property()->city() == city) {
+      city_rest_ids.push_back(r->id());
+    }
+  }
+
+  if (city_rest_ids.empty()) {
+    return;
+  }
+
+  auto& depot = city->central_depot(player_id.value);
+  depot.sync_delivery_priorities(city_rest_ids);
+
+  for (auto rest_id : depot.delivery_priorities()) {
+    auto* rest = restaurant(rest_id);
+    if (!rest || !rest->wants_open() || rest->is_force_closed()) {
+      continue;
+    }
+
+    auto demand =
+        rest->calculate_daily_ingredient_demand_grams(player->recipes());
+
+    for (int i = 0; i < max_ingredient_count; ++i) {
+      int needed = demand[i] * 2;
+      if (needed <= 0) {
+        continue;
+      }
+
+      auto& depot_stock =
+          depot.get_stock(static_cast<core::food::IngredientType>(i));
+      if (depot_stock.quantity <= 0) {
+        continue;
+      }
+
+      // We just top up the stock until it's at 2x yesterday's demand
+      int current = rest->inventory()
+                        .get_stock(static_cast<core::food::IngredientType>(i))
+                        .quantity;
+      int shortfall = needed - current;
+      if (shortfall <= 0) {
+        continue;
+      }
+
+      int transfer = std::min(shortfall, depot_stock.quantity);
+      int quality = depot_stock.weighted_avg_quality;
+      Money cost = depot_stock.weighted_avg_cost;
+
+      depot_stock.consume(transfer);
+      rest->inventory().add_ingredient(
+          static_cast<core::food::IngredientType>(i), transfer, quality, cost);
+    }
+  }
+}
+
 void GameState::finish_end_of_turn() {
   auto& state = *end_of_turn_state_;
 
@@ -637,6 +703,8 @@ void GameState::finish_end_of_turn() {
 
   // Clear end-of-turn state before starting next player's day
   end_of_turn_state_.reset();
+
+  deliver_depot_stock(active_player_);
 
   // Restaurant open state is now derived from wants_open, forced closure,
   // and business hour. No manual open/close sync needed at turn boundaries.

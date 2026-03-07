@@ -230,6 +230,7 @@ private:
   void check_market_share_milestones(const City& city);
   void process_next_restaurant();
   void finish_end_of_turn();
+  void deliver_depot_stock(core::PlayerId player_id);
 
   // State for multi-step end-of-turn processing
   struct EndOfTurnState {
