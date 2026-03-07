@@ -305,7 +305,10 @@ add_executable(plegacy
 
 # Build as a proper macOS .app bundle when on Apple platforms
 if(APPLE)
-    set_target_properties(plegacy PROPERTIES MACOSX_BUNDLE TRUE)
+    set_target_properties(plegacy PROPERTIES
+        MACOSX_BUNDLE TRUE
+        OUTPUT_NAME "Pizza Legacy"
+    )
 endif()
 
 target_compile_definitions(plegacy PRIVATE $<$<CONFIG:Debug>:DEBUG>)
