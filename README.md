@@ -41,7 +41,8 @@ See [pizzalegacy.nl](https://pizzalegacy.nl) for a detailed status overview.
 
 - CMake 3.25+
 - [Ninja](https://ninja-build.org/) build system
-- A C++20 compiler with std::format support or otherwise fmt::format
+- A C++20 compiler: **GCC 13+**, **Clang 17+**, or **MSVC 2022+**.
+  GCC 12 works with the `libfmt-dev` library as a fallback for `std::format`. GCC 11 and below are not supported.
 - SDL2 (>= 2.0.16)
 - libpng (optional, for PNG screenshots)
 - [libADLMIDI](https://github.com/Wohlstand/libADLMIDI) for music support
