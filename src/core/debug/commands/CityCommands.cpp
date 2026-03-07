@@ -6,7 +6,6 @@
 
 #include "core/debug/commands/CityCommands.h"
 
-#include <format>
 #include <unordered_map>
 #include "core/character/AiMenuSlot.h"
 #include "core/character/Player.h"
@@ -15,6 +14,7 @@
 #include "core/restaurant/Restaurant.h"
 #include "core/state/GameState.h"
 #include "core/util/Constants.h"
+#include "engine/FormatCompat.h"
 
 using namespace debug::command;
 
@@ -45,7 +45,7 @@ Example:
         }
 
         CommandResult result = CommandResult::success();
-        result.add_message(std::format(
+        result.add_message(compat::format(
             "Pizza Charts - {} ({} entries):", city->name(), entries.size()));
         result.add_message(" #  Prev  Score  Pizza                Player");
         result.add_message(
@@ -55,8 +55,8 @@ Example:
           const auto& e = entries[i];
           std::string prev = e.previous_position == 0
                                  ? " -"
-                                 : std::format("{:>2}", e.previous_position);
-          result.add_message(std::format("{:>2}. {:>4}  {:>5}  {:<19}  {}",
+                                 : compat::format("{:>2}", e.previous_position);
+          result.add_message(compat::format("{:>2}. {:>4}  {:>5}  {:<19}  {}",
                                          i + 1, prev, e.score, e.pizza_name,
                                          e.player_name));
         }
@@ -107,7 +107,7 @@ Examples:
         }
 
         CommandResult result = CommandResult::success();
-        result.add_message(std::format("Pizza Chart Debug - {}", city->name()));
+        result.add_message(compat::format("Pizza Chart Debug - {}", city->name()));
         result.add_message("");
 
         auto players = ctx.state.players();
@@ -122,12 +122,12 @@ Examples:
           std::string type_str = player->is_human_controlled() ? "Human" : "AI";
           int rest_count =
               static_cast<int>(ctx.state.restaurants_for(player->id()).size());
-          result.add_message(std::format(
+          result.add_message(compat::format(
               "Player {} ({}) - {} [{}] - {} restaurant(s):",
               player->id().value, type_str, player->name(),
               player->is_human_controlled()
-                  ? std::format("{} recipes", player->recipe_count())
-                  : std::format("cooking={}", player->character().cooking()),
+                  ? compat::format("{} recipes", player->recipe_count())
+                  : compat::format("cooking={}", player->character().cooking()),
               rest_count));
 
           if (player->is_human_controlled()) {
@@ -160,9 +160,9 @@ Examples:
                 const auto* recipe = player->recipes().find(rid);
                 std::string name = recipe
                                        ? std::string(recipe->display_name())
-                                       : std::format("(recipe {})", rid.value);
+                                       : compat::format("(recipe {})", rid.value);
                 result.add_message(
-                    std::format("  Score {:>5}  {}", total, name));
+                    compat::format("  Score {:>5}  {}", total, name));
               }
             }
           }
@@ -177,7 +177,7 @@ Examples:
               }
               any = true;
               result.add_message(
-                  std::format("  Slot {:>2}: recipe_id={:>3}  prod={:>3}  "
+                  compat::format("  Slot {:>2}: recipe_id={:>3}  prod={:>3}  "
                               "max_prod={:>3}  chart_score={:>5}",
                               i, slot.recipe_id, slot.production_counter,
                               slot.max_production, slot.chart_score()));
@@ -215,7 +215,7 @@ Example:
                       int count = static_cast<int>(
                           city->pizza_charts().entries().size());
                       return CommandResult::success().add_message(
-                          std::format("Chart rebuilt: {} entries", count));
+                          compat::format("Chart rebuilt: {} entries", count));
                     },
                     .category = "city"};
 }

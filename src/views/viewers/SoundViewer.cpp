@@ -5,7 +5,6 @@
  */
 
 #include "views/viewers/SoundViewer.h"
-#include <format>
 #include <magic_enum/magic_enum.hpp>
 #include "engine/Logger.h"
 #include "engine/audio/AudioManager.h"

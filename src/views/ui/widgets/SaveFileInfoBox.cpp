@@ -7,13 +7,13 @@
 #include "views/ui/widgets/SaveFileInfoBox.h"
 
 #include <filesystem>
-#include <format>
 #include <fstream>
 #include <nlohmann/json.hpp>
 
 #include "core/save/SaveGameManager.h"
 #include "core/util/Constants.h"
 #include "engine/Logger.h"
+#include "engine/FormatCompat.h"
 #include "engine/geom/Spaces.h"
 #include "resources/FontManager.h"
 
@@ -98,18 +98,18 @@ void SaveFileInfoBox::draw(Surface& screen, ViewPoint p, bool is_selected) {
   }
 
   context_.font->render_line_onto(block,
-                                  std::format("File: {}", info_.filename),
+                                  compat::format("File: {}", info_.filename),
                                   text_pos, FontFace::SUPERSMA, TEXT_COLOR);
   text_pos.y += LINE_HEIGHT;
 
   context_.font->render_line_onto(block,
-                                  std::format("Saved: {}", info_.saved_at),
+                                  compat::format("Saved: {}", info_.saved_at),
                                   text_pos, FontFace::SUPERSMA, TEXT_COLOR);
   text_pos.y += LINE_HEIGHT;
 
   if (!info_.game_date.empty()) {
     context_.font->render_line_onto(
-        block, std::format("Game date: {}", info_.game_date), text_pos,
+        block, compat::format("Game date: {}", info_.game_date), text_pos,
         FontFace::SUPERSMA, TEXT_COLOR);
     text_pos.y += LINE_HEIGHT;
   }
@@ -123,9 +123,9 @@ void SaveFileInfoBox::draw(Surface& screen, ViewPoint p, bool is_selected) {
   for (int row = 0; row < ROWS; ++row) {
     int left = row;
     int right = row + ROWS;
-    auto left_text = std::format("{}: {}", left + 1, info_.player_names[left]);
+    auto left_text = compat::format("{}: {}", left + 1, info_.player_names[left]);
     auto right_text =
-        std::format("{}: {}", right + 1, info_.player_names[right]);
+        compat::format("{}: {}", right + 1, info_.player_names[right]);
     context_.font->render_line_onto(block, left_text, text_pos,
                                     FontFace::SUPERSMA, TEXT_COLOR);
     context_.font->render_line_onto(block, right_text,
@@ -149,7 +149,7 @@ void SaveFileInfoBox::draw(Surface& screen, ViewPoint p, bool is_selected) {
             : "?";
 
     context_.font->render_line_onto(
-        block, std::format("Active: {} ({})", player_name, city_name), text_pos,
+        block, compat::format("Active: {} ({})", player_name, city_name), text_pos,
         FontFace::SUPERSMA, TEXT_COLOR);
   }
 

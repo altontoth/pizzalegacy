@@ -8,7 +8,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <format>
 
 #include "core/Demographics.h"
 #include "core/city/District.h"
@@ -1829,7 +1828,7 @@ void RestaurantView::handle_sell_furniture() {
   // Check if confirmation is required
   if (!state_.options().life_improvements) {
     auto msg =
-        std::format("Do you want to sell this|item for {:w}?", sell_price);
+        compat::format("Do you want to sell this|item for {:w}?", sell_price);
     context_.popup->origin(ViewPoint{52, 80});
     context_.popup->create<ConfirmPopup>(msg, [do_sell](bool confirmed) {
       if (confirmed) {

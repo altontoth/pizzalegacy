@@ -7,9 +7,7 @@
 #include "views/screens/Newspaper.h"
 
 #include <cassert>
-#include <format>
 #include "core/city/City.h"
-#include "core/food/Ingredient.h"
 #include "core/newspaper/ArticleDatabase.h"
 #include "core/newspaper/NewspaperState.h"
 #include "core/state/GameState.h"
@@ -19,7 +17,6 @@
 #include "gfx/Draw.h"
 #include "resources/FontManager.h"
 #include "resources/FontTypes.h"
-#include "views/base/ViewDefs.h"
 
 Newspaper::Newspaper(GameContext& context, GameState& state)
     : MainPanelView(context, state) {

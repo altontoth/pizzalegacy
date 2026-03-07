@@ -7,7 +7,6 @@
 #include "views/ui/popups/GuestTalkPopup.h"
 
 #include <algorithm>
-#include <format>
 
 #include "core/Demographics.h"
 #include "core/restaurant/Restaurant.h"

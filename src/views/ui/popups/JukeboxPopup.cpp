@@ -7,7 +7,6 @@
 #include "views/ui/popups/JukeboxPopup.h"
 
 #include <array>
-#include <format>
 
 #include "core/restaurant/Restaurant.h"
 #include "engine/audio/AudioManager.h"

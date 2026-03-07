@@ -7,7 +7,6 @@
 #include "views/ui/popups/TvPopup.h"
 
 #include <array>
-#include <format>
 
 #include "core/restaurant/Restaurant.h"
 #include "engine/geom/Spaces.h"
