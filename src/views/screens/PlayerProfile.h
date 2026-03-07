@@ -10,6 +10,8 @@
 #include "views/base/MainPanelView.h"
 #include "views/ui/SlideAnimator.h"
 
+class Player;
+
 constexpr int space_on_top = 2;
 constexpr int slider_height = 352;
 constexpr int slider_width = 384;

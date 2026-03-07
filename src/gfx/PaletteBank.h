@@ -8,9 +8,9 @@
 
 // PaletteBank - loads and caches the 71 VGA palettes (palette.e) lazily.
 
-#include "core/util/ConfigManager.h"
 #include "engine/Fatal.h"
 #include "gfx/Color.h"
+#include "gfx/PaletteHandle.h"
 #include "resources/util/FileUtils.h"
 #include "resources/util/Platform.h"
 
@@ -19,6 +19,8 @@
 #include <cstdint>
 #include <fstream>
 #include <vector>
+
+class ConfigManager;
 
 namespace gfx {
 
@@ -37,10 +39,6 @@ constexpr int AMIGA_BYTES_PER_COLOR = 2;
 constexpr int PALETTE_COUNT = 71;
 constexpr int COLORS_PER_PALETTE = 256;
 constexpr int BYTES_PER_COLOR = 3;
-
-struct PaletteHandle {
-  uint8_t id{0};
-}; // 0-70 inclusive
 
 // PaletteOverride - Describes a palette modification relative to a base
 // palette. We specify a list of destination indices to overwrite in the base

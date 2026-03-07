@@ -7,6 +7,7 @@
 #pragma once
 
 #include "core/common/Ids.h"
+#include "core/restaurant/Restaurant.h"
 #include "views/base/MainPanelView.h"
 
 class Restaurant;

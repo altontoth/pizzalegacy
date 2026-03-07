@@ -12,7 +12,6 @@
 #include <variant>
 #include <vector>
 #include "core/GameTypes.h"
-#include "core/city/CityTypes.h"
 #include "core/common/Ids.h"
 #include "core/events/LeventId.h"
 #include "core/food/BakeSession.h"

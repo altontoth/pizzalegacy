@@ -8,7 +8,7 @@
 
 #include <map>
 #include <string>
-#include "core/state/GameState.h"
+#include "core/state/GameOptions.h"
 
 class ConfigManager {
 public:

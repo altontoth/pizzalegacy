@@ -6,6 +6,7 @@
 
 #include "views/screens/PlayerTurnCard.h"
 
+#include "core/state/GameState.h"
 #include "gfx/Blit.h"
 #include "resources/FontManager.h"
 #include "resources/FontTypes.h"

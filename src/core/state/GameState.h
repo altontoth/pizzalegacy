@@ -14,13 +14,13 @@
 #include "core/newspaper/ArticleDatabase.h"
 #include "core/restaurant/FurnitureBatch.h"
 #include "core/restaurant/Restaurant.h"
+#include "core/state/GameOptions.h"
 #include "core/state/UIStateStack.h"
 #include "core/status/StatusHub.h"
 #include "core/time/GameTime.h"
 #include "core/util/Constants.h"
 #include "engine/DisplayConstants.h"
 #include "engine/geom/Spaces.h"
-#include "resources/util/Platform.h"
 #include "views/screens/city_view/CityViewMapState.h"
 
 #include <array>
@@ -32,20 +32,6 @@ class Player;
 class Property;
 class GameContext;
 class StatusDisplay;
-
-struct GameOptions {
-  bool map_fx = true;
-  bool restaurant_fx = true;
-  bool music = true;
-  bool automatic_report = true;
-  // Use 640x480 (4:3) CRT aspect ratio instead of 640x400
-  bool crt_aspect_ratio = false;
-  bool fix_legacy_bugs = true;
-  bool life_improvements = true;
-  // Asset format (DOS or Amiga)
-  platform::AssetFormat asset_format = platform::AssetFormat::DOS;
-  ScreenResolution resolution = ScreenResolution::Res_640x400;
-};
 
 constexpr int default_fade_length = 15;
 

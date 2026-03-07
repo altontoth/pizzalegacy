@@ -8,6 +8,8 @@
 
 #include <string>
 #include <vector>
+#include "core/Demographics.h"
+#include "core/finance/Money.h"
 
 #include "views/ui/popups/BasePopup.h"
 #include "views/ui/popups/PopupButton.h"

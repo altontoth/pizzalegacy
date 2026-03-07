@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include "core/state/UIState.h"
 #include "views/base/MainPanelView.h"
 
 class PlayerTurnCard : public MainPanelView {

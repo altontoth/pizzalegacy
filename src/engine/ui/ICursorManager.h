@@ -7,7 +7,7 @@
 #pragma once
 
 #include <memory>
-#include "gfx/PaletteBank.h"
+#include "gfx/PaletteHandle.h"
 #include "resources/VgaManager.h"
 
 namespace gfx {

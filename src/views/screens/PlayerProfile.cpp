@@ -8,6 +8,7 @@
 #include "core/GameTypes.h"
 #include "core/character/Awards.h"
 #include "core/character/Character.h"
+#include "core/character/Player.h"
 #include "core/state/GameState.h"
 #include "core/status/StatusHub.h"
 #include "core/util/Constants.h"

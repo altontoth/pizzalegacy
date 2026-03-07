@@ -14,6 +14,7 @@
 #include "gfx/Draw.h"
 #include "gfx/Surface.h"
 #include "resources/FontManager.h"
+#include "views/base/ViewDefs.h"
 #include "views/ui/widgets/PositionMarkerMenuItem.h"
 
 using namespace views::base;

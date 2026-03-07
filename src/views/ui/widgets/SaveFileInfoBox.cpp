@@ -12,8 +12,8 @@
 
 #include "core/save/SaveGameManager.h"
 #include "core/util/Constants.h"
-#include "engine/Logger.h"
 #include "engine/FormatCompat.h"
+#include "engine/Logger.h"
 #include "engine/geom/Spaces.h"
 #include "resources/FontManager.h"
 
@@ -123,7 +123,8 @@ void SaveFileInfoBox::draw(Surface& screen, ViewPoint p, bool is_selected) {
   for (int row = 0; row < ROWS; ++row) {
     int left = row;
     int right = row + ROWS;
-    auto left_text = compat::format("{}: {}", left + 1, info_.player_names[left]);
+    auto left_text =
+        compat::format("{}: {}", left + 1, info_.player_names[left]);
     auto right_text =
         compat::format("{}: {}", right + 1, info_.player_names[right]);
     context_.font->render_line_onto(block, left_text, text_pos,
@@ -149,8 +150,8 @@ void SaveFileInfoBox::draw(Surface& screen, ViewPoint p, bool is_selected) {
             : "?";
 
     context_.font->render_line_onto(
-        block, compat::format("Active: {} ({})", player_name, city_name), text_pos,
-        FontFace::SUPERSMA, TEXT_COLOR);
+        block, compat::format("Active: {} ({})", player_name, city_name),
+        text_pos, FontFace::SUPERSMA, TEXT_COLOR);
   }
 
   screen.blit_raw(block, p);

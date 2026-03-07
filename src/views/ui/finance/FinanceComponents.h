@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "core/finance/Money.h"
+#include "core/time/GameDate.h"
 #include "gfx/Surface.h"
 #include "resources/Blitmap.h"
 #include "resources/Bob.h"

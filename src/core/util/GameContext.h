@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include "core/util/ConfigManager.h"
 #include "engine/GameClock.h"
 #include "engine/ui/ICursorManager.h"
 #include "resources/BobManager.h"
@@ -15,7 +16,6 @@ class BlitmapManager;
 class PopupManager;
 class CursorupManager;
 class FontManager;
-class ConfigManager;
 namespace views::ui {
 class InteractionManager;
 }

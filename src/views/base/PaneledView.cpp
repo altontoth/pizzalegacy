@@ -9,6 +9,7 @@
 #include <cassert>
 #include <memory>
 
+#include "core/state/GameState.h"
 #include "core/util/LegacyConstants.h"
 #include "engine/DisplayConstants.h"
 #include "engine/geom/Spaces.h"

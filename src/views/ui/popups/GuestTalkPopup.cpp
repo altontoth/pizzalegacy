@@ -10,6 +10,7 @@
 
 #include "core/Demographics.h"
 #include "core/restaurant/Restaurant.h"
+#include "engine/Random.h"
 #include "engine/geom/Spaces.h"
 #include "gfx/Draw.h"
 #include "resources/FontTypes.h"

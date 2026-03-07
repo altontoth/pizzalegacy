@@ -8,7 +8,9 @@
 
 #include <memory>
 #include <string>
+#include "core/GameTypes.h"
 #include "core/character/Actor.h"
+#include "core/state/UIState.h"
 #include "views/base/MainPanelView.h"
 #include "views/helpers/TypewriterTextRenderer.h"
 
