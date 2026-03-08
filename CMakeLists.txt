@@ -48,7 +48,6 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         -Wno-missing-designated-field-initializers
         $<$<CONFIG:Debug>:-g>
         $<$<CONFIG:Debug>:-O0>
-        $<$<CONFIG:Debug>:-fstack-protector>
         $<$<CONFIG:Debug>:-fsanitize=address,undefined>
     )
     add_link_options(
@@ -66,7 +65,6 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         #-Wimplicit-fallthrough
         $<$<CONFIG:Debug>:-g1>
         $<$<CONFIG:Debug>:-O0>
-        $<$<CONFIG:Debug>:-fstack-protector>
     )
 elseif(MSVC)
     add_compile_options(
