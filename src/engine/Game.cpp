@@ -50,6 +50,7 @@
 #include "views/screens/AnimatedStats.h"
 #include "views/screens/EuroMap.h"
 #include "views/screens/FullscreenStatus.h"
+#include "views/screens/GameOver.h"
 #include "views/screens/GlobalStats.h"
 #include "views/screens/Intro.h"
 #include "views/screens/MarketResearch.h"
@@ -827,6 +828,10 @@ Renderable* Game::change_state(GameState& gs, LoopState& /*loop*/) {
           },
           [&](const ActorTerminalState& at) {
             current_view_ = ActorViewFactory::create(context, gs, at);
+          },
+
+          [&](const GameOverState& gos) {
+            current_view_ = std::make_unique<GameOver>(context, gs, gos);
           },
           [&](const ViewerState& v) {
             cursor_manager_->base_cursor_mode(CursorMode::MENU);

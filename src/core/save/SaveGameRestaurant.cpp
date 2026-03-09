@@ -248,6 +248,7 @@ json restaurant_to_json(const Restaurant& restaurant) {
   j["id"] = restaurant.id().value;
   j["name"] = restaurant.name();
   j["wants_open"] = restaurant.wants_open();
+  j["ever_opened"] = restaurant.ever_opened();
   j["forced_days_remaining"] = restaurant.forced_days_remaining();
   j["kitchen_size"] = {{"w", restaurant.kitchen_size().w},
                        {"h", restaurant.kitchen_size().h}};
@@ -378,6 +379,11 @@ std::unique_ptr<Restaurant> json_to_restaurant(const json& j,
     if (status == 3) {
       restaurant->force_close(j.value("forced_days_closed", 1));
     }
+  }
+  // ever_opened: prefer saved value; fall back to inferring from wants_open
+  // (handles saves made before this field existed)
+  if (j.value("ever_opened", false)) {
+    restaurant->set_ever_opened();
   }
 
   // Restore menu

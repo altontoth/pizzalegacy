@@ -21,14 +21,14 @@ FullscreenStatus::FullscreenStatus(GameContext& context, GameState& state,
       background_([&]() -> const Surface& {
         const auto& msg_data = state_.message_manager().get_data(msg_id);
 
-        assert(msg_data.background_index != 0);
+        assert(msg_data.background != core::events::ZwBackground::NONE);
 
-        std::string bg_path =
-            compat::format("gfx/zw{}.vga", msg_data.background_index);
+        std::string bg_path = compat::format(
+            "gfx/zw{}.vga", static_cast<int>(msg_data.background));
         return context_.vga->get(bg_path);
       }()) {
 
-  text_ = state_.message_manager().get_message_text(msg_id);
+  text_ = state_.message_manager().get_levent_text(msg_id);
 
   // Set up typewriter renderer with wrap width
   // Position is {50, 50}, so available width is SCREEN_WIDTH - 2*50 = 540
@@ -87,20 +87,4 @@ bool FullscreenStatus::on_action(const input::ActionEvent& ev) {
   return false;
 }
 
-void FullscreenStatus::dismiss() {
-  // Award score points and mark message as shown
-  if (message_id_.has_value()) {
-    auto* player = state_.active_player();
-    if (player) {
-      const auto& msg_data = state_.message_manager().get_data(*message_id_);
-
-      if (msg_data.score_points > 0) {
-        player->add_score(msg_data.score_points);
-      }
-
-      state_.message_manager().mark_as_shown(*message_id_, player->id());
-    }
-  }
-
-  state_.ui().pop();
-}
+void FullscreenStatus::dismiss() { state_.ui().pop(); }

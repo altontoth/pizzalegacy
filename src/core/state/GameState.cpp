@@ -366,14 +366,25 @@ void GameState::advance_game_time() {
     });
   }
 
-  // Check for pending fullscreen messages after time advances
+  process_pending_messages();
+}
+
+void GameState::process_pending_messages() {
   auto* player = active_player();
-  if (player && player->is_human_controlled()) {
-    auto pending = message_manager_.get_pending_for_player(player->id());
-    for (auto msg_id : pending) {
-      ui_.push<FullscreenStatusState>(msg_id);
-      message_manager_.mark_as_shown(msg_id, player->id());
+  if (!player || !player->is_human_controlled()) {
+    return;
+  }
+
+  auto pending = message_manager_.get_pending_for_player(player->id());
+  for (auto msg_id : pending) {
+    const auto& data = message_manager_.get_data(msg_id);
+    if (data.score > 0) {
+      player->add_score(data.score);
     }
+    if (data.background != core::events::ZwBackground::NONE) {
+      ui_.push<FullscreenStatusState>(msg_id);
+    }
+    message_manager_.mark_as_shown(msg_id, player->id());
   }
 }
 
@@ -805,6 +816,62 @@ void GameState::check_market_share_milestones(const City& city) {
           LeventId::Achieved10PctMarketShareInCity, pid, time_.current_date());
     }
   }
+}
+
+void GameState::check_restaurant_milestones(const Player& player) {
+  using core::events::LeventId;
+  auto pid = player.id();
+  auto date = time_.current_date();
+
+  auto player_restaurants = restaurants_for(pid);
+  int count = 0;
+  std::array<bool, NUMBER_OF_CITIES> cities_present = {};
+
+  for (const auto* rest : player_restaurants) {
+    if (!rest->ever_opened()) {
+      continue;
+    }
+    count++;
+    if (rest->property() && rest->property()->city()) {
+      int city_val = rest->property()->city()->id().value;
+      if (city_val >= 0 && city_val < NUMBER_OF_CITIES) {
+        cities_present[city_val] = true;
+      }
+    }
+  }
+
+  if (count == 1) {
+    message_manager_.schedule_message(LeventId::OpenedFirstRestaurant, pid,
+                                      date);
+  }
+  else if (count == 2) {
+    message_manager_.schedule_message(LeventId::OpensSecondRestaurant, pid,
+                                      date);
+  }
+  else if (count == 5) {
+    message_manager_.schedule_message(LeventId::HasFiveRestaurants, pid, date);
+  }
+  int distinct_cities = static_cast<int>(
+      std::count(cities_present.begin(), cities_present.end(), true));
+
+  if (distinct_cities >= 2) {
+    message_manager_.schedule_message(LeventId::FirstRestaurantInOtherCity, pid,
+                                      date);
+  }
+  if (distinct_cities >= NUMBER_OF_CITIES) {
+    message_manager_.schedule_message(LeventId::OutletsInEveryWesternCity, pid,
+                                      date);
+  }
+
+  process_pending_messages();
+}
+
+void GameState::on_city_entered(core::CityId city_id, const Player& player) {
+  using core::events::LeventId;
+  auto arrival = static_cast<LeventId>(
+      static_cast<int>(LeventId::ArrivalInParis) + city_id.value);
+  message_manager_.schedule_message(arrival, player.id(), time_.current_date());
+  process_pending_messages();
 }
 
 void GameState::active_player(core::PlayerId player_id) {

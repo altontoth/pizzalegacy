@@ -142,13 +142,62 @@ RestaurantView::RestaurantView(GameContext& context, GameState& state,
       context_.audio->play_music(static_cast<audio::MusicId>(music - 1));
     }
   }
+
+  update_restaurant_noise();
 }
 
 RestaurantView::~RestaurantView() {
   state_.prevent_end_of_day(true);
   if (context_.audio) {
     context_.audio->stop_music();
+    if (current_restaurant_noise_) {
+      context_.audio->stop_sound(*current_restaurant_noise_);
+    }
   }
+}
+
+void RestaurantView::update_restaurant_noise() {
+  if (!context_.audio) {
+    return;
+  }
+
+  // Stop any currently playing restaurant noise
+  if (current_restaurant_noise_) {
+    context_.audio->stop_sound(*current_restaurant_noise_);
+    current_restaurant_noise_.reset();
+  }
+
+  // No noise when closed, in kitchen view, or when jukebox is playing
+  if (kitchen_view_ || !restaurant_->is_open(state_.time().time_of_day()) ||
+      restaurant_->jukebox_music() > 0) {
+    return;
+  }
+
+  const auto [guests, seats] = restaurant_->guest_occupancy();
+  if (guests <= 0 || seats <= 0) {
+    return;
+  }
+
+  const float occupancy =
+      static_cast<float>(guests) / static_cast<float>(seats);
+
+  audio::SoundId noise;
+  if (occupancy > 0.81f) {
+    noise = audio::SoundId::RESTAURANT_NOISE_3;
+  }
+  else if (occupancy > 0.51f) {
+    noise = audio::SoundId::RESTAURANT_NOISE_2;
+  }
+  else if (occupancy > 0.21f) {
+    noise = audio::SoundId::RESTAURANT_NOISE_1;
+  }
+  else {
+    // No sound if not enough people
+    return;
+  }
+
+  current_restaurant_noise_ = noise;
+  context_.audio->play_sound(noise, true);
 }
 
 bool RestaurantView::on_action(const input::ActionEvent& ev) {
@@ -245,6 +294,7 @@ void RestaurantView::set_up_buttons() {
                 if (close) {
                   restaurant_->wants_open(false);
                   restaurant_->add_reputation_damage(-16, 16);
+                  update_restaurant_noise();
                 }
                 mark_dirty();
               });
@@ -295,12 +345,11 @@ void RestaurantView::set_up_buttons() {
                 Logger::debug("Opening restaurant: {}", open ? "Yes" : "No");
                 if (open) {
                   restaurant_->wants_open(true);
+                  update_restaurant_noise();
+                  if (auto* player = state_.active_player()) {
+                    state_.check_restaurant_milestones(*player);
+                  }
                 }
-
-                state_.message_manager().schedule_message(
-                    core::events::LeventId::OpenedFirstRestaurant,
-                    *restaurant_->property()->owner_or_tenant(),
-                    state_.time().current_date());
 
                 mark_dirty();
               });
@@ -933,33 +982,10 @@ std::span<const GuestRenderItem> RestaurantView::visible_guests() const {
     return guests_cache_;
   }
 
-  constexpr int DEMO_COUNT = static_cast<int>(ConsumerType::Count);
-
-  const auto& economy = restaurant_->economy();
-  const auto& customer_counts = economy.customer_counts();
-
-  int total_daily = 0;
-  for (auto ct : ALL_CONSUMER_TYPES) {
-    total_daily += customer_counts[ct];
+  const auto [guests_to_show, seat_count] = restaurant_->guest_occupancy();
+  if (guests_to_show <= 0) {
+    return guests_cache_;
   }
-
-  std::array<float, DEMO_COUNT> demo_fractions{};
-
-  if (total_daily > 0) {
-    // Primary path: customer_counts is populated
-    for (int i = 0; i < DEMO_COUNT; ++i) {
-      demo_fractions[i] =
-          static_cast<float>(customer_counts[static_cast<ConsumerType>(i)]) /
-          total_daily;
-    }
-  }
-
-  // occupancy using avg_seating_time
-  const auto service_data = restaurant_->calculate_service_time_data();
-  const float avg_seating_time = std::max(service_data.avg_seating_time, 1.0f);
-
-  const float current_demand =
-      static_cast<float>(total_daily) * avg_seating_time / 720.0f;
 
   // Build shuffled chair list once per open period
   if (shuffled_chairs_.empty()) {
@@ -979,12 +1005,22 @@ std::span<const GuestRenderItem> RestaurantView::visible_guests() const {
     return guests_cache_;
   }
 
-  const int seat_count = static_cast<int>(shuffled_chairs_.size());
-  const int guests_to_show =
-      std::min(static_cast<int>(current_demand + 0.5f), seat_count);
+  // Compute demographic fractions for guest appearance distribution
+  constexpr int DEMO_COUNT = static_cast<int>(ConsumerType::Count);
+  const auto& customer_counts = restaurant_->economy().customer_counts();
 
-  if (guests_to_show <= 0) {
-    return guests_cache_;
+  int total_daily = 0;
+  for (auto ct : ALL_CONSUMER_TYPES) {
+    total_daily += customer_counts[ct];
+  }
+
+  std::array<float, DEMO_COUNT> demo_fractions{};
+  if (total_daily > 0) {
+    for (int i = 0; i < DEMO_COUNT; ++i) {
+      demo_fractions[i] =
+          static_cast<float>(customer_counts[static_cast<ConsumerType>(i)]) /
+          total_daily;
+    }
   }
 
   // Distribute guests across demographics (largest-remainder)

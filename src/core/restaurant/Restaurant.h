@@ -170,6 +170,8 @@ public:
   // Player intent
   bool wants_open() const { return wants_open_; }
   void wants_open(bool wants);
+  bool ever_opened() const { return ever_opened_; }
+  void set_ever_opened() { ever_opened_ = true; } // for save/load
 
   // Forced closure (staff screw-ups, mayor)
   void force_close(int days);
@@ -296,6 +298,13 @@ public:
   // (seat_count * 720) / avg_seating_time
   int calculate_seating_capacity(const ServiceTimeData* service_data) const;
 
+  struct Occupancy {
+    int guests;
+    int seats;
+  };
+  // How many guests are concurrently seated vs total linked seats
+  Occupancy guest_occupancy() const;
+
   ProductionScreenData get_production_screen_data() const;
 
   // All timing metrics used by staff screen and seating capacity calc
@@ -375,6 +384,7 @@ private:
       const core::food::Pizza& pizza) const;
   Property* property_{nullptr};
   bool wants_open_{false};
+  bool ever_opened_{false};
   Size kitchen_size_;
   core::RestaurantId restaurant_id_{0};
   std::string name_;

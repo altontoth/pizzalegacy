@@ -59,7 +59,12 @@ bool Restaurant::is_within_business_hours(
   return now >= opening_time_ && now < closing_time_;
 }
 
-void Restaurant::wants_open(bool wants) { wants_open_ = wants; }
+void Restaurant::wants_open(bool wants) {
+  wants_open_ = wants;
+  if (wants) {
+    ever_opened_ = true;
+  }
+}
 
 void Restaurant::force_close(int days) { forced_days_remaining_ = days; }
 
@@ -351,6 +356,35 @@ int Restaurant::calculate_seating_capacity(
                      : 0;
 
   return capacity;
+}
+
+Restaurant::Occupancy Restaurant::guest_occupancy() const {
+  int seat_count = 0;
+  if (layout_) {
+    for (const auto& pf : layout_->placed_furniture()) {
+      if (pf && pf->furniture()->category() == FurnitureCategory::CHAIR &&
+          pf->linked_furniture_id().has_value()) {
+        ++seat_count;
+      }
+    }
+  }
+  if (seat_count == 0) {
+    return {0, 0};
+  }
+
+  int total_daily = 0;
+  for (auto ct : ALL_CONSUMER_TYPES) {
+    total_daily += economy_.customer_counts()[ct];
+  }
+
+  const auto service_data = calculate_service_time_data();
+  const float avg_seating_time = std::max(service_data.avg_seating_time, 1.0f);
+  const float current_demand =
+      static_cast<float>(total_daily) * avg_seating_time / 720.0f;
+
+  const int guests =
+      std::min(static_cast<int>(current_demand + 0.5f), seat_count);
+  return {guests, seat_count};
 }
 
 ProductionScreenData Restaurant::get_production_screen_data() const {

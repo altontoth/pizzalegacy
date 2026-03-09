@@ -12,6 +12,7 @@
 #include "core/restaurant/FurnitureBatch.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/state/UIState.h"
+#include "engine/audio/AudioManager.h"
 #include "engine/geom/Camera.h"
 #include "engine/geom/Spaces.h"
 #include "views/base/BobRenderer.h"
@@ -134,6 +135,7 @@ private:
 
   void zoom_out_of_restaurant_view();
   void update_status_display(const PlacedFurniture* pf);
+  void update_restaurant_noise();
 
   const Surface& k0_;
   bool kitchen_view_ = 0;
@@ -192,6 +194,7 @@ private:
   core::FurnitureId next_furniture_id_{0};
   std::optional<SupplierType>
       return_to_supplier_type_; // Where to navigate after placement complete
+  std::optional<audio::SoundId> current_restaurant_noise_;
   StatusController status_controller_;
   input::ListenerToken listener_;
   std::optional<core::item::Item> hovered_sabotage_item_;

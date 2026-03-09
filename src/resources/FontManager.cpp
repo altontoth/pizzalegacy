@@ -49,6 +49,13 @@ RenderedTextMetrics FontManager::render_text_onto(
   return get(face).render_text_onto(surface, text, p, style, flow);
 }
 
+RenderedTextMetrics FontManager::render_into_rect(Surface& surface,
+                                                  std::string_view text,
+                                                  ViewRect rect, FontFace face,
+                                                  const TextStyle& style) {
+  return get(face).render_into_rect(surface, text, rect, style);
+}
+
 RenderedTextMetrics FontManager::size_text(std::string_view text, FontFace face,
                                            const TextStyle& style) {
   return get(face).size_text(text, style);

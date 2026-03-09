@@ -66,6 +66,10 @@ CityView::CityView(GameContext& context, GameState& state, core::CityId id)
   city_ = state_.active_city();
   state_.prevent_end_of_day(false);
 
+  if (auto* player = state_.active_player()) {
+    state_.on_city_entered(id, *player);
+  }
+
   for (int i = 0; i < city_->data_length(); ++i) {
     highlighted_cells_.push_back(HighlightType::NONE);
   }

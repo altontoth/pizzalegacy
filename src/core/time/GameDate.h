@@ -50,6 +50,12 @@ public:
     return compat::format("{}-{}-{}", d, short_month_names[m - 1], y);
   }
 
+  // Compact CV format: "d-m-yy" (e.g. "1-3-95")
+  std::string cv_date_string() const {
+    return compat::format("{}-{}-{:02}", unsigned(ymd_.day()),
+                          unsigned(ymd_.month()), year_short());
+  }
+
   int days_since(const GameDate& other) const {
     return (std::chrono::sys_days{ymd_} - std::chrono::sys_days{other.ymd_})
         .count();

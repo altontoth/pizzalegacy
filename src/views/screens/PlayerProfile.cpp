@@ -70,10 +70,10 @@ void PlayerProfile::set_up_buttons() {
                            ButtonPosition::TopCenter, "Company",
                            [this] { change_mode(PlayerProfileMode::Company); });
 
-  input_panel_->add_button(Icon::WRITTEN_REPORT, ButtonType::Square,
-                           ButtonPosition::TopRight, "Disk options", [this] {
-                             change_mode(PlayerProfileMode::CurriculumVitae);
-                           });
+  input_panel_->add_button(
+      Icon::WRITTEN_REPORT, ButtonType::Square, ButtonPosition::TopRight,
+      "Curriculum Vitae",
+      [this] { change_mode(PlayerProfileMode::CurriculumVitae); });
 
   input_panel_->add_button(
       Icon::FANCY_R, ButtonType::Square, ButtonPosition::MiddleLeft, "Position",
@@ -385,10 +385,16 @@ bool PlayerProfile::switch_to_player(core::PlayerId new_id) {
 void PlayerProfile::handle_arrow(PageAction action) {
   // CV mode: page through CV pages
   if (mode_ == PlayerProfileMode::CurriculumVitae) {
+    const auto* player = state_.player(id_);
+    auto entries = state_.message_manager().get_cv_entries_for(player->id());
+    constexpr int events_per_page = 12;
+    int total_pages =
+        std::max(1, (static_cast<int>(entries.size()) + events_per_page - 1) /
+                        events_per_page);
+
     if (action == PageAction::Next) {
-      if (cv_page_ < max_cv_pages - 1) {
+      if (cv_page_ < total_pages - 1) {
         cv_page_++;
-        const auto* player = state_.player(id_);
         fg_page_ = create_curriculum_vitae(player, cv_page_);
         mark_dirty();
       }
@@ -396,7 +402,6 @@ void PlayerProfile::handle_arrow(PageAction action) {
     else {
       if (cv_page_ > 0) {
         cv_page_--;
-        const auto* player = state_.player(id_);
         fg_page_ = create_curriculum_vitae(player, cv_page_);
         mark_dirty();
       }
@@ -551,36 +556,41 @@ Surface PlayerProfile::create_curriculum_vitae(const Player* player, int page) {
   constexpr int text_color = 240;
   auto* font = context_.font;
 
-  // Title
   font->render_text_onto(cv, "Curriculum Vitae", {192, 24}, FontFace::PIZ_NUMB,
                          text_color, AlignX::CenterPoint);
 
-  // Character name below title
   const auto& character = player->character();
   std::string name =
       compat::format("{} {}", character.first_name(), character.last_name());
   font->render_text_onto(cv, name, {192, 48}, FontFace::PIZ_NUMB, text_color,
                          AlignX::CenterPoint);
 
-  // Stubbed event list, one sample event on page 0
   constexpr int events_per_page = 12;
-  int y = 84;
-  constexpr int row_height = 18;
+  constexpr int date_x = 46;
+  constexpr int text_x = 160;
+  int y = 80;
+  constexpr int row_height = 20;
 
-  if (page == 0) {
-    // Just a single stub event for now
-    font->render_line_onto(cv, "1-Mar-1995", {60, y}, FontFace::PIZ_NUMB,
-                           text_color);
-    font->render_line_onto(cv, "Started career", {200, y}, FontFace::PIZ_NUMB,
-                           text_color);
+  auto entries = state_.message_manager().get_cv_entries_for(player->id());
+  int start = page * events_per_page;
+  int end = std::min(start + events_per_page, static_cast<int>(entries.size()));
+
+  for (int i = start; i < end; ++i) {
+    const auto& entry = entries[i];
+    font->render_line_onto(cv, entry.date.cv_date_string(), {date_x, y},
+                           FontFace::PIZ_NUMB, text_color);
+    font->render_line_onto(
+        cv, state_.message_manager().get_cv_text(entry.message_id), {text_x, y},
+        FontFace::PIZ_NUMB, text_color);
     y += row_height;
   }
-  // Other pages are empty; the original lets you page through
-  // regardless, so we just show blank pages.
 
-  // Page indicator at the bottom
-  font->render_line_onto(cv, compat::format("Page {}", page + 1), {192, 330},
-                         FontFace::PIZ_NUMB, text_color, AlignX::CenterPoint);
+  int total_pages = static_cast<int>((entries.size() + events_per_page - 1) /
+                                     events_per_page);
+  total_pages = std::max(total_pages, 1);
+  font->render_line_onto(
+      cv, compat::format("Page {} of {}", page + 1, total_pages), {192, 330},
+      FontFace::PIZ_NUMB, text_color, AlignX::CenterPoint);
 
   return cv;
 }

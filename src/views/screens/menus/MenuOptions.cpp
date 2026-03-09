@@ -62,8 +62,8 @@ MenuOptions::MenuOptions(GameContext& context, GameState& state)
       },
       face));
   add_menu_item(std::make_unique<ToggleMenuItem>(
-      context, "Fix various bugs from original",
-      state.options().fix_legacy_bugs, [&state, this] {
+      context, "Fix original bugs", state.options().fix_legacy_bugs,
+      [&state, this] {
         state.options().fix_legacy_bugs = !state.options().fix_legacy_bugs;
         mark_dirty();
       }));

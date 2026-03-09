@@ -110,7 +110,8 @@ RenderedTextMetrics Font::render_text_onto(Surface& surface,
 
     // Calculate total height
     if (!flow_lines.empty()) {
-      total_height = flow_lines.back().baseline_y - pos.y + line_spacing();
+      total_height = flow_lines.back().baseline_y - pos.y + line_spacing() +
+                     style.line_height;
     }
 
     if (style.shadow && style.shadow->offset.dy > 0) {
@@ -140,39 +141,7 @@ RenderedTextMetrics Font::render_text_onto(Surface& surface,
   if (style.shadow && style.shadow->offset.dx > 0) {
     available_width -= style.shadow->offset.dx;
   }
-  auto lines = split_and_wrap_text(text, available_width, style);
-
-  int total_height = 0;
-  int max_width = 0;
-  int current_y = pos.y;
-  int initial_x = -1;
-
-  // Render line by line
-  for (const auto& line : lines) {
-
-    auto line_metrics =
-        render_line_onto(surface, line, ViewPoint{pos.x, current_y}, style);
-
-    int vertical_line_spacing = line_spacing();
-
-    current_y += vertical_line_spacing;
-    total_height += vertical_line_spacing;
-
-    //  Track maximum line width
-    max_width = std::max(line_metrics.width, max_width);
-    if (initial_x == -1) {
-      initial_x = line_metrics.render_x;
-    }
-  }
-
-  if (style.shadow && style.shadow->offset.dy > 0) {
-    total_height += style.shadow->offset.dy;
-  }
-
-  metrics.width = max_width;
-  metrics.height = total_height;
-  metrics.render_x = initial_x;
-  return metrics;
+  return render_fixed_width(surface, text, pos, available_width, style);
 }
 
 RenderedTextMetrics Font::size_text(std::string_view text,
@@ -531,7 +500,7 @@ std::vector<FlowLine> Font::word_wrap_with_flow(std::string_view input_line,
   std::size_t last_word_end = i;
   int current_w = 0;
   int current_y = start_y;
-  int vert_spacing = line_spacing();
+  int vert_spacing = line_spacing() + style.line_height;
 
   while (i < n) {
     // Determine current max width based on Y position
@@ -599,7 +568,7 @@ std::vector<FlowLine> Font::split_and_wrap_with_flow(std::string_view text,
   auto pipe_lines = split_by_pipe(text);
   std::vector<FlowLine> final_lines;
   int current_y = start_y;
-  int spacing = line_spacing();
+  int spacing = line_spacing() + style.line_height;
 
   // For each user-specified line (split by `|`), do word wrapping
   for (std::string_view line : pipe_lines) {
@@ -654,4 +623,48 @@ int Font::get_character_spacing(const TextStyle& style) const {
 
   // Default spacing for other fonts
   return SPACE_BETWEEN_CHARACTERS;
+}
+
+RenderedTextMetrics Font::render_fixed_width(Surface& surface,
+                                             std::string_view text,
+                                             ViewPoint pos, int max_width,
+                                             const TextStyle& style) {
+  RenderedTextMetrics metrics;
+  auto lines = split_and_wrap_text(text, max_width, style);
+
+  int total_height = 0;
+  int current_y = pos.y;
+  int initial_x = -1;
+
+  for (const auto& line : lines) {
+    auto line_metrics =
+        render_line_onto(surface, line, ViewPoint{pos.x, current_y}, style);
+
+    int vertical_line_spacing = line_spacing() + style.line_height;
+    current_y += vertical_line_spacing;
+    total_height += vertical_line_spacing;
+
+    metrics.width = std::max(line_metrics.width, metrics.width);
+    if (initial_x == -1) {
+      initial_x = line_metrics.render_x;
+    }
+  }
+
+  if (style.shadow && style.shadow->offset.dy > 0) {
+    total_height += style.shadow->offset.dy;
+  }
+
+  metrics.height = total_height;
+  metrics.render_x = initial_x;
+  return metrics;
+}
+
+RenderedTextMetrics Font::render_into_rect(Surface& surface,
+                                           std::string_view text, ViewRect rect,
+                                           const TextStyle& style) {
+  int max_width = rect.w;
+  if (style.shadow && style.shadow->offset.dx > 0) {
+    max_width -= style.shadow->offset.dx;
+  }
+  return render_fixed_width(surface, text, {rect.x, rect.y}, max_width, style);
 }

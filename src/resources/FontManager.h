@@ -63,6 +63,10 @@ public:
                    FontFace face, uint8_t color, AlignX align = AlignX::Left,
                    std::optional<FlowColumns> flow = std::nullopt);
 
+  RenderedTextMetrics render_into_rect(Surface& surface, std::string_view text,
+                                       ViewRect rect, FontFace face,
+                                       const TextStyle& style = {});
+
   RenderedTextMetrics size_text(std::string_view text, FontFace face,
                                 const TextStyle& style = {});
 

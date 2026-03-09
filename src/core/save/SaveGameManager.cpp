@@ -251,18 +251,21 @@ json SaveGameManager::state_to_json(const GameState& state,
   }
   j["restaurants"] = restaurants_array;
 
-  // Save shown message history (milestone deduplication across save/load)
+  // Save shown message history with dates (for CV display and deduplication)
   json shown_msgs;
   for (size_t pid = 0; pid < players.size(); ++pid) {
     if (players[pid] != nullptr) {
       auto player_id = core::PlayerId{static_cast<int>(pid)};
-      auto ids = state.message_manager().all_scheduled_for(player_id);
-      if (!ids.empty()) {
-        json id_array = json::array();
-        for (auto id : ids) {
-          id_array.push_back(static_cast<int>(id));
+      auto entries = state.message_manager().get_cv_entries_for(player_id);
+      if (!entries.empty()) {
+        json entry_array = json::array();
+        for (const auto& entry : entries) {
+          entry_array.push_back({{"id", static_cast<int>(entry.message_id)},
+                                 {"y", entry.date.year()},
+                                 {"m", entry.date.month()},
+                                 {"d", entry.date.day()}});
         }
-        shown_msgs[std::to_string(pid)] = id_array;
+        shown_msgs[std::to_string(pid)] = entry_array;
       }
     }
   }
@@ -374,14 +377,17 @@ void SaveGameManager::json_to_state(const json& j, GameState& state,
 
   // Restore shown message history (clear slate first, then load from save)
   if (j.contains("shown_messages")) {
-    for (const auto& [pid_str, ids_json] : j["shown_messages"].items()) {
+    for (const auto& [pid_str, entries_json] : j["shown_messages"].items()) {
       auto pid = core::PlayerId{std::stoi(pid_str)};
       state.message_manager().clear_player_messages(pid);
-      std::vector<core::events::LeventId> ids;
-      for (const auto& val : ids_json) {
-        ids.push_back(static_cast<core::events::LeventId>(val.get<int>()));
+      std::vector<core::events::FullscreenMessageManager::CvEntry> entries;
+      for (const auto& val : entries_json) {
+        auto id = static_cast<core::events::LeventId>(val.at("id").get<int>());
+        GameDate date{val.at("y").get<int>(), val.at("m").get<int>(),
+                      val.at("d").get<int>()};
+        entries.push_back({date, id});
       }
-      state.message_manager().restore_scheduled(pid, ids);
+      state.message_manager().restore_scheduled(pid, entries);
     }
   }
 }

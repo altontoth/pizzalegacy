@@ -216,7 +216,6 @@ public:
   void clear_all_refused_calls();
   void next_player();
 
-  // Called when PlayerTurnCard finishes displaying
   void on_player_turn_card_finished();
 
   // Called when a restaurant's end-of-turn processing is complete
@@ -225,6 +224,16 @@ public:
 
   GameMode game_mode() const;
   int human_player_count() const;
+
+  // Call when a restaurant is opened for the first time (from view layer).
+  // Checks and schedules restaurant count / city milestone events.
+  void check_restaurant_milestones(const Player& player);
+
+  void on_city_entered(core::CityId city_id, const Player& player);
+
+  // Process all pending messages for the active player immediately:
+  // award score, push fullscreen if needed, mark as shown.
+  void process_pending_messages();
 
 private:
   void check_market_share_milestones(const City& city);

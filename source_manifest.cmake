@@ -104,6 +104,7 @@ set(GAME_PLEGACY_SOURCES
     src/views/screens/AnimatedStats.cpp
     src/views/screens/EuroMap.cpp
     src/views/screens/FullscreenStatus.cpp
+    src/views/screens/GameOver.cpp
     src/views/screens/GlobalStats.cpp
     src/views/screens/InputPanel.cpp
     src/views/screens/Intro.cpp
@@ -350,6 +351,7 @@ set(PLEGACY_HEADERS
     src/core/save/SaveGameRestaurant.h
     src/core/settings/BankSettings.h
     src/core/settings/RealtorSettings.h
+    src/core/state/GameOptions.h
     src/core/state/GameState.h
     src/core/state/Overloaded.h
     src/core/state/UIState.h
@@ -441,6 +443,7 @@ set(PLEGACY_HEADERS
     src/gfx/Draw.h
     src/gfx/PaletteBank.h
     src/gfx/PaletteCycleController.h
+    src/gfx/PaletteHandle.h
     src/gfx/Surface.h
     src/gfx/SurfaceBuilder.h
     src/resources/AmigaBobLoader.h
@@ -501,6 +504,7 @@ set(PLEGACY_HEADERS
     src/views/screens/AnimatedStats.h
     src/views/screens/EuroMap.h
     src/views/screens/FullscreenStatus.h
+    src/views/screens/GameOver.h
     src/views/screens/GlobalStats.h
     src/views/screens/InputPanel.h
     src/views/screens/Intro.h

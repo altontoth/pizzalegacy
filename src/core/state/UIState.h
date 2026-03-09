@@ -90,6 +90,9 @@ struct EuroMapState {
   MapMode mode;
   std::optional<IngredientCategory> category = std::nullopt;
 };
+struct GameOverState {
+  core::PlayerId player_id;
+};
 struct PlayerProfileState {
   core::PlayerId player_id;
 };
@@ -199,6 +202,6 @@ using UIState = std::variant<
     DepotMainState, DepotExportState, IngredientSupplierListState,
     IngredientOrderState, DepotWeaponInterfaceState, TerminalState,
     SupplierContractState, PlayerTurnCardState, FullscreenStatusState,
-    StatsRestaurantsState, PlayerProfileState,
+    StatsRestaurantsState, PlayerProfileState, GameOverState,
     // nothing on screen:
     std::monostate>;

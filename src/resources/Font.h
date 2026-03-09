@@ -76,6 +76,9 @@ public:
   render_text_onto(Surface& surface, std::string_view text, ViewPoint p,
                    const TextStyle& style = {},
                    std::optional<FlowColumns> flow = std::nullopt);
+  RenderedTextMetrics render_into_rect(Surface& surface, std::string_view text,
+                                       ViewRect rect,
+                                       const TextStyle& style = {});
   RenderedTextMetrics size_text(std::string_view text,
                                 const TextStyle& style = {});
   int count_wrapped_lines(std::string_view text, int max_width,
@@ -91,6 +94,9 @@ public:
 private:
   [[nodiscard]] int line_spacing() const;
   [[nodiscard]] int get_character_spacing(const TextStyle& style) const;
+  RenderedTextMetrics render_fixed_width(Surface& surface,
+                                         std::string_view text, ViewPoint pos,
+                                         int max_width, const TextStyle& style);
   FontFace face_;
   FontData data_;
 
