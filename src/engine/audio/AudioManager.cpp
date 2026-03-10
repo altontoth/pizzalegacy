@@ -158,22 +158,6 @@ void AudioManager::play_sound(SoundId id, bool loop) {
     return;
   }
 
-  // Check if sound effects are enabled in options
-  auto* config = ConfigManager::instance();
-  if (config) {
-    // TRAFFIC sounds check map_fx, everything else checks restaurant_fx
-    if (id == SoundId::TRAFFIC_1 || id == SoundId::TRAFFIC_2) {
-      if (!config->options().map_fx) {
-        return;
-      }
-    }
-    else {
-      if (!config->options().restaurant_fx) {
-        return;
-      }
-    }
-  }
-
   auto slot = static_cast<size_t>(id);
   if (slot >= sounds_.size()) {
     Logger::warn("Sound slot {} out of range (have {} sounds)", slot,

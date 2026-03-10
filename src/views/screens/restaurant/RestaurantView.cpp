@@ -157,7 +157,7 @@ RestaurantView::~RestaurantView() {
 }
 
 void RestaurantView::update_restaurant_noise() {
-  if (!context_.audio) {
+  if (!context_.audio || !context_.config->options().restaurant_fx) {
     return;
   }
 

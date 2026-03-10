@@ -11,6 +11,7 @@
 
 #include "core/city/CarManager.h"
 #include "core/city/CityTypes.h"
+#include "engine/audio/AudioManager.h"
 #include "engine/geom/Camera.h"
 #include "engine/geom/Spaces.h"
 #include "gfx/PaletteCycleController.h"
@@ -34,6 +35,10 @@ public:
 
 private:
   enum class Dropdown { PLAYER, RANGE, LOCATIONS, PROPERTIES };
+
+  // Sound
+  void update_city_sound();
+  void stop_city_sound();
 
   // Zooming
   void zoom_in(ViewPoint p);
@@ -142,6 +147,7 @@ private:
   Surface zoom_box_far_;
   Surface zoom_box_medium_;
   std::optional<CarManager> car_mgr_;
+  std::optional<audio::SoundId> current_city_sound_;
   DropdownManager<Dropdown> dropdowns_;
   std::vector<uint8_t> water_indices_;
   std::vector<std::vector<uint8_t>> water_cycles_;

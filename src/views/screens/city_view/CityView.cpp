@@ -114,12 +114,7 @@ CityView::~CityView() {
   // Rebuild to clear our district:
   build_default_city_status_recipe();
   state_.prevent_end_of_day(true);
-  if (zoom_ == ZoomLevel::CLOSE) {
-    context_.audio->stop_sound(audio::SoundId::TRAFFIC_1);
-  }
-  else if (zoom_ == ZoomLevel::MEDIUM) {
-    context_.audio->stop_sound(audio::SoundId::TRAFFIC_2);
-  }
+  stop_city_sound();
 }
 
 template <typename T, typename... Args>
@@ -236,25 +231,55 @@ void CityView::zoom_in(ViewPoint p_view_local) {
   mark_dirty();
 }
 
+void CityView::update_city_sound() {
+  if (!context_.audio || !context_.config->options().map_fx) {
+    return;
+  }
+
+  audio::SoundId desired;
+  if (zoom_ == ZoomLevel::CLOSE) {
+    desired = audio::SoundId::TRAFFIC_1;
+  }
+  else if (zoom_ == ZoomLevel::MEDIUM) {
+    desired = audio::SoundId::TRAFFIC_2;
+  }
+  else {
+    stop_city_sound();
+    return;
+  }
+
+  if (current_city_sound_ && *current_city_sound_ == desired) {
+    return;
+  }
+
+  stop_city_sound();
+  current_city_sound_ = desired;
+  context_.audio->play_sound(desired, true);
+}
+
+void CityView::stop_city_sound() {
+  if (context_.audio && current_city_sound_) {
+    context_.audio->stop_sound(*current_city_sound_);
+    current_city_sound_.reset();
+  }
+}
+
 void CityView::on_zoom_close() {
   water_animation_.request_start();
   if (!car_mgr_) {
     car_mgr_.emplace(context_.bob, *city_,
                      [](int max) { return engine::random::rand_max_n(max); });
   }
-  context_.audio->stop_sound(audio::SoundId::TRAFFIC_2);
-  context_.audio->play_sound(audio::SoundId::TRAFFIC_1, true);
+  update_city_sound();
 }
 
 void CityView::on_zoom_medium() {
-  context_.audio->stop_sound(audio::SoundId::TRAFFIC_1);
-  context_.audio->play_sound(audio::SoundId::TRAFFIC_2, true);
+  update_city_sound();
   on_zoom_not_close();
 }
 
 void CityView::on_zoom_far() {
-  // Just in case they come from Medium:
-  context_.audio->stop_sound(audio::SoundId::TRAFFIC_2);
+  update_city_sound();
   on_zoom_not_close();
 }
 
