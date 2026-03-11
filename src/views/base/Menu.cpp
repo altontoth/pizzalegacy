@@ -10,6 +10,7 @@
 #include "engine/DisplayConstants.h"
 #include "engine/geom/Spaces.h"
 #include "engine/ui/Alignment.h"
+#include "engine/ui/TooltipRequest.h"
 #include "gfx/Blit.h"
 #include "gfx/Draw.h"
 #include "gfx/Surface.h"
@@ -76,6 +77,23 @@ void Menu::update_interactions() {
           .rect = r,
           .selected = is_selected,
       });
+      views::ui::InteractionLayers::TooltipCb ttcb;
+      if (context_.config->options().life_improvements) {
+        if (std::string tt = menu_item->tooltip_text(); !tt.empty()) {
+          ttcb = [tt = std::move(tt)](const views::ui::InteractionEvent& ie) {
+            return TooltipRequest{
+                .text = tt,
+                .anchor = TooltipAnchor::Mouse,
+                .screenPos = ie.pos,
+                .palette = 8,
+                .bg_color = 29,
+                .text_color = 240,
+                .border_color = 240,
+                .padding = 4,
+            };
+          };
+        }
+      }
       interactions_.create_persistent_item(
           r, "menu_item_" + std::to_string(i),
           [this, menu_item](views::ui::InteractionEvent ie) {
@@ -105,7 +123,8 @@ void Menu::update_interactions() {
               mark_dirty();
               selected_option_ = nullptr;
             }
-          });
+          },
+          std::move(ttcb));
       y += size.h + line_spacing_;
       ++i;
     }

@@ -7,6 +7,7 @@
 #pragma once
 
 #include "engine/DebugLabel.h"
+#include "engine/DisplayConstants.h"
 #include "engine/ui/TooltipManager.h"
 #include "gfx/Draw.h"
 #include "resources/FontManager.h"
@@ -53,12 +54,17 @@ public:
                          (views::base::INPUT_PANEL_WIDTH / 2),
                      box.y + req.padding};
       break;
-    case TooltipAnchor::Mouse:
+    case TooltipAnchor::Mouse: {
       // position just above the cursor; screenPos kept current by
       // InteractionManager::handle_tooltip on every Hover event
-      box = {req.screenPos.x, req.screenPos.y - h - 2};
+      int bx = req.screenPos.x;
+      if (bx + w > DisplayConstants::SCREEN_WIDTH) {
+        bx = DisplayConstants::SCREEN_WIDTH - w;
+      }
+      box = {bx, req.screenPos.y - h - 2};
       text_center = {box.x + (w / 2), box.y + req.padding};
       break;
+    }
     }
 
     ctx.surface->fill_rect({box.x, box.y, w, h}, req.bg_color);

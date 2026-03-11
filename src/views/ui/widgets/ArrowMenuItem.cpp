@@ -8,8 +8,8 @@
 #include "engine/geom/Spaces.h"
 
 ArrowMenuItem::ArrowMenuItem(GameContext& gc, ArrowType direction,
-                             std::function<void()> action)
-    : MenuItem(gc), action_(action),
+                             std::function<void()> action, std::string tooltip)
+    : MenuItem(gc), action_(action), tooltip_text_(std::move(tooltip)),
       menu_bobs_(gc.bob->get("bob/menubobs.bob")),
       arrow_surface_(direction == ArrowType::Up
                          ? menu_bobs_.frame(3, PaletteHandle{63})

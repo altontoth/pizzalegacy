@@ -36,6 +36,7 @@ public:
   virtual bool handles_keyboard_events() { return false; };
   virtual bool handles_mouse_events() { return false; };
   virtual bool on_interaction(views::ui::InteractionEvent ie) { return false; };
+  virtual std::string tooltip_text() const { return ""; }
   virtual void begin_keyboard_session(input::InputManager*,
                                       std::function<void()>) {};
 

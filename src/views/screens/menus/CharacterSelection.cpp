@@ -88,11 +88,14 @@ CharacterSelection::CharacterSelection(GameContext& context, GameState& state)
   // Reposition for third column
   add_menu_item(std::make_unique<PositionMarkerMenuItem>(context, 365, 0));
   // Up arrow for human selection:
-  add_menu_item(std::make_unique<ArrowMenuItem>(context, ArrowType::Up, [this] {
-    human_players_ = std::clamp(human_players_ - 1, 1, MAX_HUMAN_PLAYERS);
-    player_items_.at(human_players_).is_human = false;
-    mark_dirty();
-  }));
+  add_menu_item(std::make_unique<ArrowMenuItem>(
+      context, ArrowType::Up,
+      [this] {
+        human_players_ = std::clamp(human_players_ - 1, 1, MAX_HUMAN_PLAYERS);
+        player_items_.at(human_players_).is_human = false;
+        mark_dirty();
+      },
+      "Decrease number of human players"));
   // Company selection box
   auto company_box =
       std::make_unique<CompanySelectionBox>(context, player_items_);
@@ -112,12 +115,14 @@ CharacterSelection::CharacterSelection(GameContext& context, GameState& state)
   });
   add_menu_item(std::move(company_box));
   // Down arrow
-  add_menu_item(
-      std::make_unique<ArrowMenuItem>(context, ArrowType::Down, [this] {
+  add_menu_item(std::make_unique<ArrowMenuItem>(
+      context, ArrowType::Down,
+      [this] {
         human_players_ = std::clamp(human_players_ + 1, 1, MAX_HUMAN_PLAYERS);
         player_items_.at(human_players_ - 1).is_human = true;
         mark_dirty();
-      }));
+      },
+      "Increase number of human players"));
 }
 
 void CharacterSelection::generate_player_items() {
