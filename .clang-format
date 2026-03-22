@@ -1,0 +1,17 @@
+BasedOnStyle: LLVM
+AllowShortBlocksOnASingleLine: false
+AllowShortIfStatementsOnASingleLine: false
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterControlStatement: false
+  BeforeElse: true
+  BeforeCatch: true
+  IndentBraces: false
+IndentWidth: 2
+IncludeCategories:
+  - Regex: '^<.*>' # System headers (e.g., <cassert>, <clocale>)
+    Priority: 1
+  - Regex: '^".*"' # Other project headers (e.g., "Util.h", "Game.h")
+    Priority: 2
+SortIncludes: true
+PointerAlignment: Left
