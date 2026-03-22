@@ -43,7 +43,9 @@ private:
   void advance_conversation();
   void advance_conversation(LineEnum choice);
   void advance_proposal(bool accept);
-  void apply_emotion_if_needed(bool state_changed);
+  void apply_emotion_if_needed(
+      bool state_changed,
+      std::vector<ConversationLine<LineEnum>> previous_lines = {});
   void render_character_head(const RenderContext&);
 
   Actor* actor_;
@@ -54,12 +56,17 @@ private:
   int conversation_delay_{DEFAULT_CONVERSATION_DELAY};
   ConversationPhase current_phase_{ConversationPhase::TALKING};
   int phase_timer_{0};
-  bool stop_rendering_dialog{false};
+
   int hovered_line_id_{-1};
   Bob& actor_bob_;
   std::string bg_filename_;
-  int happy_stage_ = 0; // 0 = inactive, 1..3 = the three stages
-  int happy_timer_ = 0; // countdown in ticks for the current stage
+  int happy_stage_ = 0;
+  int happy_timer_ = 0;
+  int nod_frame_ = 0;
+  int nod_timer_ = 0;
+
+  // During emoting, we freeze the previous dialog text
+  std::vector<ConversationLine<LineEnum>> frozen_lines_;
 };
 
 #include "views/screens/ActorView.inl"

@@ -11,6 +11,7 @@
 #include <optional>
 #include <variant>
 #include <vector>
+#include "conversations/MafiaLine.h"
 #include "core/GameTypes.h"
 #include "core/common/Ids.h"
 #include "core/events/LeventId.h"
@@ -140,6 +141,11 @@ struct ActorTerminalState {
 struct BankState {
   ActorId id{};
 };
+struct MafiaState {
+  ActorId id;
+  std::optional<MafiaMode> mode;
+  std::optional<core::RestaurantId> restaurant_id;
+};
 struct PoliceState {
   ActorId id;
   std::optional<ArrestReason> reason;
@@ -190,18 +196,23 @@ struct PlayerTurnCardState {
 };
 struct FullscreenStatusState {
   core::events::LeventId message_id;
+  std::function<void()> on_dismiss;
+};
+struct MafiaMissionViewState {
+  MafiaLine line;
 };
 
 using UIState = std::variant<
     ScreenTag, EuroMapState, PizzaJudgesState, CityViewState, PurchasingState,
     PurchasingDemographicState, ActorTerminalState, BankState, PoliceState,
-    RestaurantViewState, ViewerState, FloorListState, FurnitureListState,
-    CategoryOverviewState, SupplierListState, PizzaManagerState,
-    RestaurantMenuState, RestaurantStatsState, WeeksTakingsState,
-    AnimatedStatsState, IngredientCategoryViewState, StockMainState,
-    DepotMainState, DepotExportState, IngredientSupplierListState,
-    IngredientOrderState, DepotWeaponInterfaceState, TerminalState,
-    SupplierContractState, PlayerTurnCardState, FullscreenStatusState,
+    MafiaState, RestaurantViewState, ViewerState, FloorListState,
+    FurnitureListState, CategoryOverviewState, SupplierListState,
+    PizzaManagerState, RestaurantMenuState, RestaurantStatsState,
+    WeeksTakingsState, AnimatedStatsState, IngredientCategoryViewState,
+    StockMainState, DepotMainState, DepotExportState,
+    IngredientSupplierListState, IngredientOrderState,
+    DepotWeaponInterfaceState, TerminalState, SupplierContractState,
+    PlayerTurnCardState, FullscreenStatusState, MafiaMissionViewState,
     StatsRestaurantsState, PlayerProfileState, GameOverState,
     // nothing on screen:
     std::monostate>;

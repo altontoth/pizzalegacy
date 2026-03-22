@@ -57,5 +57,5 @@ struct TextStyle {
   AlignX align{AlignX::Left};
   std::optional<ShadowStyle> shadow = std::nullopt;
   std::optional<int> character_spacing = std::nullopt; // pixels between chars
-  int line_height{0}; // extra pixels added between lines (multi-line only)
+  int line_spacing{0}; // extra pixels added between lines (multi-line only)
 };

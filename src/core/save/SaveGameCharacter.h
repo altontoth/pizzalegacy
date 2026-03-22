@@ -8,6 +8,7 @@
 
 #include <nlohmann/json.hpp>
 #include "core/character/Character.h"
+#include "core/character/MafiaPlayerState.h"
 #include "core/character/Player.h"
 #include "core/save/SaveGameFood.h"
 
@@ -34,6 +35,10 @@ void load_inventory(const json& j, core::inventory::Inventory& inventory);
 // Loan serialization
 json loan_to_json(const Loan& loan);
 Loan json_to_loan(const json& j);
+
+// Mafia state serialization
+json mafia_state_to_json(const MafiaPlayerState& state);
+MafiaPlayerState json_to_mafia_state(const json& j);
 
 // Ledger/financials serialization
 json posting_to_json(const Posting& posting);

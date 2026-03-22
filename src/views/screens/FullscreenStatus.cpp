@@ -15,9 +15,11 @@
 #include "resources/FontManager.h"
 
 FullscreenStatus::FullscreenStatus(GameContext& context, GameState& state,
-                                   core::events::LeventId msg_id)
+                                   core::events::LeventId msg_id,
+                                   std::function<void()> on_dismiss)
     : View(context, state), typewriter_(context_.font), message_id_(msg_id),
       listener_(context_.input->register_listener(*this)),
+      on_dismiss_(std::move(on_dismiss)),
       background_([&]() -> const Surface& {
         const auto& msg_data = state_.message_manager().get_data(msg_id);
 
@@ -87,4 +89,9 @@ bool FullscreenStatus::on_action(const input::ActionEvent& ev) {
   return false;
 }
 
-void FullscreenStatus::dismiss() { state_.ui().pop(); }
+void FullscreenStatus::dismiss() {
+  state_.ui().pop();
+  if (on_dismiss_) {
+    on_dismiss_();
+  }
+}

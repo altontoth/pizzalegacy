@@ -7,6 +7,7 @@
 #pragma once
 
 #include <memory>
+#include "core/util/Constants.h"
 #include "engine/geom/Spaces.h"
 #include "resources/Bob.h"
 #include "resources/BobManager.h"
@@ -14,6 +15,8 @@
 #include "views/base/MainPanelView.h"
 
 class District;
+
+enum class BarChartMode { Percentage, Currency };
 
 enum class MarketResearchScreen {
   Area_Info,
@@ -45,6 +48,8 @@ private:
   void render_market_share(const RenderContext& ctx);
   void render_paper(const RenderContext& ctx, ViewRect box);
   void render_bar_diagram_background(const RenderContext& ctx);
+  void render_bar_chart(const RenderContext& ctx, BarChartMode mode,
+                        const std::array<int, NUMBER_OF_PLAYERS>& values);
 
   const District& district_;
   MarketResearchScreen current_screen_{MarketResearchScreen::Area_Info};

@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include "core/finance/Money.h"
 #include "core/status/StatusHub.h"
 #include "views/base/PanelView.h"
 
@@ -27,7 +28,8 @@ private:
                      const RenderContext& ctx);
 
   StatusDisplayRecipe recipe_;
-  int previous_time_{-1};
+  std::optional<int> previous_time_;
+  std::optional<Money> previous_balance_;
   StatusHub& hub_;
   StatusHub::Subscription sub_;
 

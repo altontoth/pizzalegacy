@@ -377,6 +377,16 @@ public:
   uint8_t fulfillment_rate() const { return fulfillment_rate_; }
   ManagerSettings& manager_settings() { return manager_settings_; };
 
+  // Mafia protection racket timer.
+  // nullopt = never contacted, 1 = expired (trigger visit), >1 = counting down.
+  std::optional<int> protection_timer() const { return protection_timer_; }
+  void protection_timer(std::optional<int> t) { protection_timer_ = t; }
+  void decrement_protection_timer() {
+    if (protection_timer_.has_value() && *protection_timer_ > 1) {
+      (*protection_timer_)--;
+    }
+  }
+
 private:
   int calculate_average_cook_quality() const;
   int calculate_average_oven_quality() const;
@@ -402,6 +412,7 @@ private:
   core::time::TimeOfDay opening_time_{9, 0};
   core::time::TimeOfDay closing_time_{21, 0};
   ManagerSettings manager_settings_;
+  std::optional<int> protection_timer_;
 
   uint8_t pizza_quality_rating_{0};
   PizzaQualityFactors pizza_quality_factors_{};

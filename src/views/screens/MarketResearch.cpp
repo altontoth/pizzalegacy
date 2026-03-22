@@ -5,20 +5,172 @@
  */
 
 #include "views/screens/MarketResearch.h"
+#include "core/character/Player.h"
 #include "core/city/City.h"
+#include "core/city/ControlMap.h"
 #include "core/city/District.h"
 #include "core/city/PizzaCharts.h"
 #include "core/city/Property.h"
 #include "core/state/GameState.h"
+#include "core/util/Constants.h"
 #include "engine/geom/Spaces.h"
 #include "engine/ui/Alignment.h"
 #include "gfx/Blit.h"
 #include "gfx/Draw.h"
 #include "resources/BlitmapIcons.h"
 #include "resources/BlitmapManager.h"
+#include "views/base/ViewDefs.h"
 #include "views/ui/PageDecoration.h"
 
-constexpr int text_color = 11;
+#include <algorithm>
+#include <span>
+
+constexpr int text_color = 10;
+
+void MarketResearch::render_bar_chart(const RenderContext& ctx,
+                                      BarChartMode mode,
+                                      const std::array<int, NUMBER_OF_PLAYERS>& values) {
+  ctx.surface->fill({15});
+  constexpr int edge_offset = 6;
+  views::ui::render_decorated_corners(
+      *ctx.surface, stanbobs_,
+      ViewRect{{edge_offset, edge_offset},
+               {views::base::MAIN_PANEL_WIDTH - (edge_offset * 2),
+                views::base::MAIN_PANEL_HEIGHT - (edge_offset * 2)}},
+      4);
+
+  // Title
+  ctx.surface->palette(PaletteHandle{62});
+  context_.font->render_line_onto(
+      *ctx.surface, "chain of restaurants",
+      ViewPoint{views::base::MAIN_PANEL_WIDTH / 2, 14}, FontFace::ASTANDAR,
+      text_color, AlignX::CenterPoint);
+
+  // Compute scale and subtitle based on mode
+  int scale_unit = 1;
+  std::string subtitle;
+  if (mode == BarChartMode::Percentage) {
+    subtitle = "market shares in %";
+  }
+  else {
+    int max_val = *std::max_element(values.begin(), values.end());
+    // Original game starts at $10K chunks; life_improvements allows finer $1K
+    const bool fine_scale = context_.config->options().life_improvements;
+    constexpr std::array<int, 5> original_units = {
+        10000, 100000, 1000000, 10000000, 100000000};
+    constexpr std::array<int, 6> improved_units = {
+        1000, 10000, 100000, 1000000, 10000000, 100000000};
+    const auto& units = fine_scale
+        ? std::span<const int>(improved_units)
+        : std::span<const int>(original_units);
+    scale_unit = units.back();
+    for (int u : units) {
+      if (max_val <= u * 10) {
+        scale_unit = u;
+        break;
+      }
+    }
+    subtitle = "turnover in $" + std::to_string(scale_unit);
+  }
+
+  context_.font->render_line_onto(
+      *ctx.surface, subtitle,
+      ViewPoint{views::base::MAIN_PANEL_WIDTH / 2, 32}, FontFace::ASTANDAR,
+      text_color, AlignX::CenterPoint);
+
+  // Graph area
+  constexpr int grid_color = 14;
+  constexpr ViewRect graph_box{28, 52, 324, 244};
+  gfx::draw::grid(*ctx.surface, graph_box, grid_color, 14);
+
+  constexpr int y_label_offset = 20;
+  constexpr ViewPoint label_y_start{28, 284};
+  for (int i = 10; i > 0; --i) {
+    context_.font->render_line_onto(*ctx.surface, std::to_string(i),
+                                    label_y_start - PxOffset{0, i * y_label_offset},
+                                    FontFace::CSTANDAR, 240, AlignX::RightEdge);
+  }
+
+  constexpr int graph_bottom = 52 + 244;
+  constexpr int bar_area_height = 200;
+
+  // Bar gradient colors from original (each drawn twice for 2x rendering)
+  constexpr std::array<uint8_t, 10> bar_colors{
+      0x9, 0xA, 0xB, 0xC, 0xD, 0xE, 0xF, 0xE, 0xC, 0x9};
+  constexpr int bar_width = 20;
+  constexpr int slot_width = graph_box.w / NUMBER_OF_PLAYERS;
+  // Shop frontend tiles: same encoding as City::type() for owned premises
+  constexpr uint8_t icon_row = 0xA;
+  constexpr int icon_size =
+      LegacyConstants::BASE_MAP_TILE_WIDTH * BASE_MAP_ZOOM_MULTIPLIER;
+
+  const auto& landsym = context_.vga->get("gfx/landsym");
+
+  for (int i = 0; i < NUMBER_OF_PLAYERS; ++i) {
+    int center_x = graph_box.x + (i * slot_width) + (slot_width / 2);
+    // Show a at least a tiny bar by default, so just bump everything by one
+    const int value = values[i] + 1;
+
+    // Compute bar height
+    int bar_height;
+    if (mode == BarChartMode::Percentage) {
+      bar_height = value * 2;
+    }
+    else {
+      bar_height = (value * 20) / std::max(scale_unit, 1);
+    }
+    bar_height = std::clamp(bar_height, 0, bar_area_height);
+
+    // Draw bar: 10 original colors, each drawn twice for 2x rendering
+    int bar_x = center_x - (bar_width / 2);
+    for (int col = 0; col < 10; ++col) {
+      if (bar_height > 0) {
+        int x = bar_x + (col * 2);
+        gfx::draw::line(*ctx.surface, ViewPoint{x, graph_bottom},
+                        ViewPoint{x, graph_bottom - bar_height},
+                        bar_colors[col]);
+        gfx::draw::line(*ctx.surface, ViewPoint{x + 1, graph_bottom},
+                        ViewPoint{x + 1, graph_bottom - bar_height},
+                        bar_colors[col]);
+      }
+    }
+
+    // Restaurant icon below the graph has transparency so needs a background
+    int icon_x = center_x - (icon_size / 2);
+    int icon_y = graph_bottom + 6;
+    ctx.surface->fill_rect(ViewRect{icon_x, icon_y, icon_size, icon_size}, 240);
+    uint8_t tile_type = ((i & 0xF) << 4) | icon_row;
+    ViewRect src = landsym_source_rect(tile_type, BASE_MAP_ZOOM_MULTIPLIER);
+    ctx.surface->blit(landsym, src, ViewPoint{icon_x, icon_y});
+
+    // Hover tooltip showing actual value
+    if (context_.config->options().life_improvements) {
+      int display_value = values[i];
+      std::string tip;
+      if (mode == BarChartMode::Percentage) {
+        tip = std::to_string(display_value) + "%";
+      } else {
+        tip = "$" + std::to_string(display_value);
+      }
+      interactions_.create_frame_item(
+          {icon_x, icon_y, icon_size, icon_size},
+          "bar_chart_" + std::to_string(i),
+          [](const views::ui::InteractionEvent&) {},
+          [tip](const views::ui::InteractionEvent& ie) {
+            return TooltipRequest{
+                .text = tip,
+                .anchor = TooltipAnchor::Mouse,
+                .screenPos = ie.pos,
+                .palette = 62,
+                .bg_color = 15,
+                .text_color = 240,
+                .border_color = 240,
+                .padding = 4,
+            };
+          });
+    }
+  }
+}
 
 MarketResearch::MarketResearch(GameContext& context, GameState& state)
     : MainPanelView(context, state),
@@ -32,6 +184,7 @@ MarketResearch::MarketResearch(GameContext& context, GameState& state)
 void MarketResearch::tick() {}
 
 void MarketResearch::render(const RenderContext& ctx) {
+  interactions_.begin_frame();
   ctx.surface->palette(PaletteHandle{8});
   uint8_t bg_color = 21;
   ctx.surface->fill(bg_color);
@@ -51,6 +204,12 @@ void MarketResearch::render(const RenderContext& ctx) {
     break;
   case MarketResearchScreen::Economy:
     render_economy(ctx);
+    break;
+  case MarketResearchScreen::Competitors:
+    render_competitors(ctx);
+    break;
+  case MarketResearchScreen::Market_Share:
+    render_market_share(ctx);
     break;
   default:
     break;
@@ -506,9 +665,22 @@ void MarketResearch::render_pizza_charts(const RenderContext& ctx) {
   }
 }
 
-void MarketResearch::render_competitors(const RenderContext& ctx) {}
+void MarketResearch::render_competitors(const RenderContext& ctx) {
+  std::array<int, NUMBER_OF_PLAYERS> values{};
+  auto players = state_.players();
+  for (int i = 0; i < NUMBER_OF_PLAYERS; ++i) {
+    if (players[i]) {
+      // Revenue accounts carry negative (credit) balances, negate for display
+      values[i] = static_cast<int>(-players[i]->financials().total_receipts().whole());
+    }
+  }
+  render_bar_chart(ctx, BarChartMode::Currency, values);
+}
 
-void MarketResearch::render_market_share(const RenderContext& ctx) {}
+void MarketResearch::render_market_share(const RenderContext& ctx) {
+  const auto& values = state_.active_city()->control_map().player_percentages();
+  render_bar_chart(ctx, BarChartMode::Percentage, values);
+}
 
 void MarketResearch::render_paper(const RenderContext& ctx, ViewRect box) {
   uint8_t bg_color = 21;

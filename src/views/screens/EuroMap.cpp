@@ -57,6 +57,8 @@ EuroMap::EuroMap(GameContext& context, GameState& state, MapMode mode,
   small_popup_box_.w = 242;
   small_popup_box_.h = 66;
 
+  state_.pause_time_advancement();
+
   interactions_.create_persistent_item(
       ViewRect{0, 0, DisplayConstants::SCREEN_WIDTH,
                DisplayConstants::SCREEN_HEIGHT},

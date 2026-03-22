@@ -15,7 +15,9 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include "conversations/MafiaLine.h"
 #include "core/GameTypes.h"
+#include "core/character/MafiaPlayerState.h"
 #include "core/character/Player.h"
 #include "core/city/City.h"
 #include "core/city/CityTypes.h"
@@ -63,6 +65,7 @@ CityView::CityView(GameContext& context, GameState& state, core::CityId id)
       status_controller_(state.status()), camctrl_{context.input, camera_} {
 
   state_.active_city(id);
+  state_.resume_time_advancement();
   city_ = state_.active_city();
   state_.prevent_end_of_day(false);
 
@@ -371,6 +374,43 @@ void CityView::handle_mouse_click_zoom_close(WorldPoint p) {
   if (city_->type(clicked_index) == 0x14) {
     clicked_index--;
     Logger::debug("  Adjusted to index {} (depot right side)", clicked_index);
+  }
+
+  // Check for active mafia mission at this location and time
+  auto& mafia = state_.active_player()->mafia_state();
+  if (mafia.active_mission && mafia.active_mission->active &&
+      !mafia.active_mission->completed) {
+    auto& mission = *mafia.active_mission;
+    const auto& time = state_.time();
+
+    bool at_pickup = mission.pickup.tile_index == clicked_index &&
+                     mission.pickup.is_active(time);
+    bool at_dropoff = mission.dropoff.tile_index == clicked_index &&
+                      mission.dropoff.is_active(time);
+
+    if (at_pickup || at_dropoff) {
+      if (mission.busted) {
+        // Pre-rolled bust: police arrest instead of mission success.
+        // Crime code = mission type (Package=1, Weapon=3, Laundering=4, etc.)
+        auto crime = static_cast<ArrestReason>(
+            static_cast<int>(mission.mission_type) + 1);
+        mafia.active_mission = std::nullopt;
+        state_.initiate_arrest(crime);
+        return;
+      }
+
+      if (at_pickup) {
+        ui_push_store_position<MafiaMissionViewState>(
+            CityViewReentryMode::RESTORE_ALL,
+            MafiaLine::SSSHHH_HERE_TAKE_THIS_SUITCASE);
+      }
+      else {
+        ui_push_store_position<MafiaMissionViewState>(
+            CityViewReentryMode::RESTORE_ALL,
+            MafiaLine::COME_ON_HAND_IT_OVER);
+      }
+      return;
+    }
   }
 
   auto* property = city_->property_by_index(clicked_index);

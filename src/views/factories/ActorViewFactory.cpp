@@ -8,6 +8,7 @@
 
 #include "conversations/ArmsDealerConversation.h"
 #include "conversations/BankConversation.h"
+#include "conversations/MafiaConversation.h"
 #include "conversations/MayorConversation.h"
 #include "conversations/PoliceConversation.h"
 #include "conversations/RealtorConversation.h"
@@ -48,6 +49,11 @@ ActorViewFactory::create(GameContext& context, GameState& game_state,
     mpv = make_actor_view<MayorConversation>(context, game_state, actor,
                                              city->mayor_office(),
                                              MayorConversationType::PhoneCall);
+    break;
+  }
+  case ActorType::MAFIA: {
+    mpv = make_actor_view<MafiaConversation>(context, game_state, actor,
+                                             MafiaMode::PlayerCall);
     break;
   }
   default:

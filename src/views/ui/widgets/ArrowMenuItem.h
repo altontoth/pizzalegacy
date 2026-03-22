@@ -23,6 +23,6 @@ public:
 private:
   std::function<void()> action_;
   Bob& menu_bobs_;
-  Surface arrow_surface_;
   std::string tooltip_text_;
+  Surface arrow_surface_;
 };

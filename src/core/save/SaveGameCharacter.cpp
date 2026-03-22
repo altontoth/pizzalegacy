@@ -84,6 +84,10 @@ json player_to_json(const Player& player) {
   if (player.holiday_days_left().has_value()) {
     j["holiday_days_left"] = *player.holiday_days_left();
   }
+  j["criminal_record"] = player.criminal_record();
+  if (player.jail_days_left().has_value()) {
+    j["jail_days_left"] = *player.jail_days_left();
+  }
 
   // Save AI menu slots (only meaningful for AI players, but always written for
   // simplicity)
@@ -115,6 +119,11 @@ json player_to_json(const Player& player) {
 
   j["inventory"] = inventory_to_json(player.inventory());
 
+  j["social_score"] = player.social_status().social_score;
+  j["underworld_score"] = player.social_status().underworld_score;
+
+  j["mafia_state"] = mafia_state_to_json(player.mafia_state());
+
   return j;
 }
 
@@ -142,6 +151,15 @@ std::unique_ptr<Player> json_to_player(const json& j, GameContext& context) {
   }
   if (j.contains("holiday_days_left")) {
     player->holiday(j["holiday_days_left"].get<int>());
+  }
+  if (j.contains("criminal_record")) {
+    int cr = j["criminal_record"].get<int>();
+    for (int i = 0; i < cr; ++i) {
+      player->increment_criminal_record();
+    }
+  }
+  if (j.contains("jail_days_left")) {
+    player->jail(j["jail_days_left"].get<int>());
   }
 
   // Restore AI menu slots
@@ -183,8 +201,156 @@ std::unique_ptr<Player> json_to_player(const json& j, GameContext& context) {
   if (j.contains("inventory")) {
     load_inventory(j["inventory"], player->inventory());
   }
+  if (j.contains("social_score")) {
+    player->social_status().social_score = j["social_score"];
+  }
+  if (j.contains("underworld_score")) {
+    player->social_status().underworld_score = j["underworld_score"];
+  }
+  if (j.contains("mafia_state")) {
+    player->mafia_state() = json_to_mafia_state(j["mafia_state"]);
+  }
 
   return player;
+}
+
+static json date_to_json(const GameDate& d) {
+  return {{"year", d.year()}, {"month", d.month()}, {"day", d.day()}};
+}
+
+static GameDate json_to_date(const json& j) {
+  return GameDate{j["year"].get<int>(), j["month"].get<int>(),
+                  j["day"].get<int>()};
+}
+
+static json mission_location_to_json(const MissionLocation& loc) {
+  json j;
+  j["description"] = loc.description;
+  j["tile_index"] = loc.tile_index;
+  j["date"] = date_to_json(loc.date);
+  j["hour"] = loc.hour;
+  j["minute"] = loc.minute;
+  return j;
+}
+
+static MissionLocation json_to_mission_location(const json& j) {
+  MissionLocation loc;
+  loc.description = j.value("description", "");
+  loc.tile_index = j.value("tile_index", -1);
+  if (j.contains("date")) {
+    loc.date = json_to_date(j["date"]);
+  }
+  loc.hour = j.value("hour", 0);
+  loc.minute = j.value("minute", 0);
+  return loc;
+}
+
+static json mission_to_json(const MafiaMission& m) {
+  json j;
+  j["mission_type"] = static_cast<int>(m.mission_type);
+  j["active"] = m.active;
+  j["risk_pct"] = m.risk_pct;
+  j["reward"] = m.reward.cents;
+  j["deadline"] = date_to_json(m.deadline);
+  j["deadline_hour"] = m.deadline_hour;
+  j["deadline_minute"] = m.deadline_minute;
+  j["completed"] = m.completed;
+  j["busted"] = m.busted;
+  j["item_index"] = m.item_index;
+  j["quantity"] = m.quantity;
+  j["cash_amount"] = m.cash_amount.cents;
+  j["pickup"] = mission_location_to_json(m.pickup);
+  j["dropoff"] = mission_location_to_json(m.dropoff);
+
+  json banks = json::array();
+  json launder = json::array();
+  for (int i = 0; i < 4; ++i) {
+    banks.push_back(m.bank_accounts[i]);
+    launder.push_back(m.launder_done[i]);
+  }
+  j["bank_accounts"] = banks;
+  j["launder_done"] = launder;
+  j["contamination_pct"] = m.contamination_pct;
+  j["profit"] = m.profit.cents;
+  return j;
+}
+
+static MafiaMission json_to_mission(const json& j) {
+  MafiaMission m;
+  m.mission_type =
+      static_cast<MafiaMissionType>(j.value("mission_type", 0));
+  m.active = j.value("active", false);
+  m.risk_pct = j.value("risk_pct", 0);
+  m.reward = Money{j.value("reward", int64_t{0})};
+  if (j.contains("deadline")) {
+    m.deadline = json_to_date(j["deadline"]);
+  }
+  m.deadline_hour = j.value("deadline_hour", 0);
+  m.deadline_minute = j.value("deadline_minute", 0);
+  m.completed = j.value("completed", false);
+  m.busted = j.value("busted", false);
+  m.item_index = j.value("item_index", 0);
+  m.quantity = j.value("quantity", 0);
+  m.cash_amount = Money{j.value("cash_amount", int64_t{0})};
+  if (j.contains("pickup")) {
+    m.pickup = json_to_mission_location(j["pickup"]);
+  }
+  if (j.contains("dropoff")) {
+    m.dropoff = json_to_mission_location(j["dropoff"]);
+  }
+  if (j.contains("bank_accounts")) {
+    for (int i = 0; i < 4 && i < static_cast<int>(j["bank_accounts"].size());
+         ++i) {
+      m.bank_accounts[i] = j["bank_accounts"][i].get<int>();
+    }
+  }
+  if (j.contains("launder_done")) {
+    for (int i = 0; i < 4 && i < static_cast<int>(j["launder_done"].size());
+         ++i) {
+      m.launder_done[i] = j["launder_done"][i].get<bool>();
+    }
+  }
+  m.contamination_pct = j.value("contamination_pct", 0);
+  m.profit = Money{j.value("profit", int64_t{0})};
+  return m;
+}
+
+static json mafia_loan_to_json(const MafiaLoan& loan) {
+  json j;
+  j["amount"] = loan.amount.cents;
+  j["due_date"] = date_to_json(loan.due_date);
+  return j;
+}
+
+static MafiaLoan json_to_mafia_loan(const json& j) {
+  MafiaLoan loan;
+  loan.amount = Money{j.value("amount", int64_t{0})};
+  if (j.contains("due_date")) {
+    loan.due_date = json_to_date(j["due_date"]);
+  }
+  return loan;
+}
+
+json mafia_state_to_json(const MafiaPlayerState& state) {
+  json j;
+  if (state.active_mission) {
+    j["active_mission"] = mission_to_json(*state.active_mission);
+  }
+  if (state.loan) {
+    j["loan"] = mafia_loan_to_json(*state.loan);
+  }
+  return j;
+}
+
+MafiaPlayerState json_to_mafia_state(const json& j) {
+  MafiaPlayerState state;
+  if (j.contains("active_mission") && !j["active_mission"].is_null()) {
+    state.active_mission = json_to_mission(j["active_mission"]);
+  }
+  if (j.contains("loan") && !j["loan"].is_null()) {
+    state.loan = json_to_mafia_loan(j["loan"]);
+  }
+  return state;
 }
 
 json player_recipes_to_json(const core::food::PlayerRecipes& recipes) {

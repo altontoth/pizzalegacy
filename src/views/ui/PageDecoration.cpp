@@ -149,7 +149,7 @@ void render_push_pin(Surface& surface, const Bob& pins, ViewPoint pos,
 
 void render_decorated_corners(Surface& surface, const Bob& stanbobs,
                               const ViewRect& offsets, int corner_offset,
-                              gfx::ColorIndex color) {
+                              std::optional<gfx::ColorIndex> line_color) {
   const std::array<Surface, 4> corners = {
       stanbobs.frame(35),
       stanbobs.frame(36),
@@ -157,7 +157,9 @@ void render_decorated_corners(Surface& surface, const Bob& stanbobs,
       stanbobs.frame(38),
   };
 
-  gfx::draw::box(surface, offsets, color, 2);
+  if (line_color) {
+    gfx::draw::box(surface, offsets, *line_color, 2);
+  }
 
   const PxOffset corner_delta{corner_offset, corner_offset};
   const ViewPoint top_left = offsets.point() + corner_delta;

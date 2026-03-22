@@ -114,6 +114,29 @@ public:
     return wd.iso_encoding(); // 1=Monday, 7=Sunday
   }
 
+  // English ordinal suffix for the day: "st", "nd", "rd", or "th"
+  std::string_view ordinal_suffix() const {
+    auto d = day();
+    if (d >= 11 && d <= 13) {
+      return "th";
+    }
+    switch (d % 10) {
+    case 1:
+      return "st";
+    case 2:
+      return "nd";
+    case 3:
+      return "rd";
+    default:
+      return "th";
+    }
+  }
+
+  // Day with ordinal suffix, e.g. "3rd", "21st"
+  std::string day_with_suffix() const {
+    return compat::format("{}{}", day(), ordinal_suffix());
+  }
+
   bool is_sunday() const { return day_of_week() == 7; }
   bool is_saturday() const { return day_of_week() == 6; }
   bool is_end_of_week() const { return is_saturday(); }
@@ -125,36 +148,3 @@ private:
 };
 
 inline const GameDate game_start_date{1995, 3, 1};
-/*
-
-  // Game starts on 1st of March 1995
-  int year = 1995;
-  int month = 3;
-  int day = 1;
-
-  bool operator==(const GameDate&) const = default;
-  std::strong_ordering operator<=>(const GameDate& other) const;
-
-  // Month name methods
-  std::string month_name() const;
-  std::string previous_month_name() const;
-  int previous_month() const;
-  std::string to_string() const;
-  static bool is_leap_year(int year);
-  static int days_in_month(int month, int year);
-
-  // Helpers for date ranges
-  GameDate month_start() const;
-  GameDate month_end() const;
-  GameDate previous_month_start() const;
-  GameDate previous_month_end() const;
-
-private:
-  static constexpr std::array<std::string_view, 12> month_names = {
-      "January", "February", "March",     "April",   "May",      "June",
-      "July",    "August",   "September", "October", "November", "December",
-  };
-};
-
-int operator-(const GameDate&, const GameDate&);
-*/

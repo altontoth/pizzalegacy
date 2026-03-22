@@ -209,6 +209,7 @@ json SaveGameManager::state_to_json(const GameState& state,
 
   // Save difficulty
   j["difficulty_level"] = state.difficulty_level();
+  j["game_mode"] = static_cast<int>(state.game_mode());
 
   // Save players
   json players_array = json::array();
@@ -289,6 +290,10 @@ void SaveGameManager::json_to_state(const json& j, GameState& state,
   if (j.contains("active_player")) {
     core::PlayerId pid{j["active_player"].get<int>()};
     state.active_player(pid);
+  }
+  if (j.contains("game_mode")) {
+    auto mode{j["game_mode"].get<int>()};
+    state.game_mode(static_cast<GameMode>(mode));
   }
 
   // active_city and active_restaurant will be set after

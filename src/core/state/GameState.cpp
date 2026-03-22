@@ -12,6 +12,7 @@
 
 #include <magic_enum/magic_enum.hpp>
 #include <utility>
+#include "core/character/Actor.h"
 #include "core/character/Awards.h"
 #include "core/character/Player.h"
 #include "core/city/District.h"
@@ -23,6 +24,7 @@
 #include "core/util/GameContext.h"
 #include "engine/Fatal.h"
 #include "engine/Logger.h"
+#include "engine/Random.h"
 #include "engine/geom/Spaces.h"
 #include "factories/CharacterFactory.h"
 #include "factories/CityFactory.h"
@@ -366,7 +368,32 @@ void GameState::advance_game_time() {
     });
   }
 
+  check_mafia_events();
+  check_police_events();
   process_pending_messages();
+}
+
+void GameState::deliver_message(core::events::LeventId msg_id,
+                                std::function<void()> on_dismiss) {
+  auto* player = active_player();
+  if (!player) {
+    return;
+  }
+
+  // Ensure CV entry exists (no-op if already scheduled)
+  message_manager_.schedule_message(msg_id, player->id(),
+                                    time().current_date());
+
+  const auto& data = message_manager_.get_data(msg_id);
+  if (data.score > 0) {
+    player->add_score(data.score);
+  }
+  if (data.background != core::events::ZwBackground::NONE) {
+    FullscreenStatusState fss{.message_id = msg_id,
+                              .on_dismiss = std::move(on_dismiss)};
+    ui_.push<FullscreenStatusState>(std::move(fss));
+  }
+  message_manager_.mark_as_shown(msg_id, player->id());
 }
 
 void GameState::process_pending_messages() {
@@ -377,14 +404,7 @@ void GameState::process_pending_messages() {
 
   auto pending = message_manager_.get_pending_for_player(player->id());
   for (auto msg_id : pending) {
-    const auto& data = message_manager_.get_data(msg_id);
-    if (data.score > 0) {
-      player->add_score(data.score);
-    }
-    if (data.background != core::events::ZwBackground::NONE) {
-      ui_.push<FullscreenStatusState>(msg_id);
-    }
-    message_manager_.mark_as_shown(msg_id, player->id());
+    deliver_message(msg_id);
   }
 }
 
@@ -429,6 +449,15 @@ bool GameState::advance_time_blocks(int n) {
 const GameTime& GameState::time() const { return time_; }
 
 void GameState::request_end_of_turn() { should_end_of_turn_ = true; }
+
+void GameState::skip_to_next_player() {
+  // Used on jail/holiday release day. The player's jail/holiday state has
+  // already been cleared by decrement, so end_of_turn() would see a free
+  // human player and show interactive reports. Force non-interactive so
+  // restaurants still process but reports are suppressed.
+  suppress_end_of_turn_reports_ = true;
+  end_of_turn();
+}
 
 void GameState::update(uint32_t elapsed_ms) {
   if (active_player_.value < 0) {
@@ -479,17 +508,22 @@ void GameState::end_of_turn() {
 
   auto* current_player = active_player();
 
-  // Process player end of day accounting FIRST (includes advertising costs,
-  // campaign updates, financial warnings)
+  // Compute interactivity early so we can suppress status messages before
+  // any end-of-day processing (AI expansion posts, financial warnings, etc.)
+  bool interactive = current_player->is_human_controlled() &&
+                     !current_player->is_on_holiday() &&
+                     !current_player->is_in_jail() &&
+                     !suppress_end_of_turn_reports_;
+  suppress_end_of_turn_reports_ = false;
+  if (!interactive) {
+    status_hub_.suppress(true);
+  }
+
+  // Process player end of day accounting (includes advertising costs,
+  // campaign updates, financial warnings, AI expansion)
   current_player->end_of_day(*this);
 
   auto player_restaurants = restaurants_for(current_player->id());
-
-  // Set up state for multi-step processing.
-  // Holiday players are treated as non-interactive (no reports, no delays)
-  // so the entire end-of-turn completes synchronously within one frame.
-  bool interactive =
-      current_player->is_human_controlled() && !current_player->is_on_holiday();
   end_of_turn_state_ = EndOfTurnState{
       .restaurants = player_restaurants,
       .current_index = 0,
@@ -729,6 +763,7 @@ void GameState::finish_end_of_turn() {
   // Mark if this is an AI player that should auto-end after card is shown
   pending_ai_auto_end_turn_ =
       !players_[active_player_.value]->is_human_controlled();
+  status_hub_.suppress(false);
   resume_time_advancement();
 }
 
@@ -874,6 +909,98 @@ void GameState::on_city_entered(core::CityId city_id, const Player& player) {
   process_pending_messages();
 }
 
+void GameState::check_mafia_events() {
+  auto* player = active_player();
+  auto* city = active_city();
+
+  auto mafia_actors = city->actors(ActorType::MAFIA);
+  if (mafia_actors.empty()) {
+    return;
+  }
+  int mafia_id = mafia_actors[0]->id();
+  const auto& date = time_.current_date();
+
+  // Loan repayment check
+  auto& loan = player->mafia_state().loan;
+  if (loan && date >= loan->due_date) {
+    ui_.push<MafiaState>(MafiaState{.id = mafia_id,
+                                    .mode = MafiaMode::LoanRepaymentDue,
+                                    .restaurant_id = std::nullopt});
+    return;
+  }
+
+  // Check laundering mission completion (all 4 accounts received their share)
+  auto& mission = player->mafia_state().active_mission;
+  if (mission && mission->active &&
+      mission->mission_type == MafiaMissionType::Laundering &&
+      !mission->completed) {
+    Money per_account = mission->cash_amount / 4;
+    bool all_done = true;
+    for (int i = 0; i < 4; i++) {
+      auto* acct = bank_accounts_.find(mission->bank_accounts[i]);
+      if (acct && acct->deposited >= per_account) {
+        mission->launder_done[i] = true;
+      }
+      if (!mission->launder_done[i]) {
+        all_done = false;
+      }
+    }
+    if (all_done) {
+      mission->completed = true;
+      for (int acct : mission->bank_accounts) {
+        bank_accounts_.close_account(acct);
+      }
+    }
+  }
+
+  // Mission deadline check
+  if (mission && mission->active) {
+    // Package missions fail immediately once the pickup window has passed,
+    // since without the item the dropoff can never succeed.
+    if (mission->mission_type == MafiaMissionType::Package &&
+        !mission->completed && mission->pickup.has_passed(time_)) {
+      ui_.push<MafiaState>(MafiaState{.id = mafia_id,
+                                      .mode = MafiaMode::MissionOverdue,
+                                      .restaurant_id = std::nullopt});
+      return;
+    }
+    if (date > mission->deadline && !mission->completed) {
+      ui_.push<MafiaState>(MafiaState{.id = mafia_id,
+                                      .mode = MafiaMode::MissionOverdue,
+                                      .restaurant_id = std::nullopt});
+      return;
+    }
+    if (date >= mission->deadline && mission->completed) {
+      ui_.push<MafiaState>(MafiaState{.id = mafia_id,
+                                      .mode = MafiaMode::MissionDeadlineReached,
+                                      .restaurant_id = std::nullopt});
+      return;
+    }
+  }
+
+  // Protection racket check (2% daily chance per restaurant)
+  if (player->social_status().underworld_score < 500) {
+    auto restaurants = restaurants_for(player->id());
+    for (auto* restaurant : restaurants) {
+      if (!restaurant->wants_open()) {
+        continue;
+      }
+      auto timer = restaurant->protection_timer();
+      // trigger if timer expired (==1) or never contacted (nullopt)
+      if (timer.has_value() && *timer > 1) {
+        continue;
+      }
+      if (!engine::random::rand_percentage_chance(2)) {
+        continue;
+      }
+      ui_.push<MafiaState>(MafiaState{.id = mafia_id,
+                                      .mode = MafiaMode::ProtectionRacketOffer,
+                                      .restaurant_id = restaurant->id()});
+      return;
+    }
+  }
+}
+
 void GameState::active_player(core::PlayerId player_id) {
   active_player_ = player_id;
 }
@@ -951,8 +1078,27 @@ void GameState::finalize_initialization(GameContext& context) {
         continue;
       }
 
+      // AI restaurants open immediately; human players open via UI
+      if (!player_item.is_human) {
+        rest->wants_open(true);
+      }
+
       // Load the first 3 pizzas for QuickStart mode
       load_initial_pizzas(context, core::PlayerId{i});
+    }
+  }
+
+  // Register fixed bank accounts for each player (111111 through 888888)
+  for (int i = 0; i < NUMBER_OF_PLAYERS; ++i) {
+    if (players_[i]) {
+      bank_accounts_.register_player_account(core::PlayerId{i});
+    }
+  }
+
+  // Register mayor bank accounts for all loaded cities
+  for (auto& city : cities_) {
+    if (city) {
+      city->mayor_office().register_accounts(bank_accounts_);
     }
   }
 
@@ -1142,7 +1288,66 @@ void GameState::city_view_view_state(const CityViewMapState cmvs) {
   city_view_view_state_[active_player_.value] = cmvs;
 }
 
-void GameState::initiate_arrest(ArrestReason reason) {}
+RankChange GameState::adjust_underworld_score(Player& player, int delta) {
+  auto rc = player.social_status().adjust_underworld(delta, difficulty_level_);
+  if (rc.promoted()) {
+    // Underworld rank LeventIds run from AsGoodAsDead(15) to Godfather(27)
+    auto id = static_cast<core::events::LeventId>(15 + rc.new_rank);
+    message_manager_.schedule_message(id, player.id(), time_.current_date());
+  }
+  return rc;
+}
+
+RankChange GameState::adjust_social_score(Player& player, int delta) {
+  auto rc = player.social_status().adjust_social(delta, difficulty_level_);
+  if (rc.promoted()) {
+    // Business rank LeventIds run from LaughingStock(1) to StatusTycoon(14)
+    auto id = static_cast<core::events::LeventId>(1 + rc.new_rank);
+    message_manager_.schedule_message(id, player.id(), time_.current_date());
+  }
+  return rc;
+}
+
+void GameState::initiate_arrest(ArrestReason reason) {
+  auto* city = active_city();
+  if (!city) {
+    return;
+  }
+  auto police_actors = city->actors(ActorType::POLICE);
+  if (police_actors.empty()) {
+    return;
+  }
+  ui_.push<PoliceState>(
+      PoliceState{.id = police_actors[0]->id(), .reason = reason});
+}
+
+void GameState::check_police_events() {
+  auto* player = active_player();
+  if (!player || !player->is_human_controlled()) {
+    return;
+  }
+
+  using core::item::Item;
+  auto& inv = player->inventory();
+  int contraband = 0;
+  for (auto item : {Item::FlameThrower, Item::Chemicals, Item::Bazooka, Item::Bomb}) {
+    contraband += inv[item];
+  }
+  if (contraband == 0) {
+    return;
+  }
+
+  if (!engine::random::rand_percentage_chance(2)) {
+    return;
+  }
+
+  int evasion = player->character().dexterity();
+  if (engine::random::rand_percentage_chance(evasion)) {
+    return;
+  }
+
+  initiate_arrest(ArrestReason::PosessingWeapons);
+}
 
 Restaurant* GameState::restaurant(core::RestaurantId r_id) const {
   for (const auto& r : restaurants_) {
@@ -1412,9 +1617,26 @@ void GameState::on_player_turn_card_finished() {
   }
 
   auto* player = active_player();
+  if (player && player->is_in_jail()) {
+    player->decrement_jail_day();
+    if (player->is_in_jail()) {
+      end_of_turn();
+    }
+    else {
+      // Release day: no bookkeeping, just advance to next player
+      skip_to_next_player();
+    }
+    return;
+  }
   if (player && player->is_on_holiday()) {
     player->decrement_holiday_day();
-    end_of_turn();
+    if (player->is_on_holiday()) {
+      end_of_turn();
+    }
+    else {
+      skip_to_next_player();
+    }
+    return;
   }
 }
 
@@ -1457,6 +1679,8 @@ GameState::total_ingredient_need_for_player(core::PlayerId player_id) const {
 
 GameMode GameState::game_mode() const { return game_mode_; }
 
+void GameState::game_mode(GameMode mode) { game_mode_ = mode; }
+
 int GameState::human_player_count() const {
   int h_count = 0;
   for (const auto& player : players_) {
@@ -1465,4 +1689,32 @@ int GameState::human_player_count() const {
     }
   }
   return h_count;
+}
+
+bool GameState::bank_transfer(int account_number, Money amount,
+                              Player& sender) {
+  auto* account = bank_accounts_.find(account_number);
+  if (!account) {
+    return false;
+  }
+
+  const auto& date = time().current_date();
+
+  // Debit the sender
+  if (!sender.spend_cash(date, Account::Others, amount)) {
+    return false;
+  }
+
+  // Credit the target
+  if (account->player_id) {
+    auto* target = player(*account->player_id);
+    if (target) {
+      target->financials().transfer(date, Account::Others, Account::Cash,
+                                    amount, AccountingScope::Operational);
+    }
+  }
+
+  // Track the deposit (for mafia/mayor to query)
+  bank_accounts_.deposit(account_number, amount);
+  return true;
 }

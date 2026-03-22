@@ -93,7 +93,6 @@ private:
                                 const WorldRect& table_map_rect) const;
 
   std::span<const GuestRenderItem> visible_guests() const;
-  [[nodiscard]] core::FurnitureId allocate_next_furniture_id() const;
   void init_active_batch_if_needed();
   [[nodiscard]] FurnitureBatch* current_batch();
   void set_active_batch(size_t idx);
@@ -190,8 +189,6 @@ private:
   int interior_start_row_{0};
   std::vector<FurnitureBatch>& furniture_placement_;
   std::optional<size_t> active_batch_index_; // index into furniture_placement_
-  // Todo: Move this to RestaurantLayout:
-  core::FurnitureId next_furniture_id_{0};
   std::optional<SupplierType>
       return_to_supplier_type_; // Where to navigate after placement complete
   std::optional<audio::SoundId> current_restaurant_noise_;

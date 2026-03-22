@@ -24,6 +24,8 @@ public:
   bool advance_line_choice(BankLine) override;
   bool advance_proposal(bool) override;
   bool has_ended() const override;
+  PopupRequest popup_request() const override;
+  void on_cheque_result(int amount, int account) override;
 
 private:
   Loan propose_loan() const;
@@ -32,4 +34,5 @@ private:
   Loan proposed_loan_{};
   Loan* repaying_loan_{nullptr};
   const BankSettings& bank_settings_;
+  bool wants_cheque_{false};
 };

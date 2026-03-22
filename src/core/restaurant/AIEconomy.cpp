@@ -64,7 +64,6 @@ void process_restaurant_revenue(Restaurant& restaurant, Player& player,
 
 bool check_bankruptcy(Restaurant& restaurant, Player& player,
                       GameState& game_state) {
-  // Original: if profit[+0x86] < -50 AND competitor_count[+0x8F] > 3
   if (restaurant.ai_profit_days() >= -50) {
     return false;
   }

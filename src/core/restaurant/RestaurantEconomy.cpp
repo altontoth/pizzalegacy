@@ -159,22 +159,20 @@ Popularity RestaurantEconomy::calculate_furniture_popularity(
   const auto& floor_pattern = layout->floor_pattern();
 
   for (auto demographic : ALL_CONSUMER_TYPES) {
-    int total_popularity =
-        floor_pattern.popularity[static_cast<int>(demographic)];
+    int floor_pop = floor_pattern.popularity_for(demographic);
 
+    int furniture_pop = 0;
     if (layout) {
       for (const auto& placed : layout->placed_furniture()) {
         if (!placed || !placed->furniture()) {
           continue;
         }
 
-        int pop = placed->furniture()->popularity(demographic);
-        total_popularity += pop;
+        furniture_pop += placed->furniture()->popularity(demographic);
       }
     }
 
-    // Divide by 2
-    int result_value = total_popularity / 2;
+    int result_value = floor_pop + furniture_pop / 2;
 
     result[demographic] = result_value;
   }

@@ -6,7 +6,7 @@
 
 #include "views/base/Menu.h"
 
-#include "engine/DebugLabel.h"
+#include "core/state/GameState.h"
 #include "engine/DisplayConstants.h"
 #include "engine/geom/Spaces.h"
 #include "engine/ui/Alignment.h"
@@ -15,7 +15,6 @@
 #include "gfx/Draw.h"
 #include "gfx/Surface.h"
 #include "resources/FontManager.h"
-#include "views/base/ViewDefs.h"
 #include "views/ui/widgets/PositionMarkerMenuItem.h"
 
 using namespace views::base;
@@ -28,6 +27,7 @@ Menu::Menu(GameContext& context, GameState& state, ViewPoint origin,
       origin_in_view_(origin), line_spacing_(line_spacing) {
 
   update_selection(nullptr);
+  state.pause_time_advancement();
 }
 
 std::optional<std::size_t> Menu::index_of_selected() const {

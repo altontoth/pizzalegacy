@@ -28,7 +28,7 @@ void GameOver::render(const RenderContext& ctx) {
       .align = AlignX::Left,
       .shadow = std::nullopt,
       .character_spacing = std::nullopt,
-      .line_height = 10,
+      .line_spacing = 10,
   };
 
   if (has_high_score) {

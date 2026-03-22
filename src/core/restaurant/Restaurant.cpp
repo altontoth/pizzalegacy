@@ -1425,6 +1425,8 @@ void Restaurant::start_of_day(GameState& game_state) {
     --forced_days_remaining_;
   }
 
+  decrement_protection_timer();
+
   if (auto* player = game_state.active_player()) {
     if (player->is_human_controlled()) {
       if (property_ && property_->city()) {

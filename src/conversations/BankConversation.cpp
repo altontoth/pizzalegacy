@@ -29,6 +29,8 @@ bool BankConversation::advance() {
   case BankLine::GOOD_LUCK_WITH_INVESTMENTS:
   case BankLine::YOU_DONT_HAVE_ENOUGH_TO_REPAY:
   case BankLine::YOU_DONT_HAVE_LOAN_WITH_US:
+  case BankLine::TRANSFER_SUCCEEDED:
+  case BankLine::TRANSFER_FAILED:
     current_line(BankLine::I_NEED_LOAN);
     break;
   default:
@@ -58,8 +60,10 @@ bool BankConversation::advance_line_choice(BankLine choice) {
       current_line(BankLine::LOAN_ARRANGEMENT);
     }
     break;
+  case BankLine::I_WANT_TO_TRANSFER:
+    wants_cheque_ = true;
+    break;
   case BankLine::I_WANT_TO_REPAY:
-    // Check if player has a loan with this bank
     if (!state_.active_player()->has_loan_with_bank(
             state_.active_city_id(), core::BankId{actor_->id()})) {
       current_line(BankLine::YOU_DONT_HAVE_LOAN_WITH_US);
@@ -391,4 +395,17 @@ int BankConversation::round_to_nearest(int value, int rounding_unit) const {
 BankLine BankConversation::compute_start_line(const GameState& state,
                                               const Actor*) {
   return BankLine::HELLO_MAY_I_HELP_YOU;
+}
+
+BankConversation::PopupRequest BankConversation::popup_request() const {
+  return wants_cheque_ ? PopupRequest::CHEQUE : PopupRequest::NONE;
+}
+
+void BankConversation::on_cheque_result(int amount, int account) {
+  wants_cheque_ = false;
+
+  bool ok = amount > 0 && account > 0 &&
+            state_.bank_transfer(account, Money{amount * 100},
+                                 *state_.active_player());
+  current_line(ok ? BankLine::TRANSFER_SUCCEEDED : BankLine::TRANSFER_FAILED);
 }

@@ -165,6 +165,8 @@ void CityFactory::load_city_data(int city_id) {
 
   read_realtor_data(is, number_of_realtors_);
   read_bank_data(is, number_of_banks);
+  read_insurance_data(is, number_of_insurance);
+  read_mafia_data(is, number_of_others);
 
   // Skip 240 zero bytes.
   is.ignore(240);
@@ -520,11 +522,15 @@ std::unique_ptr<City> CityFactory::build_city_object(int id) {
   };
   std::map<uint8_t, std::unique_ptr<Actor>> actor_map;
   std::unordered_map<int, BankSettings> bank_settings_map;
+  std::unordered_map<int, InsuranceSettings> insurance_settings_map;
+  std::unordered_map<int, MafiaSettings> mafia_settings_map;
   std::unordered_map<int, RealtorSettings> realtor_settings_map;
   int actor_id = 0;
   std::optional<int> mayor_id;
   std::optional<int> police_id;
   int bank_index = 0;
+  int insurance_index = 0;
+  int mafia_index = 0;
   int realtor_index = 0;
   for (int i = 0; i < NUMBER_OF_ACTOR_TYPES; ++i) {
     int count = actor_count_[i];
@@ -556,6 +562,18 @@ std::unique_ptr<City> CityFactory::build_city_object(int id) {
         bank_settings_map.emplace(actor_id, bank_settings_[bank_index]);
         bank_index++;
       }
+      else if (actor_type == ActorType::INSURANCE) {
+        insurance_settings_map.emplace(actor_id,
+                                       insurance_settings_[insurance_index]);
+        insurance_index++;
+      }
+      else if (actor_type == ActorType::MAFIA ||
+               actor_type == ActorType::ARMS_DEALER) {
+        if (mafia_index < static_cast<int>(mafia_settings_.size())) {
+          mafia_settings_map.emplace(actor_id, mafia_settings_[mafia_index]);
+          mafia_index++;
+        }
+      }
       else if (actor_type == ActorType::REALTOR) {
         realtor_settings_map.emplace(actor_id,
                                      realtor_settings_[realtor_index]);
@@ -570,6 +588,8 @@ std::unique_ptr<City> CityFactory::build_city_object(int id) {
   city->mayor_id(*mayor_id);
   city->actors(std::move(actor_map));
   city->bank_settings(bank_settings_map);
+  city->insurance_settings(insurance_settings_map);
+  city->mafia_settings(mafia_settings_map);
   city->realtor_settings(realtor_settings_map);
 
   city->suppliers(std::move(suppliers_));
@@ -774,5 +794,56 @@ void CityFactory::read_bank_data(std::ifstream& is, int number_of_banks) {
   bank_settings_ = std::move(banks);
 
   // Restore original position
+  is.seekg(current_pos);
+}
+
+void CityFactory::read_insurance_data(std::ifstream& is,
+                                      int number_of_insurance) {
+  std::streampos current_pos = is.tellg();
+  is.seekg(1866);
+
+  std::vector<InsuranceSettings> insurance;
+  insurance.reserve(number_of_insurance);
+
+  for (int i = 0; i < number_of_insurance; ++i) {
+    auto premium_factor = static_cast<uint8_t>(is.get());
+    auto willingness_threshold = static_cast<uint8_t>(is.get());
+    auto rejection_pct = static_cast<uint8_t>(is.get());
+    auto padding = static_cast<uint8_t>(is.get());
+
+    Logger::debug(
+        "Insurance [{}]: premium_factor={}, willingness_threshold={}, "
+        "rejection_pct={}, padding={}",
+        i, premium_factor, willingness_threshold, rejection_pct, padding);
+
+    insurance.emplace_back(premium_factor, willingness_threshold, rejection_pct,
+                           padding);
+  }
+  insurance_settings_ = std::move(insurance);
+
+  is.seekg(current_pos);
+}
+
+void CityFactory::read_mafia_data(std::ifstream& is, int number_of_mafia) {
+  std::streampos current_pos = is.tellg();
+  is.seekg(1946);
+
+  std::vector<MafiaSettings> mafia;
+  mafia.reserve(number_of_mafia);
+
+  for (int i = 0; i < number_of_mafia; ++i) {
+    auto crime_danger_level = static_cast<uint8_t>(is.get());
+    auto unknown_1 = static_cast<uint8_t>(is.get());
+    auto unknown_2 = static_cast<uint8_t>(is.get());
+    auto unknown_3 = static_cast<uint8_t>(is.get());
+
+    Logger::debug("Mafia [{}]: crime_danger_level={}, unknown_1={}, "
+                  "unknown_2={}, unknown_3={}",
+                  i, crime_danger_level, unknown_1, unknown_2, unknown_3);
+
+    mafia.emplace_back(crime_danger_level, unknown_1, unknown_2, unknown_3);
+  }
+  mafia_settings_ = std::move(mafia);
+
   is.seekg(current_pos);
 }

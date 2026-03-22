@@ -10,10 +10,18 @@
 #include "magic_enum/magic_enum.hpp"
 #include "resources/FontManager.h"
 
+#include "core/util/LegacyConstants.h"
 #include "gfx/Blit.h"
 #include "views/base/ViewDefs.h"
+#include "views/ui/PopupManager.h"
+#include "views/ui/popups/ChequePopup.h"
 
 constexpr int DEFAULT_CONVERSATION_ANIMATION_DURATION = 67;
+
+// Two-nod sequence: down 2, down 4, up 2, up 0, down 2, down 4, up 2, up 0
+constexpr int nod_y_offsets[] = {2, 4, 2, 0, 2, 4, 2, 0};
+constexpr int NOD_NUM_FRAMES = 8;
+constexpr int NOD_TICKS_PER_FRAME = 3;
 
 const uint8_t eye_x_offsets[] = {0x09, 0x0A, 0x02, 0x0B, 0x05, 0x01, 0x09,
                                  0x00, 0x17, 0x0A, 0x04, 0x16, 0x0A, 0x0A,
@@ -82,11 +90,28 @@ template <typename LineEnum> void ActorView<LineEnum>::tick() {
 
     case 3: // done, resume dialogue
       happy_stage_ = 0;
+      frozen_lines_.clear();
       current_phase_ = ConversationPhase::TALKING;
       actor_->state(ActionState::TALKING);
       phase_timer_ = DEFAULT_CONVERSATION_DELAY;
-      stop_rendering_dialog = false;
+
       break;
+    }
+    mark_dirty();
+  }
+
+  if (nod_frame_ != 0 && --nod_timer_ == 0) {
+    nod_frame_++;
+    if (nod_frame_ > NOD_NUM_FRAMES) {
+      nod_frame_ = 0;
+      frozen_lines_.clear();
+      current_phase_ = ConversationPhase::TALKING;
+      actor_->state(ActionState::TALKING);
+
+      phase_timer_ = DEFAULT_CONVERSATION_DELAY;
+    }
+    else {
+      nod_timer_ = NOD_TICKS_PER_FRAME;
     }
     mark_dirty();
   }
@@ -112,7 +137,7 @@ template <typename LineEnum> void ActorView<LineEnum>::on_phase_finished() {
   switch (current_phase_) {
   case ConversationPhase::EMOTING:
     // We are done emoting -> Show the next line (or next conversation logic).
-    stop_rendering_dialog = false;
+    frozen_lines_.clear();
     current_phase_ = ConversationPhase::TALKING;
     actor_->state(ActionState::TALKING);
     mark_dirty();
@@ -133,6 +158,9 @@ template <typename LineEnum> void ActorView<LineEnum>::on_phase_finished() {
   case ConversationPhase::ENDING:
     Logger::debug("Conversation over!");
     state_.ui().pop();
+    if (conversation_->on_end_) {
+      conversation_->on_end_();
+    }
     break;
   default:
     break;
@@ -158,6 +186,9 @@ bool ActorView<LineEnum>::update_face_animations() {
 
 template <typename LineEnum>
 bool ActorView<LineEnum>::update_idle_animations() {
+  if (nod_frame_ != 0) {
+    return false;
+  }
   int blink_for = rand() % 3 + 3;
   if (count_ % 5 == 0) {
     if (rand() % 35 > 32) {
@@ -190,6 +221,9 @@ template <typename LineEnum> bool ActorView<LineEnum>::update_emotions() {
       actor_->state(ActionState::HAPPY);
       already_emoted_ = true;
       break;
+    case Emotion::NOD:
+      already_emoted_ = true;
+      break;
     }
   }
   return true;
@@ -197,15 +231,14 @@ template <typename LineEnum> bool ActorView<LineEnum>::update_emotions() {
 
 template <typename LineEnum>
 void ActorView<LineEnum>::render(const RenderContext& ctx) {
+  auto& bg = context_.vga->get(bg_filename_);
   ctx.surface->fill(240);
-  gfx::blit::blit_raw_with_palette(*ctx.surface,
-                                   context_.vga->get(bg_filename_));
+  ctx.surface->palette(bg.palette());
+  ctx.surface->blit_masked(bg);
 
   render_character_head(ctx);
   render_contract_terms(ctx);
-  if (!stop_rendering_dialog) {
-    render_dialog(ctx);
-  }
+  render_dialog(ctx);
 }
 
 template <typename LineEnum>
@@ -216,6 +249,10 @@ void ActorView<LineEnum>::render_character_head(const RenderContext& ctx) {
   // Get the indexes to our arrays:
   auto character_idx = actor_->head_id() - 1;
   auto bg_idx = actor_->background_id() - 10;
+
+  int nod_offset = (nod_frame_ > 0 && nod_frame_ <= NOD_NUM_FRAMES)
+                       ? nod_y_offsets[nod_frame_ - 1]
+                       : 0;
 
   if (actor_->is_blinking()) {
     int eye_x = eye_x_offsets[character_idx] * 2;
@@ -233,7 +270,7 @@ void ActorView<LineEnum>::render_character_head(const RenderContext& ctx) {
   y_1x += character_y_adjustments[character_idx];
 
   int x = x_1x * 2;
-  int y = y_1x * 2;
+  int y = y_1x * 2 + nod_offset;
 
   ctx.surface->blit_masked(character, ViewPoint{x, y});
 }
@@ -279,15 +316,13 @@ void ActorView<LineEnum>::render_contract_terms(const RenderContext& ctx) {
 template <typename LineEnum>
 void ActorView<LineEnum>::render_dialog(const RenderContext& ctx) {
   interactions_.begin_frame();
-  // Dialog rendering:
-  auto d = conversation_->lines();
   int text_x_pos = 0;
   int text_y_pos = 0;
   constexpr int dialog_box_offset_x = 15;
-  constexpr int dialog_box_offset_y = 256;
+  constexpr int dialog_box_offset_y = 252;
   constexpr int y_offset = 20;
 
-  auto lines = conversation_->lines();
+  auto lines = frozen_lines_.empty() ? conversation_->lines() : frozen_lines_;
 
   // Before we start, we add an interaction item over the whole screen,
   // to catch any clicks that didn't hit any of our actual hit points. This
@@ -300,16 +335,17 @@ void ActorView<LineEnum>::render_dialog(const RenderContext& ctx) {
         if (ie.type == views::ui::InteractionEvent::Type::Click) {
           Logger::debug("catch all advance conversation with a click at {}, {}",
                         ie.pos.x, ie.pos.y);
-          // We have to check if they clicked outside of the buttons
-          // on a proposal, in which case they accepted the proposal:
-          // TODO: Some proposals don't allow you to accept by clicking through,
-          // so we need some way to differentiate.
           if (conversation_->is_terminal()) {
             current_phase_ = ConversationPhase::ENDING;
             phase_timer_ = 10;
           }
           else if (conversation_->is_proposal()) {
-            advance_proposal(true);
+            // Only accept via click-through if easy_accept is set;
+            // otherwise the player must use the thumbs-up button.
+            auto current_lines = conversation_->lines();
+            if (!current_lines.empty() && current_lines[0].is_easy_accept) {
+              advance_proposal(true);
+            }
           }
           else {
             advance_conversation();
@@ -317,31 +353,33 @@ void ActorView<LineEnum>::render_dialog(const RenderContext& ctx) {
         }
       });
 
-  static constexpr char LINE_FMT[] = "{}.line.{}";
+  constexpr int dialog_w = 345;
+  constexpr int dialog_h = 104;
+  int abs_x = dialog_box_offset_x - 2;
+  int abs_y = dialog_box_offset_y - 4;
 
-  // Create a dedicated surface for this so that
-  // the line width is done correctly.
-  Surface s(345, 100, PaletteHandle{0}, 240);
   for (auto line : lines) {
-    int w, h;
-    auto text_color = 15;
+    int line_x = abs_x + text_x_pos;
+    int line_y = abs_y + text_y_pos;
+
     if (static_cast<int>(line.line_id) == hovered_line_id_) {
-      // Draw background rectangle
       auto hover_metrics =
           context_.font->size_text(line.text, FontFace::PIZ_NUMB);
-      s.fill_rect(ViewRect{text_x_pos - 2, text_y_pos - 2,
-                           hover_metrics.width + 4, hover_metrics.height + 4},
-                  13);
+      ctx.surface->fill_rect(
+          ViewRect{line_x - 2, line_y - 2, hover_metrics.width + 4,
+                   hover_metrics.height + 4},
+          13);
     }
-    auto metrics = context_.font->render_text_onto(
-        s, line.text, ViewPoint{text_x_pos, text_y_pos}, FontFace::PIZ_NUMB,
-        text_color, AlignX::Left);
+
+    auto metrics = context_.font->render_into_rect(
+        *ctx.surface, line.text,
+        ViewRect{line_x, line_y, dialog_w - text_x_pos,
+                 dialog_h - text_y_pos},
+        FontFace::PIZ_NUMB, {.color = gfx::ColorIndex{15}});
 
     if (line.is_option) {
       interactions_.create_frame_item(
-          ViewRect{dialog_box_offset_x + text_x_pos,
-                   dialog_box_offset_y + text_y_pos, metrics.width,
-                   metrics.height},
+          ViewRect{line_x, line_y, metrics.width, metrics.height},
           compat::format("{}.line.{}", magic_enum::enum_name(actor_->type()),
                          magic_enum::enum_name(line.line_id)),
           [this, line](views::ui::InteractionEvent ie) {
@@ -360,33 +398,56 @@ void ActorView<LineEnum>::render_dialog(const RenderContext& ctx) {
     }
     text_y_pos += y_offset;
   }
-  ctx.surface->blit_masked(s,
-                           ViewPoint{dialog_box_offset_x, dialog_box_offset_y});
 }
 
 template <typename LineEnum> void ActorView<LineEnum>::advance_conversation() {
+  auto previous_lines = conversation_->lines();
   bool state_changed = conversation_->advance();
-  apply_emotion_if_needed(state_changed);
-}
-
-template <typename LineEnum>
-void ActorView<LineEnum>::advance_conversation(LineEnum choice) {
-  bool state_changed = conversation_->advance_line_choice(choice);
-  apply_emotion_if_needed(state_changed);
-}
-
-template <typename LineEnum>
-void ActorView<LineEnum>::advance_proposal(bool accept) {
-  auto state_changed = conversation_->advance_proposal(accept);
-  apply_emotion_if_needed(state_changed);
+  apply_emotion_if_needed(state_changed, std::move(previous_lines));
   mark_dirty();
 }
 
 template <typename LineEnum>
-void ActorView<LineEnum>::apply_emotion_if_needed(bool state_changed) {
+void ActorView<LineEnum>::advance_conversation(LineEnum choice) {
+  auto previous_lines = conversation_->lines();
+  bool state_changed = conversation_->advance_line_choice(choice);
+
+  if (conversation_->popup_request() ==
+      BaseConversation<LineEnum>::PopupRequest::CHEQUE) {
+    context_.popup->palette_handle({37});
+    context_.popup->origin(ViewPoint{LegacyConstants::WOOD_BORDER_WIDTH_LEFT,
+                                     LegacyConstants::WOOD_BORDER_HEIGHT_TOP});
+    context_.popup->create<ChequePopup>(
+        [this](int amount, int account) {
+          conversation_->on_cheque_result(amount, account);
+          current_phase_ = ConversationPhase::TALKING;
+          actor_->state(ActionState::TALKING);
+          phase_timer_ = DEFAULT_CONVERSATION_DELAY;
+          mark_dirty();
+        });
+    return;
+  }
+
+  apply_emotion_if_needed(state_changed, std::move(previous_lines));
+  mark_dirty();
+}
+
+template <typename LineEnum>
+void ActorView<LineEnum>::advance_proposal(bool accept) {
+  auto previous_lines = conversation_->lines();
+  auto state_changed = conversation_->advance_proposal(accept);
+  apply_emotion_if_needed(state_changed, std::move(previous_lines));
+  mark_dirty();
+}
+
+template <typename LineEnum>
+void ActorView<LineEnum>::apply_emotion_if_needed(
+    bool state_changed,
+    std::vector<ConversationLine<LineEnum>> previous_lines) {
   auto emotion = conversation_->emotion();
   bool is_choice = conversation_->is_option();
   if (emotion != Emotion::NEUTRAL) {
+    frozen_lines_ = std::move(previous_lines);
     phase_timer_ = DEFAULT_CONVERSATION_DELAY;
     current_phase_ = ConversationPhase::EMOTING;
     switch (emotion) {
@@ -394,18 +455,26 @@ void ActorView<LineEnum>::apply_emotion_if_needed(bool state_changed) {
       happy_stage_ = 1;
       happy_timer_ = happy_stage_1_delay;
       actor_->state(ActionState::HAPPY);
-      stop_rendering_dialog = true;
       current_phase_ = ConversationPhase::EMOTING;
       phase_timer_ = 100;
       break;
-      break;
     case Emotion::ANGRY:
       actor_->state(ActionState::ANGRY);
-      stop_rendering_dialog = true;
+      break;
+    case Emotion::NOD:
+      nod_frame_ = 1;
+      nod_timer_ = NOD_TICKS_PER_FRAME;
+      actor_->state(ActionState::WAITING);
+      current_phase_ = ConversationPhase::EMOTING;
+      phase_timer_ = 0; // nod_timer_ drives the animation
       break;
     default:
       break;
     }
+  }
+  else if (conversation_->has_ended() && conversation_->lines().empty()) {
+    current_phase_ = ConversationPhase::ENDING;
+    phase_timer_ = 1;
   }
   else if (!is_choice) {
     current_phase_ = ConversationPhase::TALKING;

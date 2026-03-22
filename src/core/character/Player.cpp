@@ -45,6 +45,11 @@ Player::Player(core::PlayerId id, Character character, bool is_human)
     : id_(id), character_(character), is_human_(is_human) {
   financials_.transfer(game_start_date, Account::Capital, Account::Cash,
                        character.starting_money(), AccountingScope::Capital);
+
+  social_status_ = SocialStatus{
+      .social_score = (character.personality() / 2) + 220,
+      .underworld_score = (character.courage() / 2) + 220,
+  };
 }
 
 Player::~Player() = default;
@@ -401,6 +406,30 @@ void Player::on_food_shop_visit() {
     if (engine::random::rand_percentage_chance(character_.age())) {
       character_.energy(
           static_cast<uint8_t>(std::max(0, (int)character_.energy() - 1)));
+    }
+  }
+}
+
+int Player::criminal_record() const { return criminal_record_; }
+
+void Player::increment_criminal_record() { criminal_record_++; }
+
+void Player::jail(int days) {
+  jail_days_left_ = std::min(days, 99);
+  jail_time_ = *jail_days_left_;
+}
+
+bool Player::is_in_jail() const {
+  return jail_days_left_.has_value() && *jail_days_left_ > 0;
+}
+
+std::optional<int> Player::jail_days_left() const { return jail_days_left_; }
+
+void Player::decrement_jail_day() {
+  if (jail_days_left_) {
+    --(*jail_days_left_);
+    if (*jail_days_left_ <= 0) {
+      jail_days_left_.reset();
     }
   }
 }

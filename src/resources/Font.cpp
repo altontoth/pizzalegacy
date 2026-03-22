@@ -111,7 +111,7 @@ RenderedTextMetrics Font::render_text_onto(Surface& surface,
     // Calculate total height
     if (!flow_lines.empty()) {
       total_height = flow_lines.back().baseline_y - pos.y + line_spacing() +
-                     style.line_height;
+                     style.line_spacing;
     }
 
     if (style.shadow && style.shadow->offset.dy > 0) {
@@ -342,71 +342,52 @@ uint32_t Font::substitute_character(uint32_t codepoint) {
   return (uint32_t)'?';
 }
 
-// Analyze word for soft hyphen break points
-// Soft hyphens are dashes between letter characters (not at start/end, not
-// between numbers) Example: "cer-ti-fi-cates" -> clean_text="certificates",
-// break_positions={3, 5, 7}
+// Strips dashes between letters and records break positions.
+// e.g. "cer-ti-fi-cates" -> clean_text="certificates", break_positions={3,5,7}
 Font::BreakableWord Font::analyze_word_breaks(std::string_view word) {
   BreakableWord result;
   result.clean_text.reserve(word.size());
 
   for (size_t i = 0; i < word.size(); ++i) {
     char ch = word[i];
-
-    // Check if this is a potential soft hyphen
     if (ch == '-' && i > 0 && i < word.size() - 1) {
       char before = word[i - 1];
       char after = word[i + 1];
-
-      // Soft hyphen if surrounded by letters
       if (std::isalpha(static_cast<unsigned char>(before)) &&
           std::isalpha(static_cast<unsigned char>(after))) {
-        // Mark break position (after this character in clean text)
         result.break_positions.push_back(result.clean_text.size());
-        // Don't add the dash to clean text
         continue;
       }
     }
-
-    // Regular character or non-soft-hyphen dash
     result.clean_text += ch;
   }
 
   return result;
 }
 
-std::vector<std::string_view> Font::word_wrap_line(std::string_view input_line,
-                                                   int max_width,
-                                                   const TextStyle& style) {
-  std::vector<std::string_view> out;
+std::vector<std::string> Font::word_wrap_line(std::string_view input_line,
+                                              int max_width,
+                                              const TextStyle& style) {
+  std::vector<std::string> out;
 
   const auto n = input_line.size();
   std::size_t i = 0;
 
-  // Skip leading whitespace
   while (i < n &&
          (std::isspace(static_cast<unsigned char>(input_line[i])) != 0)) {
     ++i;
   }
 
-  // size_text(fragment) returns width assuming the fragment starts a new run:
-  // it counts inter-glyph spacing only between characters *within* the
-  // fragment. When joining two fragments on the same line, callers must insert
-  // one extra boundary spacing (the gap between the last glyph of the previous
-  // fragment and the first glyph of the next).
   const int boundary = get_character_spacing(style);
 
-  // Style for measuring fragments: same as caller's but without shadow,
-  // since shadow is a constant offset on the whole line, not per-fragment.
   TextStyle wrap_style = style;
   wrap_style.shadow = std::nullopt;
 
-  std::size_t line_start = i;    // start index of current line slice
-  std::size_t last_word_end = i; // end index of last word included
+  std::string current_line;
   int current_w = 0;
 
   while (i < n) {
-    // Find next word [w_begin, w_end)
+    // Find next whitespace-delimited word
     const std::size_t w_begin = i;
     while (i < n &&
            (std::isspace(static_cast<unsigned char>(input_line[i])) == 0)) {
@@ -414,61 +395,110 @@ std::vector<std::string_view> Font::word_wrap_line(std::string_view input_line,
     }
     const std::size_t w_end = i;
 
-    // Measure word
-    const auto word_view = input_line.substr(w_begin, w_end - w_begin);
-    const int w_width = size_text(word_view, wrap_style).width;
-
-    // Measure the whitespace that follows this word
-    std::size_t ws_begin = w_end;
+    // Grab trailing whitespace
+    const std::size_t ws_begin = w_end;
     while (i < n &&
            (std::isspace(static_cast<unsigned char>(input_line[i])) != 0)) {
       ++i;
     }
     const std::size_t ws_end = i;
 
-    const auto ws_view = input_line.substr(ws_begin, ws_end - ws_begin);
+    auto raw_word = input_line.substr(w_begin, w_end - w_begin);
+    auto ws = input_line.substr(ws_begin, ws_end - ws_begin);
+    auto bw = analyze_word_breaks(raw_word);
+    const int w_width = size_text(bw.clean_text, wrap_style).width;
     const int ws_width =
-        ws_view.empty() ? 0 : size_text(ws_view, wrap_style).width;
+        ws.empty() ? 0 : size_text(ws, wrap_style).width;
 
-    // If this word overflows the current line, emit and start fresh
-    if (current_w > 0 && current_w + boundary + w_width > max_width) {
-      if (last_word_end > line_start) {
-        out.push_back(
-            input_line.substr(line_start, last_word_end - line_start));
+    // Does the clean word fit on the current line?
+    int needed = (current_w == 0) ? w_width : current_w + boundary + w_width;
+    if (needed <= max_width) {
+      // Fits whole
+      if (!current_line.empty()) {
+        current_line += ' ';
       }
-      line_start = w_begin;
-      current_w = 0;
+      current_line += bw.clean_text;
+      current_w = needed;
+      if (ws_width > 0) {
+        current_w += boundary + ws_width;
+      }
+      continue;
     }
 
-    // Accumulate: word (with boundary spacing if joining to existing content)
-    current_w += (current_w == 0) ? w_width : boundary + w_width;
+    // Doesn't fit, try breaking at soft-hyphen positions
+    if (!bw.break_positions.empty()) {
+      int avail = max_width - current_w;
+      if (!current_line.empty()) {
+        avail -= boundary;
+      }
+
+      // find the best break that fits (with trailing dash)
+      std::string dash_str("-");
+      int dash_w = size_text(dash_str, wrap_style).width;
+      int best_break = -1;
+
+      for (auto pos : bw.break_positions) {
+        auto fragment = bw.clean_text.substr(0, pos);
+        int frag_w = size_text(fragment, wrap_style).width + dash_w;
+        if (frag_w <= avail) {
+          best_break = static_cast<int>(pos);
+        }
+        else {
+          break;
+        }
+      }
+
+      if (best_break >= 0) {
+        // emit current line + first part with dash
+        if (!current_line.empty()) {
+          current_line += ' ';
+        }
+        current_line += bw.clean_text.substr(0, best_break) + '-';
+        out.push_back(std::move(current_line));
+        current_line.clear();
+
+        // remainder becomes the start of the next line
+        auto remainder = bw.clean_text.substr(best_break);
+        current_w = size_text(remainder, wrap_style).width;
+        current_line = std::move(remainder);
+        if (ws_width > 0) {
+          current_w += boundary + ws_width;
+        }
+        continue;
+      }
+    }
+
+    // No soft-hyphen break worked, fall back to whole-word wrap
+    if (!current_line.empty()) {
+      out.push_back(std::move(current_line));
+      current_line.clear();
+      current_w = 0;
+    }
+    current_line = bw.clean_text;
+    current_w = w_width;
     if (ws_width > 0) {
       current_w += boundary + ws_width;
     }
-    last_word_end = w_end;
   }
 
-  // Emit the final line if any
-  if (last_word_end > line_start) {
-    out.push_back(input_line.substr(line_start, last_word_end - line_start));
+  if (!current_line.empty()) {
+    out.push_back(std::move(current_line));
   }
 
   return out;
 }
 
-std::vector<std::string_view>
+std::vector<std::string>
 Font::split_and_wrap_text(std::string_view text, int max_width,
                           const TextStyle& style) {
   auto pipe_lines = split_by_pipe(text);
-  std::vector<std::string_view> final_lines;
+  std::vector<std::string> final_lines;
 
-  // For each user-specified line (split by `|`),
-  // do word wrapping:
   for (std::string_view line : pipe_lines) {
     auto wrapped = word_wrap_line(line, max_width, style);
-    final_lines.insert(final_lines.end(),
-                       std::make_move_iterator(wrapped.begin()),
-                       std::make_move_iterator(wrapped.end()));
+    for (auto& w : wrapped) {
+      final_lines.push_back(std::move(w));
+    }
   }
   return final_lines;
 }
@@ -500,7 +530,7 @@ std::vector<FlowLine> Font::word_wrap_with_flow(std::string_view input_line,
   std::size_t last_word_end = i;
   int current_w = 0;
   int current_y = start_y;
-  int vert_spacing = line_spacing() + style.line_height;
+  int vert_spacing = line_spacing() + style.line_spacing;
 
   while (i < n) {
     // Determine current max width based on Y position
@@ -568,7 +598,7 @@ std::vector<FlowLine> Font::split_and_wrap_with_flow(std::string_view text,
   auto pipe_lines = split_by_pipe(text);
   std::vector<FlowLine> final_lines;
   int current_y = start_y;
-  int spacing = line_spacing() + style.line_height;
+  int spacing = line_spacing() + style.line_spacing;
 
   // For each user-specified line (split by `|`), do word wrapping
   for (std::string_view line : pipe_lines) {
@@ -640,7 +670,7 @@ RenderedTextMetrics Font::render_fixed_width(Surface& surface,
     auto line_metrics =
         render_line_onto(surface, line, ViewPoint{pos.x, current_y}, style);
 
-    int vertical_line_spacing = line_spacing() + style.line_height;
+    int vertical_line_spacing = line_spacing() + style.line_spacing;
     current_y += vertical_line_spacing;
     total_height += vertical_line_spacing;
 

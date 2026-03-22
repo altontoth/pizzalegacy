@@ -170,7 +170,7 @@ FullscreenMessageManager::FullscreenMessageManager()
 bool FullscreenMessageManager::schedule_message(LeventId msg_id,
                                                 core::PlayerId player_id,
                                                 const GameDate& date) {
-  if (was_shown(msg_id, player_id)) {
+  if (was_scheduled(msg_id, player_id)) {
     return false;
   }
 
@@ -179,7 +179,7 @@ bool FullscreenMessageManager::schedule_message(LeventId msg_id,
   return true;
 }
 
-bool FullscreenMessageManager::was_shown(LeventId msg_id,
+bool FullscreenMessageManager::was_scheduled(LeventId msg_id,
                                          core::PlayerId player_id) const {
   auto it = player_messages_.find(player_id);
   if (it == player_messages_.end()) {

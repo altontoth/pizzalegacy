@@ -100,6 +100,10 @@ public:
   void post(StatusMsg m); // Temporary or Ephemeral
   void clear_overlay();   // Force only baseline
 
+  // Suppress all posts (jail/holiday: events still process but player
+  // does not see the messages)
+  void suppress(bool s) { suppressed_ = s; }
+
   // Panel interactions
   void show_baseline(); // Left-click
   void show_previous(); // Right-click (one step back)
@@ -136,7 +140,7 @@ private:
   std::vector<LiveMsg> active_; // currently overlaying (TTL-managed)
   StatusDisplayRecipe current_; // last published composite
 
-  // Right-click “previous” history (short ring)
+  // Right-click "previous" history (short ring)
   static constexpr size_t prev_cap = 8;
   std::deque<StatusDisplayRecipe> prev_stack_; // snapshots of composites
   std::optional<int> prev_index_;              // => live view if not set
@@ -147,4 +151,5 @@ private:
 
   // Subscription bookkeeping (simple one-subscriber model; extend if needed)
   bool subscribed_ = false;
+  bool suppressed_ = false;
 };

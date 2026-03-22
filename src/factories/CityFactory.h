@@ -16,6 +16,8 @@
 
 #include "core/city/City.h"
 #include "core/common/Ids.h"
+#include "core/settings/InsuranceSettings.h"
+#include "core/settings/MafiaSettings.h"
 #include "core/supply/FoodSupplier.h"
 #include "engine/Math.h"
 
@@ -50,6 +52,8 @@ private:
   std::vector<std::unique_ptr<District>> districts_;
   std::map<int, std::unique_ptr<Property>> properties_;
   std::vector<BankSettings> bank_settings_;
+  std::vector<InsuranceSettings> insurance_settings_;
+  std::vector<MafiaSettings> mafia_settings_;
   std::vector<RealtorSettings> realtor_settings_;
 
   // Suppliers:
@@ -85,5 +89,7 @@ private:
   static uint32_t invert_transform_phone_number(uint32_t);
   void load_district_bez(int id);
   void read_bank_data(std::ifstream& is, int number_of_banks);
+  void read_insurance_data(std::ifstream& is, int number_of_insurance);
+  void read_mafia_data(std::ifstream& is, int number_of_mafia);
   void read_realtor_data(std::ifstream& is, int number_of_realtors);
 };

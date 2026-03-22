@@ -58,5 +58,4 @@ enum class RealtorLine {
   NO_IVE_HAD_IT_WITH_YOU,
   WE_CANNOT_ALLOW_A_LOW_LIFE_IN_OUR_CITY,
   REALTORS_MAY_I_HELP_YOU, // fake line
-  NO_CHOICE,
 };

@@ -6,5 +6,5 @@
 
 // engine/meta.h
 namespace game_meta {
-inline constexpr const char* VERSION = "0.0.1";
+inline constexpr const char* VERSION = "0.0.2";
 }

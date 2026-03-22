@@ -257,7 +257,8 @@ StatusDisplayRecipe StatusController::build_city_customer_info(const CityCtx& c,
 StatusDisplayRecipe
 StatusController::build_city_named_building(const CityCtx& c, int index) {
   StatusDisplayRecipe r;
-  r.add_header(c.city->building_name(index));
+  r.add_header(c.city->building_type_name(index));
+  r.add_header(c.city->building_specific_name(index));
   return r;
 }
 

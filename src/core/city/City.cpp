@@ -146,7 +146,7 @@ std::string City::description(int index) const {
   }
 
   if (building_name_index == 3) {
-    return building_name(index);
+    return building_type_name(index) + "|" + building_specific_name(index);
   }
 
   return type_names_[building_name_index];
@@ -171,7 +171,7 @@ uint8_t City::type(int index) const {
   return data_[index];
 }
 
-std::string City::building_name(int index) const {
+std::string City::building_type_name(int index) const {
   auto type = data_[index];
   auto opt_type = decode_special_building_type(type);
   if (!opt_type) {
@@ -184,8 +184,27 @@ std::string City::building_name(int index) const {
   };
   auto name_index =
       static_cast<int>(*opt_type) - static_cast<int>(BuildingType::CHURCH);
+  return std::string(names[name_index]);
+}
 
-  return std::string(names[name_index]) + "|" + named_buildings_.at(index);
+std::string City::building_specific_name(int index) const {
+  auto it = named_buildings_.find(index);
+  if (it == named_buildings_.end()) {
+    return "";
+  }
+  return it->second;
+}
+
+std::string City::building_name(int index) const {
+  auto type_name = building_type_name(index);
+  if (type_name.empty()) {
+    return "";
+  }
+  auto specific = building_specific_name(index);
+  if (specific.empty()) {
+    return type_name;
+  }
+  return type_name + " " + specific;
 }
 
 std::optional<BuildingType> City::decode_special_building_type(uint8_t type) {
@@ -582,4 +601,14 @@ void City::initialize_known_arms_dealers(core::PlayerId player_id) {
     }
   }
   known.known_count = static_cast<uint8_t>(known.known_actor_ids.size());
+}
+
+std::vector<const Actor*> City::all_arms_dealers() const {
+  std::vector<const Actor*> result;
+  for (const auto& [id, actor] : actors_) {
+    if (actor->type() == ActorType::ARMS_DEALER) {
+      result.push_back(actor.get());
+    }
+  }
+  return result;
 }

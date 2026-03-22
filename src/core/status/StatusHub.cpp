@@ -77,6 +77,9 @@ bool StatusHub::decay_overlays(uint64_t dt_ms) {
 }
 
 void StatusHub::post(StatusMsg m) {
+  if (suppressed_) {
+    return;
+  }
   insert_or_replace(std::move(m));
 
   // Compose a snapshot for prev_stack_ and (optionally) for ephemeral_log_

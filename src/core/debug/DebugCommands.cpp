@@ -7,6 +7,7 @@
 #include "core/debug/DebugCommands.h"
 
 #include "core/debug/command/CommandRegistry.h"
+#include "core/debug/commands/ActorCommands.h"
 #include "core/debug/commands/CityCommands.h"
 #include "core/debug/commands/DebugCommands.h"
 #include "core/debug/commands/DepotCommands.h"
@@ -30,6 +31,7 @@ void register_debug_commands(DebugConsole& console, GameState& state,
   registry.register_command(debug::commands::make_debug_commands());
   registry.register_command(debug::commands::make_newspaper_commands());
   registry.register_command(debug::commands::make_city_commands());
+  registry.register_command(debug::commands::make_actor_commands());
 
   // Register top-level convenience commands
   registry.register_command(debug::commands::make_dump_command());

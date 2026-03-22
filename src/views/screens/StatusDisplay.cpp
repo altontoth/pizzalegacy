@@ -41,10 +41,18 @@ StatusDisplay::StatusDisplay(GameContext& context, GameState& state,
 }
 
 void StatusDisplay::tick() {
-  const int blocks = state_.time().time_blocks();
-  if (blocks != previous_time_) {
+  const auto blocks = state_.time().time_blocks();
+  if (previous_time_ != blocks) {
     previous_time_ = blocks;
     mark_dirty();
+  }
+
+  if (!frozen_ && state_.active_player()) {
+    const auto balance = state_.active_player()->cash_balance();
+    if (previous_balance_ != balance) {
+      previous_balance_ = balance;
+      mark_dirty();
+    }
   }
 }
 

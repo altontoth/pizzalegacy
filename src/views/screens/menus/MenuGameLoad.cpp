@@ -18,6 +18,7 @@
 #include "resources/util/FileUtils.h"
 #include "views/screens/menus/MenuTheme.h"
 #include "views/ui/PopupManager.h"
+#include "views/ui/popups/AlertPopup.h"
 #include "views/ui/popups/ConfirmPopup.h"
 #include "views/ui/widgets/ArrowMenuItem.h"
 #include "views/ui/widgets/PositionMarkerMenuItem.h"
@@ -132,8 +133,7 @@ void MenuGameLoad::load_selected_file() {
   }
   else {
     Logger::warn("Failed to load: {}", selected_file_);
-    context_.popup->create<ConfirmPopup>("Failed to load save file.",
-                                         [](bool) {});
+    context_.popup->create<AlertPopup>("Failed to load save file.");
   }
 }
 

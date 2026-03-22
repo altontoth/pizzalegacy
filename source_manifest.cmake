@@ -13,6 +13,7 @@ set(GAME_PLEGACY_SOURCES
     src/core/city/ControlMap.cpp
     src/core/city/District.cpp
     src/core/city/EconomyTrend.cpp
+    src/core/city/MayorOffice.cpp
     src/core/city/PizzaCharts.cpp
     src/core/city/Property.cpp
     src/core/debug/DebugCommands.cpp
@@ -24,6 +25,7 @@ set(GAME_PLEGACY_SOURCES
     src/core/debug/command/ParsedValue.cpp
     src/core/debug/command/TypeParser.cpp
     src/core/debug/command/ValueValidator.cpp
+    src/core/debug/commands/ActorCommands.cpp
     src/core/debug/commands/CityCommands.cpp
     src/core/debug/commands/DebugCommands.cpp
     src/core/debug/commands/DepotCommands.cpp
@@ -35,6 +37,7 @@ set(GAME_PLEGACY_SOURCES
     src/core/economy/WeaponMarket.cpp
     src/core/events/FullscreenMessageManager.cpp
     src/core/finance/BalanceSheet.cpp
+    src/core/finance/BankAccountRegistry.cpp
     src/core/finance/Ledger.cpp
     src/core/finance/Loan.cpp
     src/core/finance/MoneyParse.cpp
@@ -71,6 +74,7 @@ set(GAME_PLEGACY_SOURCES
     src/core/util/Tools.cpp
     src/conversations/ArmsDealerConversation.cpp
     src/conversations/BankConversation.cpp
+    src/conversations/MafiaConversation.cpp
     src/conversations/MayorConversation.cpp
     src/conversations/PoliceConversation.cpp
     src/conversations/RealtorConversation.cpp
@@ -108,6 +112,7 @@ set(GAME_PLEGACY_SOURCES
     src/views/screens/GlobalStats.cpp
     src/views/screens/InputPanel.cpp
     src/views/screens/Intro.cpp
+    src/views/screens/MafiaMissionView.cpp
     src/views/screens/MarketResearch.cpp
     src/views/screens/Newspaper.cpp
     src/views/screens/PizzaJudges.cpp
@@ -159,6 +164,7 @@ set(GAME_PLEGACY_SOURCES
     src/views/ui/finance/FinanceComponents.cpp
     src/views/ui/popups/AlertPopup.cpp
     src/views/ui/popups/BasePopup.cpp
+    src/views/ui/popups/ChequePopup.cpp
     src/views/ui/popups/ConfirmPopup.cpp
     src/views/ui/popups/GuestTalkPopup.cpp
     src/views/ui/popups/InvoicePopup.cpp
@@ -245,6 +251,8 @@ set(PLEGACY_HEADERS
     src/conversations/BaseConversation.h
     src/conversations/InsuranceConversation.h
     src/conversations/InsuranceLine.h
+    src/conversations/MafiaConversation.h
+    src/conversations/MafiaLine.h
     src/conversations/MayorConversation.h
     src/conversations/MayorLine.h
     src/conversations/PoliceConversation.h
@@ -259,7 +267,9 @@ set(PLEGACY_HEADERS
     src/core/character/AiMenuSlot.h
     src/core/character/Awards.h
     src/core/character/Character.h
+    src/core/character/MafiaPlayerState.h
     src/core/character/Player.h
+    src/core/character/SocialStatus.h
     src/core/character/Staff.h
     src/core/character/Training.h
     src/core/city/Car.h
@@ -288,6 +298,7 @@ set(PLEGACY_HEADERS
     src/core/debug/command/ParsedValue.h
     src/core/debug/command/TypeParser.h
     src/core/debug/command/ValueValidator.h
+    src/core/debug/commands/ActorCommands.h
     src/core/debug/commands/CityCommands.h
     src/core/debug/commands/DebugCommands.h
     src/core/debug/commands/DepotCommands.h
@@ -300,6 +311,7 @@ set(PLEGACY_HEADERS
     src/core/events/FullscreenMessageManager.h
     src/core/events/LeventId.h
     src/core/finance/BalanceSheet.h
+    src/core/finance/BankAccountRegistry.h
     src/core/finance/Investment.h
     src/core/finance/Ledger.h
     src/core/finance/Loan.h
@@ -350,6 +362,8 @@ set(PLEGACY_HEADERS
     src/core/save/SaveGameManager.h
     src/core/save/SaveGameRestaurant.h
     src/core/settings/BankSettings.h
+    src/core/settings/InsuranceSettings.h
+    src/core/settings/MafiaSettings.h
     src/core/settings/RealtorSettings.h
     src/core/state/GameOptions.h
     src/core/state/GameState.h
@@ -508,6 +522,7 @@ set(PLEGACY_HEADERS
     src/views/screens/GlobalStats.h
     src/views/screens/InputPanel.h
     src/views/screens/Intro.h
+    src/views/screens/MafiaMissionView.h
     src/views/screens/MarketResearch.h
     src/views/screens/Newspaper.h
     src/views/screens/PizzaJudges.h
@@ -569,6 +584,7 @@ set(PLEGACY_HEADERS
     src/views/ui/finance/FinanceComponents.h
     src/views/ui/popups/AlertPopup.h
     src/views/ui/popups/BasePopup.h
+    src/views/ui/popups/ChequePopup.h
     src/views/ui/popups/ConfirmPopup.h
     src/views/ui/popups/GuestTalkPopup.h
     src/views/ui/popups/InvoicePopup.h

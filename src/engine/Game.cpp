@@ -15,6 +15,8 @@
 #include <savepng/savepng.h>
 #endif
 #include "conversations/BankConversation.h"
+#include "conversations/MafiaConversation.h"
+#include "conversations/MafiaLine.h"
 #include "conversations/PoliceConversation.h"
 #include "conversations/SupplierConversation.h"
 #include "core/character/Player.h"
@@ -53,6 +55,7 @@
 #include "views/screens/GameOver.h"
 #include "views/screens/GlobalStats.h"
 #include "views/screens/Intro.h"
+#include "views/screens/MafiaMissionView.h"
 #include "views/screens/MarketResearch.h"
 #include "views/screens/Newspaper.h"
 #include "views/screens/PizzaJudges.h"
@@ -823,6 +826,14 @@ Renderable* Game::change_state(GameState& gs, LoopState& /*loop*/) {
             current_view_ = std::make_unique<ActorView<PoliceLine>>(
                 context, gs, actor, std::move(conversation));
           },
+          [&](const MafiaState& ms) {
+            auto* actor = gs.active_city()->actor_by_id(ms.id);
+            auto mode = ms.mode.value_or(MafiaMode::PlayerCall);
+            auto conversation = std::make_unique<MafiaConversation>(
+                gs, actor, mode, ms.restaurant_id);
+            current_view_ = std::make_unique<ActorView<MafiaLine>>(
+                context, gs, actor, std::move(conversation));
+          },
           [&](const TerminalState& ts) {
             current_view_ = std::make_unique<Terminal>(context, gs, ts);
           },
@@ -869,8 +880,12 @@ Renderable* Game::change_state(GameState& gs, LoopState& /*loop*/) {
             current_view_ = std::make_unique<PlayerTurnCard>(context, gs, ptcs);
           },
           [&](const FullscreenStatusState& fss) {
+            current_view_ = std::make_unique<FullscreenStatus>(
+                context, gs, fss.message_id, fss.on_dismiss);
+          },
+          [&](const MafiaMissionViewState& mmvs) {
             current_view_ =
-                std::make_unique<FullscreenStatus>(context, gs, fss.message_id);
+                std::make_unique<MafiaMissionView>(context, gs, mmvs.line);
           },
           [&](const PlayerProfileState& pps) {
             current_view_ =

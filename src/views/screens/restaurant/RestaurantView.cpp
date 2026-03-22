@@ -65,6 +65,7 @@ RestaurantView::RestaurantView(GameContext& context, GameState& state,
   // we're working with
   state_.active_restaurant(r_state.id);
   state_.prevent_end_of_day(false);
+  state_.resume_time_advancement();
 
   // Check if we're placing kitchenware (ovens) - if so, start in kitchen view
   // Also check if we're placing regular furniture while the restaurant is open,
@@ -91,10 +92,6 @@ RestaurantView::RestaurantView(GameContext& context, GameState& state,
 
   set_up_buttons();
 
-  // Set up next_furniture_id from layout:
-  const auto max_id = restaurant_->layout()->max_furniture_id_value();
-  next_furniture_id_ =
-      max_id ? core::FurnitureId(max_id.value() + 1) : core::FurnitureId(0);
 
   scroll_edges_.add_interactions(interactions_);
 
@@ -1181,19 +1178,6 @@ bool RestaurantView::intersects_wall(const WorldRect& r) const {
   return !interior.contains(r);
 }
 
-core::FurnitureId RestaurantView::allocate_next_furniture_id() const {
-  auto max_id = 0;
-  const auto& pf = restaurant_->layout()->placed_furniture();
-  const auto& kpf = restaurant_->layout()->placed_kitchen_furniture();
-  auto scan = [&](const auto& vec) {
-    for (const auto& u : vec) {
-      max_id = std::max(max_id, u->id().value);
-    }
-  };
-  scan(pf);
-  scan(kpf);
-  return core::FurnitureId{max_id + 1};
-}
 
 void RestaurantView::prune_empty_batches() {
   std::erase_if(furniture_placement_, [](const FurnitureBatch& b) {
@@ -1311,10 +1295,8 @@ RestaurantView::make_cursor_for_batch(const FurnitureBatch& b) {
   const int bob_state = b.bob_state.value_or(0);
 
   auto pf = std::make_unique<PlacedFurniture>(
-      b.furniture, next_furniture_id_, WorldPoint{0, 0},
+      b.furniture, restaurant_->layout()->next_furniture_id(), WorldPoint{0, 0},
       core::FurnitureId{UNLINKED_FURNITURE}, bob_state);
-
-  next_furniture_id_.value += 1;
   return pf;
 }
 
@@ -1965,7 +1947,12 @@ void RestaurantView::update_status_display(const PlacedFurniture* pf) {
   else {
     const auto* furniture = pf->furniture();
     const auto category = furniture->category();
-    recipe.add_single(to_string(category));
+    if (category == FurnitureCategory::OTHER) {
+      recipe.add_single("nothing");
+    }
+    else {
+      recipe.add_single(to_string(category));
+    }
     recipe.add_single(furniture->name());
     recipe.add_single(compat::format("quality: {}", furniture->quality()));
     recipe.add_single(compat::format("price {:w}", furniture->price()));

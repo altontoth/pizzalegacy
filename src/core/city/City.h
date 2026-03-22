@@ -29,6 +29,8 @@
 #include "core/newspaper/NewspaperEventSystem.h"
 #include "core/newspaper/NewspaperState.h"
 #include "core/settings/BankSettings.h"
+#include "core/settings/InsuranceSettings.h"
+#include "core/settings/MafiaSettings.h"
 #include "core/settings/RealtorSettings.h"
 #include "core/supply/FoodSupplier.h"
 
@@ -85,6 +87,8 @@ public:
   bool is_road_tile(int index) const;
   std::string description(int index) const;
   std::string building_name(int index) const;
+  std::string building_type_name(int index) const;
+  std::string building_specific_name(int index) const;
   std::string tile_description(int index) const;
   const std::vector<std::unique_ptr<District>>& districts() const;
   const District& district(core::DistrictId district_id) const;
@@ -124,6 +128,13 @@ public:
   realtor_settings(std::unordered_map<int, RealtorSettings> realtor_settings) {
     realtor_settings_ = std::move(realtor_settings);
   };
+  void insurance_settings(
+      std::unordered_map<int, InsuranceSettings> insurance_settings) {
+    insurance_settings_ = std::move(insurance_settings);
+  };
+  void mafia_settings(std::unordered_map<int, MafiaSettings> mafia_settings) {
+    mafia_settings_ = std::move(mafia_settings);
+  };
 
   std::vector<const Actor*> actors(ActorType type) const;
   std::vector<const FoodSupplier*> food_suppliers(ActorType type) const;
@@ -142,6 +153,9 @@ public:
 
   static bool is_named_building(uint8_t type);
   bool is_named_building_by_index(int index) const;
+  const std::map<int, std::string>& named_building_entries() const {
+    return named_buildings_;
+  }
   PropertyInfo property_info_by_index(uint8_t index);
 
   // District methods
@@ -234,6 +248,26 @@ public:
     assert(it != realtor_settings_.end() && "Invalid realtor actor_id");
     return it->second;
   }
+
+  const std::unordered_map<int, InsuranceSettings>& insurance_settings() const {
+    return insurance_settings_;
+  }
+
+  const InsuranceSettings& insurance_settings(int actor_id) const {
+    auto it = insurance_settings_.find(actor_id);
+    assert(it != insurance_settings_.end() && "Invalid insurance actor_id");
+    return it->second;
+  }
+
+  const std::unordered_map<int, MafiaSettings>& mafia_settings() const {
+    return mafia_settings_;
+  }
+
+  const MafiaSettings& mafia_settings(int actor_id) const {
+    auto it = mafia_settings_.find(actor_id);
+    assert(it != mafia_settings_.end() && "Invalid mafia actor_id");
+    return it->second;
+  }
   WeaponMarket& weapon_market();
 
   void ingredient_base_prices(const IngredientPrices& prices) {
@@ -271,6 +305,7 @@ public:
   void add_known_arms_dealer(core::PlayerId player_id, ActorId id);
   void clear_known_arms_dealers(core::PlayerId player_id);
   void initialize_known_arms_dealers(core::PlayerId player_id);
+  std::vector<const Actor*> all_arms_dealers() const;
 
   core::city::CentralDepot& central_depot(int player_id);
   MayorOffice& mayor_office() { return mayor_office_; }
@@ -326,6 +361,8 @@ private:
   std::map<int, std::unique_ptr<Property>> properties_;
   std::array<uint8_t, 300> district_bez_{};
   std::unordered_map<int, BankSettings> bank_settings_;
+  std::unordered_map<int, InsuranceSettings> insurance_settings_;
+  std::unordered_map<int, MafiaSettings> mafia_settings_;
   std::unordered_map<int, RealtorSettings> realtor_settings_;
   WeaponMarket weapon_market_;
   int mayor_id_ = -1;

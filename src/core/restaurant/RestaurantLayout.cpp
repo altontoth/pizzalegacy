@@ -112,6 +112,13 @@ std::optional<int> RestaurantLayout::max_furniture_id_value() const {
   return max_id;
 }
 
+core::FurnitureId RestaurantLayout::next_furniture_id() {
+  auto max_id = max_furniture_id_value();
+  next_furniture_id_ =
+      max_id ? core::FurnitureId{max_id.value() + 1} : core::FurnitureId{0};
+  return next_furniture_id_;
+}
+
 int RestaurantLayout::entrance_offset() const { return entrance_offset_; }
 
 int RestaurantLayout::kitchen_entry_offset() const {

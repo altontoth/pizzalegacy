@@ -8,14 +8,22 @@
 
 #include <string_view>
 
+enum class MafiaMode {
+  PlayerCall,
+  MissionDeadlineReached,
+  MissionOverdue,
+  ProtectionRacketOffer,
+  LoanRepaymentDue,
+};
+
 enum class ArrestReason {
-  Receiving,
-  Burglary,
-  WeaponsDealing,
-  LaunderingMoney,
-  ShadyDealings,
-  SuspectedHomicide,
-  PosessingWeapons,
+  Receiving = 1,
+  Burglary = 2,
+  WeaponsDealing = 3,
+  LaunderingMoney = 4,
+  ShadyDealings = 5,
+  SuspectedHomicide = 6,
+  PosessingWeapons = 7,
 };
 
 enum class GameMode {

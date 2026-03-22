@@ -11,6 +11,8 @@
 #include "core/character/AiMenuSlot.h"
 #include "core/character/Awards.h"
 #include "core/character/Character.h"
+#include "core/character/MafiaPlayerState.h"
+#include "core/character/SocialStatus.h"
 #include "core/common/Ids.h"
 #include "core/finance/Investment.h"
 #include "core/finance/Loan.h"
@@ -43,6 +45,12 @@ public:
   };
   int jail_time() const;
   void jail_time(uint8_t jail_time);
+  int criminal_record() const;
+  void increment_criminal_record();
+  void jail(int days);
+  bool is_in_jail() const;
+  std::optional<int> jail_days_left() const;
+  void decrement_jail_day();
   void end_of_day(class GameState& game_state);
   void end_of_week(class GameState& game_state);
   void on_food_shop_visit();
@@ -100,6 +108,15 @@ public:
 
   int negotiation_skill() const;
 
+  MafiaPlayerState& mafia_state() { return mafia_state_; }
+  const MafiaPlayerState& mafia_state() const { return mafia_state_; }
+  SocialStatus& social_status() { return social_status_; }
+  const SocialStatus& social_status() const { return social_status_; }
+  Money weapon_dealing_profit() const { return weapon_dealing_profit_; }
+  void add_weapon_dealing_profit(Money amount) {
+    weapon_dealing_profit_ += amount;
+  }
+
   struct MonthlyLoanCosts {
     Money repayment;
     Money interest;
@@ -121,6 +138,8 @@ private:
   core::character::Character character_;
   PlayerFinancials financials_;
   int jail_time_{0};
+  int criminal_record_{0};
+  std::optional<int> jail_days_left_;
   std::string name_;
   std::map<core::CityId, std::vector<Loan>> loans_;
   std::map<core::CityId, std::vector<Investment>> investments_;
@@ -140,4 +159,7 @@ private:
   void check_ai_expansion(class GameState& game_state);
 
   std::array<std::optional<AdvertisingCampaign>, 4> campaigns_;
+  MafiaPlayerState mafia_state_;
+  SocialStatus social_status_;
+  Money weapon_dealing_profit_{0};
 };

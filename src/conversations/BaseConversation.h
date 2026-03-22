@@ -7,6 +7,7 @@
 #pragma once
 
 #include <fstream>
+#include <functional>
 #include <iostream>
 #include <optional>
 #include <string>
@@ -30,6 +31,7 @@ enum class Emotion {
   NEUTRAL,
   ANGRY,
   HAPPY,
+  NOD,
 };
 
 // Generic ostream operator for enum class
@@ -96,14 +98,20 @@ public:
   // `lines()` method will use the `current_line_` enum to decide which
   // `ConversationLine` objects to return. This allows `lines()` to return
   // dynamically constructed lines (e.g., with formatted text), while the enum
-  // still acts as a symbolic state key for the conversation logic.)
+  // still acts as the state key for the conversation logic).
   void current_line(LineEnum line) {
     previous_line_ = current_line_;
     current_line_ = line;
   }
 
+  enum class PopupRequest { NONE, CHEQUE };
+  virtual PopupRequest popup_request() const { return PopupRequest::NONE; }
+  virtual void on_cheque_result(int amount, int account) {}
+
   virtual Emotion emotion() const = 0;
   virtual bool has_ended() const = 0;
+
+  std::function<void()> on_end_;
   virtual std::optional<ContractTermsDisplay> contract_terms() const {
     return std::nullopt;
   }

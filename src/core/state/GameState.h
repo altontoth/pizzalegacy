@@ -9,6 +9,7 @@
 #include "core/character/Player.h"
 #include "core/city/City.h"
 #include "core/events/FullscreenMessageManager.h"
+#include "core/finance/BankAccountRegistry.h"
 #include "core/init/NewGameConfig.h"
 #include "core/marketing/AdvertisingCampaign.h"
 #include "core/newspaper/ArticleDatabase.h"
@@ -81,6 +82,15 @@ public:
   bool spend_cash(Account to, Money amount); // Uses active player
   bool spend_cash(Account to, Money amount, core::RestaurantId restaurant_id);
 
+  // Bank account registry (player accounts, mayor bribes, mafia laundering)
+  BankAccountRegistry& bank_accounts() { return bank_accounts_; }
+  const BankAccountRegistry& bank_accounts() const { return bank_accounts_; }
+
+  // Transfer money from sender to a registered bank account.
+  // Debits sender's cash, credits target (player cash or dynamic account).
+  // Returns false if account doesn't exist or sender can't afford it.
+  bool bank_transfer(int account_number, Money amount, Player& sender);
+
   core::food::IngredientDemand
   total_ingredient_need_for_player(core::PlayerId player_id) const;
 
@@ -152,6 +162,7 @@ public:
   void end_of_turn(); // per player
   void end_of_day();
   void request_end_of_turn();
+  void skip_to_next_player(); // jail/holiday release: non-interactive
   void update(uint32_t elapsed_ms);
 
   // Time advancement control (for pausing during furniture placement, etc.)
@@ -178,8 +189,12 @@ public:
 
   int difficulty_level() const { return difficulty_level_; };
 
+  RankChange adjust_underworld_score(Player& player, int delta);
+  RankChange adjust_social_score(Player& player, int delta);
+
   // Game Events
   void initiate_arrest(ArrestReason);
+  void check_police_events();
   void bootstrap_minimal_playable_world(GameContext& context);
 
   // Create a restaurant with a specific layout in a random available property
@@ -203,6 +218,11 @@ public:
   const core::events::FullscreenMessageManager& message_manager() const {
     return message_manager_;
   }
+
+  // Unified message delivery: schedule (CV entry) + score + push view + mark
+  // shown. Safe to call for already-scheduled messages (schedule is a no-op).
+  void deliver_message(core::events::LeventId msg_id,
+                       std::function<void()> on_dismiss = nullptr);
   core::newspaper::ArticleDatabase& article_database() {
     return article_database_;
   }
@@ -223,6 +243,7 @@ public:
   void on_restaurant_processed();
 
   GameMode game_mode() const;
+  void game_mode(GameMode);
   int human_player_count() const;
 
   // Call when a restaurant is opened for the first time (from view layer).
@@ -230,6 +251,7 @@ public:
   void check_restaurant_milestones(const Player& player);
 
   void on_city_entered(core::CityId city_id, const Player& player);
+  void check_mafia_events();
 
   // Process all pending messages for the active player immediately:
   // award score, push fullscreen if needed, mark as shown.
@@ -269,7 +291,8 @@ private:
   int window_height_{0};
   std::optional<int> last_clicked_property_index_;
   bool should_end_of_turn_{false};
-  bool time_advancement_enabled_{true};
+  bool suppress_end_of_turn_reports_{false};
+  bool time_advancement_enabled_{false};
   bool prevent_end_of_day_{false};
   uint32_t time_accumulator_{0};
   std::optional<core::RestaurantId> active_restaurant_;
@@ -297,6 +320,8 @@ private:
 
   // Fullscreen message system
   core::events::FullscreenMessageManager message_manager_;
+
+  BankAccountRegistry bank_accounts_;
 
   // Actor call management (actors refusing calls after being annoyed)
   std::unordered_set<int> actors_refusing_calls_;

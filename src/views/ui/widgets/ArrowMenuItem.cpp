@@ -9,8 +9,9 @@
 
 ArrowMenuItem::ArrowMenuItem(GameContext& gc, ArrowType direction,
                              std::function<void()> action, std::string tooltip)
-    : MenuItem(gc), action_(action), tooltip_text_(std::move(tooltip)),
+    : MenuItem(gc), action_(std::move(action)),
       menu_bobs_(gc.bob->get("bob/menubobs.bob")),
+      tooltip_text_(std::move(tooltip)),
       arrow_surface_(direction == ArrowType::Up
                          ? menu_bobs_.frame(3, PaletteHandle{63})
                          : menu_bobs_.frame(4, PaletteHandle{63})) {

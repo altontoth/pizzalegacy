@@ -27,11 +27,12 @@ public:
   FullscreenMessageManager();
   ~FullscreenMessageManager() = default;
 
-  // Schedule a one-time message. Returns false if already scheduled.
+  // Schedule a one-time message for deferred delivery. Returns false if
+  // already scheduled (idempotent).
   bool schedule_message(LeventId msg_id, core::PlayerId player_id,
                         const GameDate& date);
 
-  bool was_shown(LeventId msg_id, core::PlayerId player_id) const;
+  bool was_scheduled(LeventId msg_id, core::PlayerId player_id) const;
 
   const EventData& get_data(LeventId msg_id) const;
 

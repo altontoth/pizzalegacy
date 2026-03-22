@@ -21,7 +21,8 @@ class FullscreenStatus : public View,
                          public debug::AutoLabel<FullscreenStatus> {
 public:
   FullscreenStatus(GameContext& context, GameState& state,
-                   core::events::LeventId msg_id);
+                   core::events::LeventId msg_id,
+                   std::function<void()> on_dismiss = nullptr);
 
   ~FullscreenStatus() override = default;
 
@@ -37,5 +38,6 @@ private:
   std::string text_;
   std::optional<core::events::LeventId> message_id_;
   input::ListenerToken listener_;
+  std::function<void()> on_dismiss_;
   const Surface& background_;
 };

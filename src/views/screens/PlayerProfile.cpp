@@ -9,6 +9,7 @@
 #include "core/character/Awards.h"
 #include "core/character/Character.h"
 #include "core/character/Player.h"
+#include "core/character/SocialStatus.h"
 #include "core/state/GameState.h"
 #include "core/status/StatusHub.h"
 #include "core/util/Constants.h"
@@ -18,6 +19,7 @@
 #include "gfx/Blit.h"
 #include "resources/FontManager.h"
 #include "resources/FontTypes.h"
+#include "resources/util/FileUtils.h"
 #include "views/base/RawRenderer.h"
 #include "views/base/ViewDefs.h"
 #include "views/ui/PopupManager.h"
@@ -595,33 +597,62 @@ Surface PlayerProfile::create_curriculum_vitae(const Player* player, int page) {
   return cv;
 }
 
-Surface PlayerProfile::create_position(const Player* /*player*/) {
+Surface PlayerProfile::create_position(const Player* player) {
   Surface page = position_paper_.clone();
   auto* font = context_.font;
 
   constexpr int bar_max_width = 138;
-  constexpr int bar_height = 22;
+  constexpr int bar_height = 24;
   constexpr uint8_t bar_color = 28;
-
-  // Both bars share the same vertical position
   constexpr int bar_y = 312;
+  constexpr int bar_y_text_offset = 4;
 
-  // Social standing (left bar)
-  constexpr int social_x = 54;
-  int social_fill = bar_max_width * 40 / 100;
-  page.fill_rect({social_x, bar_y, social_fill, bar_height}, bar_color);
+  int difficulty = state_.difficulty_level();
+  const auto& status = player->social_status();
 
-  // TODO: Still hardcoded. TBD
-  font->render_line_onto(page, "WORKER", {social_x, bar_y + bar_height + 4},
-                         FontFace::SUPERSMA, 240);
+  // Load rank names from LEBEN.E (lines 0-13 social, 14-27 underworld)
+  constexpr int relevant_line_count = 28;
+  auto leben = fileutils::open("t/leben.e");
+  std::vector<std::string> leben_lines;
+  leben_lines.reserve(relevant_line_count);
+  std::string line;
+  while (leben_lines.size() < relevant_line_count + 1 &&
+         std::getline(leben, line)) {
+    leben_lines.push_back(std::move(line));
+  }
 
-  // Underworld reputation (right bar)
-  constexpr int underworld_x = 218;
-  int underworld_fill = bar_max_width * 50 / 100;
+  // Underworld reputation (left)
+  constexpr int underworld_x = 54;
+  int underworld_rank_val = social_rank(status.underworld_score, difficulty);
+  int underworld_rank_idx = underworld_rank_val + 14;
+  double underworld_progress = social_rank_progress(
+      status.underworld_score, underworld_rank_val, difficulty);
+  int underworld_fill = static_cast<int>(underworld_progress * bar_max_width);
   page.fill_rect({underworld_x, bar_y, underworld_fill, bar_height}, bar_color);
 
-  font->render_line_onto(page, "AMATEUR",
-                         {underworld_x, bar_y + bar_height + 4},
+  std::string underworld_name =
+      (underworld_rank_idx < static_cast<int>(leben_lines.size()))
+          ? leben_lines[underworld_rank_idx]
+          : "";
+  font->render_line_onto(page, underworld_name,
+                         {underworld_x + 4, bar_y + bar_y_text_offset},
+                         FontFace::SUPERSMA, 240);
+
+  // Social status (right)
+  constexpr int social_x = 218;
+  int social_rank_val = social_rank(status.social_score, difficulty);
+  double social_progress =
+      social_rank_progress(status.social_score, social_rank_val, difficulty);
+  int social_fill = static_cast<int>(social_progress * bar_max_width);
+  page.fill_rect({social_x, bar_y, social_fill, bar_height}, bar_color);
+
+  int social_line_idx = social_rank_val;
+  std::string social_name =
+      (social_line_idx < static_cast<int>(leben_lines.size()))
+          ? leben_lines[social_line_idx]
+          : "";
+  font->render_line_onto(page, social_name,
+                         {social_x + 4, bar_y + bar_y_text_offset},
                          FontFace::SUPERSMA, 240);
 
   return page;

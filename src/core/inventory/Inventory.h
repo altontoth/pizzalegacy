@@ -9,6 +9,7 @@
 #include <array>
 #include <cassert>
 #include <ostream>
+#include "core/finance/Money.h"
 #include "core/item/Item.h"
 
 /* Player inventory, what they walk around with; weapons and attack items */
@@ -16,6 +17,7 @@ namespace core::inventory {
 
 struct Inventory {
   std::array<int, item::item_count> qty{};
+  std::array<Money, item::item_count> cost_basis{};
   const int max_per_item_ = 255;
 
   int& operator[](item::Item i) noexcept;
@@ -29,9 +31,15 @@ struct Inventory {
   // added (you can't go beyond 255):
   int add(item::Item id, int amount = 1) noexcept;
 
+  // Add units with cost tracking for profit calculation on resale.
+  int add_with_cost(item::Item id, int amount, Money total_cost) noexcept;
+
   // Try to remove `amount` units. Returns the number of items actually
   // removed (you can't go negative):
   int remove(item::Item id, int amount = 1) noexcept;
+
+  // Remove units and return the proportional cost basis withdrawn.
+  Money remove_with_cost(item::Item id, int amount) noexcept;
 
   int max_per_item(item::Item id) noexcept { return max_per_item_; }
 };

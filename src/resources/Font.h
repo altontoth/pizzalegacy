@@ -87,9 +87,16 @@ public:
   uint32_t remap_character(uint32_t codepoint);
 
   // Expose text wrapping for pre-computing line breaks
-  std::vector<std::string_view>
-  split_and_wrap_text(std::string_view text, int max_width,
-                      const TextStyle& style = {});
+  std::vector<std::string> split_and_wrap_text(std::string_view text,
+                                               int max_width,
+                                               const TextStyle& style = {});
+
+  // Soft hyphen analysis: dashes between letters mark allowed break points
+  struct BreakableWord {
+    std::string clean_text;              // text with soft hyphens removed
+    std::vector<size_t> break_positions; // char indices where breaks are allowed
+  };
+  static BreakableWord analyze_word_breaks(std::string_view word);
 
 private:
   [[nodiscard]] int line_spacing() const;
@@ -100,18 +107,11 @@ private:
   FontFace face_;
   FontData data_;
 
-  // Soft hyphen support (shared helpers)
-  struct BreakableWord {
-    std::string clean_text;              // Text with soft hyphens removed
-    std::vector<size_t> break_positions; // Positions where breaks are allowed
-  };
-  BreakableWord analyze_word_breaks(std::string_view word);
-
-  // Fixed-width wrapping (existing)
+  // Fixed-width wrapping
   static std::vector<std::string_view> split_by_pipe(std::string_view text);
-  std::vector<std::string_view> word_wrap_line(std::string_view input_line,
-                                               int max_width,
-                                               const TextStyle& style = {});
+  std::vector<std::string> word_wrap_line(std::string_view input_line,
+                                          int max_width,
+                                          const TextStyle& style = {});
 
   // Variable-width wrapping (for text flow)
   std::vector<FlowLine> word_wrap_with_flow(std::string_view input_line,

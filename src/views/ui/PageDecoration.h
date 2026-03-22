@@ -29,7 +29,8 @@ void render_cork_background(Surface& surface, const Surface& permap);
 void render_push_pin(Surface& surface, const Bob& pins, ViewPoint pos,
                      bool flipped = false);
 
-void render_decorated_corners(Surface& surface, const Bob& stanbobs,
-                              const ViewRect& offsets, int corner_offset,
-                              gfx::ColorIndex color);
+void render_decorated_corners(
+    Surface& surface, const Bob& stanbobs, const ViewRect& offsets,
+    int corner_offset,
+    std::optional<gfx::ColorIndex> line_color = std::nullopt);
 } // namespace views::ui
