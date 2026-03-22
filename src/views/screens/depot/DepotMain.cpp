@@ -105,6 +105,8 @@ void DepotMain::set_up_input_panel() {
                            });
 
   input_panel_->add_button(Icon::ARROW_BACK, ButtonType::Square,
-                           ButtonPosition::BottomRight, "Back",
-                           [this]() { state_.ui().pop(); });
+                           ButtonPosition::BottomRight, "Back", [this]() {
+                             state_.advance_time_blocks(1);
+                             state_.ui().pop();
+                           });
 }

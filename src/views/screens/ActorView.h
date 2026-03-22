@@ -28,6 +28,7 @@ template <typename LineEnum> class ActorView : public MainPanelView {
 public:
   ActorView(GameContext& context, GameState& state, Actor* actor,
             std::unique_ptr<BaseConversation<LineEnum>> conversation);
+  ~ActorView() override;
 
   void tick() override;
   void on_phase_finished();

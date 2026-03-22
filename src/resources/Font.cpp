@@ -407,8 +407,7 @@ std::vector<std::string> Font::word_wrap_line(std::string_view input_line,
     auto ws = input_line.substr(ws_begin, ws_end - ws_begin);
     auto bw = analyze_word_breaks(raw_word);
     const int w_width = size_text(bw.clean_text, wrap_style).width;
-    const int ws_width =
-        ws.empty() ? 0 : size_text(ws, wrap_style).width;
+    const int ws_width = ws.empty() ? 0 : size_text(ws, wrap_style).width;
 
     // Does the clean word fit on the current line?
     int needed = (current_w == 0) ? w_width : current_w + boundary + w_width;
@@ -488,9 +487,9 @@ std::vector<std::string> Font::word_wrap_line(std::string_view input_line,
   return out;
 }
 
-std::vector<std::string>
-Font::split_and_wrap_text(std::string_view text, int max_width,
-                          const TextStyle& style) {
+std::vector<std::string> Font::split_and_wrap_text(std::string_view text,
+                                                   int max_width,
+                                                   const TextStyle& style) {
   auto pipe_lines = split_by_pipe(text);
   std::vector<std::string> final_lines;
 

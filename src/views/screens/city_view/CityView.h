@@ -153,6 +153,9 @@ private:
   std::vector<std::vector<uint8_t>> water_cycles_;
   PaletteCycleController water_animation_;
   int property_display_timer_ = 0;
+  PaletteHandle palette_;
+  std::vector<gfx::Color> season_palette_;
+  std::optional<Surface> far_map_cache_;
   StatusController status_controller_;
   Camera camera_;
   CameraController camctrl_;

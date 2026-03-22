@@ -29,21 +29,21 @@ PoliceConversation::PoliceConversation(GameState& state, const Actor* actor,
   if (arrest_reason_) {
     int crime_code = static_cast<int>(*arrest_reason_);
 
-    int uw_rank = social_rank(player->social_status().underworld_score,
-                              difficulty);
+    int uw_rank =
+        social_rank(player->social_status().underworld_score, difficulty);
     sentence_days_ = std::clamp((uw_rank + difficulty - 2) * crime_code, 3, 60);
 
     int raw_bribe = (engine::random::rand_max_n(500) + 500) *
                     (sentence_days_ + player->criminal_record());
-    bribe_or_fine_cost_ = std::max(math::round_up_to_next_power10<3>(raw_bribe),
-                           4000);
+    bribe_or_fine_cost_ =
+        std::max(math::round_up_to_next_power10<3>(raw_bribe), 4000);
 
     player->increment_criminal_record();
     apply_confiscation();
   }
   else {
-    int business_rank = social_rank(player->social_status().social_score,
-                                    difficulty);
+    int business_rank =
+        social_rank(player->social_status().social_score, difficulty);
 
     if (business_rank < 2) {
       return; // player is not welcome, so don't set up anything else
@@ -61,14 +61,15 @@ PoliceConversation::PoliceConversation(GameState& state, const Actor* actor,
   }
 }
 
-PoliceLine PoliceConversation::compute_start_line(
-    const GameState& state, const Actor* /*actor*/,
-    std::optional<ArrestReason> reason) {
+PoliceLine
+PoliceConversation::compute_start_line(const GameState& state,
+                                       const Actor* /*actor*/,
+                                       std::optional<ArrestReason> reason) {
   if (!reason) {
     auto* player = state.active_player();
     int difficulty = state.difficulty_level();
-    int business_rank = social_rank(player->social_status().social_score,
-                                    difficulty);
+    int business_rank =
+        social_rank(player->social_status().social_score, difficulty);
     if (business_rank < 2) {
       return PoliceLine::WHO_ARE_YOU_GET_OUT_OF_HERE_AT_ONCE;
     }
@@ -94,18 +95,21 @@ bool PoliceConversation::advance() {
   case PoliceLine::IN_NAME_OF_LAW_ARREST_POSESSING_WEAPONS: {
     auto* player = state_.active_player();
     int difficulty = state_.difficulty_level();
-    int business_rank = social_rank(player->social_status().social_score,
-                                    difficulty);
+    int business_rank =
+        social_rank(player->social_status().social_score, difficulty);
     if (business_rank > 6) {
       if (!arrest_reason_) {
         fatal("Don't have an arrest reason when I do expect one.");
       }
       int crime_code = static_cast<int>(*arrest_reason_);
       state_.adjust_social_score(*player, -80 * crime_code);
-      current_line(PoliceLine::IN_VIEW_OF_YOUR_GOOD_STANDING_NOT_TAKE_IT_FURTHER);
+      current_line(
+          PoliceLine::IN_VIEW_OF_YOUR_GOOD_STANDING_NOT_TAKE_IT_FURTHER);
     }
     else {
-      current_line(PoliceLine::YOU_HAVE_BEEN_SENTENCED_TO_X_DAYS_IN_JAIL_OR_WOULD_YOU_RATHER);
+      current_line(
+          PoliceLine::
+              YOU_HAVE_BEEN_SENTENCED_TO_X_DAYS_IN_JAIL_OR_WOULD_YOU_RATHER);
     }
     break;
   }
@@ -146,7 +150,8 @@ bool PoliceConversation::advance_line_choice(PoliceLine choice) {
     int chance = 80 - (difficulty * 10);
     if (engine::random::rand_percentage_chance(std::max(chance, 5))) {
       state_.spend_cash(*player, Account::FinesAndBribes, 80'000_usd);
-      current_line(PoliceLine::ALRIGHT_ILL_HAVE_ONE_FOR_80K_AND_YOU_CAN_GO_FREE);
+      current_line(
+          PoliceLine::ALRIGHT_ILL_HAVE_ONE_FOR_80K_AND_YOU_CAN_GO_FREE);
     }
     else {
       sentence_days_ *= 2;
@@ -159,7 +164,8 @@ bool PoliceConversation::advance_line_choice(PoliceLine choice) {
   case PoliceLine::ANY_INFO_FOR_SALE:
   case PoliceLine::SSSHH_DO_YOU_SELL_INFO:
     state_.spend_cash(*player, Account::FinesAndBribes, 1000_usd);
-    current_line(PoliceLine::WHAT_DO_YOU_THINK_I_AM_I_FINE_YOU_1K_FOR_INSULTING);
+    current_line(
+        PoliceLine::WHAT_DO_YOU_THINK_I_AM_I_FINE_YOU_1K_FOR_INSULTING);
     break;
 
   case PoliceLine::HOW_ARE_YOU:
@@ -172,8 +178,11 @@ bool PoliceConversation::advance_line_choice(PoliceLine choice) {
     int charisma = player->character().charisma();
     // TODO When we have warehouse inspections hooked up
     bool warehouse_inspection = false;
-    if (warehouse_inspection && engine::random::rand_percentage_chance(charisma)) {
-      current_line(PoliceLine::FINE_THANKS_I_EVEN_KNOW_WHERE_WE_WILL_BE_CHECKING_WAREHOUSE_NEXT_MONTH_FOR_4K);
+    if (warehouse_inspection &&
+        engine::random::rand_percentage_chance(charisma)) {
+      current_line(
+          PoliceLine::
+              FINE_THANKS_I_EVEN_KNOW_WHERE_WE_WILL_BE_CHECKING_WAREHOUSE_NEXT_MONTH_FOR_4K);
     }
     else {
       current_line(PoliceLine::NOT_TOO_GOOD_IM_VERY_BUSY_GOODBYE);
@@ -184,7 +193,9 @@ bool PoliceConversation::advance_line_choice(PoliceLine choice) {
   case PoliceLine::HOW_IS_YOUR_PETTY_CASH:
   case PoliceLine::DO_YOU_NEED_ANY_MONEY:
     go_to_jail(2);
-    current_line(PoliceLine::IF_YOUR_TRYING_TO_BRIBE_ME_YOUVE_GOT_THE_WRONG_PERSON_2_DAYS_JAIL);
+    current_line(
+        PoliceLine::
+            IF_YOUR_TRYING_TO_BRIBE_ME_YOUVE_GOT_THE_WRONG_PERSON_2_DAYS_JAIL);
     break;
 
   // Voluntary: option 4 — donation
@@ -216,7 +227,8 @@ bool PoliceConversation::advance_proposal(bool agree) {
   auto* player = state_.active_player();
 
   switch (current_line_) {
-  case PoliceLine::YOU_HAVE_BEEN_SENTENCED_TO_X_DAYS_IN_JAIL_OR_WOULD_YOU_RATHER: {
+  case PoliceLine::
+      YOU_HAVE_BEEN_SENTENCED_TO_X_DAYS_IN_JAIL_OR_WOULD_YOU_RATHER: {
     Money fine{static_cast<int64_t>(bribe_or_fine_cost_) * 100};
     if (agree && player->cash_balance() >= fine) {
       state_.spend_cash(*player, Account::FinesAndBribes, fine);
@@ -236,17 +248,20 @@ bool PoliceConversation::advance_proposal(bool agree) {
     break;
   }
 
-  case PoliceLine::FINE_THANKS_I_EVEN_KNOW_WHERE_WE_WILL_BE_CHECKING_WAREHOUSE_NEXT_MONTH_FOR_4K:
+  case PoliceLine::
+      FINE_THANKS_I_EVEN_KNOW_WHERE_WE_WILL_BE_CHECKING_WAREHOUSE_NEXT_MONTH_FOR_4K:
     if (agree) {
       state_.spend_cash(*player, Account::FinesAndBribes, 4000_usd);
-      current_line(PoliceLine::THANKS_A_LOT_NEXT_MONTH_WE_WILL_EXAMINE_WAREHOUSES_IN);
+      current_line(
+          PoliceLine::THANKS_A_LOT_NEXT_MONTH_WE_WILL_EXAMINE_WAREHOUSES_IN);
     }
     else {
       current_line(PoliceLine::NOT_TOO_GOOD_IM_VERY_BUSY_GOODBYE);
     }
     break;
 
-  case PoliceLine::YES_INDEED_I_HAPPENED_TO_FIND_OUT_MAYOR_VISIT_RESTAURANT_FOR_2K:
+  case PoliceLine::
+      YES_INDEED_I_HAPPENED_TO_FIND_OUT_MAYOR_VISIT_RESTAURANT_FOR_2K:
     if (agree) {
       state_.spend_cash(*player, Account::FinesAndBribes, 2000_usd);
       current_line(PoliceLine::THANK_YOU_THE_MAYOR_WILL_VISIT_YOUR_RESTAURANT);
@@ -265,7 +280,8 @@ bool PoliceConversation::advance_proposal(bool agree) {
 Emotion PoliceConversation::emotion() const {
   switch (current_line_) {
   case PoliceLine::WHAT_DO_YOU_THINK_I_AM_I_FINE_YOU_1K_FOR_INSULTING:
-  case PoliceLine::IF_YOUR_TRYING_TO_BRIBE_ME_YOUVE_GOT_THE_WRONG_PERSON_2_DAYS_JAIL:
+  case PoliceLine::
+      IF_YOUR_TRYING_TO_BRIBE_ME_YOUVE_GOT_THE_WRONG_PERSON_2_DAYS_JAIL:
   case PoliceLine::YOU_CANNOT_BRIBE_ME_SENTENCED_DOUBLED:
   case PoliceLine::WHO_ARE_YOU_GET_OUT_OF_HERE_AT_ONCE:
     return Emotion::ANGRY;
@@ -279,8 +295,7 @@ Emotion PoliceConversation::emotion() const {
   }
 }
 
-std::vector<ConversationLine<PoliceLine>>
-PoliceConversation::lines() const {
+std::vector<ConversationLine<PoliceLine>> PoliceConversation::lines() const {
   switch (current_line_) {
   case PoliceLine::IN_THE_NAME_OF_THE_LAW_MAY_I_WELCOME_YOU:
   case PoliceLine::IN_NAME_OF_LAW_ARREST_RECEIVING:
@@ -300,14 +315,16 @@ PoliceConversation::lines() const {
                                      : PoliceLine::NICE_DAY),
         make_option(random_flags_[2] ? PoliceLine::HOW_IS_YOUR_PETTY_CASH
                                      : PoliceLine::DO_YOU_NEED_ANY_MONEY),
-        make_option(random_flags_[3] ? PoliceLine::DID_YOU_LOSE_THIS_WALLET
-                                     : PoliceLine::NEED_A_DONATION_TO_THE_LOCAL_POLICE),
+        make_option(random_flags_[3]
+                        ? PoliceLine::DID_YOU_LOSE_THIS_WALLET
+                        : PoliceLine::NEED_A_DONATION_TO_THE_LOCAL_POLICE),
     };
 
   case PoliceLine::WHAT_DO_YOU_THINK_I_AM_I_FINE_YOU_1K_FOR_INSULTING:
   case PoliceLine::NOT_TOO_GOOD_IM_VERY_BUSY_GOODBYE:
   case PoliceLine::ITS_NOT_THAT_NICE_STOP_BOTHERING_ME:
-  case PoliceLine::IF_YOUR_TRYING_TO_BRIBE_ME_YOUVE_GOT_THE_WRONG_PERSON_2_DAYS_JAIL:
+  case PoliceLine::
+      IF_YOUR_TRYING_TO_BRIBE_ME_YOUVE_GOT_THE_WRONG_PERSON_2_DAYS_JAIL:
   case PoliceLine::WHO_ARE_YOU_GET_OUT_OF_HERE_AT_ONCE:
   case PoliceLine::IN_VIEW_OF_YOUR_GOOD_STANDING_NOT_TAKE_IT_FURTHER:
   case PoliceLine::YOURE_OFFERING_ME_MONEY_YOU_DONT_EVEN_HAVE:
@@ -319,28 +336,33 @@ PoliceConversation::lines() const {
   case PoliceLine::THANKS_A_LOT_NEXT_MONTH_WE_WILL_EXAMINE_WAREHOUSES_IN:
     // TODO: append district name when district lookup is wired
     Logger::warn("We don't have warehouse inspections yet!");
-    return {make_terminal_line(PoliceLine::THANKS_A_LOT_NEXT_MONTH_WE_WILL_EXAMINE_WAREHOUSES_IN)};
+    return {make_terminal_line(
+        PoliceLine::THANKS_A_LOT_NEXT_MONTH_WE_WILL_EXAMINE_WAREHOUSES_IN)};
   case PoliceLine::THANK_YOU_THE_MAYOR_WILL_VISIT_YOUR_RESTAURANT:
     // TODO: when mayor schedule is known we need to append:
     // "{restaurant name} in exactly {day count} days!"
     Logger::warn("We don't know the mayors schedule yet!");
-    return {make_terminal_line(PoliceLine::THANK_YOU_THE_MAYOR_WILL_VISIT_YOUR_RESTAURANT)};
+    return {make_terminal_line(
+        PoliceLine::THANK_YOU_THE_MAYOR_WILL_VISIT_YOUR_RESTAURANT)};
 
   case PoliceLine::YES_THANKS_WHAT_WOULD_I_HAVE_DONE_WITHOUT:
     return {make_terminal_line(
         PoliceLine::YES_THANKS_WHAT_WOULD_I_HAVE_DONE_WITHOUT,
         compat::format(
-            " ${}! {}",
-            donation_amount_,
+            " ${}! {}", donation_amount_,
             lines_.at(static_cast<int>(
-                PoliceLine::THAT_WILL_COME_IN_HANDY_I_WONT_FORGET_YOUR_GENEROSITY))))};
+                PoliceLine::
+                    THAT_WILL_COME_IN_HANDY_I_WONT_FORGET_YOUR_GENEROSITY))))};
 
   // Voluntary proposals
-  case PoliceLine::FINE_THANKS_I_EVEN_KNOW_WHERE_WE_WILL_BE_CHECKING_WAREHOUSE_NEXT_MONTH_FOR_4K:
-  case PoliceLine::YES_INDEED_I_HAPPENED_TO_FIND_OUT_MAYOR_VISIT_RESTAURANT_FOR_2K:
+  case PoliceLine::
+      FINE_THANKS_I_EVEN_KNOW_WHERE_WE_WILL_BE_CHECKING_WAREHOUSE_NEXT_MONTH_FOR_4K:
+  case PoliceLine::
+      YES_INDEED_I_HAPPENED_TO_FIND_OUT_MAYOR_VISIT_RESTAURANT_FOR_2K:
     return {make_proposal(current_line_, false)};
 
-  case PoliceLine::YOU_HAVE_BEEN_SENTENCED_TO_X_DAYS_IN_JAIL_OR_WOULD_YOU_RATHER:
+  case PoliceLine::
+      YOU_HAVE_BEEN_SENTENCED_TO_X_DAYS_IN_JAIL_OR_WOULD_YOU_RATHER:
     return {make_proposal(
         PoliceLine::
             YOU_HAVE_BEEN_SENTENCED_TO_X_DAYS_IN_JAIL_OR_WOULD_YOU_RATHER,
@@ -377,7 +399,8 @@ bool PoliceConversation::has_ended() const {
   case PoliceLine::PLAYER_PAID_FINE:
   case PoliceLine::WHO_ARE_YOU_GET_OUT_OF_HERE_AT_ONCE:
   case PoliceLine::WHAT_DO_YOU_THINK_I_AM_I_FINE_YOU_1K_FOR_INSULTING:
-  case PoliceLine::IF_YOUR_TRYING_TO_BRIBE_ME_YOUVE_GOT_THE_WRONG_PERSON_2_DAYS_JAIL:
+  case PoliceLine::
+      IF_YOUR_TRYING_TO_BRIBE_ME_YOUVE_GOT_THE_WRONG_PERSON_2_DAYS_JAIL:
   case PoliceLine::NOT_TOO_GOOD_IM_VERY_BUSY_GOODBYE:
   case PoliceLine::ITS_NOT_THAT_NICE_STOP_BOTHERING_ME:
   case PoliceLine::THANKS_A_LOT_NEXT_MONTH_WE_WILL_EXAMINE_WAREHOUSES_IN:
@@ -436,8 +459,7 @@ void PoliceConversation::go_to_jail(int days) {
   // Show prison fullscreen after the conversation view pops.
   // The on_dismiss callback starts the jail day loop.
   on_end_ = [&state = state_] {
-    state.deliver_message(
-        core::events::LeventId::YouAreOnTheWayToPrison,
-        [&state] { state.request_end_of_turn(); });
+    state.deliver_message(core::events::LeventId::YouAreOnTheWayToPrison,
+                          [&state] { state.request_end_of_turn(); });
   };
 }

@@ -633,6 +633,7 @@ void Terminal::on_dialing_phase_finished() {
   case DialingPhase::CONNECTING:
     // Push the actor terminal view
     if (pending_actor_id_) {
+      state_.advance_time_blocks(1); // dialing cost
       // Transition to IDLE first to clean up sounds and state while we're still
       // active
       transition_to_phase(DialingPhase::IDLE);

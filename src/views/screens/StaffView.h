@@ -27,6 +27,7 @@ class StaffView : public MainPanelView {
 public:
   static constexpr int PANEL_SPACE_ON_TOP = 16;
   StaffView(GameContext& context, GameState& state);
+  ~StaffView();
   void tick() override;
   void render(const RenderContext& ctx) override;
 

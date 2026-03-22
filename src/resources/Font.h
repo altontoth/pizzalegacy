@@ -93,8 +93,8 @@ public:
 
   // Soft hyphen analysis: dashes between letters mark allowed break points
   struct BreakableWord {
-    std::string clean_text;              // text with soft hyphens removed
-    std::vector<size_t> break_positions; // char indices where breaks are allowed
+    std::string clean_text;              // text without soft hyphens
+    std::vector<size_t> break_positions; // indices where breaks are allowed
   };
   static BreakableWord analyze_word_breaks(std::string_view word);
 

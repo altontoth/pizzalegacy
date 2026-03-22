@@ -19,8 +19,7 @@ FullscreenStatus::FullscreenStatus(GameContext& context, GameState& state,
                                    std::function<void()> on_dismiss)
     : View(context, state), typewriter_(context_.font), message_id_(msg_id),
       listener_(context_.input->register_listener(*this)),
-      on_dismiss_(std::move(on_dismiss)),
-      background_([&]() -> const Surface& {
+      on_dismiss_(std::move(on_dismiss)), background_([&]() -> const Surface& {
         const auto& msg_data = state_.message_manager().get_data(msg_id);
 
         assert(msg_data.background != core::events::ZwBackground::NONE);

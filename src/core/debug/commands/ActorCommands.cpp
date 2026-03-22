@@ -37,8 +37,7 @@ static const char* mission_type_name(MafiaMissionType t) {
   return "Unknown";
 }
 
-static std::string location_info(const MissionLocation& loc,
-                                 const City* city) {
+static std::string location_info(const MissionLocation& loc, const City* city) {
   std::string name = "(no city)";
   if (city && loc.tile_index >= 0) {
     name = city->building_name(loc.tile_index);
@@ -212,12 +211,11 @@ Example:
           auto* city = ctx.state.active_city();
           result.add_message(compat::format(
               "Mission: type={} active={} risk={}% reward={} busted={}",
-              mission_type_name(m.mission_type), m.active, m.risk_pct,
-              m.reward, m.busted));
-          result.add_message(
-              compat::format("  deadline={} {}:{:02} completed={}",
-                             m.deadline.to_string(), m.deadline_hour,
-                             m.deadline_minute, m.completed));
+              mission_type_name(m.mission_type), m.active, m.risk_pct, m.reward,
+              m.busted));
+          result.add_message(compat::format(
+              "  deadline={} {}:{:02} completed={}", m.deadline.to_string(),
+              m.deadline_hour, m.deadline_minute, m.completed));
           result.add_message(
               compat::format("  pickup: {}", location_info(m.pickup, city)));
           result.add_message(
@@ -345,7 +343,8 @@ static CommandDef make_mafia_set_dropoff() {
   return CommandDef{
       .name = "set-dropoff",
       .description = "Override dropoff tile and time",
-      .help_text = R"(Usage: actor mafia set-dropoff <tile_index> [hour] [minute]
+      .help_text =
+          R"(Usage: actor mafia set-dropoff <tile_index> [hour] [minute]
 
 Sets the dropoff location to the given tile index and optionally
 overrides the time window to today at the specified hour:minute.
@@ -544,15 +543,14 @@ Example:
         result.add_message(
             compat::format("Criminal record: {}", player->criminal_record()));
         if (player->is_in_jail()) {
-          result.add_message(compat::format("Jail days left: {}",
-                                            *player->jail_days_left()));
+          result.add_message(
+              compat::format("Jail days left: {}", *player->jail_days_left()));
         }
         else {
           result.add_message("Jail: free");
         }
         auto& ss = player->social_status();
-        int s_rank =
-            social_rank(ss.social_score, ctx.state.difficulty_level());
+        int s_rank = social_rank(ss.social_score, ctx.state.difficulty_level());
         int u_rank =
             social_rank(ss.underworld_score, ctx.state.difficulty_level());
         result.add_message(compat::format("Social: score={} rank={}",

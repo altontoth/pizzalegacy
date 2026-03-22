@@ -7,6 +7,8 @@
 #include "GameCommands.h"
 #include "core/save/SaveGameManager.h"
 #include "core/state/GameState.h"
+#include "core/time/GameDate.h"
+#include "core/time/GameTime.h"
 
 using namespace debug::command;
 
@@ -37,7 +39,7 @@ Examples:
               },
           },
       .handler = [](const CommandContext& ctx) -> CommandResult {
-        std::string filename = ctx.string_arg(1);
+        std::string filename = ctx.string_arg(0);
 
         // Add .json extension if not present
         if (filename.size() < 5 ||
@@ -86,7 +88,7 @@ Examples:
               },
           },
       .handler = [](const CommandContext& ctx) -> CommandResult {
-        std::string filename = ctx.string_arg(1);
+        std::string filename = ctx.string_arg(0);
 
         // Add .json extension if not present
         if (filename.size() < 5 ||
@@ -142,6 +144,77 @@ Example:
                     .category = "game"};
 }
 
+static CommandDef make_game_date_set() {
+  return CommandDef{
+      .name = "set",
+      .description = "Set the game date",
+      .help_text = R"(Usage: game date set <dd-mm-yyyy>
+
+Sets the game date, preserving the current time of day.
+
+Examples:
+  game date set 15-01-1996    # Winter
+  game date set 01-06-1995    # Summer
+  game date set 10-10-1995    # Autumn
+)",
+      .args =
+          {
+              ArgSpec{
+                  .name = "date",
+                  .type = ArgType::String,
+                  .optional = false,
+                  .default_provider = DefaultProvider::None,
+                  .description = "Date in dd-mm-yyyy format",
+              },
+          },
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        std::string date_str = ctx.string_arg(0);
+
+        int day = 0;
+        int month = 0;
+        int year = 0;
+        if (sscanf(date_str.c_str(), "%d-%d-%d", &day, &month, &year) != 3) {
+          return CommandResult::error("Invalid date format, use dd-mm-yyyy");
+        }
+        if (month < 1 || month > 12 || day < 1 || day > 31 || year < 1995) {
+          return CommandResult::error("Invalid date values");
+        }
+
+        GameDate target(year, month, day);
+        int days = target.days_since(game_start_date);
+        if (days < 0) {
+          return CommandResult::error("Date must be on or after 01-03-1995");
+        }
+
+        constexpr int BLOCKS_PER_DAY = 144;
+        auto time = ctx.state.time();
+        int time_of_day = time.time_blocks() % BLOCKS_PER_DAY;
+        time.time_blocks(days * BLOCKS_PER_DAY + time_of_day);
+        ctx.state.set_time(time);
+
+        auto season = GameTime::to_string(time.season());
+        return CommandResult::success().add_message(compat::format(
+            "Date set to {} ({})", time.to_date_string(), season));
+      },
+      .category = "game"};
+}
+
+static CommandDef make_game_date() {
+  return CommandDef{
+      .name = "date",
+      .description = "Date management",
+      .help_text = "View or change the game date",
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        auto& time = ctx.state.time();
+        auto season = GameTime::to_string(time.season());
+        return CommandResult::success().add_message(
+            compat::format("{} ({})", time.to_date_string(), season));
+      },
+      .category = "game",
+  }
+      .add_subcommand(make_game_date_set());
+}
+
 CommandDef make_game_commands() {
   return CommandDef{
       .name = "game",
@@ -151,7 +224,8 @@ CommandDef make_game_commands() {
   }
       .add_subcommand(make_game_save())
       .add_subcommand(make_game_load())
-      .add_subcommand(make_game_exit());
+      .add_subcommand(make_game_exit())
+      .add_subcommand(make_game_date());
 }
 
 } // namespace debug::commands

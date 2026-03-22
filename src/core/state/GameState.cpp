@@ -1330,7 +1330,8 @@ void GameState::check_police_events() {
   using core::item::Item;
   auto& inv = player->inventory();
   int contraband = 0;
-  for (auto item : {Item::FlameThrower, Item::Chemicals, Item::Bazooka, Item::Bomb}) {
+  for (auto item :
+       {Item::FlameThrower, Item::Chemicals, Item::Bazooka, Item::Bomb}) {
     contraband += inv[item];
   }
   if (contraband == 0) {

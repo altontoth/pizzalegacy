@@ -12,6 +12,7 @@
 #include "core/food/RecipeCodec.h"
 #include "core/state/GameState.h"
 #include "core/util/LegacyConstants.h"
+#include "engine/Random.h"
 #include "engine/audio/AudioManager.h"
 #include "engine/geom/Spaces.h"
 #include "engine/input/InputManager.h"
@@ -556,7 +557,7 @@ void PizzaManager::draw_pizza_info(const RenderContext& ctx) const {
 
   if (recipe_id) {
     // Check if pizza is on this restaurant's menu
-    if (auto menu_entry = menu.find(*recipe_id)) {
+    if (const auto* menu_entry = menu.find(*recipe_id)) {
       on_current_menu = true;
       here_price = menu_entry->price;
 
@@ -589,7 +590,7 @@ void PizzaManager::draw_pizza_info(const RenderContext& ctx) const {
       }
 
       // Only include restaurants that have this pizza on their menu
-      if (auto menu_entry = rest->menu().find(*recipe_id)) {
+      if (const auto* menu_entry = rest->menu().find(*recipe_id)) {
         restaurants_with_pizza++;
         all_price = all_price + menu_entry->price;
 
@@ -777,7 +778,7 @@ bool PizzaManager::handle_left_mouse_click(ViewPoint vp) {
   return false;
 }
 
-bool PizzaManager::handle_right_mouse_click(ViewPoint p) {
+bool PizzaManager::handle_right_mouse_click(ViewPoint /* p */) {
   if (mode_ != PizzaManagerMode::Design) {
     return false;
   }
@@ -864,6 +865,9 @@ void PizzaManager::create_dropdowns() {
 }
 
 void PizzaManager::change_mode(PizzaManagerMode mode) {
+  if (engine::random::rand_percentage_chance(20)) {
+    state_.advance_time_blocks(1);
+  }
   mode_ = mode;
   create_input_panel();
   mark_dirty();
@@ -1075,8 +1079,15 @@ void PizzaManager::create_input_panel() {
 
   // Back
   input_panel_->add_button(Icon::ARROW_BACK, ButtonType::Square,
-                           ButtonPosition::BottomRight, "Back",
-                           [this] { state_.ui().pop(); });
+                           ButtonPosition::BottomRight, "Back", [this] {
+                             if (design_mode_) {
+                               state_.advance_time_blocks(5);
+                             }
+                             else {
+                               state_.advance_time_blocks(1);
+                             }
+                             state_.ui().pop();
+                           });
 }
 
 void PizzaManager::draw_recipes(const RenderContext& ctx) {
@@ -1224,6 +1235,7 @@ void PizzaManager::begin_bake(core::food::BakeSession s) {
 }
 
 void PizzaManager::on_design_finished() {
+  state_.advance_time_blocks(5);
   design_mode_ = false;
   if (!bake_) {
     Logger::warn("I don't have a bake?!");
@@ -1579,6 +1591,7 @@ void PizzaManager::update_status_ingredient() {
 }
 
 void PizzaManager::handle_post_judging() {
+  state_.advance_time_blocks(3);
   if (!bake_) {
     Logger::warn("No bake session after judging!");
     change_mode(PizzaManagerMode::Recipes);

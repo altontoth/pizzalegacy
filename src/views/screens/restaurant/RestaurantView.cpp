@@ -65,7 +65,12 @@ RestaurantView::RestaurantView(GameContext& context, GameState& state,
   // we're working with
   state_.active_restaurant(r_state.id);
   state_.prevent_end_of_day(false);
-  state_.resume_time_advancement();
+  if (furniture_placement_.empty()) {
+    state_.resume_time_advancement();
+  }
+  else {
+    state_.pause_time_advancement(); // only advance explicitly per item placed
+  }
 
   // Check if we're placing kitchenware (ovens) - if so, start in kitchen view
   // Also check if we're placing regular furniture while the restaurant is open,
@@ -91,7 +96,6 @@ RestaurantView::RestaurantView(GameContext& context, GameState& state,
   }
 
   set_up_buttons();
-
 
   scroll_edges_.add_interactions(interactions_);
 
@@ -1178,7 +1182,6 @@ bool RestaurantView::intersects_wall(const WorldRect& r) const {
   return !interior.contains(r);
 }
 
-
 void RestaurantView::prune_empty_batches() {
   std::erase_if(furniture_placement_, [](const FurnitureBatch& b) {
     return b.count <= 0 || b.furniture == nullptr;
@@ -1428,6 +1431,8 @@ void RestaurantView::place_cursor_item(WorldPoint wp) {
   else {
     restaurant_->layout()->place_furniture(std::move(on_cursor_));
   }
+
+  state_.advance_time_blocks(1);
 
   // Clear ghost rendering state
   ghost_furniture_topleft_.reset();

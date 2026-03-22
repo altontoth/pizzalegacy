@@ -27,9 +27,9 @@
 
 constexpr int text_color = 10;
 
-void MarketResearch::render_bar_chart(const RenderContext& ctx,
-                                      BarChartMode mode,
-                                      const std::array<int, NUMBER_OF_PLAYERS>& values) {
+void MarketResearch::render_bar_chart(
+    const RenderContext& ctx, BarChartMode mode,
+    const std::array<int, NUMBER_OF_PLAYERS>& values) {
   ctx.surface->fill({15});
   constexpr int edge_offset = 6;
   views::ui::render_decorated_corners(
@@ -56,13 +56,12 @@ void MarketResearch::render_bar_chart(const RenderContext& ctx,
     int max_val = *std::max_element(values.begin(), values.end());
     // Original game starts at $10K chunks; life_improvements allows finer $1K
     const bool fine_scale = context_.config->options().life_improvements;
-    constexpr std::array<int, 5> original_units = {
-        10000, 100000, 1000000, 10000000, 100000000};
+    constexpr std::array<int, 5> original_units = {10'000, 100'000, 1'000'000,
+                                                   10'000'000, 100'000'000};
     constexpr std::array<int, 6> improved_units = {
-        1000, 10000, 100000, 1000000, 10000000, 100000000};
-    const auto& units = fine_scale
-        ? std::span<const int>(improved_units)
-        : std::span<const int>(original_units);
+        1'000, 10'000, 100'000, 1'000'000, 10'000'000, 100'000'000};
+    const auto& units = fine_scale ? std::span<const int>(improved_units)
+                                   : std::span<const int>(original_units);
     scale_unit = units.back();
     for (int u : units) {
       if (max_val <= u * 10) {
@@ -74,9 +73,8 @@ void MarketResearch::render_bar_chart(const RenderContext& ctx,
   }
 
   context_.font->render_line_onto(
-      *ctx.surface, subtitle,
-      ViewPoint{views::base::MAIN_PANEL_WIDTH / 2, 32}, FontFace::ASTANDAR,
-      text_color, AlignX::CenterPoint);
+      *ctx.surface, subtitle, ViewPoint{views::base::MAIN_PANEL_WIDTH / 2, 32},
+      FontFace::ASTANDAR, text_color, AlignX::CenterPoint);
 
   // Graph area
   constexpr int grid_color = 14;
@@ -87,7 +85,8 @@ void MarketResearch::render_bar_chart(const RenderContext& ctx,
   constexpr ViewPoint label_y_start{28, 284};
   for (int i = 10; i > 0; --i) {
     context_.font->render_line_onto(*ctx.surface, std::to_string(i),
-                                    label_y_start - PxOffset{0, i * y_label_offset},
+                                    label_y_start -
+                                        PxOffset{0, i * y_label_offset},
                                     FontFace::CSTANDAR, 240, AlignX::RightEdge);
   }
 
@@ -95,8 +94,8 @@ void MarketResearch::render_bar_chart(const RenderContext& ctx,
   constexpr int bar_area_height = 200;
 
   // Bar gradient colors from original (each drawn twice for 2x rendering)
-  constexpr std::array<uint8_t, 10> bar_colors{
-      0x9, 0xA, 0xB, 0xC, 0xD, 0xE, 0xF, 0xE, 0xC, 0x9};
+  constexpr std::array<uint8_t, 10> bar_colors{0x9, 0xA, 0xB, 0xC, 0xD,
+                                               0xE, 0xF, 0xE, 0xC, 0x9};
   constexpr int bar_width = 20;
   constexpr int slot_width = graph_box.w / NUMBER_OF_PLAYERS;
   // Shop frontend tiles: same encoding as City::type() for owned premises
@@ -149,7 +148,8 @@ void MarketResearch::render_bar_chart(const RenderContext& ctx,
       std::string tip;
       if (mode == BarChartMode::Percentage) {
         tip = std::to_string(display_value) + "%";
-      } else {
+      }
+      else {
         tip = "$" + std::to_string(display_value);
       }
       interactions_.create_frame_item(
@@ -671,7 +671,8 @@ void MarketResearch::render_competitors(const RenderContext& ctx) {
   for (int i = 0; i < NUMBER_OF_PLAYERS; ++i) {
     if (players[i]) {
       // Revenue accounts carry negative (credit) balances, negate for display
-      values[i] = static_cast<int>(-players[i]->financials().total_receipts().whole());
+      values[i] =
+          static_cast<int>(-players[i]->financials().total_receipts().whole());
     }
   }
   render_bar_chart(ctx, BarChartMode::Currency, values);

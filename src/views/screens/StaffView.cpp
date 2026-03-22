@@ -74,6 +74,8 @@ StaffView::StaffView(GameContext& context, GameState& state)
       });
 }
 
+StaffView::~StaffView() { state_.advance_time_blocks(4); }
+
 void StaffView::tick() {
   if (card_animator_.update()) {
     // Logger::info("CA Logic did something");

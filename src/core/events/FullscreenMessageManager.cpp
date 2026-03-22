@@ -180,7 +180,7 @@ bool FullscreenMessageManager::schedule_message(LeventId msg_id,
 }
 
 bool FullscreenMessageManager::was_scheduled(LeventId msg_id,
-                                         core::PlayerId player_id) const {
+                                             core::PlayerId player_id) const {
   auto it = player_messages_.find(player_id);
   if (it == player_messages_.end()) {
     return false;

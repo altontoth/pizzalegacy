@@ -10,6 +10,7 @@
 #include "magic_enum/magic_enum.hpp"
 #include "resources/FontManager.h"
 
+#include "core/state/GameState.h"
 #include "core/util/LegacyConstants.h"
 #include "gfx/Blit.h"
 #include "views/base/ViewDefs.h"
@@ -56,6 +57,7 @@ ActorView<LineEnum>::ActorView(
       bg_filename_(compat::format("gfx/back{}", actor_->background_id())) {
 
   actor_->state(ActionState::TALKING);
+  state_.advance_time_blocks(1);
 
   phase_timer_ = DEFAULT_CONVERSATION_ANIMATION_DURATION;
 
@@ -70,6 +72,10 @@ ActorView<LineEnum>::ActorView(
   input_panel_->add_button(Icon::THUMBS_DOWN, ButtonType::Vertical,
                            ButtonPosition::TopRight, "Reject",
                            [this] { advance_proposal(false); });
+}
+
+template <typename LineEnum> ActorView<LineEnum>::~ActorView() {
+  state_.advance_time_blocks(5);
 }
 
 template <typename LineEnum> void ActorView<LineEnum>::tick() {
@@ -365,16 +371,15 @@ void ActorView<LineEnum>::render_dialog(const RenderContext& ctx) {
     if (static_cast<int>(line.line_id) == hovered_line_id_) {
       auto hover_metrics =
           context_.font->size_text(line.text, FontFace::PIZ_NUMB);
-      ctx.surface->fill_rect(
-          ViewRect{line_x - 2, line_y - 2, hover_metrics.width + 4,
-                   hover_metrics.height + 4},
-          13);
+      ctx.surface->fill_rect(ViewRect{line_x - 2, line_y - 2,
+                                      hover_metrics.width + 4,
+                                      hover_metrics.height + 4},
+                             13);
     }
 
     auto metrics = context_.font->render_into_rect(
         *ctx.surface, line.text,
-        ViewRect{line_x, line_y, dialog_w - text_x_pos,
-                 dialog_h - text_y_pos},
+        ViewRect{line_x, line_y, dialog_w - text_x_pos, dialog_h - text_y_pos},
         FontFace::PIZ_NUMB, {.color = gfx::ColorIndex{15}});
 
     if (line.is_option) {
@@ -417,14 +422,13 @@ void ActorView<LineEnum>::advance_conversation(LineEnum choice) {
     context_.popup->palette_handle({37});
     context_.popup->origin(ViewPoint{LegacyConstants::WOOD_BORDER_WIDTH_LEFT,
                                      LegacyConstants::WOOD_BORDER_HEIGHT_TOP});
-    context_.popup->create<ChequePopup>(
-        [this](int amount, int account) {
-          conversation_->on_cheque_result(amount, account);
-          current_phase_ = ConversationPhase::TALKING;
-          actor_->state(ActionState::TALKING);
-          phase_timer_ = DEFAULT_CONVERSATION_DELAY;
-          mark_dirty();
-        });
+    context_.popup->create<ChequePopup>([this](int amount, int account) {
+      conversation_->on_cheque_result(amount, account);
+      current_phase_ = ConversationPhase::TALKING;
+      actor_->state(ActionState::TALKING);
+      phase_timer_ = DEFAULT_CONVERSATION_DELAY;
+      mark_dirty();
+    });
     return;
   }
 

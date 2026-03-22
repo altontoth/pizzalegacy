@@ -21,11 +21,11 @@
 #include "core/restaurant/PlacedFurniture.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/restaurant/RestaurantLayout.h"
-#include "factories/FurnitureFactory.h"
 #include "engine/Fatal.h"
 #include "engine/FormatCompat.h"
 #include "engine/Math.h"
 #include "engine/Random.h"
+#include "factories/FurnitureFactory.h"
 
 using engine::random::coin_flip;
 using engine::random::rand_between;
@@ -386,8 +386,7 @@ bool MafiaConversation::advance_proposal(bool agree) {
 
             auto ash_type = is_table ? FurnitureType::ASHES_LARGE
                                      : FurnitureType::ASHES_SMALL;
-            const auto* ash_furn =
-                FurnitureFactory::create_furniture(ash_type);
+            const auto* ash_furn = FurnitureFactory::create_furniture(ash_type);
             if (ash_furn) {
               auto ash = std::make_unique<PlacedFurniture>(
                   ash_furn, layout.next_furniture_id(), pos,
@@ -437,8 +436,8 @@ bool MafiaConversation::advance_proposal(bool agree) {
         // Investment missions use risk for profit outcome instead (already
         // handled in generate_mission), so they don't get busted.
         if (pending_mission_->mission_type != MafiaMissionType::Investment) {
-          pending_mission_->busted =
-              engine::random::rand_percentage_chance(pending_mission_->risk_pct);
+          pending_mission_->busted = engine::random::rand_percentage_chance(
+              pending_mission_->risk_pct);
         }
         player->mafia_state().active_mission = *pending_mission_;
 
@@ -647,10 +646,9 @@ std::vector<ConversationLine<MafiaLine>> MafiaConversation::lines() const {
     [[fallthrough]];
   case MafiaLine::HERE_WE_ARE_AGAIN_WE_WANT_THE_USUAL: {
     auto offer_text = protection_offer_text();
-    return {make_line(
-        current_line_,
-        {.is_proposal = true, .easy_accept = false,
-         .custom_text = offer_text})};
+    return {make_line(current_line_, {.is_proposal = true,
+                                      .easy_accept = false,
+                                      .custom_text = offer_text})};
   }
   case MafiaLine::PROTECTION_OFFER: {
     auto text = protection_offer_text();
@@ -927,7 +925,8 @@ std::optional<MafiaMission> MafiaConversation::generate_mission(int rank) {
     // Money laundering: receive cash, distribute across 4 bank accounts
     mission.mission_type = MafiaMissionType::Laundering;
     int amount_10k = rand_max_n(120) + 30;
-    mission.cash_amount = Money{static_cast<int64_t>(amount_10k) * 10'000 * 100};
+    mission.cash_amount =
+        Money{static_cast<int64_t>(amount_10k) * 10'000 * 100};
 
     for (int i = 0; i < 4; i++) {
       mission.bank_accounts[i] = rand_between(100'000, 1'000'000);

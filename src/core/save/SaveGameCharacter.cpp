@@ -277,8 +277,7 @@ static json mission_to_json(const MafiaMission& m) {
 
 static MafiaMission json_to_mission(const json& j) {
   MafiaMission m;
-  m.mission_type =
-      static_cast<MafiaMissionType>(j.value("mission_type", 0));
+  m.mission_type = static_cast<MafiaMissionType>(j.value("mission_type", 0));
   m.active = j.value("active", false);
   m.risk_pct = j.value("risk_pct", 0);
   m.reward = Money{j.value("reward", int64_t{0})};

@@ -78,9 +78,10 @@ public:
 
   // Spending money with insufficient funds notification
   // Returns true if successful, false if insufficient funds (and posts message)
-  bool spend_cash(Player& player, Account to, Money amount);
-  bool spend_cash(Account to, Money amount); // Uses active player
-  bool spend_cash(Account to, Money amount, core::RestaurantId restaurant_id);
+  [[nodiscard]] bool spend_cash(Player& player, Account to, Money amount);
+  [[nodiscard]] bool spend_cash(Account to, Money amount); // Uses active player
+  [[nodiscard]] bool spend_cash(Account to, Money amount,
+                                core::RestaurantId restaurant_id);
 
   // Bank account registry (player accounts, mayor bribes, mafia laundering)
   BankAccountRegistry& bank_accounts() { return bank_accounts_; }
