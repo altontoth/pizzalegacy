@@ -344,6 +344,10 @@ json restaurant_to_json(const Restaurant& restaurant) {
   j["pizza_quality_factors"] = {pqf.ingredients, pqf.chef, pqf.oven,
                                 pqf.contamination};
 
+  if (restaurant.protection_timer().has_value()) {
+    j["protection_timer"] = *restaurant.protection_timer();
+  }
+
   // Save sabotage contamination and reputation damage slots
   j["sabotage_contamination"] = restaurant.sabotage_contamination();
   j["event_reputation_penalties"] = restaurant.event_reputation_penalties();
@@ -538,6 +542,10 @@ std::unique_ptr<Restaurant> json_to_restaurant(const json& j,
       factors.contamination = pqf[3].get<int8_t>();
       restaurant->set_pizza_quality_factors(factors);
     }
+  }
+
+  if (j.contains("protection_timer")) {
+    restaurant->protection_timer(j["protection_timer"].get<int>());
   }
 
   // Restore sabotage contamination and reputation damage slots
