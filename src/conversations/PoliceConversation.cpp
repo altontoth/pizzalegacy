@@ -11,6 +11,7 @@
 #include "core/character/Player.h"
 #include "core/character/SocialStatus.h"
 #include "core/events/LeventId.h"
+#include "core/finance/Ledger.h"
 #include "core/item/Item.h"
 #include "engine/Fatal.h"
 #include "engine/FormatCompat.h"
@@ -135,7 +136,9 @@ bool PoliceConversation::advance_line_choice(PoliceLine choice) {
   case PoliceLine::HOW_ABOUT_20K_FOR_YOU: {
     int chance = 70 - (difficulty * 12);
     if (engine::random::rand_percentage_chance(std::max(chance, 5))) {
-      state_.spend_cash(*player, Account::FinesAndBribes, 20'000_usd);
+      player->financials().transfer(state_.time().current_date(),
+                                    Account::Cash, Account::FinesAndBribes,
+                                    20'000_usd, AccountingScope::Operational);
       current_line(PoliceLine::SURE_BUT_THIS_WILL_REMAIN_OUR_SECRET);
     }
     else {
@@ -149,7 +152,9 @@ bool PoliceConversation::advance_line_choice(PoliceLine choice) {
   case PoliceLine::COULD_YOU_DO_WITH_A_SPORTS_CAR: {
     int chance = 80 - (difficulty * 10);
     if (engine::random::rand_percentage_chance(std::max(chance, 5))) {
-      state_.spend_cash(*player, Account::FinesAndBribes, 80'000_usd);
+      player->financials().transfer(state_.time().current_date(),
+                                    Account::Cash, Account::FinesAndBribes,
+                                    80'000_usd, AccountingScope::Operational);
       current_line(
           PoliceLine::ALRIGHT_ILL_HAVE_ONE_FOR_80K_AND_YOU_CAN_GO_FREE);
     }
@@ -163,7 +168,9 @@ bool PoliceConversation::advance_line_choice(PoliceLine choice) {
 
   case PoliceLine::ANY_INFO_FOR_SALE:
   case PoliceLine::SSSHH_DO_YOU_SELL_INFO:
-    state_.spend_cash(*player, Account::FinesAndBribes, 1000_usd);
+    player->financials().transfer(state_.time().current_date(), Account::Cash,
+                                  Account::FinesAndBribes, 1000_usd,
+                                  AccountingScope::Operational);
     current_line(
         PoliceLine::WHAT_DO_YOU_THINK_I_AM_I_FINE_YOU_1K_FOR_INSULTING);
     break;
@@ -203,7 +210,9 @@ bool PoliceConversation::advance_line_choice(PoliceLine choice) {
   case PoliceLine::NEED_A_DONATION_TO_THE_LOCAL_POLICE: {
     Money donation{static_cast<int64_t>(donation_amount_) * 100};
     if (player->cash_balance() >= donation) {
-      state_.spend_cash(*player, Account::FinesAndBribes, donation);
+      player->financials().transfer(state_.time().current_date(), Account::Cash,
+                                    Account::FinesAndBribes, donation,
+                                    AccountingScope::Operational);
       state_.message_manager().schedule_message(
           core::events::LeventId::FirstBribery, player->id(),
           state_.time().current_date());
@@ -231,7 +240,9 @@ bool PoliceConversation::advance_proposal(bool agree) {
       YOU_HAVE_BEEN_SENTENCED_TO_X_DAYS_IN_JAIL_OR_WOULD_YOU_RATHER: {
     Money fine{static_cast<int64_t>(bribe_or_fine_cost_) * 100};
     if (agree && player->cash_balance() >= fine) {
-      state_.spend_cash(*player, Account::FinesAndBribes, fine);
+      player->financials().transfer(state_.time().current_date(), Account::Cash,
+                                    Account::FinesAndBribes, fine,
+                                    AccountingScope::Operational);
       if (!arrest_reason_) {
         fatal("Don't have an arrest reason when I do expect one.");
       }
@@ -251,7 +262,9 @@ bool PoliceConversation::advance_proposal(bool agree) {
   case PoliceLine::
       FINE_THANKS_I_EVEN_KNOW_WHERE_WE_WILL_BE_CHECKING_WAREHOUSE_NEXT_MONTH_FOR_4K:
     if (agree) {
-      state_.spend_cash(*player, Account::FinesAndBribes, 4000_usd);
+      player->financials().transfer(state_.time().current_date(), Account::Cash,
+                                    Account::FinesAndBribes, 4000_usd,
+                                    AccountingScope::Operational);
       current_line(
           PoliceLine::THANKS_A_LOT_NEXT_MONTH_WE_WILL_EXAMINE_WAREHOUSES_IN);
     }
@@ -263,7 +276,9 @@ bool PoliceConversation::advance_proposal(bool agree) {
   case PoliceLine::
       YES_INDEED_I_HAPPENED_TO_FIND_OUT_MAYOR_VISIT_RESTAURANT_FOR_2K:
     if (agree) {
-      state_.spend_cash(*player, Account::FinesAndBribes, 2000_usd);
+      player->financials().transfer(state_.time().current_date(), Account::Cash,
+                                    Account::FinesAndBribes, 2000_usd,
+                                    AccountingScope::Operational);
       current_line(PoliceLine::THANK_YOU_THE_MAYOR_WILL_VISIT_YOUR_RESTAURANT);
     }
     else {
