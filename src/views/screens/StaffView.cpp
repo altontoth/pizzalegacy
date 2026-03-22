@@ -6,8 +6,11 @@
 
 #include "views/screens/StaffView.h"
 
+#include <algorithm>
+
 #include "core/character/Character.h"
 #include "core/restaurant/Restaurant.h"
+#include "core/restaurant/RestaurantStats.h"
 #include "core/state/GameState.h"
 #include "core/util/LegacyConstants.h"
 #include "engine/geom/Spaces.h"
@@ -555,7 +558,7 @@ void StaffView::draw_manager_settings_interactions() {
   }
 }
 
-Surface StaffView::create_staff_overview(Restaurant* /*r*/) {
+Surface StaffView::create_staff_overview(Restaurant* r) {
   if (!empty_staff_overview_surface_) {
     // First get one of the corner pieces so we can figure out the exact colors
     // for drawing the boxes that they surround.
@@ -602,7 +605,71 @@ Surface StaffView::create_staff_overview(Restaurant* /*r*/) {
                             box.y + box.h - stats_bottom_right.height()})
             .build();
   }
-  return empty_staff_overview_surface_->clone();
+
+  // Gather stats from the staff array matching the current job tab
+  bool is_chef = (job_ == core::character::JobRole::CHEF);
+  auto& staff_array = is_chef ? r->cooks() : r->waiters();
+
+  int count = is_chef ? r->count_cooks() : r->count_waiters();
+  int total_capacity = 0;
+  int total_quality = 0;
+  Money total_costs{0};
+
+  for (const auto& slot : staff_array) {
+    if (slot.has_value() && !slot->is_away()) {
+      total_capacity += slot->pizzas_per_day();
+      total_quality += is_chef ? slot->character().cooking()
+                               : slot->character().serving();
+      total_costs += slot->payment();
+    }
+  }
+
+  int avg_quality = (count > 0) ? total_quality / count : 0;
+
+  // Time per pizza: 720 minutes / total capacity (0 for waiters)
+  constexpr int OPERATING_MINUTES_PER_DAY = 720;
+  int time_per_pizza = 0;
+  if (is_chef && total_capacity > 0) {
+    time_per_pizza = OPERATING_MINUTES_PER_DAY / total_capacity;
+  }
+
+  // Work: percentage of this role's capacity actually used (yesterday's final)
+  int pizzas_sold = r->stats().yesterday.orders_fulfilled;
+  int work = (total_capacity > 0)
+                 ? std::min(pizzas_sold * 100 / total_capacity, 100)
+                 : 0;
+
+  auto surface = empty_staff_overview_surface_->clone();
+  struct Line {
+    std::string_view label;
+    int value;
+  };
+  std::array<Line, 6> lines = {
+      Line{.label = "number:", .value = count},
+      Line{.label = "total capacity:", .value = total_capacity},
+      Line{.label = "average quality:", .value = avg_quality},
+      Line{.label = "time per pizza:", .value = time_per_pizza},
+      Line{.label = "work:", .value = work},
+      Line{.label = "total costs", .value = static_cast<int>(total_costs.whole())},
+  };
+  constexpr int text_color = 10;
+  constexpr int line_color = 13;
+  const int label_x = 68;
+  const int value_x = 302;
+  int y = 24;
+  int line_spacing = 20;
+  for (auto line : lines) {
+    context_.font->render_text_onto(surface, line.label, ViewPoint{label_x, y},
+                                    FontFace::PIZ_NUMB, text_color);
+    context_.font->render_text_onto(surface, std::to_string(line.value),
+                                    ViewPoint{value_x, y}, FontFace::PIZ_NUMB,
+                                    text_color, AlignX::RightEdge);
+    gfx::draw::line(surface, ViewPoint{label_x, y + line_spacing - 4},
+                    ViewPoint{value_x, y + line_spacing - 4}, line_color, 2);
+    y += line_spacing;
+  }
+
+  return surface;
 }
 
 Surface StaffView::create_staff_slots(Restaurant* r) {
