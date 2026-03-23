@@ -50,15 +50,15 @@ static constexpr int TEXT_COLOR_BLACK = 240;
 
 // Manager settings panel layout (shared between rendering and interactions)
 static constexpr int MS_LABEL_X = 22;
-static constexpr int MS_ROW_H = 25;
+static constexpr int MS_ROW_H = 20;
 static constexpr int MS_HEADER_H = 26;
-static constexpr int MS_BUTTON_Y_INSET = 4;
-static constexpr int MS_BUTTON_H = 20;
+static constexpr int MS_BUTTON_Y_INSET = 2;
+static constexpr int MS_BUTTON_H = 18;
 static constexpr int MS_BOOL_BUTTON_X = 240;
 static constexpr int MS_BOOL_BUTTON_W = 78;
 static constexpr int MS_WIDE_BUTTON_X = 200;
 static constexpr int MS_WIDE_BUTTON_W = 160;
-static constexpr int MS_GAP_BEFORE_BEHAVIOR = 40;
+static constexpr int MS_GAP_BEFORE_BEHAVIOR = 36;
 
 StaffView::StaffView(GameContext& context, GameState& state)
     : MainPanelView(context, state),
@@ -388,8 +388,7 @@ Surface StaffView::create_manager_settings_panel(Restaurant* r) {
             : views::ui::components::ButtonState::Normal);
   }
   y += 4 * MS_ROW_H;
-
-  // Gap before behavior section
+  draw_green_area(surface, y, MS_GAP_BEFORE_BEHAVIOR);
   y += MS_GAP_BEFORE_BEHAVIOR;
 
   // Behavior towards staff
@@ -431,6 +430,8 @@ Surface StaffView::create_manager_settings_panel(Restaurant* r) {
             ? views::ui::components::ButtonState::Pressed
             : views::ui::components::ButtonState::Normal);
   }
+  y += MS_ROW_H;
+  draw_green_area(surface, y, MAX_CARD_HEIGHT - y);
 
   return surface;
 }
