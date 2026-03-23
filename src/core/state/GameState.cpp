@@ -1240,6 +1240,28 @@ void GameState::add_restaurant(std::unique_ptr<Restaurant> restaurant) {
   restaurants_.push_back(std::move(restaurant));
 }
 
+void GameState::remove_restaurant(core::RestaurantId r_id) {
+  // Clear the property link
+  for (auto& city_ptr : cities_) {
+    if (!city_ptr) {
+      continue;
+    }
+    for (auto* property : city_ptr->properties()) {
+      if (property && property->has_restaurant() &&
+          property->restaurant_id() == r_id) {
+        property->clear_restaurant();
+      }
+    }
+  }
+  // Clear active restaurant
+  if (active_restaurant_ && *active_restaurant_ == r_id) {
+    active_restaurant_.reset();
+  }
+  // Actually remove the restaurant object
+  std::erase_if(restaurants_,
+                [r_id](const auto& r) { return r->id() == r_id; });
+}
+
 void GameState::clear_restaurants_for_load() {
   // Clear all restaurant references from properties in all loaded cities
   for (auto& city_ptr : cities_) {
@@ -1277,7 +1299,12 @@ bool GameState::end_property_lease(Property& property, Player& player) {
     city->central_depot(player.id().value).remove_capacity(capacity);
   }
 
+  if (property.has_restaurant()) {
+    remove_restaurant(*property.restaurant_id());
+  }
+
   property.clear_owner();
+  property.status(PremiseStatus::NOT_AVAILABLE);
   return true;
 }
 

@@ -1160,8 +1160,9 @@ void CityView::create_buttons() {
   input_panel_->add_button(
       Icon::QUESTION_MARK, ButtonType::Square, ButtonPosition::MiddleCenter,
       "Market research", [this] {
-        ui_push_store_position<ScreenTag>(CityViewReentryMode::RESTORE_ALL,
-                                          ScreenTag::Kind::MarketResearch);
+        ui_push_store_position<MarketResearchState>(
+            CityViewReentryMode::RESTORE_ALL,
+            state_.active_district_id().value_or(core::DistrictId{0}));
       });
 
   input_panel_->add_button(Icon::NEWSPAPER, ButtonType::Square,

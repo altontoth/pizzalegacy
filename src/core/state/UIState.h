@@ -40,7 +40,6 @@ struct ScreenTag {
     MenuSaveAsGame,
 
     Advertising,
-    MarketResearch,
     StaffView,
     Newspaper,
     GlobalStats,
@@ -198,6 +197,9 @@ struct FullscreenStatusState {
   core::events::LeventId message_id;
   std::function<void()> on_dismiss;
 };
+struct MarketResearchState {
+  core::DistrictId district_id;
+};
 struct MafiaMissionViewState {
   MafiaLine line;
 };
@@ -213,6 +215,7 @@ using UIState = std::variant<
     IngredientSupplierListState, IngredientOrderState,
     DepotWeaponInterfaceState, TerminalState, SupplierContractState,
     PlayerTurnCardState, FullscreenStatusState, MafiaMissionViewState,
-    StatsRestaurantsState, PlayerProfileState, GameOverState,
+    MarketResearchState, StatsRestaurantsState, PlayerProfileState,
+    GameOverState,
     // nothing on screen:
     std::monostate>;

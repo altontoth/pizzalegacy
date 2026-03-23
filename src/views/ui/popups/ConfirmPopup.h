@@ -21,6 +21,7 @@ public:
   void add_interactions(views::ui::InteractionContext ictx,
                         ViewPoint origin) override;
   void render(Surface& surface, ViewPoint origin) override;
+  Size popup_size() const override { return {popup_width_, popup_height_}; }
   bool on_action(const input::ActionEvent& ev) override;
 
 private:

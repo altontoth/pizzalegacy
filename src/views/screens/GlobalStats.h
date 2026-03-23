@@ -11,7 +11,6 @@
 #include "resources/Bob.h"
 #include "views/base/MainPanelView.h"
 
-class District;
 class Restaurant;
 
 enum class GlobalStatsScreen {
@@ -56,7 +55,6 @@ private:
   void render_binder(const RenderContext& ctx);
   void render_balance_lines(const RenderContext& ctx);
 
-  const District& district_;
   GlobalStatsScreen current_screen_{GlobalStatsScreen::Month_Overview};
   Bob& stanbobs_;
   Blitmap<Blitmap2Icon>& blitmap2_;

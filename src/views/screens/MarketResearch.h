@@ -7,6 +7,7 @@
 #pragma once
 
 #include <memory>
+#include "core/common/Ids.h"
 #include "core/util/Constants.h"
 #include "engine/geom/Spaces.h"
 #include "resources/Bob.h"
@@ -32,7 +33,8 @@ enum class MarketResearchScreen {
 
 class MarketResearch : public MainPanelView {
 public:
-  MarketResearch(GameContext& context, GameState& state);
+  MarketResearch(GameContext& context, GameState& state,
+                 core::DistrictId district_id);
   void tick() override;
   void render(const RenderContext& ctx) override;
 

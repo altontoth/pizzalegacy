@@ -1080,13 +1080,29 @@ void PizzaManager::create_input_panel() {
   // Back
   input_panel_->add_button(Icon::ARROW_BACK, ButtonType::Square,
                            ButtonPosition::BottomRight, "Back", [this] {
-                             if (design_mode_) {
-                               state_.advance_time_blocks(5);
+                             if (bake_) {
+                               if (state_.options().life_improvements &&
+                                   !bake_->working.toppings().empty()) {
+                                 context_.popup->create<ConfirmPopup>(
+                                     "Discard pizza?", [this](bool agree) {
+                                       if (agree) {
+                                         change_mode(PizzaManagerMode::Recipes);
+                                       }
+                                     });
+                               }
+                               else {
+                                 change_mode(PizzaManagerMode::Recipes);
+                               }
                              }
                              else {
-                               state_.advance_time_blocks(1);
+                               if (design_mode_) {
+                                 state_.advance_time_blocks(5);
+                               }
+                               else {
+                                 state_.advance_time_blocks(1);
+                               }
+                               state_.ui().pop();
                              }
-                             state_.ui().pop();
                            });
 }
 

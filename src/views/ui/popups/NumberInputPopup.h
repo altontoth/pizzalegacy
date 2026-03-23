@@ -19,6 +19,7 @@ public:
                    const std::string& append_text, int value, int min, int max,
                    int step_size, callback_t cb = nullptr);
   void render(Surface& surface, ViewPoint origin) override;
+  Size popup_size() const override { return {popup_width_, popup_height_}; }
   void add_interactions(views::ui::InteractionContext, ViewPoint) override;
 
   bool on_text(const input::TextEvent& ev) override;

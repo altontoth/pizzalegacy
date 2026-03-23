@@ -135,6 +135,7 @@ public:
   prev_restaurant(core::PlayerId pid, core::RestaurantId from) const;
   // For save/load:
   void add_restaurant(std::unique_ptr<Restaurant> restaurant);
+  void remove_restaurant(core::RestaurantId r_id);
   void clear_restaurants_for_load();
 
   // Real Estate management

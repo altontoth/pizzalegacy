@@ -706,9 +706,6 @@ Renderable* Game::change_state(GameState& gs, LoopState& /*loop*/) {
             case K::Advertising:
               current_view_ = std::make_unique<Advertising>(context, gs);
               break;
-            case K::MarketResearch:
-              current_view_ = std::make_unique<MarketResearch>(context, gs);
-              break;
             case K::StaffView:
               current_view_ = std::make_unique<StaffView>(context, gs);
               break;
@@ -722,6 +719,10 @@ Renderable* Game::change_state(GameState& gs, LoopState& /*loop*/) {
           },
 
           // data-bearing screens
+          [&](const MarketResearchState& mr) {
+            current_view_ =
+                std::make_unique<MarketResearch>(context, gs, mr.district_id);
+          },
           [&](const EuroMapState& em) {
             current_view_ =
                 std::make_unique<EuroMap>(context, gs, em.mode, em.category);

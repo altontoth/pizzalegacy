@@ -136,9 +136,9 @@ bool PoliceConversation::advance_line_choice(PoliceLine choice) {
   case PoliceLine::HOW_ABOUT_20K_FOR_YOU: {
     int chance = 70 - (difficulty * 12);
     if (engine::random::rand_percentage_chance(std::max(chance, 5))) {
-      player->financials().transfer(state_.time().current_date(),
-                                    Account::Cash, Account::FinesAndBribes,
-                                    20'000_usd, AccountingScope::Operational);
+      player->financials().transfer(state_.time().current_date(), Account::Cash,
+                                    Account::FinesAndBribes, 20'000_usd,
+                                    AccountingScope::Operational);
       current_line(PoliceLine::SURE_BUT_THIS_WILL_REMAIN_OUR_SECRET);
     }
     else {
@@ -152,9 +152,9 @@ bool PoliceConversation::advance_line_choice(PoliceLine choice) {
   case PoliceLine::COULD_YOU_DO_WITH_A_SPORTS_CAR: {
     int chance = 80 - (difficulty * 10);
     if (engine::random::rand_percentage_chance(std::max(chance, 5))) {
-      player->financials().transfer(state_.time().current_date(),
-                                    Account::Cash, Account::FinesAndBribes,
-                                    80'000_usd, AccountingScope::Operational);
+      player->financials().transfer(state_.time().current_date(), Account::Cash,
+                                    Account::FinesAndBribes, 80'000_usd,
+                                    AccountingScope::Operational);
       current_line(
           PoliceLine::ALRIGHT_ILL_HAVE_ONE_FOR_80K_AND_YOU_CAN_GO_FREE);
     }

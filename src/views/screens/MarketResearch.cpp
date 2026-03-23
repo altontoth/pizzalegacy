@@ -172,10 +172,10 @@ void MarketResearch::render_bar_chart(
   }
 }
 
-MarketResearch::MarketResearch(GameContext& context, GameState& state)
+MarketResearch::MarketResearch(GameContext& context, GameState& state,
+                               core::DistrictId district_id)
     : MainPanelView(context, state),
-      district_(state_.active_city()->district(
-          state_.active_district_id().value_or(core::DistrictId{0}))),
+      district_(state_.active_city()->district(district_id)),
       stanbobs_(context_.bob->get("bob/stanbobs.bob")) {
 
   create_buttons();

@@ -249,8 +249,7 @@ bool RealtorConversation::advance_proposal(bool agree) {
           }
         }
       }
-      active_property()->clear_owner();
-      active_property()->status(PremiseStatus::NOT_AVAILABLE);
+      state_.end_property_lease(*active_property(), *state_.active_player());
     }
     else {
       current_line(RealtorLine::I_WANT_TO_BUY_THIS_SHOP);

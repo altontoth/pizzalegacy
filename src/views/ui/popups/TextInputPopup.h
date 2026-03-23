@@ -21,6 +21,7 @@ public:
   ~TextInputPopup() = default;
 
   void render(Surface& surface, ViewPoint origin) override;
+  Size popup_size() const override { return {popup_width_, popup_height_}; }
   void add_interactions(views::ui::InteractionContext, ViewPoint) override;
   bool on_text(const input::TextEvent& ev) override;
   bool on_action(const input::ActionEvent& ev) override;

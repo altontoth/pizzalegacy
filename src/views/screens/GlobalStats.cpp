@@ -26,8 +26,6 @@ namespace {
 
 GlobalStats::GlobalStats(GameContext& context, GameState& state)
     : MainPanelView(context, state),
-      district_(state_.active_city()->district(
-          state_.active_district_id().value_or(core::DistrictId{0}))),
       stanbobs_(context_.bob->get("bob/stanbobs.bob")),
       blitmap2_(context_.blitmap->get<Blitmap2Icon>()) {
 

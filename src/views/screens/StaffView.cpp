@@ -618,8 +618,8 @@ Surface StaffView::create_staff_overview(Restaurant* r) {
   for (const auto& slot : staff_array) {
     if (slot.has_value() && !slot->is_away()) {
       total_capacity += slot->pizzas_per_day();
-      total_quality += is_chef ? slot->character().cooking()
-                               : slot->character().serving();
+      total_quality +=
+          is_chef ? slot->character().cooking() : slot->character().serving();
       total_costs += slot->payment();
     }
   }
@@ -650,7 +650,8 @@ Surface StaffView::create_staff_overview(Restaurant* r) {
       Line{.label = "average quality:", .value = avg_quality},
       Line{.label = "time per pizza:", .value = time_per_pizza},
       Line{.label = "work:", .value = work},
-      Line{.label = "total costs", .value = static_cast<int>(total_costs.whole())},
+      Line{.label = "total costs",
+           .value = static_cast<int>(total_costs.whole())},
   };
   constexpr int text_color = 10;
   constexpr int line_color = 13;
@@ -802,6 +803,8 @@ Surface StaffView::create_staff_slots(Restaurant* r) {
 Surface StaffView::create_data_card(const Staff& staff) {
   const auto& character = staff.character();
   auto snapshot = character.to_character_data();
+  // Use effective capacity (base + skill bonus) so card matches list CAP column
+  snapshot.pizzas_per_day = staff.pizzas_per_day();
 
   return create_data_card_impl(character, snapshot, staff.payment().whole(),
                                "");
