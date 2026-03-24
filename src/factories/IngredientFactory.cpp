@@ -229,7 +229,7 @@ Ingredient* IngredientFactory::create_ingredient(int ingredient_id) {
     i = std::make_unique<Ingredient>(IngredientType::MUSHROOMS, to_string(ingredient_type),
                                      20, 10, 5, 24, 4, 2, 0, 3, 1,
                                      IngredientCategory::VEGETABLES, std::vector<int>{
-                                      109,110,111,112,
+                                      127,128,129,130,
                                       113,114,115,116,
                                       117,117,117,117,
                                     });
@@ -249,7 +249,7 @@ Ingredient* IngredientFactory::create_ingredient(int ingredient_id) {
     i = std::make_unique<Ingredient>(IngredientType::W_MUSHROOMS, to_string(ingredient_type),
                                      30, 10, 10, 34, 4, 2, 0, 3,
                                      2, IngredientCategory::VEGETABLES, std::vector<int>{
-                                      127,128,129,130,
+                                      109,110,111,112,
                                       113,114,115,116,
                                       117,117,117,117,
                                     });

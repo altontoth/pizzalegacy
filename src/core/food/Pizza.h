@@ -55,6 +55,7 @@ public:
   static int topping_comparison_score(const Topping& ref_topping,
                                       const Topping& user_topping);
   const std::string& name() const { return name_; }
+  void name(std::string n) { name_ = std::move(n); }
   Popularity popularity() const { return popularity_; };
   int calories() const { return calories_; };
   Flavors flavors() const { return flavors_; };

@@ -12,6 +12,7 @@
 #include "core/food/RecipeCodec.h"
 #include "core/state/GameState.h"
 #include "core/util/LegacyConstants.h"
+#include "engine/PlatformPaths.h"
 #include "engine/Random.h"
 #include "engine/audio/AudioManager.h"
 #include "engine/geom/Spaces.h"
@@ -308,7 +309,7 @@ bool PizzaManager::on_action(const input::ActionEvent& ev) {
     auto bob_size_fn =
         make_ingredient_bob_size_fn<Bob, core::food::Topping>(zutaten_bob_);
     context_.popup->create<NumberInputPopup>(
-        "Save recipe as (game/)?", "", 0, 0, 99, 1,
+        "Save recipe as?", "", 0, 0, 99, 1,
         [this, bob_size_fn](int number) {
           const auto& self = *this; // non-const function, but self is const-ref
           const core::food::Pizza* pizza = self.current_pizza();
@@ -316,8 +317,10 @@ bool PizzaManager::on_action(const input::ActionEvent& ev) {
             Logger::warn("No current pizza!");
             return;
           }
-          std::filesystem::path path("game/r" + std::to_string(number) +
+          std::filesystem::path path(platform_paths::pizzas_dir() + "r" +
+                                     std::to_string(number) +
                                      (platform::is_amiga() ? "" : ".pc"));
+          std::filesystem::create_directories(path.parent_path());
           if (fileutils::fexists(path.string())) {
             context_.popup->create<ConfirmPopup>(
                 "File already exists, overwrite?",
@@ -363,14 +366,8 @@ void PizzaManager::render(const RenderContext& ctx) {
             handle_right_mouse_click(ui.local);
           }
         });
-    dropdowns_.add_interactions(ictx);
-    dropdowns_.render(*ctx.surface, context_.font);
-
-    // Chopper
+    // Chopper (registered before dropdowns so dropdowns take priority)
     interactions_.create_frame_item(
-        // ViewRect{LegacyConstants::WOOD_BORDER_WIDTH_LEFT + 5, 250 +
-        // LegacyConstants::WOOD_BORDER_HEIGHT_TOP, CHOPPER_WIDTH,
-        // CHOPPER_HEIGHT},
         ViewRect{5, 250, CHOPPER_WIDTH, CHOPPER_HEIGHT}, "chopper",
         [this](views::ui::InteractionEvent ie) {
           if (ie.type == views::ui::InteractionEvent::Type::Click &&
@@ -386,6 +383,9 @@ void PizzaManager::render(const RenderContext& ctx) {
             start_chop();
           }
         });
+
+    dropdowns_.add_interactions(ictx);
+    dropdowns_.render(*ctx.surface, context_.font);
     break;
   }
   case PizzaManagerMode::Ingredients:
@@ -1086,12 +1086,12 @@ void PizzaManager::create_input_panel() {
                                  context_.popup->create<ConfirmPopup>(
                                      "Discard pizza?", [this](bool agree) {
                                        if (agree) {
-                                         change_mode(PizzaManagerMode::Recipes);
+                                         cancel_bake();
                                        }
                                      });
                                }
                                else {
-                                 change_mode(PizzaManagerMode::Recipes);
+                                 cancel_bake();
                                }
                              }
                              else {
@@ -1307,8 +1307,7 @@ void PizzaManager::on_design_finished() {
 }
 
 void PizzaManager::finish_new_user(std::string name) {
-  // Pizza is already finalized with temporary name, just create it with real
-  // name
+  bake_->working.name(name);
   auto id = state_.active_player()->recipes().create_user(
       std::move(name), std::move(bake_->working));
   change_active_key(id);
@@ -1371,7 +1370,7 @@ void PizzaManager::post_bake() {
 }
 
 void PizzaManager::cancel_bake() {
-  change_mode(PizzaManagerMode::View);
+  change_mode(PizzaManagerMode::Recipes);
   bake_.reset();
 }
 
@@ -1418,9 +1417,9 @@ const Pizza* PizzaManager::current_pizza() const {
 }
 
 void PizzaManager::load_user_recipe(int number) {
-  // Create the pizza from disk (from game/ directory)
-  std::string filename =
-      "game/r" + std::to_string(number) + (platform::is_amiga() ? "" : ".pc");
+  std::string filename = platform_paths::pizzas_dir() + "r" +
+                         std::to_string(number) +
+                         (platform::is_amiga() ? "" : ".pc");
 
   // Check if file exists first
   if (!fileutils::fexists(filename)) {
@@ -1452,7 +1451,7 @@ void PizzaManager::load_user_recipe(int number) {
   auto* player = state_.active_player();
   auto& recipes = player->recipes();
 
-  // Always treat game/ recipes as user recipes
+  // Always treat loaded recipes as user recipes
   auto id = recipes.create_user(pizza->name(), std::move(*pizza));
   Logger::info("Loaded user recipe from {} into user slot {}", filename,
                id.value);
@@ -1569,8 +1568,9 @@ void PizzaManager::load_recipe_for_debug(const std::string& filename) {
 }
 
 void PizzaManager::load_user_recipe_for_debug(int number) {
-  std::string filename =
-      "game/r" + std::to_string(number) + (platform::is_amiga() ? "" : ".pc");
+  std::string filename = platform_paths::pizzas_dir() + "r" +
+                         std::to_string(number) +
+                         (platform::is_amiga() ? "" : ".pc");
   load_recipe_for_debug(filename);
 }
 

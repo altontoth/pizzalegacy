@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-// engine/meta.h
+// Generated from Version.h.in by CMake: do not edit directly.
 namespace game_meta {
 inline constexpr const char* VERSION = "0.0.2";
 }

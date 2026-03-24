@@ -92,10 +92,15 @@ PizzaFactory::create_pizza(const std::string& filename,
   is.seekg(name_offset, std::ios::beg);
 
   std::string pizza_name_str;
-  if (recipe_id < 0 ||
-      recipe_id >
+  if (!is_prez && recipe_id >= 0 &&
+      recipe_id <=
           static_cast<int>(core::food::CanonicalPizza::VegetablePizza)) {
-    // Safety cap so we don't run away on malformed files.
+    // Non-PREZ canonical files: use the canonical name
+    pizza_name_str =
+        to_string(static_cast<core::food::CanonicalPizza>(recipe_id));
+  }
+  else {
+    // PREZ (user-saved) or non-canonical: read name from file
     constexpr std::size_t max_name_bytes = 64;
 
     char ch = '\0';
@@ -112,10 +117,6 @@ PizzaFactory::create_pizza(const std::string& filename,
     while (!pizza_name_str.empty() && pizza_name_str.back() == ' ') {
       pizza_name_str.pop_back();
     }
-  }
-  else {
-    pizza_name_str =
-        to_string(static_cast<core::food::CanonicalPizza>(recipe_id));
   }
 
   // std::cout << "Processing pizza recipe: " << pizza_name_str << "\n";

@@ -36,4 +36,6 @@ std::string saves_dir() { return base_dir_ + "saves/"; }
 
 std::string screenshots_dir() { return base_dir_ + "screenshots/"; }
 
+std::string pizzas_dir() { return base_dir_ + "pizzas/"; }
+
 } // namespace platform_paths

@@ -3,7 +3,14 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 cmake_minimum_required(VERSION 3.25)
-project(plegacy VERSION 1.0 LANGUAGES C CXX)
+project(plegacy VERSION 0.0.2 LANGUAGES C CXX)
+
+# Generate Version.h from the project version
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/Version.h.in
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/Version.h
+    @ONLY
+)
 
 # ---------------------------------------------------------
 #  User‑selectable options
@@ -303,9 +310,20 @@ add_executable(plegacy
 
 # Build as a proper macOS .app bundle when on Apple platforms
 if(APPLE)
+    set(MACOSX_ICON "${CMAKE_CURRENT_SOURCE_DIR}/assets/Pizza Legacy.icns")
+    set_source_files_properties("${MACOSX_ICON}" PROPERTIES
+        MACOSX_PACKAGE_LOCATION "Resources"
+    )
+    target_sources(plegacy PRIVATE "${MACOSX_ICON}")
     set_target_properties(plegacy PROPERTIES
         MACOSX_BUNDLE TRUE
         OUTPUT_NAME "Pizza Legacy"
+        MACOSX_BUNDLE_BUNDLE_NAME "Pizza Legacy"
+        MACOSX_BUNDLE_GUI_IDENTIFIER "nl.pizzalegacy"
+        MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}"
+        MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}"
+        MACOSX_BUNDLE_COPYRIGHT "Copyright 2010-2026 Cowomaly. Licensed under GPL v3."
+        MACOSX_BUNDLE_ICON_FILE "Pizza Legacy.icns"
     )
 endif()
 
