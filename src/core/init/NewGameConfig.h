@@ -22,7 +22,13 @@ struct PlayerSlot {
 };
 
 enum class RestaurantSize { NONE, SMALL, BIG };
-enum class DifficultyLevel { PUSHOVER, EASY, NORMAL, DIFFICULT, IMPOSSIBLE };
+enum class DifficultyLevel {
+  PUSHOVER = 1,
+  EASY = 2,
+  NORMAL = 3,
+  DIFFICULT = 4,
+  IMPOSSIBLE = 5,
+};
 
 struct Config {
   GameMode mode = GameMode::FREEMODE;

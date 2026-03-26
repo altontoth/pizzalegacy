@@ -49,11 +49,13 @@ public:
   // Public entrypoints for the views:
   void show_city_default(const CityCtx& c);
   void show_city_property_info(const CityCtx& c, int index);
+  void show_city_competitor_restaurant(const CityCtx& c, int index);
   void show_city_customer_info(const CityCtx& c, int index);
   void show_city_named_building(const CityCtx& c, int index);
   void show_city_type_name(const CityCtx& c, int index);
 
   void show_restaurant(const RestaurantCtx& r);
+  void show_competitor_restaurant(const CityCtx& c, const Restaurant& rest);
   void show_pizza(const PizzaCtx& p);
   void show_topping(const ToppingCtx& t);
   [[nodiscard]] std::optional<const StatusMsg> current_status_msg() const {
@@ -65,6 +67,10 @@ private:
   static StatusDisplayRecipe build_city_default(const CityCtx&);
   static StatusDisplayRecipe build_city_property_info(const CityCtx&,
                                                       int index);
+  static StatusDisplayRecipe build_city_competitor_restaurant(const CityCtx&,
+                                                              int index);
+  static StatusDisplayRecipe
+  build_competitor_restaurant(const CityCtx&, const Restaurant& rest);
   static StatusDisplayRecipe build_city_customer_info(const CityCtx&,
                                                       int index);
   static StatusDisplayRecipe build_city_named_building(const CityCtx&,

@@ -211,6 +211,20 @@ json SaveGameManager::state_to_json(const GameState& state,
   j["difficulty_level"] = state.difficulty_level();
   j["game_mode"] = static_cast<int>(state.game_mode());
 
+  // Save customer taste profiles
+  {
+    json taste_array = json::array();
+    for (auto demo : ALL_CONSUMER_TYPES) {
+      const auto& tp = state.customer_taste_profiles()[demo];
+      taste_array.push_back({{"fat", tp.fat},
+                             {"sweet", tp.sweet},
+                             {"salty", tp.salty},
+                             {"hot", tp.hot},
+                             {"spicy", tp.spicy}});
+    }
+    j["customer_taste_profiles"] = taste_array;
+  }
+
   // Save players
   json players_array = json::array();
   auto players = state.players();
@@ -300,12 +314,30 @@ void SaveGameManager::json_to_state(const json& j, GameState& state,
   // cities/restaurants are loaded (to avoid them being overwritten during city
   // creation)
 
+  // Load customer taste profiles (before players, since pizza loading uses
+  // them)
+  if (j.contains("customer_taste_profiles")) {
+    const auto& taste_array = j["customer_taste_profiles"];
+    for (size_t i = 0;
+         i < taste_array.size() && i < static_cast<size_t>(ConsumerType::Count);
+         ++i) {
+      auto demo = static_cast<ConsumerType>(i);
+      auto& tp = state.customer_taste_profiles()[demo];
+      tp.fat = taste_array[i]["fat"].get<int>();
+      tp.sweet = taste_array[i]["sweet"].get<int>();
+      tp.salty = taste_array[i]["salty"].get<int>();
+      tp.hot = taste_array[i]["hot"].get<int>();
+      tp.spicy = taste_array[i]["spicy"].get<int>();
+    }
+  }
+
   // Load players
   if (j.contains("players")) {
     std::array<std::unique_ptr<Player>, NUMBER_OF_PLAYERS> players;
     for (size_t i = 0; i < j["players"].size(); ++i) {
       if (!j["players"][i].is_null()) {
-        players[i] = json_to_player(j["players"][i], context);
+        players[i] = json_to_player(j["players"][i], context,
+                                    state.customer_taste_profiles());
       }
     }
     state.players(std::move(players));

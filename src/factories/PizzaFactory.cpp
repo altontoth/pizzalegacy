@@ -19,9 +19,9 @@
 #include "resources/util/FileUtils.h"
 #include "resources/util/Platform.h"
 
-std::unique_ptr<core::food::Pizza>
-PizzaFactory::create_pizza(const std::string& filename,
-                           const BobSizeFn& get_size) {
+std::unique_ptr<core::food::Pizza> PizzaFactory::create_pizza(
+    const std::string& filename, const BobSizeFn& get_size,
+    const core::food::CustomerTasteProfiles& taste_profiles) {
   std::string path(filename);
 
   // Extract recipe number from filename (e.g., "r/r14.pc" -> 14, "game/r3.pc"
@@ -226,17 +226,18 @@ PizzaFactory::create_pizza(const std::string& filename,
   disk_flavors.salty = static_cast<int>(salty_raw) * 10;
   disk_flavors.hot = static_cast<int>(hot_raw) * 10;
 
-  pizza->finalize(pizza_name_str);
+  pizza->finalize(taste_profiles, pizza_name_str);
   pizza->set_disk_stats(disk_flavors, appearance_raw, refinement_raw,
-                        normality_raw);
+                        normality_raw, taste_profiles);
 
   return pizza;
 }
 
-std::unique_ptr<core::food::Pizza>
-PizzaFactory::create_pizza(int recipe_id, const BobSizeFn& get_size) {
+std::unique_ptr<core::food::Pizza> PizzaFactory::create_pizza(
+    int recipe_id, const BobSizeFn& get_size,
+    const core::food::CustomerTasteProfiles& taste_profiles) {
   char filename[16];
   snprintf(filename, sizeof(filename), "r/r%d%s", recipe_id,
            platform::is_amiga() ? "" : ".pc");
-  return create_pizza(std::string(filename), get_size);
+  return create_pizza(std::string(filename), get_size, taste_profiles);
 }

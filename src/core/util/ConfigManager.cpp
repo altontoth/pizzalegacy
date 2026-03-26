@@ -158,7 +158,7 @@ void ConfigManager::save_options(const GameOptions& opts) {
   save_bool("automatic_report", opts.automatic_report);
   save_bool("crt_aspect_ratio", opts.crt_aspect_ratio);
   save_bool("fix_legacy_bugs", opts.fix_legacy_bugs);
-  save_bool("life_improvements", opts.life_improvements);
+  save_bool("qol_improvements", opts.qol_improvements);
 
   const char* format_str =
       (opts.asset_format == platform::AssetFormat::AMIGA) ? "amiga" : "dos";
@@ -185,7 +185,7 @@ GameOptions ConfigManager::load_options() const {
   load_bool("automatic_report", opts.automatic_report);
   load_bool("crt_aspect_ratio", opts.crt_aspect_ratio);
   load_bool("fix_legacy_bugs", opts.fix_legacy_bugs);
-  load_bool("life_improvements", opts.life_improvements);
+  load_bool("qol_improvements", opts.qol_improvements);
 
   auto it = config_.find("active_asset_format");
   if (it != config_.end()) {

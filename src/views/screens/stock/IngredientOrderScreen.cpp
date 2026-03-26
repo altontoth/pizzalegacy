@@ -453,7 +453,7 @@ Money IngredientOrderScreen::calculate_ingredient_price(
   int difficulty = state_.difficulty_level();
 
   return supplier_->calculate_price(ingredient_type, base_price,
-                                    difficulty_multipliers[difficulty]);
+                                    difficulty_multipliers[difficulty - 1]);
 }
 
 void IngredientOrderScreen::set_up_input_panel() {

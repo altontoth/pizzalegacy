@@ -11,6 +11,7 @@
 #include "core/food/Ingredient.h"
 #include "core/food/IngredientCategory.h"
 #include "core/util/Constants.h"
+#include "engine/Random.h"
 
 #include <algorithm>
 #include <cassert>
@@ -329,6 +330,34 @@ void City::end_of_day(bool is_active) {
   for (int i = 0; i < 4; i++) {
     if (trade_embargo_counters_[i] > 0) {
       trade_embargo_counters_[i]--;
+    }
+  }
+}
+
+void City::end_of_month() {
+  // Monthly property availability cycle
+  // Each commercial property rolls against its district's appeal percentage.
+  // If the roll succeeds, available properties are taken off market and
+  // unavailable untenanted ones are put back on.
+  for (auto& [index, property] : properties_) {
+    auto district_id = district_by_index(index);
+    const auto& dist = district(district_id);
+
+    if (!engine::random::rand_percentage_chance(dist.premises_availability())) {
+      continue;
+    }
+
+    auto status = property->status();
+    if (status == PremiseStatus::FOR_RENT ||
+        status == PremiseStatus::FOR_SALE ||
+        status == PremiseStatus::FOR_SALE_RENT) {
+      property->status(PremiseStatus::NOT_AVAILABLE);
+    }
+    else if (status == PremiseStatus::NOT_AVAILABLE &&
+             !property->owner_or_tenant()) {
+      auto new_status =
+          static_cast<PremiseStatus>(engine::random::rand_max_n(3) + 1);
+      property->status(new_status);
     }
   }
 }

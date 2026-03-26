@@ -10,6 +10,7 @@
 #include "core/city/City.h"
 #include "core/events/FullscreenMessageManager.h"
 #include "core/finance/BankAccountRegistry.h"
+#include "core/food/CustomerTasteProfiles.h"
 #include "core/init/NewGameConfig.h"
 #include "core/marketing/AdvertisingCampaign.h"
 #include "core/newspaper/ArticleDatabase.h"
@@ -87,6 +88,17 @@ public:
   BankAccountRegistry& bank_accounts() { return bank_accounts_; }
   const BankAccountRegistry& bank_accounts() const { return bank_accounts_; }
 
+  core::food::CustomerTasteProfiles& customer_taste_profiles() {
+    return customer_taste_profiles_;
+  }
+  const core::food::CustomerTasteProfiles& customer_taste_profiles() const {
+    return customer_taste_profiles_;
+  }
+
+  // Recalculate demographic scores for all pizzas across all players.
+  // Call after mutating customer_taste_profiles (weekly drift, events).
+  void recalculate_all_pizza_demographics();
+
   // Transfer money from sender to a registered bank account.
   // Debits sender's cash, credits target (player cash or dynamic account).
   // Returns false if account doesn't exist or sender can't afford it.
@@ -139,11 +151,11 @@ public:
   void clear_restaurants_for_load();
 
   // Real Estate management
-  bool buy_restaurant(Property&, Player&);
+  bool buy_restaurant(Property&, Player&, Money price);
   Restaurant* rent_restaurant(Property&, Player&, bool free = false);
   bool buy_depot(Property&, Player&);
   bool rent_depot(Property&, Player&, bool free = false);
-  bool sell_property(Property&, Player&);
+  bool sell_property(Property&, Player&, Money sale_price);
   bool end_property_lease(Property&, Player&);
   Restaurant* create_restaurant(Player& player, Property& property);
   void restaurant_placement(std::vector<FurnitureBatch> batch);
@@ -324,6 +336,9 @@ private:
   core::events::FullscreenMessageManager message_manager_;
 
   BankAccountRegistry bank_accounts_;
+
+  core::food::CustomerTasteProfiles customer_taste_profiles_{
+      core::food::default_customer_taste_profiles()};
 
   // Actor call management (actors refusing calls after being annoyed)
   std::unordered_set<int> actors_refusing_calls_;

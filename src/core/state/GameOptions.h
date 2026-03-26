@@ -17,7 +17,7 @@ struct GameOptions {
   // Use 640x480 (4:3) CRT aspect ratio instead of 640x400
   bool crt_aspect_ratio = false;
   bool fix_legacy_bugs = true;
-  bool life_improvements = true;
+  bool qol_improvements = true;
   // Asset format (DOS or Amiga)
   platform::AssetFormat asset_format = platform::AssetFormat::DOS;
   ScreenResolution resolution = ScreenResolution::Res_640x400;

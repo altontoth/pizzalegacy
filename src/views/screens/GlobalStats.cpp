@@ -501,7 +501,7 @@ void GlobalStats::render_loans(const RenderContext& ctx) {
     context_.font->render_text_onto(*ctx.surface, city->name(), {col_city, y},
                                     FontFace::PIZ_NUMB, 240);
 
-    if (context_.config->options().life_improvements) {
+    if (context_.config->options().qol_improvements) {
       // Tooltip on hover: show which bank this loan is with
       const Actor* bank =
           city->actor_by_id(static_cast<uint8_t>(loan->bank_id().value));

@@ -287,7 +287,7 @@ Surface PlayerProfile::create_overview(const Player* player) {
   s.blit_masked(up_arrow, up_pos);
   s.blit_masked(down_arrow, down_pos);
 
-  std::string difficulty(state_.difficulty_level() + 1, '*');
+  std::string difficulty(state_.difficulty_level(), '*');
   font->render_text_onto(s, difficulty,
                          ViewPoint{game_mode_pos.x, oclock_pos.y + line_height},
                          FontFace::PIZ_NUMB, text_color);

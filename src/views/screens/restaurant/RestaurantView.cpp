@@ -123,8 +123,14 @@ RestaurantView::RestaurantView(GameContext& context, GameState& state,
   camctrl_.tile_grid(RESTAURANT_TILE_WIDTH, RESTAURANT_TILE_HEIGHT);
   camctrl_.reset();
 
-  status_controller_.show_restaurant(
-      {.state = &state_, .rest = restaurant_, .label = "RESTAURANT"});
+  if (view_mode_ == RestaurantViewMode::OPPONENT_VIEW) {
+    status_controller_.show_competitor_restaurant(
+        {.state = &state_, .city = state_.active_city()}, *restaurant_);
+  }
+  else {
+    status_controller_.show_restaurant(
+        {.state = &state_, .rest = restaurant_, .label = "RESTAURANT"});
+  }
 
   if (post_waiting_customers_msg) {
     state_.status().post(StatusMsg{
@@ -1849,7 +1855,7 @@ void RestaurantView::handle_sell_furniture() {
   };
 
   // Check if confirmation is required
-  if (!state_.options().life_improvements) {
+  if (!state_.options().qol_improvements) {
     auto msg =
         compat::format("Do you want to sell this|item for {:w}?", sell_price);
     context_.popup->origin(ViewPoint{52, 80});

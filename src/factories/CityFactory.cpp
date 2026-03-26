@@ -460,40 +460,6 @@ CityFactory::invert_transform_phone_number(uint32_t transformed_value) {
   return phone_number;
 }
 
-std::unique_ptr<Property> CityFactory::generate_premise() {
-  int width = (rand() % 16) + 8;
-  int height_diff = (rand() % 6) - 3;
-  int height = width + height_diff;
-  // realtor index chosen at random:
-  int realtor_count = actor_count_[0] > 0 ? actor_count_[0] : 1;
-  int realtor = rand() % realtor_count;
-
-  int status_id = rand() % 4;
-  PremiseStatus status = PremiseStatus::NOT_AVAILABLE;
-  switch (status_id) {
-  case 1:
-    status = PremiseStatus::FOR_RENT;
-    break;
-  case 2:
-    status = PremiseStatus::FOR_SALE;
-    break;
-  case 3:
-    status = PremiseStatus::FOR_SALE_RENT;
-    break;
-  default:
-    status = PremiseStatus::NOT_AVAILABLE;
-    break;
-  }
-
-  int price_level = (rand() % 9) + 15;
-  int rent = price_level * 20;
-  int sale = price_level * 15;
-
-  return std::make_unique<Property>(0, PropertyType::BUSINESS_PREMISE,
-                                    Size{width, height}, realtor, status,
-                                    nullptr);
-}
-
 std::unique_ptr<City> CityFactory::build_city_object(int id) {
   auto city = std::make_unique<City>(core::CityId{id});
 
@@ -724,7 +690,8 @@ void CityFactory::populate_properties(int city_id) {
       auto status = PremiseStatus::NOT_AVAILABLE;
       if (engine::random::rand_percentage_chance(
               district->premises_availability())) {
-        status = static_cast<PremiseStatus>(engine::random::rand_max_n(4));
+        // Status 1=FOR_RENT, 2=FOR_SALE, 3=FOR_SALE_RENT
+        status = static_cast<PremiseStatus>(engine::random::rand_max_n(3) + 1);
       }
       // We'll set the city pointer later
       auto bp = std::make_unique<Property>(index, prop_type, Size{w, h}, r_id,

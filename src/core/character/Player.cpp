@@ -519,6 +519,7 @@ void Player::check_ai_expansion(GameState& game_state) {
       game_state.create_restaurant_with_layout(*this, *city, layout_id, big);
 
   if (rest) {
+    rest->wants_open(true);
     std::string district_name = "unknown";
     if (rest->property()) {
       district_name = rest->property()->district().name();

@@ -60,6 +60,7 @@ private:
   void on_city_hover(Destination dest);
   void on_city_leave(Destination dest);
   bool player_has_depot_in_city(Destination dest);
+  void attempt_flight();
 
   MapState map_state_{MapState::NO_ACTION};
   ViewRect big_popup_box_;

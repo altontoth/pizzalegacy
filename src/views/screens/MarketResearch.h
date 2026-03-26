@@ -48,7 +48,7 @@ private:
   void render_pizza_charts(const RenderContext& ctx);
   void render_competitors(const RenderContext& ctx);
   void render_market_share(const RenderContext& ctx);
-  void render_paper(const RenderContext& ctx, ViewRect box);
+  void render_paper(const RenderContext& ctx, ViewRect box, int bg_color = 21);
   void render_bar_diagram_background(const RenderContext& ctx);
   void render_bar_chart(const RenderContext& ctx, BarChartMode mode,
                         const std::array<int, NUMBER_OF_PLAYERS>& values);
@@ -56,4 +56,5 @@ private:
   const District& district_;
   MarketResearchScreen current_screen_{MarketResearchScreen::Area_Info};
   Bob& stanbobs_;
+  bool taste_render_percentages_{false};
 };

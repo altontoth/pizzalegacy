@@ -321,6 +321,7 @@ set(PLEGACY_HEADERS
     src/core/finance/PlayerFinancials.h
     src/core/food/BakeSession.h
     src/core/food/CanonicalPizza.h
+    src/core/food/CustomerTasteProfiles.h
     src/core/food/Ingredient.h
     src/core/food/IngredientArray.h
     src/core/food/IngredientCategory.h
@@ -636,4 +637,5 @@ set(PLEGACY_DIST_EXTRA
     CMakeLists.txt
     README.md
     source_manifest.cmake
+    assets/
 )

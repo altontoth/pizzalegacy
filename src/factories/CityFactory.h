@@ -79,7 +79,6 @@ private:
                       uint8_t number_of_banks, uint8_t number_of_insurance,
                       uint8_t number_of_authorities, uint8_t number_of_others);
   void parse_phone_numbers(std::ifstream& is);
-  std::unique_ptr<Property> generate_premise();
   void populate_properties(int id);
 
   std::unique_ptr<City> build_city_object(int id);

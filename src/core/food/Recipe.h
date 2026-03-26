@@ -49,6 +49,7 @@ public:
   void rename(std::string new_name) { display_name_ = std::move(new_name); }
 
   const Pizza& pizza() const noexcept { return pizza_; }
+  Pizza& pizza_mut() noexcept { return pizza_; }
 
   void recreate(Pizza new_pizza) { pizza_ = std::move(new_pizza); }
 

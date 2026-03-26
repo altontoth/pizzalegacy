@@ -309,8 +309,7 @@ bool PizzaManager::on_action(const input::ActionEvent& ev) {
     auto bob_size_fn =
         make_ingredient_bob_size_fn<Bob, core::food::Topping>(zutaten_bob_);
     context_.popup->create<NumberInputPopup>(
-        "Save recipe as?", "", 0, 0, 99, 1,
-        [this, bob_size_fn](int number) {
+        "Save recipe as?", "", 0, 0, 99, 1, [this, bob_size_fn](int number) {
           const auto& self = *this; // non-const function, but self is const-ref
           const core::food::Pizza* pizza = self.current_pizza();
           if (!pizza) {
@@ -759,7 +758,7 @@ bool PizzaManager::handle_left_mouse_click(ViewPoint vp) {
     previous_topping_ = std::make_unique<Topping>(*active_topping_);
     pizza->add_topping(std::move(active_topping_));
     active_topping_ = nullptr;
-    pizza->update_stats();
+    pizza->update_stats(state_.customer_taste_profiles());
     status_.show_pizza(PizzaCtx{
         .state = &state_,
         .wip_pizza = pizza,
@@ -791,7 +790,7 @@ bool PizzaManager::handle_right_mouse_click(ViewPoint /* p */) {
   }
   else {
     previous_topping_ = pizza->remove_latest_topping();
-    pizza->update_stats();
+    pizza->update_stats(state_.customer_taste_profiles());
     status_.show_pizza(PizzaCtx{
         .state = &state_,
         .wip_pizza = &bake_->working,
@@ -1081,7 +1080,7 @@ void PizzaManager::create_input_panel() {
   input_panel_->add_button(Icon::ARROW_BACK, ButtonType::Square,
                            ButtonPosition::BottomRight, "Back", [this] {
                              if (bake_) {
-                               if (state_.options().life_improvements &&
+                               if (state_.options().qol_improvements &&
                                    !bake_->working.toppings().empty()) {
                                  context_.popup->create<ConfirmPopup>(
                                      "Discard pizza?", [this](bool agree) {
@@ -1241,7 +1240,7 @@ void PizzaManager::on_bake_pressed() {
 void PizzaManager::begin_bake(core::food::BakeSession s) {
   bake_ = std::move(s);
   design_mode_ = true;
-  bake_->working.update_stats();
+  bake_->working.update_stats(state_.customer_taste_profiles());
   status_.show_pizza(PizzaCtx{
       .state = &state_,
       .wip_pizza = &bake_->working,
@@ -1264,8 +1263,8 @@ void PizzaManager::on_design_finished() {
     auto get_bob_size =
         make_ingredient_bob_size_fn<Bob, core::food::Topping>(zutaten_bob_);
     int pizza_index = static_cast<int>(*bake_->canonical_id);
-    auto canonical_pizza =
-        PizzaFactory::create_pizza(pizza_index, get_bob_size);
+    auto canonical_pizza = PizzaFactory::create_pizza(
+        pizza_index, get_bob_size, state_.customer_taste_profiles());
 
     if (canonical_pizza) {
       bake_->working.set_scores_from_canonical(*canonical_pizza);
@@ -1277,10 +1276,11 @@ void PizzaManager::on_design_finished() {
 
   // Finalize the pizza but don't set name yet for NewUser
   if (bake_->kind == BakeKind::NewUser) {
-    bake_->working.finalize("recipe"); // temporary name
+    bake_->working.finalize(state_.customer_taste_profiles(),
+                            "recipe"); // temporary name
   }
   else {
-    bake_->working.finalize();
+    bake_->working.finalize(state_.customer_taste_profiles());
   }
 
   switch (bake_->kind) {
@@ -1436,7 +1436,8 @@ void PizzaManager::load_user_recipe(int number) {
   auto get_bob_size =
       make_ingredient_bob_size_fn<Bob, core::food::Topping>(zutaten_bob_);
 
-  auto pizza = PizzaFactory::create_pizza(filename, get_bob_size);
+  auto pizza = PizzaFactory::create_pizza(filename, get_bob_size,
+                                          state_.customer_taste_profiles());
   if (!pizza) {
     Logger::warn("PizzaFactory::create_pizza('{}') returned null", filename);
     return;
@@ -1479,7 +1480,8 @@ void PizzaManager::load_canonical_recipe(int number) {
   auto get_bob_size =
       make_ingredient_bob_size_fn<Bob, core::food::Topping>(zutaten_bob_);
 
-  auto pizza = PizzaFactory::create_pizza(filename, get_bob_size);
+  auto pizza = PizzaFactory::create_pizza(filename, get_bob_size,
+                                          state_.customer_taste_profiles());
   if (!pizza) {
     Logger::warn("PizzaFactory::create_pizza('{}') returned null", filename);
     return;
@@ -1533,7 +1535,8 @@ void PizzaManager::load_recipe_for_debug(const std::string& filename) {
       make_ingredient_bob_size_fn<Bob, core::food::Topping>(zutaten_bob_);
 
   // Load the pizza from the specified file
-  auto pizza = PizzaFactory::create_pizza(filename, get_bob_size);
+  auto pizza = PizzaFactory::create_pizza(filename, get_bob_size,
+                                          state_.customer_taste_profiles());
   if (!pizza) {
     Logger::warn("PizzaFactory::create_pizza('{}') returned null", filename);
     return;
@@ -1556,7 +1559,7 @@ void PizzaManager::load_recipe_for_debug(const std::string& filename) {
   }
 
   // Update stats and refresh display
-  bake_->working.update_stats();
+  bake_->working.update_stats(state_.customer_taste_profiles());
   status_.show_pizza(PizzaCtx{
       .state = &state_,
       .wip_pizza = &bake_->working,
@@ -1588,7 +1591,7 @@ void PizzaManager::change_active_key(RecipeKey active_key) {
     auto id = std::get<core::RecipeId>(*active_key_);
     const core::food::Recipe* r = recipes.find(id);
     if (bake_) {
-      bake_->working.update_stats();
+      bake_->working.update_stats(state_.customer_taste_profiles());
     }
     status_.show_pizza({.state = &state_,
                         .wip_pizza = (bake_ ? &bake_->working : nullptr),

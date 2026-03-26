@@ -25,27 +25,39 @@
 constexpr uint8_t dark_text_color = 20;
 constexpr uint8_t box_bg_color = 24;
 
+// Destination enum value. Our render coordinates are 2x these.
+struct CityCoord {
+  int x, y;
+};
+constexpr CityCoord city_coords[] = {
+    {.x = 237, .y = 95},  // Paris
+    {.x = 289, .y = 88},  // Berlin
+    {.x = 67, .y = 80},   // Baltimore
+    {.x = 282, .y = 111}, // Vienna
+    {.x = 7, .y = 53},    // Chicago
+    {.x = 79, .y = 61},   // New York
+    {.x = 175, .y = 162}, // Madrid
+    {.x = 276, .y = 149}, // Rome
+    {.x = 301, .y = 42},  // Stockholm
+    {.x = 223, .y = 67},  // London
+};
+
 EuroMap::EuroMap(GameContext& context, GameState& state, MapMode mode,
                  std::optional<IngredientCategory> category)
     : View(context, state), map_state_(MapState::NO_ACTION),
       last_clicked_city_(Destination::NONE), map_mode_(mode),
-      destination_rects_(
-          {{Destination::PARIS, dest_box(ViewPoint{477, 188})},
-           {Destination::BERLIN, dest_box(ViewPoint{582, 175})},
-           {Destination::BALTIMORE, dest_box(ViewPoint{136, 161})},
-           {Destination::VIENNA, dest_box(ViewPoint{568, 222})},
-           {Destination::CHICAGO, dest_box(ViewPoint{15, 110})},
-           {Destination::NEW_YORK, dest_box(ViewPoint{162, 123})},
-           {Destination::MADRID, dest_box(ViewPoint{352, 325})},
-           {Destination::ROME, dest_box(ViewPoint{555, 301})},
-           {Destination::STOCKHOLM, dest_box(ViewPoint{605, 82})},
-           {Destination::LONDON, dest_box(ViewPoint{449, 134})}}),
       destination_list_({Destination::PARIS, Destination::BERLIN,
                          Destination::BALTIMORE, Destination::VIENNA,
                          Destination::CHICAGO, Destination::NEW_YORK,
                          Destination::MADRID, Destination::ROME,
                          Destination::STOCKHOLM, Destination::LONDON}),
       category_(category) {
+
+  for (auto dest : destination_list_) {
+    auto i = static_cast<int>(dest);
+    destination_rects_[dest] =
+        dest_box(ViewPoint{city_coords[i].x * 2, city_coords[i].y * 2});
+  }
 
   // Where we want the white city popup box and how big it is:
   big_popup_box_.x = 140;
@@ -202,21 +214,39 @@ void EuroMap::render(const RenderContext& ctx) {
           });
     }
     else {
-      context_.font->render_text_onto(popup_surface, "The flight costs",
-                                      ViewPoint{0, 12}, FontFace::ASTANDAR,
-                                      dark_text_color, AlignX::Center);
-      context_.font->render_text_onto(
-          popup_surface, "$" + std::to_string(cost) + ".", ViewPoint{0, 36},
-          FontFace::ASTANDAR, dark_text_color, AlignX::Center);
-      interactions_.create_frame_item(
-          small_popup_box_, "flight_cost_box",
-          [this](views::ui::InteractionEvent ie) {
-            if (ie.type != views::ui::InteractionEvent::Type::Click) {
-              return;
-            }
-            state_.ui().push<CityViewState>(
-                core::CityId{static_cast<int>(last_clicked_city_)});
-          });
+      Money amount{static_cast<int64_t>(cost) * 100};
+      bool can_afford = state_.active_player()->cash_balance() >= amount;
+      if (can_afford) {
+        context_.font->render_text_onto(popup_surface, "The flight costs",
+                                        ViewPoint{0, 12}, FontFace::ASTANDAR,
+                                        dark_text_color, AlignX::Center);
+        context_.font->render_text_onto(
+            popup_surface, "$" + std::to_string(cost) + ".", ViewPoint{0, 36},
+            FontFace::ASTANDAR, dark_text_color, AlignX::Center);
+        interactions_.create_frame_item(
+            small_popup_box_, "flight_cost_box",
+            [this](views::ui::InteractionEvent ie) {
+              if (ie.type != views::ui::InteractionEvent::Type::Click) {
+                return;
+              }
+              attempt_flight();
+            });
+      }
+      else {
+        context_.font->render_text_onto(popup_surface, "Not enough money!",
+                                        ViewPoint{0, 24}, FontFace::ASTANDAR,
+                                        dark_text_color, AlignX::Center);
+        interactions_.create_frame_item(
+            small_popup_box_, "flight_cost_box",
+            [this](views::ui::InteractionEvent ie) {
+              if (ie.type != views::ui::InteractionEvent::Type::Click) {
+                return;
+              }
+              map_state_ = MapState::NO_ACTION;
+              last_clicked_city_ = Destination::NONE;
+              mark_dirty();
+            });
+      }
     }
 
     ctx.surface->blit_raw(popup_surface,
@@ -277,23 +307,14 @@ Surface EuroMap::create_popup(const RenderContext& ctx, int w, int h) {
 }
 
 int EuroMap::calculate_cost(Destination from, Destination to) {
-
-  const auto& from_item = destination_rects_.at(from);
-  const auto& to_item = destination_rects_.at(to);
-
-  // Calculate Manhattan distance.
-  int dx = std::abs(from_item.x - to_item.x);
-  int dy = std::abs(from_item.y - to_item.y);
+  auto fi = static_cast<int>(from);
+  auto ti = static_cast<int>(to);
+  int dx = std::abs(city_coords[fi].x - city_coords[ti].x);
+  int dy = std::abs(city_coords[fi].y - city_coords[ti].y);
   int manhattan = dx + dy;
 
-  // Get the difficulty level.
-  // For our model, the multiplier is (difficulty + 1) / 2.
-  // For difficulty 1: (1+1)/2 = 1, difficulty 2: (2+1)/2 = 1.5, etc.
-  float difficulty = 1.0f + 0.5f * state_.difficulty_level();
-
-  int cost = manhattan * (difficulty + 1) / 2;
-
-  return cost;
+  // Original used difficulty 1-5 with multiplier (difficulty + 1).
+  return manhattan * (state_.difficulty_level() + 1);
 }
 
 void EuroMap::on_city_click(Destination dest, views::ui::MouseButton btn) {
@@ -315,6 +336,16 @@ void EuroMap::on_city_click(Destination dest, views::ui::MouseButton btn) {
       map_state_ = MapState::CITY_CLICKED;
     }
     mark_dirty();
+    return;
+  }
+
+  // QoL: clicking the city a third time (while the price box is shown)
+  // acts as accepting the price, saving the user from having to figure out that
+  // they have to click the white box with the price (which is not communicated
+  // to them in any way).
+  if (context_.config->options().qol_improvements &&
+      map_state_ == MapState::CITY_CONFIRMED && last_clicked_city_ == dest) {
+    attempt_flight();
     return;
   }
 
@@ -361,6 +392,17 @@ void EuroMap::on_city_leave(Destination dest) {
   }
   hovered_city_ = Destination::NONE;
   mark_dirty();
+}
+
+void EuroMap::attempt_flight() {
+  auto current_city = static_cast<Destination>(state_.active_city_id().value);
+  int cost = calculate_cost(current_city, last_clicked_city_);
+  Money amount{static_cast<int64_t>(cost) * 100};
+  if (!state_.spend_cash(Account::Others, amount)) {
+    return;
+  }
+  state_.ui().push<CityViewState>(
+      core::CityId{static_cast<int>(last_clicked_city_)});
 }
 
 bool EuroMap::player_has_depot_in_city(Destination dest) {

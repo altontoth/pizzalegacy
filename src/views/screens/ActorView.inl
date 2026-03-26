@@ -325,7 +325,7 @@ void ActorView<LineEnum>::render_dialog(const RenderContext& ctx) {
   int text_x_pos = 0;
   int text_y_pos = 0;
   constexpr int dialog_box_offset_x = 15;
-  constexpr int dialog_box_offset_y = 252;
+  constexpr int dialog_box_offset_y = 256;
   constexpr int y_offset = 20;
 
   auto lines = frozen_lines_.empty() ? conversation_->lines() : frozen_lines_;

@@ -110,17 +110,18 @@ void Pizza::set_scores_from_canonical(const Pizza& canonical) {
   }
 }
 
-void Pizza::finalize(const std::string& name) {
+void Pizza::finalize(const CustomerTasteProfiles& taste_profiles,
+                     const std::string& name) {
   if (name != "") {
     name_ = name;
   }
   // Calculate flavor percentages, calories, and all scores
-  update_stats();
+  update_stats(taste_profiles);
 
   finalized_ = true;
 }
 
-void Pizza::update_stats() {
+void Pizza::update_stats(const CustomerTasteProfiles& taste_profiles) {
   flavors_ = calculate_flavor_percentages();
 
   float calories_sum = 0;
@@ -136,7 +137,7 @@ void Pizza::update_stats() {
 
   calculate_judge_scores();
 
-  calculate_demographic_scores();
+  calculate_demographic_scores(taste_profiles);
 }
 
 const std::vector<std::unique_ptr<Topping>>& Pizza::toppings() const {
@@ -435,98 +436,45 @@ int Pizza::calculate_herb_score() const {
   return std::clamp(herb_weight / 3, 0, 10);
 }
 
-void Pizza::calculate_demographic_scores() {
-  // Logger::debug("=== DEMOGRAPHIC SCORING ===");
-
-  // {fat, sweet, salty, hot}
-  static constexpr int profiles[6][4] = {
-      {3, 10, 3, 1}, // children
-      {5, 6, 5, 3},  // young people
-      {7, 1, 5, 10}, // blue collar
-      {6, 3, 9, 6},  // white collar
-      {4, 4, 8, 1},  // business people
-      {8, 0, 7, 10}, // senior citizens
-  };
-
-  static const char* demographic_names[] = {
-      "Children",     "Young People",    "Blue Collar",
-      "White Collar", "Business People", "Senior Citizens"};
-
-  const int normality = normality_;   // Use cached value
-  const int imitation = imitation_;   // Use cached value
-  const int appearance = appearance_; // Already calculated in update_stats
+void Pizza::calculate_demographic_scores(
+    const CustomerTasteProfiles& taste_profiles) {
+  const int normality = normality_;
+  const int imitation = imitation_;
+  const int appearance = appearance_;
   const bool is_user_recipe = (origin_ == Origin::User);
-
-  // Get pizza's flavor profile (these are already 0-100 percentages bucketed to
-  // 10s)
   const auto pizza_flavors = flavors_;
 
-  // Logger::debug("  Pizza flavors: fat={}, sweet={}, salty={}, hot={}",
-  //               pizza_flavors.fat, pizza_flavors.sweet, pizza_flavors.salty,
-  //               pizza_flavors.hot);
-  // Logger::debug("  Pizza appearance: {}", appearance);
-  // Logger::debug("  Pizza normality: {}", normality);
-  // Logger::debug("  Pizza origin: {}", is_user_recipe ? "User" : "Canonical");
+  for (auto demo : ALL_CONSUMER_TYPES) {
+    const auto& tp = taste_profiles[demo];
 
-  // For each demographic
-  for (int i = 0; i < 6; ++i) {
-    // Logger::debug("  [{}] Target profile: fat={}, sweet={}, salty={},
-    // hot={}",
-    //               demographic_names[i], profiles[i][0], profiles[i][1],
-    //               profiles[i][2], profiles[i][3]);
-
-    // Calculate taste match
-    // Profile values are 0-10, pizza flavors are 0-100, so divide pizza by
-    // DEMOGRAPHIC_FLAVOR_DIVISOR
-    int fat_diff = std::abs(profiles[i][0] -
-                            pizza_flavors.fat / DEMOGRAPHIC_FLAVOR_DIVISOR);
-    int sweet_diff = std::abs(profiles[i][1] -
-                              pizza_flavors.sweet / DEMOGRAPHIC_FLAVOR_DIVISOR);
-    int salty_diff = std::abs(profiles[i][2] -
-                              pizza_flavors.salty / DEMOGRAPHIC_FLAVOR_DIVISOR);
-    int hot_diff = std::abs(profiles[i][3] -
-                            pizza_flavors.hot / DEMOGRAPHIC_FLAVOR_DIVISOR);
+    int fat_diff =
+        std::abs(tp.fat - pizza_flavors.fat / DEMOGRAPHIC_FLAVOR_DIVISOR);
+    int sweet_diff =
+        std::abs(tp.sweet - pizza_flavors.sweet / DEMOGRAPHIC_FLAVOR_DIVISOR);
+    int salty_diff =
+        std::abs(tp.salty - pizza_flavors.salty / DEMOGRAPHIC_FLAVOR_DIVISOR);
+    int hot_diff =
+        std::abs(tp.hot - pizza_flavors.hot / DEMOGRAPHIC_FLAVOR_DIVISOR);
 
     int sum = fat_diff + sweet_diff + salty_diff + hot_diff;
-
-    // Logger::debug("    Differences: fat={}, sweet={}, salty={}, hot={},
-    // sum={}",
-    //               fat_diff, sweet_diff, salty_diff, hot_diff, sum);
-
     int si = 100 - (4 * sum);
-    // Logger::debug("    Base score (100 - 4*{}): {}", sum, si);
 
     const auto floor_div2 = [](int x) -> int {
       return (x >= 0) ? (x / 2) : ((x - 1) / 2);
     };
-    // Apply appearance penalty ONLY for user recipes (index >= 14 in original)
     if (is_user_recipe) {
       const int adj = floor_div2(DEMOGRAPHIC_APPEARANCE_THRESHOLD - appearance);
-      si -= adj; // adds if appearance > 60, subtracts if < 60
-      // Logger::debug(
-      //     "    Appearance adjustment (60 - {} -> floor/2 = {}): si -> {}",
-      //     appearance, adj, si);
-    }
-    else if (!is_user_recipe) {
-      // Logger::debug("    No appearance penalty (canonical recipe)");
+      si -= adj;
     }
 
-    // Clamp to 0
     si = std::max(0, si);
-    // Logger::debug("    After clamp: {}", si);
 
-    // Scale by normality (user recipes) or imitation (canonical recipes)
     int scaling_factor = is_user_recipe ? normality : imitation;
     int demographic_score = (si * scaling_factor) / 100;
-    // Logger::debug("    Final score ({} * {} / 100): {}", si, scaling_factor,
-    //               demographic_score);
 
-    // Store in popularity array (indexed by ConsumerType)
-    popularity_.values[i] =
+    popularity_[demo] =
         static_cast<uint8_t>(std::clamp(demographic_score, 0, 100));
   }
-
-  // Logger::debug("=== END DEMOGRAPHIC SCORING ===");
 }
 
 void Pizza::calculate_judge_scores() {
@@ -643,7 +591,8 @@ void Pizza::calculate_judge_scores() {
 }
 
 void Pizza::set_disk_stats(const Flavors& flavors, int appearance,
-                           int refinement, int normality) {
+                           int refinement, int normality,
+                           const CustomerTasteProfiles& taste_profiles) {
   // Logger::debug("=== SETTING DISK STATS ===");
   // Logger::debug("  Flavors: fat={}, sweet={}, salty={}, hot={}", flavors.fat,
   //               flavors.sweet, flavors.salty, flavors.hot);
@@ -665,7 +614,7 @@ void Pizza::set_disk_stats(const Flavors& flavors, int appearance,
 
   // Recalculate judge and demographic scores with the new stats
   calculate_judge_scores();
-  calculate_demographic_scores();
+  calculate_demographic_scores(taste_profiles);
 
   // Logger::debug("=== END SETTING DISK STATS ===");
 }

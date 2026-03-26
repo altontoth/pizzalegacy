@@ -9,6 +9,7 @@
 #include <array>
 #include <string>
 #include <utility>
+#include "core/character/Player.h"
 #include "core/city/District.h"
 #include "core/city/Property.h"
 #include "core/restaurant/Restaurant.h"
@@ -25,6 +26,17 @@ void StatusController::show_city_default(const CityCtx& c) {
 void StatusController::show_city_property_info(const CityCtx& c, int index) {
   StatusMsg msg{
       .payload = build_city_property_info(c, index),
+      .scope = StatusScope::City,
+      .type = TransientType::Static,
+      .ttl = std::nullopt,
+      .coalesce_key = compat::format("prop:{}:info", index),
+  };
+  emit_status_msg(msg);
+}
+void StatusController::show_city_competitor_restaurant(const CityCtx& c,
+                                                       int index) {
+  StatusMsg msg{
+      .payload = build_city_competitor_restaurant(c, index),
       .scope = StatusScope::City,
       .type = TransientType::Static,
       .ttl = std::nullopt,
@@ -65,6 +77,10 @@ void StatusController::show_city_type_name(const CityCtx& c, int index) {
 
 void StatusController::show_restaurant(const RestaurantCtx& r) {
   emit_baseline(build_restaurant(r));
+}
+void StatusController::show_competitor_restaurant(const CityCtx& c,
+                                                  const Restaurant& rest) {
+  emit_baseline(build_competitor_restaurant(c, rest));
 }
 void StatusController::show_pizza(const PizzaCtx& p) {
   emit_baseline(build_pizza(p));
@@ -215,6 +231,58 @@ StatusDisplayRecipe StatusController::build_city_property_info(const CityCtx& c,
   r.add_header("Realtor:");
   r.add_single(actors[property->realtor_id()]->name());
   return r;
+}
+
+static StatusDisplayRecipe
+build_competitor_recipe(const CityCtx& c, Player* owner,
+                        const std::string& district_name) {
+  auto* state = c.state;
+  StatusDisplayRecipe r;
+
+  r.add_header(c.city->name());
+  r.add_header(
+      compat::format("IN {}", GameTime::to_string(state->time().season())));
+
+  if (owner) {
+    r.add_header(owner->name());
+    r.add_two_column(
+        "RESTAURANTS",
+        std::to_string(owner->restaurant_count_for_city(c.city->id())));
+    r.add_two_column("RECIPES", std::to_string(owner->recipe_count()));
+    r.add_two_column("CONTRACTS", std::to_string(owner->contract_count_for_city(
+                                      c.city->id())));
+  }
+
+  r.add_header("DISTRICT:");
+  r.add_single(district_name);
+  return r;
+}
+
+StatusDisplayRecipe
+StatusController::build_city_competitor_restaurant(const CityCtx& c,
+                                                   int index) {
+  auto* property = c.city->property_by_index(index);
+  Player* owner = nullptr;
+  if (property && property->has_restaurant() && property->owner_or_tenant()) {
+    owner = c.state->player(*property->owner_or_tenant());
+  }
+  auto district_id = c.city->district_by_index(index);
+  return build_competitor_recipe(c, owner,
+                                 c.city->district(district_id).name());
+}
+
+StatusDisplayRecipe
+StatusController::build_competitor_restaurant(const CityCtx& c,
+                                              const Restaurant& rest) {
+  Player* owner = nullptr;
+  if (rest.property() && rest.property()->owner_or_tenant()) {
+    owner = c.state->player(*rest.property()->owner_or_tenant());
+  }
+  std::string district_name = "unknown";
+  if (rest.property()) {
+    district_name = rest.property()->district().name();
+  }
+  return build_competitor_recipe(c, owner, district_name);
 }
 
 StatusDisplayRecipe StatusController::build_city_customer_info(const CityCtx& c,

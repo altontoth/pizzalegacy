@@ -1372,10 +1372,8 @@ void StaffView::add_overview_buttons() {
               int wage_pct = (new_wage_dollars * 100) / old_wage_dollars;
 
               // Calculate motivation multiplier (ebp) based on wage change
-              int difficulty = state_.difficulty_level(); // 0=easy, 1=medium,
-                                                          // 2=hard
-              int difficulty_divisor =
-                  (difficulty / 2) + 1; // Easy=1, Medium=1, Hard=2
+              int difficulty = state_.difficulty_level(); // 1-5
+              int difficulty_divisor = (difficulty / 2) + 1;
 
               int motivation_change = 0;
 

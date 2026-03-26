@@ -11,6 +11,7 @@
 #include <memory>
 #include <vector>
 #include "core/Demographics.h"
+#include "core/food/CustomerTasteProfiles.h"
 #include "core/food/Topping.h"
 
 #include <iostream>
@@ -48,7 +49,8 @@ public:
   std::unique_ptr<Topping> remove_latest_topping();
   const std::vector<std::unique_ptr<Topping>>& toppings() const;
   const std::array<int, NUMBER_OF_JUDGES>& scores() const;
-  void finalize(const std::string& name = "");
+  void finalize(const CustomerTasteProfiles& taste_profiles,
+                const std::string& name = "");
   bool is_finalized() const noexcept { return finalized_; }
   int compare_to_other_pizza(const Pizza& other) const;
   void set_scores_from_canonical(const Pizza& canonical);
@@ -59,7 +61,7 @@ public:
   Popularity popularity() const { return popularity_; };
   int calories() const { return calories_; };
   Flavors flavors() const { return flavors_; };
-  void update_stats();
+  void update_stats(const CustomerTasteProfiles& taste_profiles);
   int appearance() const { return appearance_; }
   int refinement() const { return refinement_; }
   int normality() const { return normality_; }
@@ -70,7 +72,12 @@ public:
 
   // Set stats directly from disk values (bypasses calculation)
   void set_disk_stats(const Flavors& flavors, int appearance, int refinement,
-                      int normality);
+                      int normality,
+                      const CustomerTasteProfiles& taste_profiles);
+
+  // Calculates demographic popularity scores (0-100 for each of 6 groups).
+  void
+  calculate_demographic_scores(const CustomerTasteProfiles& taste_profiles);
 
 private:
   [[nodiscard]] Flavors calculate_flavor_percentages() const;
@@ -88,9 +95,6 @@ private:
 
   // Returns 0..10. Based on total weight of herb toppings divided by 3.
   [[nodiscard]] int calculate_herb_score() const;
-
-  // Calculates demographic popularity scores (0-100 for each of 6 groups).
-  void calculate_demographic_scores();
 
   // Calculates judge scores (0-20 for each of 5 judges).
   void calculate_judge_scores();

@@ -93,6 +93,7 @@ public:
   const std::vector<std::unique_ptr<District>>& districts() const;
   const District& district(core::DistrictId district_id) const;
   void end_of_day(bool is_active);
+  void end_of_month();
   static constexpr int index_to_x(int index) {
     return index % MAP_TILES_PER_ROW;
   }

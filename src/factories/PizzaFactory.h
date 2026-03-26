@@ -7,6 +7,7 @@
 #pragma once
 
 #include <memory>
+#include "core/food/CustomerTasteProfiles.h"
 #include "core/food/Pizza.h"
 #include "engine/Size.h"
 
@@ -15,8 +16,10 @@ using BobSizeFn = std::function<Size(int ingredient_id, int state)>;
 class PizzaFactory {
 public:
   static std::unique_ptr<core::food::Pizza>
-  create_pizza(const std::string& filename, const BobSizeFn& get_size);
+  create_pizza(const std::string& filename, const BobSizeFn& get_size,
+               const core::food::CustomerTasteProfiles& taste_profiles);
 
   static std::unique_ptr<core::food::Pizza>
-  create_pizza(int recipe_id, const BobSizeFn& get_size);
+  create_pizza(int recipe_id, const BobSizeFn& get_size,
+               const core::food::CustomerTasteProfiles& taste_profiles);
 };

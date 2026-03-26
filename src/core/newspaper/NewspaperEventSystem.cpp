@@ -267,11 +267,24 @@ bool NewspaperEventSystem::execute_named_event(NewspaperEvent event,
     trends.apply_effect(IngredientType::SALAD, {0, -100, Exponential});
     break;
 
-  case ChildrenPreferSpicy:
-  case ElderlyPreferSweet:
-    // TODO: Sets demographic preferences, not sure this is hooked up in the
-    // original
+  case ChildrenPreferSpicy: {
+    auto& tp = state.customer_taste_profiles()[ConsumerType::Children];
+    tp.fat = 8;
+    tp.sweet = 4;
+    tp.salty = 7;
+    tp.hot = 9;
+    state.recalculate_all_pizza_demographics();
     break;
+  }
+  case ElderlyPreferSweet: {
+    auto& tp = state.customer_taste_profiles()[ConsumerType::SeniorCitizens];
+    tp.fat = 6;
+    tp.sweet = 9;
+    tp.salty = 6;
+    tp.hot = 7;
+    state.recalculate_all_pizza_demographics();
+    break;
+  }
   }
 
   // Housekeeping

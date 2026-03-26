@@ -127,7 +127,9 @@ json player_to_json(const Player& player) {
   return j;
 }
 
-std::unique_ptr<Player> json_to_player(const json& j, GameContext& context) {
+std::unique_ptr<Player>
+json_to_player(const json& j, GameContext& context,
+               const core::food::CustomerTasteProfiles& taste_profiles) {
   core::PlayerId pid{j["id"].get<int>()};
   bool human{j["human_controlled"].get<bool>()};
   auto character = json_to_character(j["character"]);
@@ -138,7 +140,7 @@ std::unique_ptr<Player> json_to_player(const json& j, GameContext& context) {
 
   // Restore recipes
   if (j.contains("recipes")) {
-    player->recipes() = json_to_player_recipes(j["recipes"]);
+    player->recipes() = json_to_player_recipes(j["recipes"], taste_profiles);
   }
 
   // Restore financials (including ledger)
@@ -381,7 +383,8 @@ json player_recipes_to_json(const core::food::PlayerRecipes& recipes) {
   return j;
 }
 
-core::food::PlayerRecipes json_to_player_recipes(const json& j) {
+core::food::PlayerRecipes json_to_player_recipes(
+    const json& j, const core::food::CustomerTasteProfiles& taste_profiles) {
   using namespace core::food;
 
   PlayerRecipes recipes;
@@ -392,7 +395,7 @@ core::food::PlayerRecipes json_to_player_recipes(const json& j) {
     for (size_t i = 0; i < j["canonical"].size() && i < recipes.canon.size();
          ++i) {
       if (!j["canonical"][i].is_null()) {
-        auto recipe = json_to_recipe(j["canonical"][i]);
+        auto recipe = json_to_recipe(j["canonical"][i], taste_profiles);
         recipes.canon[i] = CanonicalSlot{std::move(recipe)};
       }
     }
@@ -401,7 +404,7 @@ core::food::PlayerRecipes json_to_player_recipes(const json& j) {
   // Restore user recipes
   if (j.contains("user")) {
     for (const auto& recipe_json : j["user"]) {
-      recipes.user.push_back(json_to_recipe(recipe_json));
+      recipes.user.push_back(json_to_recipe(recipe_json, taste_profiles));
     }
   }
 

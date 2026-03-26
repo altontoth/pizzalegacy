@@ -625,7 +625,8 @@ Examples:
 
         for (int i = 0; i < core::food::CANON_COUNT; ++i) {
           const auto cid = static_cast<core::food::CanonicalPizza>(i);
-          auto pizza = PizzaFactory::create_pizza(i, get_bob_size);
+          auto pizza = PizzaFactory::create_pizza(
+              i, get_bob_size, ctx.state.customer_taste_profiles());
 
           if (!pizza) {
             continue;

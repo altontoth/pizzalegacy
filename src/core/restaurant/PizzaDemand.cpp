@@ -71,7 +71,7 @@ int PizzaDemand::calculate(const MenuEntry& menu_entry,
   // on the menu. The original's aggressive demographic scoring (100 - 4*sum)
   // causes most pizzas to get exactly 0 demand for most demographics, making
   // most of the 14 canonical pizzas pointless to have on the menu.
-  if (ConfigManager::instance()->options().life_improvements) {
+  if (ConfigManager::instance()->options().qol_improvements) {
     result = std::max(result, engine::random::rand_max_n(3));
   }
 

@@ -68,9 +68,9 @@ MenuOptions::MenuOptions(GameContext& context, GameState& state)
         mark_dirty();
       }));
   add_menu_item(std::make_unique<ToggleMenuItem>(
-      context, "Life improvements", state.options().life_improvements,
+      context, "Quality of Life improvements", state.options().qol_improvements,
       [&state, this] {
-        state.options().life_improvements = !state.options().life_improvements;
+        state.options().qol_improvements = !state.options().qol_improvements;
         mark_dirty();
       }));
 

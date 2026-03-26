@@ -162,8 +162,12 @@ CityView::CityView(GameContext& context, GameState& state, core::CityId id)
 
 CityView::~CityView() {
   state_.clear_active_district();
-  // Rebuild to clear our district:
-  build_default_city_status_recipe();
+  // Rebuild to clear our district, but not during AI turns -- the
+  // baseline would pick up the AI player and leak their name into the
+  // StatusDisplay.
+  if (state_.active_player() && state_.active_player()->is_human_controlled()) {
+    build_default_city_status_recipe();
+  }
   state_.prevent_end_of_day(true);
   stop_city_sound();
 }

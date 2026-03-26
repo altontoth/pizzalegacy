@@ -78,7 +78,7 @@ void Menu::update_interactions() {
           .selected = is_selected,
       });
       views::ui::InteractionLayers::TooltipCb ttcb;
-      if (context_.config->options().life_improvements) {
+      if (context_.config->options().qol_improvements) {
         if (std::string tt = menu_item->tooltip_text(); !tt.empty()) {
           ttcb = [tt = std::move(tt)](const views::ui::InteractionEvent& ie) {
             return TooltipRequest{

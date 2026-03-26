@@ -35,5 +35,7 @@ private:
   Money price_{0};
   bool ripoff_{false};
   bool buyer_haggled_already{false};
+  Money sell_offer_{0};
+  int sell_haggle_count_{0};
   const RealtorSettings& realtor_settings_;
 };

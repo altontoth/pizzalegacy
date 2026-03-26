@@ -69,7 +69,9 @@ json pizza_to_json(const core::food::Pizza& pizza) {
   return j;
 }
 
-core::food::Pizza json_to_pizza(const json& j) {
+core::food::Pizza
+json_to_pizza(const json& j,
+              const core::food::CustomerTasteProfiles& taste_profiles) {
   using namespace core::food;
 
   std::string name = j["name"].get<std::string>();
@@ -97,12 +99,13 @@ core::food::Pizza json_to_pizza(const json& j) {
     int refinement = j["refinement"].get<int>();
     int normality = j["normality"].get<int>();
 
-    pizza.set_disk_stats(flavors, appearance, refinement, normality);
+    pizza.set_disk_stats(flavors, appearance, refinement, normality,
+                         taste_profiles);
   }
 
   // Finalize if it was finalized when saved
   if (j["finalized"].get<bool>()) {
-    pizza.finalize(name);
+    pizza.finalize(taste_profiles, name);
   }
 
   return pizza;
@@ -130,13 +133,15 @@ json recipe_to_json(const core::food::Recipe& recipe) {
   return j;
 }
 
-core::food::Recipe json_to_recipe(const json& j) {
+core::food::Recipe
+json_to_recipe(const json& j,
+               const core::food::CustomerTasteProfiles& taste_profiles) {
   using namespace core::food;
 
   core::RecipeId id{j["id"].get<int>()};
   Origin origin = static_cast<Origin>(j["origin"].get<int>());
   std::string display_name = j["display_name"].get<std::string>();
-  Pizza pizza = json_to_pizza(j["pizza"]);
+  Pizza pizza = json_to_pizza(j["pizza"], taste_profiles);
 
   // Check if this is a canonical recipe
   if (!j["canonical_id"].is_null()) {

@@ -23,10 +23,14 @@ json character_to_json(const core::character::Character& character);
 core::character::Character json_to_character(const json& j);
 
 json player_to_json(const Player& player);
-std::unique_ptr<Player> json_to_player(const json& j, GameContext& context);
+std::unique_ptr<Player>
+json_to_player(const json& j, GameContext& context,
+               const core::food::CustomerTasteProfiles& taste_profiles);
 
 json player_recipes_to_json(const core::food::PlayerRecipes& recipes);
-core::food::PlayerRecipes json_to_player_recipes(const json& j);
+core::food::PlayerRecipes
+json_to_player_recipes(const json& j,
+                       const core::food::CustomerTasteProfiles& taste_profiles);
 
 // Inventory serialization
 json inventory_to_json(const core::inventory::Inventory& inventory);

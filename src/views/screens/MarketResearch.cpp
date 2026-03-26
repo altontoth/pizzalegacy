@@ -5,6 +5,7 @@
  */
 
 #include "views/screens/MarketResearch.h"
+#include "core/Demographics.h"
 #include "core/character/Player.h"
 #include "core/city/City.h"
 #include "core/city/ControlMap.h"
@@ -15,6 +16,7 @@
 #include "core/util/Constants.h"
 #include "engine/geom/Spaces.h"
 #include "engine/ui/Alignment.h"
+#include "engine/ui/InteractionEvent.h"
 #include "gfx/Blit.h"
 #include "gfx/Draw.h"
 #include "resources/BlitmapIcons.h"
@@ -54,8 +56,8 @@ void MarketResearch::render_bar_chart(
   }
   else {
     int max_val = *std::max_element(values.begin(), values.end());
-    // Original game starts at $10K chunks; life_improvements allows finer $1K
-    const bool fine_scale = context_.config->options().life_improvements;
+    // Original game starts at $10K chunks; qol_improvements allows finer $1K
+    const bool fine_scale = context_.config->options().qol_improvements;
     constexpr std::array<int, 5> original_units = {10'000, 100'000, 1'000'000,
                                                    10'000'000, 100'000'000};
     constexpr std::array<int, 6> improved_units = {
@@ -143,7 +145,7 @@ void MarketResearch::render_bar_chart(
     ctx.surface->blit(landsym, src, ViewPoint{icon_x, icon_y});
 
     // Hover tooltip showing actual value
-    if (context_.config->options().life_improvements) {
+    if (context_.config->options().qol_improvements) {
       int display_value = values[i];
       std::string tip;
       if (mode == BarChartMode::Percentage) {
@@ -210,6 +212,9 @@ void MarketResearch::render(const RenderContext& ctx) {
     break;
   case MarketResearchScreen::Market_Share:
     render_market_share(ctx);
+    break;
+  case MarketResearchScreen::Customer_Taste:
+    render_customer_taste(ctx);
     break;
   default:
     break;
@@ -533,7 +538,70 @@ void MarketResearch::render_economy(const RenderContext& ctx) {
                                   13, AlignX::CenterPoint);
 }
 
-void MarketResearch::render_customer_taste(const RenderContext& ctx) {}
+void MarketResearch::render_customer_taste(const RenderContext& ctx) {
+  render_paper(ctx,
+               ViewRect{0, 0, views::base::MAIN_PANEL_WIDTH,
+                        views::base::MAIN_PANEL_HEIGHT},
+               21);
+
+  const int text_color = 10;
+  context_.font->render_line_onto(
+      *ctx.surface, "taste", ViewPoint{views::base::MAIN_PANEL_WIDTH / 2, 4},
+      FontFace::RUBY, text_color, AlignX::CenterPoint);
+
+  const std::array<std::string_view, 5> tastes = {"fatty", "sweet", "salty",
+                                                  "hot", "spicy"};
+  const auto& blitmap = context_.blitmap->get2();
+  const int x = 16;
+  int y = 48;
+  const int line_height = 48;
+  const auto& thumbs_up =
+      static_cast<Blitmap2Icon>(Blitmap2Icon::THUMBS_UP_SMALL);
+  const auto& thumbs_down =
+      static_cast<Blitmap2Icon>(Blitmap2Icon::THUMBS_DOWN_SMALL);
+  const int taste_label_y = 30;
+  const int col_width = 56;
+
+  for (size_t i = 0; i < tastes.size(); ++i) {
+    int col_offset = 92 + (static_cast<int>(i) * col_width);
+    context_.font->render_line_onto(
+        *ctx.surface, tastes[i], ViewPoint{x + col_offset, taste_label_y},
+        FontFace::PIZ_NUMB, text_color, AlignX::CenterPoint);
+  }
+
+  for (auto demo : ALL_CONSUMER_TYPES) {
+    const auto demo_icon = static_cast<Blitmap2Icon>(static_cast<int>(demo));
+    blitmap.render_icon(demo_icon, *ctx.surface, ViewPoint{x, y});
+    const auto& tp = state_.customer_taste_profiles()[demo];
+    const std::array<int, 5> taste_values = {tp.fat, tp.sweet, tp.salty, tp.hot,
+                                             tp.spicy};
+    for (size_t i = 0; i < tastes.size(); ++i) {
+      int col_offset = 70 + (static_cast<int>(i) * col_width);
+      int percentage = taste_values[i] * 10;
+      if (taste_render_percentages_) {
+        context_.font->render_line_onto(
+            *ctx.surface, compat::format("{} %", percentage),
+            ViewPoint{x + col_offset + 20, y + 18}, FontFace::PIZ_NUMB,
+            text_color, AlignX::CenterPoint);
+      }
+      else {
+        blitmap.render_icon(percentage > 50 ? thumbs_up : thumbs_down,
+                            *ctx.surface, ViewPoint{x + col_offset, y + 4});
+      }
+    }
+    y += line_height;
+  }
+  interactions_.create_frame_item(
+      ViewRect{0, 0, views::base::MAIN_PANEL_WIDTH,
+               views::base::MAIN_PANEL_HEIGHT},
+      "taste_toggle", [this](views::ui::InteractionEvent ie) {
+        if (ie.button == views::ui::MouseButton::Left &&
+            ie.type == views::ui::InteractionEvent::Type::Click) {
+          taste_render_percentages_ = !taste_render_percentages_;
+          mark_dirty();
+        }
+      });
+}
 
 void MarketResearch::render_trends(const RenderContext& ctx) {
   render_paper(ctx, ViewRect{0, 0, views::base::MAIN_PANEL_WIDTH,
@@ -683,8 +751,8 @@ void MarketResearch::render_market_share(const RenderContext& ctx) {
   render_bar_chart(ctx, BarChartMode::Percentage, values);
 }
 
-void MarketResearch::render_paper(const RenderContext& ctx, ViewRect box) {
-  uint8_t bg_color = 21;
+void MarketResearch::render_paper(const RenderContext& ctx, ViewRect box,
+                                  int bg_color) {
   ctx.surface->fill_rect(box, bg_color);
   views::ui::render_corner_decorations(
       *ctx.surface, context_.blitmap->get<Blitmap2Icon>(), box);

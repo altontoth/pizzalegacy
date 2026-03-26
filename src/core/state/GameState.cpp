@@ -763,7 +763,11 @@ void GameState::finish_end_of_turn() {
   // Mark if this is an AI player that should auto-end after card is shown
   pending_ai_auto_end_turn_ =
       !players_[active_player_.value]->is_human_controlled();
-  status_hub_.suppress(false);
+  // Only unsuppress for human players; AI turns stay suppressed so the
+  // baseline never leaks competitor info into the StatusDisplay.
+  if (!pending_ai_auto_end_turn_) {
+    status_hub_.suppress(false);
+  }
   resume_time_advancement();
 }
 
@@ -795,7 +799,29 @@ void GameState::end_of_day() {
         player->end_of_week(*this);
       }
     }
+
+    // Weekly taste drift: 30% chance to re-randomize one demographic
+    if (engine::random::rand_percentage_chance(30)) {
+      auto demo = static_cast<ConsumerType>(engine::random::rand_max_n(6));
+      auto& tp = customer_taste_profiles_[demo];
+      tp.fat = engine::random::rand_max_n(10);
+      tp.sweet = engine::random::rand_max_n(10);
+      tp.salty = engine::random::rand_max_n(10);
+      tp.hot = engine::random::rand_max_n(10);
+      tp.spicy = engine::random::rand_max_n(10);
+      recalculate_all_pizza_demographics();
+    }
+
     business_week_nr++;
+  }
+
+  // Monthly property availability cycling on last day of month
+  if (time_.current_date().is_end_of_month()) {
+    for (auto& city : cities_) {
+      if (city) {
+        city->end_of_month();
+      }
+    }
   }
 
   if (time_.current_date().is_end_of_year()) {
@@ -993,6 +1019,10 @@ void GameState::check_mafia_events() {
       if (!engine::random::rand_percentage_chance(2)) {
         continue;
       }
+      // Set timer now to prevent re-triggering while the negotiation
+      // screen is pending. The conversation will overwrite this with
+      // the real cooldown value when it resolves.
+      restaurant->protection_timer(30);
       ui_.push<MafiaState>(MafiaState{.id = mafia_id,
                                       .mode = MafiaMode::ProtectionRacketOffer,
                                       .restaurant_id = restaurant->id()});
@@ -1136,8 +1166,7 @@ void GameState::finalize_initialization(GameContext& context) {
   initializer_.reset(); // Clear after use
 }
 
-bool GameState::buy_restaurant(Property& property, Player& buyer) {
-  Money price = property.get_purchase_price();
+bool GameState::buy_restaurant(Property& property, Player& buyer, Money price) {
   GameDate today = time().current_date();
 
   // Property purchase is Capital, use transfer directly
@@ -1148,7 +1177,10 @@ bool GameState::buy_restaurant(Property& property, Player& buyer) {
                               AccountingScope::Capital);
 
   property.buy(buyer.id());
-  create_restaurant(buyer, property);
+  // If the buyer was renting, a restaurant already exists
+  if (!property.has_restaurant()) {
+    create_restaurant(buyer, property);
+  }
   return true;
 }
 
@@ -1280,7 +1312,37 @@ void GameState::clear_restaurants_for_load() {
   next_restaurant_id_ = core::RestaurantId{0};
 }
 
-bool GameState::sell_property(Property&, Player&) { return false; }
+bool GameState::sell_property(Property& property, Player& seller,
+                              Money sale_price) {
+  if (!property.is_owned()) {
+    return false;
+  }
+
+  auto owner = property.owner_or_tenant();
+  if (!owner || *owner != seller.id()) {
+    return false;
+  }
+
+  GameDate today = time().current_date();
+
+  seller.financials().transfer(today, Account::Property, Account::Cash,
+                               sale_price, AccountingScope::Capital);
+
+  // If this is a depot, remove capacity from central depot
+  if (property.type() == PropertyType::DEPOT) {
+    auto* city = const_cast<City*>(property.city());
+    int capacity = property.size().w * property.size().h * 100;
+    city->central_depot(seller.id().value).remove_capacity(capacity);
+  }
+
+  if (property.has_restaurant()) {
+    remove_restaurant(*property.restaurant_id());
+  }
+
+  property.clear_owner();
+  property.status(PremiseStatus::NOT_AVAILABLE);
+  return true;
+}
 
 bool GameState::end_property_lease(Property& property, Player& player) {
   if (!property.is_rented()) {
@@ -1577,7 +1639,8 @@ void GameState::load_initial_pizzas(GameContext& context,
     const auto cid = static_cast<core::food::CanonicalPizza>(i);
 
     // Create pizza from disk
-    auto pizza = PizzaFactory::create_pizza(i, get_bob_size);
+    auto pizza =
+        PizzaFactory::create_pizza(i, get_bob_size, customer_taste_profiles_);
     if (!pizza) {
       Logger::warn("Failed to load canonical pizza {}", i);
       continue;
@@ -1587,6 +1650,24 @@ void GameState::load_initial_pizzas(GameContext& context,
     auto rid = recipes.create_from_canonical(cid, std::move(*pizza));
     // Logger::info("Loaded initial pizza {} for player {} into recipe slot {}",
     // i, player_id.value, rid.value);
+  }
+}
+
+void GameState::recalculate_all_pizza_demographics() {
+  for (auto& player_ptr : players_) {
+    if (!player_ptr) {
+      continue;
+    }
+    auto& recipes = player_ptr->recipes();
+    for (auto& slot : recipes.canon) {
+      if (slot.created()) {
+        slot.recipe->pizza_mut().calculate_demographic_scores(
+            customer_taste_profiles_);
+      }
+    }
+    for (auto& recipe : recipes.user) {
+      recipe.pizza_mut().calculate_demographic_scores(customer_taste_profiles_);
+    }
   }
 }
 
@@ -1643,6 +1724,9 @@ void GameState::on_player_turn_card_finished() {
     end_of_turn();
     return;
   }
+
+  // Human player taking control: unsuppress status so they see updates
+  status_hub_.suppress(false);
 
   auto* player = active_player();
   if (player && player->is_in_jail()) {

@@ -73,7 +73,7 @@ Intro::Intro(GameContext& context, GameState& state)
           // Bit annoying but matches the behavior of the original roughly,
           // if you don't like it there is now the life improvement option
           if (passed_ticks_ > 50 ||
-              context_.config->options().life_improvements) {
+              context_.config->options().qol_improvements) {
             state_.ui().push<ScreenTag>(ScreenTag::Kind::MenuMain);
           }
         }
