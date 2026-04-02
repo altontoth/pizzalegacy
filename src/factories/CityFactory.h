@@ -79,9 +79,9 @@ private:
                       uint8_t number_of_banks, uint8_t number_of_insurance,
                       uint8_t number_of_authorities, uint8_t number_of_others);
   void parse_phone_numbers(std::ifstream& is);
-  void populate_properties(int id);
+  void populate_properties(City& city);
 
-  std::unique_ptr<City> build_city_object(int id);
+  void build_city_object(City& city, int id);
   void populate_types();
   void load_color_definition();
   static uint32_t transform_phone_number(uint32_t);

@@ -70,6 +70,7 @@ struct RestaurantStatsState {
 };
 struct WeeksTakingsState {
   core::RestaurantId id;
+  bool end_of_week_mode{false};
 };
 struct AnimatedStatsState {
   core::RestaurantId id;
@@ -144,6 +145,7 @@ struct MafiaState {
   ActorId id;
   std::optional<MafiaMode> mode;
   std::optional<core::RestaurantId> restaurant_id;
+  bool first_contact{false};
 };
 struct PoliceState {
   ActorId id;

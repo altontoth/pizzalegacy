@@ -65,7 +65,7 @@ private:
   void handle_sell_furniture();
   void handle_next_item();
   void handle_previous_item();
-  const BobRenderer& current_bob_renderer() const;
+  const BobRenderer& bob_renderer_for(const PlacedFurniture& pf) const;
   const std::vector<std::unique_ptr<PlacedFurniture>>&
   current_furniture_list() const;
   void handle_furniture_click(const PlacedFurniture* pf);

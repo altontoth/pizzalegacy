@@ -66,7 +66,7 @@ std::vector<std::string> load_gtalk(bool formal) {
 } // namespace
 
 GuestTalkPopup::GuestTalkPopup(const GameContext& ctx, GuestInfo info,
-                               const Restaurant& restaurant)
+                               const Restaurant* restaurant)
     : BasePopup(ctx), info_(info) {
   // Demographic groups 0-2 -> casual (GTALK0), 3-5 -> formal (GTALK1)
   const bool formal = (static_cast<int>(info_.demographic) / 3) != 0;
@@ -81,7 +81,7 @@ GuestTalkPopup::GuestTalkPopup(const GameContext& ctx, GuestInfo info,
 }
 
 std::string
-GuestTalkPopup::select_dialogue(const Restaurant& restaurant,
+GuestTalkPopup::select_dialogue(const Restaurant* restaurant,
                                 const std::vector<std::string>& lines) const {
 
   auto line = [&](int n) -> std::string {
@@ -105,12 +105,12 @@ GuestTalkPopup::select_dialogue(const Restaurant& restaurant,
   }
 
   // No pizza yet (or empty menu)
-  if (!info_.has_pizza || restaurant.count_menu_items() == 0) {
+  if (!info_.has_pizza || restaurant->count_menu_items() == 0) {
 
     if (engine::random::coin_flip()) {
       // Branch A: furniture / decor comment
       const auto demo = static_cast<ConsumerType>(info_.demographic);
-      const int score = restaurant.economy().furniture_appeal()[demo];
+      const int score = restaurant->economy().furniture_appeal()[demo];
       int n;
       if (score < 5) {
         n = 37; // "You should knock the whole lot down!"
@@ -124,7 +124,7 @@ GuestTalkPopup::select_dialogue(const Restaurant& restaurant,
     // Branch B: music or atmosphere
 
     // 20% trigger: music comment (if jukebox is set)
-    const int music = restaurant.jukebox_music(); // 0=off, 1-6=demographic+1
+    const int music = restaurant->jukebox_music(); // 0=off, 1-6=demographic+1
     if (music != 0) {
       const int preferred = music - 1;
       const int diff =
@@ -142,7 +142,7 @@ GuestTalkPopup::select_dialogue(const Restaurant& restaurant,
     // lines 35-42. Shift by 100 to make the neutral restaurant land in the
     // middle of that range.
     const int pop = std::clamp(
-        static_cast<int>(restaurant.economy().total_popularity()) + 100, 0,
+        static_cast<int>(restaurant->economy().total_popularity()) + 100, 0,
         245);
     return line(std::clamp((pop / 35) + 35, 35, 42));
   }

@@ -831,7 +831,7 @@ Renderable* Game::change_state(GameState& gs, LoopState& /*loop*/) {
             auto* actor = gs.active_city()->actor_by_id(ms.id);
             auto mode = ms.mode.value_or(MafiaMode::PlayerCall);
             auto conversation = std::make_unique<MafiaConversation>(
-                gs, actor, mode, ms.restaurant_id);
+                gs, actor, mode, ms.restaurant_id, ms.first_contact);
             current_view_ = std::make_unique<ActorView<MafiaLine>>(
                 context, gs, actor, std::move(conversation));
           },
@@ -864,7 +864,8 @@ Renderable* Game::change_state(GameState& gs, LoopState& /*loop*/) {
                 context, gs, rss.id, screen, rss.automatic_mode);
           },
           [&](const WeeksTakingsState& wts) {
-            current_view_ = std::make_unique<WeeksTakings>(context, gs, wts.id);
+            current_view_ = std::make_unique<WeeksTakings>(
+                context, gs, wts.id, wts.end_of_week_mode);
           },
           [&](const StatsRestaurantsState& srs) {
             current_view_ =

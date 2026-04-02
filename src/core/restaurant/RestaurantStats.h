@@ -20,10 +20,13 @@ namespace core::restaurant {
 // Per-pizza sales tracking for detailed week's takings report.
 struct PizzaSalesData {
   core::RecipeId pizza_id{0};
+  int count_ordered{0}; // Total demand (including unfulfilled)
   int count_sold{0};
   Money revenue{0};
   Money ingredient_cost{0};
   Money profit{0};
+
+  void record_demand() { count_ordered++; }
 
   void add_sale(Money price, Money cost) {
     count_sold++;

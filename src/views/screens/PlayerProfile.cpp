@@ -312,7 +312,6 @@ void PlayerProfile::change_mode(PlayerProfileMode mode) {
     state_.status().post({
         .payload = "ACCESS TO OTHER PERSON'S CAREER PROHIBITED",
         .scope = StatusScope::Global,
-        .type = TransientType::Ephemeral,
         .ttl = std::chrono::milliseconds{3000},
         .coalesce_key = "access_denied_cv",
     });

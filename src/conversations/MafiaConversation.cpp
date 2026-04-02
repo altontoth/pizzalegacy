@@ -77,9 +77,10 @@ BuildingPick pick_random_building(const City* city,
 
 MafiaConversation::MafiaConversation(
     GameState& state, const Actor* actor, MafiaMode mm,
-    std::optional<core::RestaurantId> restaurant_id)
-    : BaseConversation(compute_start_line(state, actor, mm, restaurant_id),
-                       state, "t/mafia.e", actor),
+    std::optional<core::RestaurantId> restaurant_id, bool first_contact)
+    : BaseConversation(
+          compute_start_line(state, actor, mm, restaurant_id, first_contact),
+          state, "t/mafia.e", actor),
       restaurant_id_(restaurant_id) {
 
   auto* player = state.active_player();
@@ -91,13 +92,14 @@ MafiaConversation::MafiaConversation(
 
   if (mm == MafiaMode::ProtectionRacketOffer && restaurant_id_) {
     auto* restaurant = state.restaurant(*restaurant_id_);
-    auto* property = restaurant ? restaurant->property() : nullptr;
-    if (!(restaurant && property)) {
+    if (!restaurant) {
       fatal("Expect restaurant and property");
     }
-    int crime_stats = property->district().crime_statistics();
+    auto& property = restaurant->property();
+    int crime_stats = property.district().crime_statistics();
 
-    bool first_contact = !restaurant->protection_timer();
+    // first_contact is passed from the caller since the protection_timer
+    // is set before the conversation starts to prevent re-triggering.
     auto player_cash = player->cash_balance().whole();
     auto base_money = std::min(player_cash, 5000ll);
     double multiplier = std::min(static_cast<double>(base_money) / 5000.0, 6.0);
@@ -334,10 +336,10 @@ bool MafiaConversation::advance_proposal(bool agree) {
   case MafiaLine::PROTECTION_OFFER: {
     auto* restaurant =
         restaurant_id_ ? state_.restaurant(*restaurant_id_) : nullptr;
-    if (!(restaurant && restaurant->property())) {
+    if (!restaurant) {
       fatal("No restaurant to offer protection?!");
     }
-    int crime_stats = restaurant->property()->district().crime_statistics();
+    int crime_stats = restaurant->property().district().crime_statistics();
 
     if (agree) {
       player->financials().spend_cash(
@@ -774,7 +776,7 @@ bool MafiaConversation::has_ended() const {
 
 MafiaLine MafiaConversation::compute_start_line(
     GameState& state, const Actor* /* actor */, MafiaMode mode,
-    std::optional<core::RestaurantId> restaurant_id) {
+    std::optional<core::RestaurantId> /* restaurant_id */, bool first_contact) {
   auto* player = state.active_player();
   int uw_score = player->social_status().underworld_score;
   int rank = social_rank(uw_score, state.difficulty_level());
@@ -787,11 +789,8 @@ MafiaLine MafiaConversation::compute_start_line(
   }
 
   case MafiaMode::ProtectionRacketOffer: {
-    if (restaurant_id.has_value()) {
-      auto* restaurant = state.restaurant(*restaurant_id);
-      if (restaurant && !restaurant->protection_timer().has_value()) {
-        return MafiaLine::NICE_PLACE_YOU_GOT_HERE;
-      }
+    if (first_contact) {
+      return MafiaLine::NICE_PLACE_YOU_GOT_HERE;
     }
     return MafiaLine::HERE_WE_ARE_AGAIN_WE_WANT_THE_USUAL;
   }

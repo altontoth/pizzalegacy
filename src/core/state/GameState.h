@@ -27,6 +27,7 @@
 
 #include <array>
 #include <deque>
+#include <functional>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -271,9 +272,16 @@ public:
   // award score, push fullscreen if needed, mark as shown.
   void process_pending_messages();
 
+  // Drive the full staff event dialog chain (AlertPopup -> OptionsPopup ->
+  // reply AlertPopup). Pass a no-op on_done for debug use.
+  void show_staff_event_dialog(const core::restaurant::StaffEventData& event,
+                               Restaurant* restaurant,
+                               std::function<void()> on_done);
+
 private:
   void check_market_share_milestones(const City& city);
   void process_next_restaurant();
+  void show_next_deferred_staff_event();
   void finish_end_of_turn();
   void deliver_depot_stock(core::PlayerId player_id);
 
@@ -286,7 +294,16 @@ private:
   };
   std::optional<EndOfTurnState> end_of_turn_state_;
 
+  // Staff event dialogs deferred from EOD to next-day 10 AM.
+  struct DeferredStaffEvent {
+    core::restaurant::StaffEventData event;
+    core::RestaurantId restaurant_id;
+  };
+  std::vector<DeferredStaffEvent> deferred_staff_events_;
+  bool showing_deferred_staff_event_{false};
+
   void load_initial_pizzas(GameContext& context, core::PlayerId player_id);
+  Restaurant* create_ai_starting_restaurant(Player& player, City& city);
 
   GameTime time_;
   core::PlayerId active_player_{0};

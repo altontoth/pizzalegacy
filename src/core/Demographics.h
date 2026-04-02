@@ -10,7 +10,7 @@
 #include <cstdint>
 #include <string_view>
 
-enum class ConsumerType : uint8_t {
+enum class ConsumerType {
   Children = 0,
   YoungPeople,
   BlueCollar,
@@ -45,12 +45,12 @@ template <typename T> struct DemographicArray {
 // Pizza popularity scores (-100 to +100)
 using Popularity = DemographicArray<int>;
 // Furniture appeal per demographic [0, 150]
-using FurnitureAppeal = DemographicArray<uint8_t>;
+using FurnitureAppeal = DemographicArray<int>;
 // Menu demographic factor [1, 255]
-using MenuFactor = DemographicArray<uint8_t>;
+using MenuFactor = DemographicArray<int>;
 // Competitive strength per demographic [1, 250]
 // Higher values = win more customers in competition with nearby restaurants
-using CompetitiveStrength = DemographicArray<uint8_t>;
+using CompetitiveStrength = DemographicArray<int>;
 // Actual customer counts per demographic
 using CustomerCounts = DemographicArray<int>;
 

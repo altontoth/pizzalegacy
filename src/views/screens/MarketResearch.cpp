@@ -149,7 +149,7 @@ void MarketResearch::render_bar_chart(
       int display_value = values[i];
       std::string tip;
       if (mode == BarChartMode::Percentage) {
-        tip = std::to_string(display_value) + "%";
+        tip = compat::format("{:.1f}%", static_cast<double>(display_value));
       }
       else {
         tip = "$" + std::to_string(display_value);

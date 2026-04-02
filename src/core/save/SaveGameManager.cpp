@@ -109,6 +109,7 @@ bool SaveGameManager::load(GameState& state, GameContext& context,
     }
 
     json_to_state(j, state, context);
+    state.finalize_initialization(context);
 
     Logger::info("Load completed successfully");
     return true;
@@ -393,7 +394,7 @@ void SaveGameManager::json_to_state(const json& j, GameState& state,
       }
 
       // Reconstruct the restaurant
-      auto restaurant = json_to_restaurant(rest_json, property);
+      auto restaurant = json_to_restaurant(rest_json, *property);
 
       // Register the restaurant ID with the property
       property->restaurant_id(restaurant->id());

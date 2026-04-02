@@ -516,36 +516,30 @@ void PizzaManager::draw_pizza_info(const RenderContext& ctx) const {
   auto* restaurant = state_.active_restaurant();
   const auto& menu = restaurant->menu();
   const auto& stats = restaurant->stats();
-
-  // Calculate ingredient cost for this pizza
-  // Uses restaurant's weighted-average vendor prices, falls back to city base
-  // prices
   auto* city = state_.active_city();
-  const auto& inventory = restaurant->inventory();
-  Money pizza_cost{0};
 
-  for (const auto& topping : pizza->toppings()) {
-    const auto& ingredient = topping->ingredient();
-    auto type = ingredient->type();
-    int weight_grams = topping->weight();
-
-    // Try to get price from restaurant inventory first (vendor-specific
-    // weighted average)
-    const auto* stock = inventory.get_ingredient_stock(type);
-    Money price_per_1000g;
-
-    if (stock && stock->quantity > 0 && stock->weighted_avg_cost.cents > 0) {
-      // Use restaurant's weighted-average cost from vendor purchases
-      // This is automatically calculated when vendors deliver ingredients
-      price_per_1000g = stock->weighted_avg_cost;
+  // Compute live ingredient cost for a pizza at a given restaurant.
+  // Uses weighted-average vendor prices, falls back to city base prices.
+  auto compute_pizza_cost = [&](const auto* rest) {
+    const auto& inv = rest->inventory();
+    Money cost{0};
+    for (const auto& topping : pizza->toppings()) {
+      auto type = topping->ingredient()->type();
+      int weight_grams = topping->weight();
+      const auto* stock = inv.get_ingredient_stock(type);
+      Money price_per_1000g;
+      if (stock && stock->quantity > 0 && stock->weighted_avg_cost.cents > 0) {
+        price_per_1000g = stock->weighted_avg_cost;
+      }
+      else {
+        price_per_1000g = city->ingredient_base_price(type);
+      }
+      cost += price_per_1000g * weight_grams / 1000;
     }
-    else {
-      // Fall back to city base price if no inventory
-      price_per_1000g = city->ingredient_base_price(type);
-    }
+    return cost;
+  };
 
-    pizza_cost += price_per_1000g * weight_grams / 1000;
-  }
+  Money pizza_cost = compute_pizza_cost(restaurant);
 
   // Calculate values for "here" (this restaurant)
   Money here_price{0};
@@ -580,32 +574,27 @@ void PizzaManager::draw_pizza_info(const RenderContext& ctx) const {
   if (recipe_id) {
     auto* player = state_.active_player();
 
-    // Sum across all player's restaurants in this city that have this pizza on
-    // menu
     for (auto* rest : state_.restaurants_for(player->id())) {
-      // Only count restaurants in the same city
-      if (rest->property()->city()->id() != city->id()) {
+      if (rest->property().city().id() != city->id()) {
         continue;
       }
 
-      // Only include restaurants that have this pizza on their menu
       if (const auto* menu_entry = rest->menu().find(*recipe_id)) {
         restaurants_with_pizza++;
         all_price = all_price + menu_entry->price;
+        all_costs = all_costs + compute_pizza_cost(rest);
 
-        // Add yesterday's sales data
         if (auto it = rest->stats().yesterday.pizza_sales.find(*recipe_id);
             it != rest->stats().yesterday.pizza_sales.end()) {
           all_sales += it->second.count_sold;
-          all_costs = all_costs + it->second.ingredient_cost;
           all_profit = all_profit + it->second.profit;
         }
       }
     }
 
-    // Calculate averages
     if (restaurants_with_pizza > 0) {
       all_price = Money{all_price.cents / restaurants_with_pizza};
+      all_costs = Money{all_costs.cents / restaurants_with_pizza};
     }
   }
 
@@ -625,13 +614,9 @@ void PizzaManager::draw_pizza_info(const RenderContext& ctx) const {
       ViewPoint{label_x + here_x_offset, label_y}, FontFace::PIZ_NUMB,
       TEXT_DARKER_BROWN, AlignX::Right);
 
-  // Show aggregated costs in "all" column (only if on at least one menu)
   if (restaurants_with_pizza > 0) {
-    // Use actual costs if available from sales data, otherwise use calculated
-    // cost
-    Money display_cost = (all_costs.cents > 0) ? all_costs : pizza_cost;
     context_.font->render_text_onto(
-        *ctx.surface, compat::format("{:n}", display_cost),
+        *ctx.surface, compat::format("{:n}", all_costs),
         ViewPoint{label_x + all_x_offset, label_y}, FontFace::PIZ_NUMB,
         TEXT_DARKER_BROWN, AlignX::Right);
   }

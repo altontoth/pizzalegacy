@@ -15,7 +15,7 @@ class Restaurant;
 class WeeksTakings : public MainPanelView {
 public:
   WeeksTakings(GameContext& context, GameState& state,
-               core::RestaurantId restaurant_id);
+               core::RestaurantId restaurant_id, bool end_of_week_mode);
   void tick() override;
   void render(const RenderContext& ctx) override;
 
@@ -43,4 +43,5 @@ private:
   core::RestaurantId restaurant_id_;
   Restaurant* restaurant_{nullptr};
   int current_page_{0};
+  bool end_of_week_mode_{false};
 };

@@ -32,6 +32,7 @@ void AlertPopup::add_interactions(views::ui::InteractionContext ictx,
 void AlertPopup::render(Surface& surface, ViewPoint origin) {
   int height = popup_height_;
   int text_x = text_left_margin_;
+  constexpr int text_color = 9;
 
   if (renderable_) {
     // Render character picture on the left
@@ -42,12 +43,12 @@ void AlertPopup::render(Surface& surface, ViewPoint origin) {
              button_bottom_margin_;
 
     auto s = popup_surface(popup_width_, height);
-    s.blit_raw(picture, {text_left_margin_, text_left_margin_});
+    s.blit_raw(picture, {10, 10});
 
     // Render text on the right (after the picture + some spacing)
     text_x = text_left_margin_ + picture.width() + 10;
-    font_->render_text_onto(s, text_, {text_x, text_left_margin_},
-                            FontFace::ASTANDAR, 10);
+    font_->render_into_rect(s, text_, {text_x, text_top_margin_, 247, 300},
+                            FontFace::ASTANDAR, TextStyle{.color = text_color});
 
     btn_ok_.render_with(*this, s);
     surface.blit_raw(s, origin);
@@ -56,7 +57,7 @@ void AlertPopup::render(Surface& surface, ViewPoint origin) {
     // No picture, use default layout
     auto s = popup_surface(popup_width_, height);
     font_->render_text_onto(s, text_, {text_left_margin_, text_left_margin_},
-                            FontFace::ASTANDAR, 10);
+                            FontFace::ASTANDAR, text_color);
 
     btn_ok_.render_with(*this, s);
     surface.blit_raw(s, origin);

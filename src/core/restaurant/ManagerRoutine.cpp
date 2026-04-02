@@ -1,0 +1,379 @@
+/*
+ * SPDX-FileCopyrightText: 2026 Cowomaly <cowomaly@nullium.net>
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+#include "core/restaurant/ManagerRoutine.h"
+#include <array>
+#include "core/city/City.h"
+#include "core/city/Property.h"
+#include "core/food/IngredientCategoryType.h"
+#include "core/food/IngredientType.h"
+#include "core/logistics/IngredientStock.h"
+#include "core/restaurant/ManagerFeedback.h"
+#include "core/restaurant/Restaurant.h"
+#include "core/restaurant/RestaurantStats.h"
+#include "core/state/GameState.h"
+#include "core/status/StatusHub.h"
+#include "core/supply/FoodSupplier.h"
+#include "engine/Logger.h"
+#include "engine/Random.h"
+
+using namespace core::restaurant;
+using engine::random::rand_max_n;
+using engine::random::rand_percentage_chance;
+
+// Ingredient type index ranges per category (start index, count)
+struct CategoryRange {
+  int start;
+  int count;
+  const char* name;
+};
+static constexpr std::array<CategoryRange, 4> CATEGORY_RANGES{{
+    {.start = 0, .count = 22, .name = "vegetables"},
+    {.start = 24, .count = 17, .name = "meat"},
+    {.start = 48, .count = 13, .name = "fruit"},
+    {.start = 72, .count = 13, .name = "cheese"},
+}};
+
+ManagerRoutine::ManagerRoutine(Restaurant& restaurant, GameState& game_state)
+    : restaurant_(restaurant), game_state_(game_state) {}
+
+void ManagerRoutine::run_daily() {
+  auto& manager = restaurant_.manager();
+  if (!manager) {
+    return;
+  }
+
+  // 1. Availability check
+  if (manager->is_away()) {
+    Logger::info("[Manager] {} - Manager unavailable (away)",
+                 restaurant_.name());
+    return;
+  }
+
+  // 2. Report previous day's shortages
+  report_previous_day_shortages();
+
+  // 3. Activity gate: motivation% chance to be active today
+  if (!rand_percentage_chance(manager->character().motivation())) {
+    Logger::info("[Manager] {} - Manager idle today (motivation check failed)",
+                 restaurant_.name());
+    return;
+  }
+
+  // 4. Shopping (always attempted when active)
+  do_shopping();
+
+  // 5. Laziness gate: laziness% chance to skip remaining duties.
+  // Laziness = 100 - management stat (proxy for original +3Eh stat).
+  // High management = lower laziness = more likely to continue.
+  int laziness = 100 - manager->character().management();
+  if (rand_percentage_chance(laziness)) {
+    Logger::info("[Manager] {} - Manager skipped remaining duties (laziness)",
+                 restaurant_.name());
+    return;
+  }
+
+  // 6. Price adjustment
+  do_price_adjustment();
+
+  // 7. Turnover monitoring
+  do_turnover_monitoring();
+
+  // 8. Staff behavior influence
+  ManagerFeedback feedback(&restaurant_);
+  feedback.daily_adjustments();
+}
+
+void ManagerRoutine::report_previous_day_shortages() {
+  uint8_t augmenting = restaurant_.manager_augmenting();
+  if (augmenting == 0) {
+    return;
+  }
+
+  // TODO Check "call me" setting and show actual popup instead of status
+  // manager
+  const char* role = (augmenting == 1) ? "cook" : "waiter";
+  game_state_.status().post(StatusMsg{
+      .payload =
+          compat::format("Manager: Yesterday I had to help as a {} in {}.",
+                         role, restaurant_.name()),
+      .severity = StatusSeverity::Info,
+      .scope = StatusScope::Restaurant,
+  });
+
+  restaurant_.set_manager_augmenting(0);
+}
+
+void ManagerRoutine::do_shopping() {
+  const auto& settings = restaurant_.manager_settings();
+  const auto& manager = restaurant_.manager();
+  if (!manager) {
+    return;
+  }
+
+  if (settings.supply_shortage == ManagerReaction::DoNothing ||
+      (!settings.shopping_if_needed &&
+       settings.supply_shortage != ManagerReaction::CallMe)) {
+    return;
+  }
+
+  const auto& city = restaurant_.property().city();
+
+  auto* player = game_state_.active_player();
+  if (!player) {
+    return;
+  }
+
+  const auto& recipes = player->recipes();
+  auto daily_demand =
+      restaurant_.calculate_daily_ingredient_demand_grams(recipes);
+
+  static constexpr std::array<float, 5> difficulty_multipliers = {
+      0.6f, 0.8f, 1.0f, 1.5f, 1.9f};
+  float difficulty_mult =
+      difficulty_multipliers[game_state_.difficulty_level() - 1];
+
+  for (int cat_index = 0; cat_index < Restaurant::NUM_INGREDIENT_CATEGORIES;
+       ++cat_index) {
+    const auto& range = CATEGORY_RANGES[cat_index];
+    auto category = static_cast<IngredientCategory>(cat_index);
+
+    // Find the preferred supplier, falling back to first available
+    const FoodSupplier* supplier = nullptr;
+    auto preferred_id = restaurant_.preferred_suppliers()[cat_index];
+    for (const auto& s : city.suppliers()) {
+      if (s->category() != category) {
+        continue;
+      }
+      if (preferred_id == 0xFF || s->id() == preferred_id) {
+        supplier = s.get();
+        if (s->id() == preferred_id) {
+          break; // Found exact match
+        }
+      }
+    }
+    if (!supplier) {
+      continue;
+    }
+
+    bool needs_restock = false;
+    for (int i = 0; i < range.count; ++i) {
+      auto ingredient_type =
+          static_cast<core::food::IngredientType>(range.start + i);
+      int daily_grams = daily_demand[ingredient_type];
+      if (daily_grams <= 0) {
+        continue;
+      }
+      int current = restaurant_.inventory().get_stock(ingredient_type).quantity;
+      if (current < daily_grams * 3) {
+        needs_restock = true;
+        break;
+      }
+    }
+
+    if (!needs_restock) {
+      continue;
+    }
+
+    if (settings.supply_shortage == ManagerReaction::CallMe) {
+      game_state_.status().post(StatusMsg{
+          .payload =
+              compat::format("Manager: We urgently need {} supplies in {}.",
+                             range.name, restaurant_.name()),
+          .severity = StatusSeverity::Warning,
+          .scope = StatusScope::Restaurant,
+      });
+      continue;
+    }
+
+    if (!settings.shopping_if_needed) {
+      continue;
+    }
+
+    // Buy 2 days of demand for each low ingredient
+    Money category_total{0};
+    int category_qty = 0;
+
+    for (int i = 0; i < range.count; ++i) {
+      auto ingredient_type =
+          static_cast<core::food::IngredientType>(range.start + i);
+      int daily_grams = daily_demand[ingredient_type];
+      if (daily_grams <= 0) {
+        continue;
+      }
+      int current = restaurant_.inventory().get_stock(ingredient_type).quantity;
+      if (current >= daily_grams * 3) {
+        continue;
+      }
+
+      int buy_kg = (daily_grams * 2 + 999) / 1000;
+      if (buy_kg == 0) {
+        continue;
+      }
+
+      Money base_price = city.ingredient_base_price(ingredient_type);
+      Money price_per_kg = supplier->calculate_price(
+          ingredient_type, base_price, difficulty_mult);
+
+      // Negotiation: experience% chance to get a discount up to motivation/2 %
+      if (rand_percentage_chance(manager->character().experience())) {
+        int discount = rand_max_n(manager->character().motivation() / 2);
+        price_per_kg = Money{price_per_kg.cents * (100 - discount) / 100};
+      }
+
+      Money total_cost{price_per_kg.cents * buy_kg};
+
+      if (!settings.overdraw_account &&
+          player->financials().balance(Account::Cash) < total_cost) {
+        continue;
+      }
+
+      player->financials().spend_cash(game_state_.time().current_date(),
+                                      Account::Stock, total_cost,
+                                      restaurant_.id());
+      restaurant_.inventory().add_ingredient(ingredient_type, buy_kg * 1000,
+                                             supplier->quality(), price_per_kg);
+      category_total = category_total + total_cost;
+      category_qty += buy_kg;
+    }
+
+    if (category_qty > 0) {
+      game_state_.status().post(StatusMsg{
+          .payload = compat::format("Manager bought {} from {} ({} kg, {})",
+                                    range.name, supplier->name(), category_qty,
+                                    category_total),
+          .severity = StatusSeverity::Info,
+          .scope = StatusScope::Restaurant,
+      });
+    }
+  }
+}
+
+void ManagerRoutine::do_price_adjustment() {
+  const auto& settings = restaurant_.manager_settings();
+  if (settings.turnover_decrease != ManagerReaction::ActYourself &&
+      settings.turnover_increase != ManagerReaction::ActYourself) {
+    return;
+  }
+
+  const auto& manager = restaurant_.manager();
+  if (!manager) {
+    return;
+  }
+  int management = manager->character().management();
+
+  // Flat increase pass: if today's fulfillment rate < 80%, raise all prices.
+  // The restaurant can't keep up with demand, so reduce demand pressure by
+  // raising prices.
+  if (restaurant_.fulfillment_rate() < 80 && settings.change_prices) {
+    for (auto& entry : restaurant_.menu().entries()) {
+      entry.price = Money{entry.price.cents + 100};
+    }
+  }
+
+  // Smart per-pizza adjustment pass
+  const auto& today = restaurant_.stats().today;
+
+  for (auto& entry : restaurant_.menu().entries()) {
+    auto it = today.pizza_sales.find(entry.recipe_id);
+    int sold = (it != today.pizza_sales.end()) ? it->second.count_sold : 0;
+    int ordered =
+        (it != today.pizza_sales.end()) ? it->second.count_ordered : 0;
+
+    // Gate: if management > 70, skip when there is unmet demand.
+    if (ordered != sold && management > 70) {
+      continue;
+    }
+
+    // Choose demand figure based on management level
+    // Low management: uses "actually sold" figure
+    // High management: uses total demand (ordered)
+    int demand_figure = ordered;
+    if (management < 30) {
+      demand_figure = sold;
+    }
+
+    // pizza[+1] * pizza[+2] = cost estimate.
+    // pizza[+1] is unknown, appears always 0 in the original game.
+    int cost_estimate = 0;
+
+    int price_cents = static_cast<int>(entry.price.cents);
+    int revenue_estimate = demand_figure * price_cents;
+
+    if (management > 60 && it != today.pizza_sales.end() && sold > 0) {
+      // High-management: factor in per-portion costs for a more accurate
+      // profit signal. Dampens the revenue estimate.
+      int cost_per_portion =
+          static_cast<int>(it->second.ingredient_cost.cents) / sold;
+      cost_estimate -= sold * cost_per_portion;
+      revenue_estimate -= cost_per_portion * demand_figure;
+    }
+
+    int profit = revenue_estimate - cost_estimate;
+
+    if (settings.change_prices) {
+      if (profit < -5000) {
+        entry.price = Money{std::max(0LL, entry.price.cents - 40)};
+      }
+      else if (profit > 2000) {
+        entry.price = Money{entry.price.cents + 30};
+      }
+    }
+  }
+}
+
+void ManagerRoutine::do_turnover_monitoring() {
+  const auto& settings = restaurant_.manager_settings();
+  if (settings.turnover_decrease == ManagerReaction::DoNothing &&
+      settings.turnover_increase == ManagerReaction::DoNothing) {
+    return;
+  }
+
+  const auto& manager = restaurant_.manager();
+  if (!manager) {
+    return;
+  }
+  int management = manager->character().management();
+
+  const auto& today = restaurant_.stats().today;
+  const auto& yesterday = restaurant_.stats().yesterday;
+
+  int revenue_diff =
+      static_cast<int>(today.revenue.cents - yesterday.revenue.cents);
+
+  if (management > 60) {
+    // Profit-aware mode: subtract the cost change from the revenue change
+    int cost_diff = static_cast<int>(today.ingredient_costs.cents -
+                                     yesterday.ingredient_costs.cents);
+    revenue_diff -= cost_diff;
+  }
+
+  // Thresholds in cents.
+  constexpr int INCREASE_THRESHOLD = 50000;
+  constexpr int DECREASE_THRESHOLD = 20000;
+
+  const char* trend_word = (management > 60) ? "profit" : "turnover";
+
+  if (settings.turnover_decrease == ManagerReaction::CallMe &&
+      revenue_diff > INCREASE_THRESHOLD) {
+    game_state_.status().post(StatusMsg{
+        .payload = compat::format("Manager: {} is increasing in {}.",
+                                  trend_word, restaurant_.name()),
+        .severity = StatusSeverity::Info,
+        .scope = StatusScope::Restaurant,
+    });
+  }
+
+  if (settings.turnover_increase == ManagerReaction::CallMe &&
+      revenue_diff < -DECREASE_THRESHOLD) {
+    game_state_.status().post(StatusMsg{
+        .payload = compat::format("Manager: {} is decreasing in {}.",
+                                  trend_word, restaurant_.name()),
+        .severity = StatusSeverity::Warning,
+        .scope = StatusScope::Restaurant,
+    });
+  }
+}

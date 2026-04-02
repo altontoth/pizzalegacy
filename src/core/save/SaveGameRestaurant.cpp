@@ -254,10 +254,8 @@ json restaurant_to_json(const Restaurant& restaurant) {
                        {"h", restaurant.kitchen_size().h}};
 
   // Save property reference (city ID + property index)
-  if (restaurant.property()) {
-    j["property_city_id"] = restaurant.property()->city()->id().value;
-    j["property_index"] = restaurant.property()->index();
-  }
+  j["property_city_id"] = restaurant.property().city().id().value;
+  j["property_index"] = restaurant.property().index();
 
   // Save menu
   j["menu"] = menu_to_json(restaurant.menu());
@@ -358,7 +356,7 @@ json restaurant_to_json(const Restaurant& restaurant) {
 
 // Property pointer must be set afterwards by the caller
 std::unique_ptr<Restaurant> json_to_restaurant(const json& j,
-                                               Property* property) {
+                                               Property& property) {
   core::RestaurantId rid{j["id"].get<int>()};
   std::string name = j["name"].get<std::string>();
   Size kitchen_size{j["kitchen_size"]["w"].get<int>(),
@@ -472,19 +470,19 @@ std::unique_ptr<Restaurant> json_to_restaurant(const json& j,
   if (j.contains("furniture_appeal")) {
     auto& fa = restaurant->economy().furniture_appeal();
     for (size_t i = 0; i < 6 && i < j["furniture_appeal"].size(); ++i) {
-      fa.data()[i] = j["furniture_appeal"][i].get<uint8_t>();
+      fa.data()[i] = j["furniture_appeal"][i].get<int>();
     }
   }
   if (j.contains("menu_factor")) {
     auto& mf = restaurant->economy().menu_factor();
     for (size_t i = 0; i < 6 && i < j["menu_factor"].size(); ++i) {
-      mf.data()[i] = j["menu_factor"][i].get<uint8_t>();
+      mf.data()[i] = j["menu_factor"][i].get<int>();
     }
   }
   if (j.contains("competitive_strength")) {
     auto& cs = restaurant->economy().competitive_strength();
     for (size_t i = 0; i < 6 && i < j["competitive_strength"].size(); ++i) {
-      cs.data()[i] = j["competitive_strength"][i].get<uint8_t>();
+      cs.data()[i] = j["competitive_strength"][i].get<int>();
     }
   }
   if (j.contains("customer_counts")) {
@@ -529,17 +527,16 @@ std::unique_ptr<Restaurant> json_to_restaurant(const json& j,
 
   // Restore pizza quality
   if (j.contains("pizza_quality_rating")) {
-    restaurant->set_pizza_quality_rating(
-        j["pizza_quality_rating"].get<uint8_t>());
+    restaurant->set_pizza_quality_rating(j["pizza_quality_rating"].get<int>());
   }
   if (j.contains("pizza_quality_factors")) {
     const auto& pqf = j["pizza_quality_factors"];
     if (pqf.size() == 4) {
       PizzaQualityFactors factors;
-      factors.ingredients = pqf[0].get<int8_t>();
-      factors.chef = pqf[1].get<int8_t>();
-      factors.oven = pqf[2].get<int8_t>();
-      factors.contamination = pqf[3].get<int8_t>();
+      factors.ingredients = pqf[0].get<int>();
+      factors.chef = pqf[1].get<int>();
+      factors.oven = pqf[2].get<int>();
+      factors.contamination = pqf[3].get<int>();
       restaurant->set_pizza_quality_factors(factors);
     }
   }
@@ -551,20 +548,20 @@ std::unique_ptr<Restaurant> json_to_restaurant(const json& j,
   // Restore sabotage contamination and reputation damage slots
   if (j.contains("sabotage_contamination")) {
     restaurant->set_sabotage_contamination(
-        j["sabotage_contamination"].get<int8_t>());
+        j["sabotage_contamination"].get<int>());
   }
   if (j.contains("event_reputation_penalties")) {
     auto& penalties = restaurant->event_reputation_penalties();
     for (size_t i = 0; i < 4 && i < j["event_reputation_penalties"].size();
          ++i) {
-      penalties[i] = j["event_reputation_penalties"][i].get<int8_t>();
+      penalties[i] = j["event_reputation_penalties"][i].get<int>();
     }
   }
   if (j.contains("event_reputation_recovery")) {
     auto& recovery = restaurant->event_reputation_recovery();
     for (size_t i = 0; i < 4 && i < j["event_reputation_recovery"].size();
          ++i) {
-      recovery[i] = j["event_reputation_recovery"][i].get<int8_t>();
+      recovery[i] = j["event_reputation_recovery"][i].get<int>();
     }
   }
 
@@ -574,6 +571,7 @@ std::unique_ptr<Restaurant> json_to_restaurant(const json& j,
 json pizza_sales_data_to_json(const core::restaurant::PizzaSalesData& data) {
   json j;
   j["pizza_id"] = data.pizza_id.value;
+  j["count_ordered"] = data.count_ordered;
   j["count_sold"] = data.count_sold;
   j["revenue"] = data.revenue.cents;
   j["ingredient_cost"] = data.ingredient_cost.cents;
@@ -584,6 +582,7 @@ json pizza_sales_data_to_json(const core::restaurant::PizzaSalesData& data) {
 core::restaurant::PizzaSalesData json_to_pizza_sales_data(const json& j) {
   core::restaurant::PizzaSalesData data;
   data.pizza_id = core::RecipeId{j["pizza_id"].get<int>()};
+  data.count_ordered = j.value("count_ordered", 0);
   data.count_sold = j["count_sold"].get<int>();
   data.revenue = Money{j["revenue"].get<int64_t>()};
   data.ingredient_cost = Money{j["ingredient_cost"].get<int64_t>()};

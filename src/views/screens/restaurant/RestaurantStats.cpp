@@ -687,7 +687,7 @@ void RestaurantStats::render_customer_stats(const RenderContext& ctx) {
   // Get customer data
   // potential = raw customers from location (yellow bar)
   // current = after competition from economy (green bar)
-  const auto& potential = restaurant_->property()->potential_customers();
+  const auto& potential = restaurant_->property().potential_customers();
   const auto& current = restaurant_->economy().customer_counts();
 
   const auto& stabo = context_.bob->get("bob/stabo.bob");

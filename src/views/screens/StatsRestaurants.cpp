@@ -91,7 +91,7 @@ void StatsRestaurants::render(const RenderContext& ctx) {
 
 void StatsRestaurants::draw_restaurant_overview(const RenderContext& ctx,
                                                 ViewPoint pos, Restaurant* r) {
-  const City* city = r->property()->city();
+  const City& city = r->property().city();
   constexpr uint8_t label_color = 13;
   constexpr uint8_t header_color = 240;
   constexpr int title_y = 12;
@@ -102,9 +102,9 @@ void StatsRestaurants::draw_restaurant_overview(const RenderContext& ctx,
                                   FontFace::PIZ_NUMB, label_color);
 
   // District name
-  context_.font->render_text_onto(
-      *ctx.surface, r->property()->district().name(),
-      pos + PxOffset{208, title_y}, FontFace::PIZ_NUMB, label_color);
+  context_.font->render_text_onto(*ctx.surface, r->property().district().name(),
+                                  pos + PxOffset{208, title_y},
+                                  FontFace::PIZ_NUMB, label_color);
 
   // Map thumbnail: NxN tiles with border and gap.
   constexpr int border_w = 2;
@@ -125,7 +125,7 @@ void StatsRestaurants::draw_restaurant_overview(const RenderContext& ctx,
                                   map_outer_h - (border_w * 2)},
                          15);
 
-  const auto index = r->property()->index();
+  const auto index = r->property().index();
   const int cx = City::index_to_x(index);
   const int cy = City::index_to_y(index);
 
@@ -138,7 +138,7 @@ void StatsRestaurants::draw_restaurant_overview(const RenderContext& ctx,
         continue;
       }
 
-      uint8_t type = city->type(City::x_y_to_index(map_x, map_y));
+      uint8_t type = city.type(City::x_y_to_index(map_x, map_y));
       ViewRect src = landsym_source_rect(type);
       ViewPoint dst{map_pos.x + inset + ((dx + half) * tile_w),
                     map_pos.y + inset + ((dy + half) * tile_h)};

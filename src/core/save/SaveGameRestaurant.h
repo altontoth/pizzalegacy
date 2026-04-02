@@ -35,7 +35,7 @@ std::unique_ptr<RestaurantLayout> json_to_restaurant_layout(const json& j);
 
 json restaurant_to_json(const Restaurant& restaurant);
 std::unique_ptr<Restaurant> json_to_restaurant(const json& j,
-                                               Property* property);
+                                               Property& property);
 
 // RestaurantStats serialization
 json pizza_sales_data_to_json(const core::restaurant::PizzaSalesData& data);

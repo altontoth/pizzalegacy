@@ -41,11 +41,22 @@ public:
   bool is_sick() const { return is_sick_; }
   bool is_pregnant() const { return is_pregnant_; }
   bool stole_money() const { return stole_money_; }
+  bool wants_to_quit() const { return wants_to_quit_; }
+  bool demands_raise() const { return demands_raise_; }
+  bool recently_demanded_raise() const { return recently_demanded_raise_; }
 
-  void set_late(bool late) { is_late_ = late; }
-  void set_sick(bool sick) { is_sick_ = sick; }
-  void set_pregnant(bool pregnant) { is_pregnant_ = pregnant; }
-  void set_stole_money(bool stole) { stole_money_ = stole; }
+  void late(bool late) { is_late_ = late; }
+  void sick(bool sick) { is_sick_ = sick; }
+  void pregnant(bool pregnant) { is_pregnant_ = pregnant; }
+  void stole_money(bool stole) { stole_money_ = stole; }
+  void wants_to_quit(bool quit) { wants_to_quit_ = quit; }
+  void demands_raise(bool raise) { demands_raise_ = raise; }
+  void recently_demanded_raise(bool v) { recently_demanded_raise_ = v; }
+
+  // Duration-based absence (sick leave, pregnancy)
+  void days_away(int days);
+  void tick_days_away();
+  int days_away_remaining() const { return days_away_remaining_; }
 
   // Calculate prep time in minutes (for chefs)
   // Derived from pizzas_per_day: time = operating_minutes / pizzas_per_day
@@ -69,4 +80,10 @@ private:
   bool is_sick_{false};
   bool is_pregnant_{false};
   bool stole_money_{false};
+  bool wants_to_quit_{false};
+  bool demands_raise_{false};
+  bool recently_demanded_raise_{false};
+
+  // Duration-based absence counter (sick leave, pregnancy)
+  int days_away_remaining_{0};
 };

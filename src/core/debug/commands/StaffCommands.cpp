@@ -1,0 +1,510 @@
+/*
+ * SPDX-FileCopyrightText: 2026 Cowomaly <cowomaly@nullium.net>
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+#include "core/debug/commands/StaffCommands.h"
+
+#include "core/character/Staff.h"
+#include "core/city/Property.h"
+#include "core/restaurant/Restaurant.h"
+#include "core/restaurant/StaffEventData.h"
+#include "core/restaurant/StaffEvents.h"
+#include "core/state/GameState.h"
+#include "engine/FormatCompat.h"
+
+using namespace debug::command;
+using core::character::JobRole;
+using core::restaurant::StaffEventData;
+using core::restaurant::StaffEvents;
+
+namespace debug::commands {
+
+// Slot layout: 0-5 = cooks, 6-11 = waiters, 12 = manager.
+// Returns a pointer into the restaurant's staff arrays, or nullptr if empty.
+// role_out and array_index_out are set on success.
+static Staff* resolve_staff(Restaurant* restaurant, int slot, JobRole& role_out,
+                            int& array_index_out) {
+  if (slot >= 0 && slot <= 5) {
+    role_out = JobRole::CHEF;
+    array_index_out = slot;
+    auto& opt = restaurant->cooks()[slot];
+    return opt ? &(*opt) : nullptr;
+  }
+  if (slot >= 6 && slot <= 11) {
+    role_out = JobRole::WAITER;
+    array_index_out = slot - 6;
+    auto& opt = restaurant->waiters()[slot - 6];
+    return opt ? &(*opt) : nullptr;
+  }
+  if (slot == 12) {
+    role_out = JobRole::MANAGER;
+    array_index_out = 0;
+    auto& opt = restaurant->manager();
+    return opt ? &(*opt) : nullptr;
+  }
+  return nullptr;
+}
+
+static std::string_view role_name(JobRole role) {
+  switch (role) {
+  case JobRole::CHEF:
+    return "Cook";
+  case JobRole::WAITER:
+    return "Waiter";
+  case JobRole::MANAGER:
+    return "Manager";
+  default:
+    return "None";
+  }
+}
+
+// Validate restaurant ownership and return a pointer via out.
+// Returns nullopt on success, or an error CommandResult on failure.
+static std::optional<CommandResult>
+check_restaurant(const CommandContext& ctx, core::PlayerId player_id,
+                 core::RestaurantId restaurant_id, Restaurant*& out) {
+  out = ctx.state.restaurant(restaurant_id);
+  if (!out) {
+    return CommandResult::error(
+        compat::format("Restaurant {} not found", restaurant_id.value));
+  }
+  auto owner = out->property().owner_or_tenant();
+  if (!owner || *owner != player_id) {
+    return CommandResult::error(
+        compat::format("Restaurant {} is not owned by player {}",
+                       restaurant_id.value, player_id.value));
+  }
+  return std::nullopt;
+}
+
+static CommandDef make_staff_event() {
+  return CommandDef{
+      .name = "event",
+      .description = "Trigger a staff event dialog directly",
+      .help_text =
+          R"(Usage: staff event <type> [player_id] [restaurant_id] [slot]
+
+Trigger a staff event dialog for a specific staff member. Useful for testing
+the AlertPopup -> OptionsPopup -> reply chain without waiting for daily chance.
+
+type:   late | sick | maternity | quit | raise | theft |
+        destroycheesestock | blowupoven | spillwine | messeduporders | forgottoopen
+slot:   0-5 = cooks, 6-11 = waiters, 12 = manager (default: 0)
+
+Theft has no dialog -- it posts two status messages directly.
+
+Examples:
+  staff event late              # first cook, active restaurant
+  staff event quit @ @ 6        # first waiter
+  staff event destroycheesestock @ @ 1      # second cook
+)",
+      .args =
+          {
+              ArgSpec{
+                  .name = "type",
+                  .type = ArgType::String,
+                  .optional = false,
+                  .description = "Event type",
+                  .allowed_values =
+                      std::vector<std::string>{
+                          "late", "sick", "maternity", "quit", "raise", "theft",
+                          "destroycheesestock", "blowupoven", "spillwine",
+                          "messeduporders", "forgottoopen"},
+              },
+              ArgSpec{
+                  .name = "player_id",
+                  .type = ArgType::PlayerId,
+                  .optional = true,
+                  .default_provider = DefaultProvider::ActivePlayer,
+                  .description = "Player ID (@ for active player)",
+                  .min_value = 0,
+                  .max_value = NUMBER_OF_PLAYERS - 1,
+              },
+              ArgSpec{
+                  .name = "restaurant_id",
+                  .type = ArgType::RestaurantId,
+                  .optional = true,
+                  .default_provider = DefaultProvider::ActiveRestaurant,
+                  .description = "Restaurant ID (@ for active restaurant)",
+              },
+              ArgSpec{
+                  .name = "slot",
+                  .type = ArgType::Int,
+                  .optional = true,
+                  .description =
+                      "Staff slot (0-5 cooks, 6-11 waiters, 12 manager)",
+                  .min_value = 0,
+                  .max_value = 12,
+              },
+          },
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        auto type_str = ctx.string_arg(0);
+        auto player_id = ctx.player_id(1);
+        auto restaurant_id = ctx.restaurant_id(2);
+        auto slot = ctx.args.size() > 3 ? static_cast<int>(ctx.int_arg(3)) : 0;
+
+        Restaurant* restaurant = nullptr;
+        if (auto err =
+                check_restaurant(ctx, player_id, restaurant_id, restaurant)) {
+          return *err;
+        }
+
+        JobRole role = JobRole::NONE;
+        int array_index = -1;
+        Staff* staff = resolve_staff(restaurant, slot, role, array_index);
+        if (!staff) {
+          return CommandResult::error(
+              compat::format("No staff in slot {} of restaurant {}", slot,
+                             restaurant_id.value));
+        }
+
+        // Theft: no dialog
+        if (type_str == "theft") {
+          StaffEvents::apply_event_effect(StaffEventData::Type::Theft, *staff,
+                                          *restaurant, ctx.state);
+          return CommandResult::success({"Theft event triggered"});
+        }
+
+        // Map type string to StaffEventData::Type and set event flags.
+        StaffEventData::Type event_type;
+        if (type_str == "late") {
+          event_type = StaffEventData::Type::Late;
+          staff->late(true);
+        }
+        else if (type_str == "sick") {
+          event_type = StaffEventData::Type::Sick;
+          staff->sick(true);
+          staff->days_away(3);
+        }
+        else if (type_str == "maternity") {
+          event_type = StaffEventData::Type::Maternity;
+          staff->pregnant(true);
+          staff->days_away(90);
+        }
+        else if (type_str == "quit") {
+          event_type = StaffEventData::Type::Quit;
+          staff->wants_to_quit(true);
+        }
+        else if (type_str == "raise") {
+          event_type = StaffEventData::Type::Raise;
+          staff->demands_raise(true);
+        }
+        else if (type_str == "destroycheesestock") {
+          event_type = StaffEventData::Type::DestroyCheeseStock;
+        }
+        else if (type_str == "blowupoven") {
+          event_type = StaffEventData::Type::BlowUpOven;
+        }
+        else if (type_str == "spillwine") {
+          event_type = StaffEventData::Type::SpillWine;
+        }
+        else if (type_str == "messeduporders") {
+          event_type = StaffEventData::Type::MessedUpOrders;
+        }
+        else {
+          // forgottoopen
+          event_type = StaffEventData::Type::ForgotToOpen;
+        }
+
+        StaffEventData event{
+            .staff = staff,
+            .job_role = role,
+            .slot_index = array_index,
+            .type = event_type,
+        };
+
+        // PERSF events: apply the world effect first (simulating EOD), then
+        // show the excuse dialog in same two-step sequence as the real path.
+        if (event_type >= StaffEventData::Type::DestroyCheeseStock) {
+          StaffEvents::apply_event_effect(event_type, *staff, *restaurant,
+                                          ctx.state);
+        }
+
+        ctx.state.show_staff_event_dialog(event, restaurant, []() {});
+
+        return CommandResult::success(
+            {compat::format("Triggered '{}' event for {} {} (slot {})",
+                            type_str, staff->character().first_name(),
+                            staff->character().last_name(), slot)});
+      },
+      .category = "staff"};
+}
+
+static CommandDef make_staff_set_motivation() {
+  return CommandDef{
+      .name = "set_motivation",
+      .description = "Set a staff member's motivation directly",
+      .help_text =
+          R"(Usage: staff set_motivation <value> [player_id] [restaurant_id] [slot]
+
+Set the motivation of a staff member to the given value (0-100).
+Useful for getting quit/raise events to trigger easily.
+
+Examples:
+  staff set_motivation 0        # zero out first cook's motivation
+  staff set_motivation 50 @ @ 6 # set first waiter to 50
+)",
+      .args =
+          {
+              ArgSpec{
+                  .name = "value",
+                  .type = ArgType::Int,
+                  .optional = false,
+                  .description = "Target motivation (0-100)",
+                  .min_value = 0,
+                  .max_value = 100,
+              },
+              ArgSpec{
+                  .name = "player_id",
+                  .type = ArgType::PlayerId,
+                  .optional = true,
+                  .default_provider = DefaultProvider::ActivePlayer,
+                  .description = "Player ID (@ for active player)",
+                  .min_value = 0,
+                  .max_value = NUMBER_OF_PLAYERS - 1,
+              },
+              ArgSpec{
+                  .name = "restaurant_id",
+                  .type = ArgType::RestaurantId,
+                  .optional = true,
+                  .default_provider = DefaultProvider::ActiveRestaurant,
+                  .description = "Restaurant ID (@ for active restaurant)",
+              },
+              ArgSpec{
+                  .name = "slot",
+                  .type = ArgType::Int,
+                  .optional = true,
+                  .description =
+                      "Staff slot (0-5 cooks, 6-11 waiters, 12 manager)",
+                  .min_value = 0,
+                  .max_value = 12,
+              },
+          },
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        auto value = static_cast<int>(ctx.int_arg(0));
+        auto player_id = ctx.player_id(1);
+        auto restaurant_id = ctx.restaurant_id(2);
+        auto slot = ctx.args.size() > 3 ? static_cast<int>(ctx.int_arg(3)) : 0;
+
+        Restaurant* restaurant = nullptr;
+        if (auto err =
+                check_restaurant(ctx, player_id, restaurant_id, restaurant)) {
+          return *err;
+        }
+
+        JobRole role = JobRole::NONE;
+        int array_index = -1;
+        Staff* staff = resolve_staff(restaurant, slot, role, array_index);
+        if (!staff) {
+          return CommandResult::error(
+              compat::format("No staff in slot {} of restaurant {}", slot,
+                             restaurant_id.value));
+        }
+
+        int current = staff->character().motivation();
+        staff->adjust_motivation(value - current);
+
+        return CommandResult::success(
+            {compat::format("Set motivation of {} {} from {} to {}",
+                            staff->character().first_name(),
+                            staff->character().last_name(), current, value)});
+      },
+      .category = "staff"};
+}
+
+static CommandDef make_staff_set_days_away() {
+  return CommandDef{
+      .name = "set_days_away",
+      .description = "Set the absence counter for a staff member",
+      .help_text =
+          R"(Usage: staff set_days_away <days> [player_id] [restaurant_id] [slot]
+
+Set the days-away counter for a staff member. Useful for testing the
+"staff comes back" path without waiting.
+
+Examples:
+  staff set_days_away 0         # bring first cook back immediately
+  staff set_days_away 5 @ @ 6   # put first waiter on 5-day absence
+)",
+      .args =
+          {
+              ArgSpec{
+                  .name = "days",
+                  .type = ArgType::Int,
+                  .optional = false,
+                  .description = "Days away (0 to return immediately)",
+                  .min_value = 0,
+                  .max_value = 365,
+              },
+              ArgSpec{
+                  .name = "player_id",
+                  .type = ArgType::PlayerId,
+                  .optional = true,
+                  .default_provider = DefaultProvider::ActivePlayer,
+                  .description = "Player ID (@ for active player)",
+                  .min_value = 0,
+                  .max_value = NUMBER_OF_PLAYERS - 1,
+              },
+              ArgSpec{
+                  .name = "restaurant_id",
+                  .type = ArgType::RestaurantId,
+                  .optional = true,
+                  .default_provider = DefaultProvider::ActiveRestaurant,
+                  .description = "Restaurant ID (@ for active restaurant)",
+              },
+              ArgSpec{
+                  .name = "slot",
+                  .type = ArgType::Int,
+                  .optional = true,
+                  .description =
+                      "Staff slot (0-5 cooks, 6-11 waiters, 12 manager)",
+                  .min_value = 0,
+                  .max_value = 12,
+              },
+          },
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        auto days = static_cast<int>(ctx.int_arg(0));
+        auto player_id = ctx.player_id(1);
+        auto restaurant_id = ctx.restaurant_id(2);
+        auto slot = ctx.args.size() > 3 ? static_cast<int>(ctx.int_arg(3)) : 0;
+
+        Restaurant* restaurant = nullptr;
+        if (auto err =
+                check_restaurant(ctx, player_id, restaurant_id, restaurant)) {
+          return *err;
+        }
+
+        JobRole role = JobRole::NONE;
+        int array_index = -1;
+        Staff* staff = resolve_staff(restaurant, slot, role, array_index);
+        if (!staff) {
+          return CommandResult::error(
+              compat::format("No staff in slot {} of restaurant {}", slot,
+                             restaurant_id.value));
+        }
+
+        staff->days_away(days);
+
+        return CommandResult::success({compat::format(
+            "Set days_away for {} {} to {}", staff->character().first_name(),
+            staff->character().last_name(), days)});
+      },
+      .category = "staff"};
+}
+
+static CommandDef make_staff_list() {
+  return CommandDef{
+      .name = "list",
+      .description = "List all staff in a restaurant",
+      .help_text = R"(Usage: staff list [player_id] [restaurant_id]
+
+Print all staff slots with name, role, motivation, days_away,
+and current event flags.
+
+Examples:
+  staff list            # active player's active restaurant
+  staff list @ 0        # restaurant 0 of active player
+)",
+      .args =
+          {
+              ArgSpec{
+                  .name = "player_id",
+                  .type = ArgType::PlayerId,
+                  .optional = true,
+                  .default_provider = DefaultProvider::ActivePlayer,
+                  .description = "Player ID (@ for active player)",
+                  .min_value = 0,
+                  .max_value = NUMBER_OF_PLAYERS - 1,
+              },
+              ArgSpec{
+                  .name = "restaurant_id",
+                  .type = ArgType::RestaurantId,
+                  .optional = true,
+                  .default_provider = DefaultProvider::ActiveRestaurant,
+                  .description = "Restaurant ID (@ for active restaurant)",
+              },
+          },
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        auto player_id = ctx.player_id(0);
+        auto restaurant_id = ctx.restaurant_id(1);
+
+        Restaurant* restaurant = nullptr;
+        if (auto err =
+                check_restaurant(ctx, player_id, restaurant_id, restaurant)) {
+          return *err;
+        }
+
+        std::vector<std::string> lines;
+        lines.push_back(
+            compat::format("Staff in restaurant {}:", restaurant_id.value));
+
+        auto print_slot = [&](int slot, const std::optional<Staff>& opt,
+                              JobRole role) {
+          if (!opt) {
+            lines.push_back(
+                compat::format("  [{:2d}] {} -- empty", slot, role_name(role)));
+            return;
+          }
+          const Staff& s = *opt;
+          std::string flags;
+          if (s.is_late()) {
+            flags += " late";
+          }
+          if (s.is_sick()) {
+            flags += " sick";
+          }
+          if (s.is_pregnant()) {
+            flags += " pregnant";
+          }
+          if (s.stole_money()) {
+            flags += " theft";
+          }
+          if (s.wants_to_quit()) {
+            flags += " quit";
+          }
+          if (s.demands_raise()) {
+            flags += " raise";
+          }
+          if (flags.empty()) {
+            flags = " -";
+          }
+
+          lines.push_back(compat::format(
+              "  [{:2d}] {} -- {} {} | motiv:{} | away:{} |{}", slot,
+              role_name(role), s.character().first_name(),
+              s.character().last_name(), s.character().motivation(),
+              s.days_away_remaining(), flags));
+        };
+
+        auto& cooks = restaurant->cooks();
+        for (int i = 0; i < static_cast<int>(cooks.size()); ++i) {
+          print_slot(i, cooks[i], JobRole::CHEF);
+        }
+        auto& waiters = restaurant->waiters();
+        for (int i = 0; i < static_cast<int>(waiters.size()); ++i) {
+          print_slot(i + 6, waiters[i], JobRole::WAITER);
+        }
+        print_slot(12, restaurant->manager(), JobRole::MANAGER);
+
+        return CommandResult::success(lines);
+      },
+      .category = "staff"};
+}
+
+CommandDef make_staff_commands() {
+  return CommandDef{
+      .name = "staff",
+      .aliases = {"st"},
+      .description = "Staff management and event testing commands",
+      .help_text = "Subcommands: event, set_motivation, set_days_away, list",
+      .category = "staff",
+  }
+      .add_subcommand(make_staff_event())
+      .add_subcommand(make_staff_set_motivation())
+      .add_subcommand(make_staff_set_days_away())
+      .add_subcommand(make_staff_list());
+}
+
+} // namespace debug::commands

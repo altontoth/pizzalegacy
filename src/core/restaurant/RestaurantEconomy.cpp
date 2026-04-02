@@ -206,21 +206,10 @@ Popularity RestaurantEconomy::calculate_furniture_appeal_popularity(
 void RestaurantEconomy::calculate_demand_with_competition(
     const Restaurant& restaurant, GameState& game_state) {
 
-  const auto* property = restaurant.property();
-  if (!property) {
-    Logger::warn("[Competition] {} - No property, skipping competition calc",
-                 restaurant.name());
-    return;
-  }
+  const auto& property = restaurant.property();
 
-  const City* city = property->city();
-  if (!city) {
-    Logger::warn("[Competition] {} - No city, skipping competition calc",
-                 restaurant.name());
-    return;
-  }
-
-  int property_index = property->index();
+  const City& city = property.city();
+  int property_index = property.index();
   int center_x = City::index_to_x(property_index);
   int center_y = City::index_to_y(property_index);
   int search_radius = range_tiles_ + 10;
@@ -251,12 +240,9 @@ void RestaurantEconomy::calculate_demand_with_competition(
         continue;
       }
 
-      const auto* comp_property = comp_restaurant->property();
-      if (!comp_property) {
-        continue;
-      }
+      const auto& comp_property = comp_restaurant->property();
 
-      int comp_index = comp_property->index();
+      int comp_index = comp_property.index();
       int comp_x = City::index_to_x(comp_index);
       int comp_y = City::index_to_y(comp_index);
 
@@ -299,7 +285,7 @@ void RestaurantEconomy::calculate_demand_with_competition(
   competition_score_ = total_competition - 600;
 
   // Apply competition to calculate actual customer counts
-  const auto& property_demand = property->potential_customers();
+  const auto& property_demand = property.potential_customers();
 
   for (ConsumerType demo : ALL_CONSUMER_TYPES) {
     int our_base_demand = competitive_strength_[demo];

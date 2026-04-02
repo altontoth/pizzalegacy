@@ -148,9 +148,8 @@ void EuroMap::render(const RenderContext& ctx) {
         auto leader = state_.city(city_id)->control_map().market_leader();
         if (leader) {
           auto* player = state_.player(*leader);
-          if (player) {
-            leader_name = player->name();
-          }
+          assert(player);
+          leader_name = player->name();
         }
       }
       context_.font->render_text_onto(popup_surface, leader_name,

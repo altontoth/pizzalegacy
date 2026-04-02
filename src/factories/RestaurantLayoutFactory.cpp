@@ -88,28 +88,22 @@ RestaurantLayoutFactory::create_layout(const std::string& filename) {
                       interior_relative.y + tile_h_px};
   };
 
-  auto legacy_kitchen_coords_to_map = [width, height](int x,
-                                                      int y) -> WorldPoint {
-    // Clamp in case kitchen is smaller than the viewport
-    // right aligned:
-    const int scroll_x_px = std::max(0, width - VISIBLE_X_TILES) * tile_w_px;
-    // bottom-aligned:
-    const int scroll_y_px = std::max(0, height - VISIBLE_Y_TILES) * tile_h_px;
-    // Logger::debug("Scroll x pos is {}", scroll_x_px);
+  auto legacy_kitchen_coords_to_map = [k_width, k_height](int x,
+                                                          int y) -> WorldPoint {
+    // Kitchen view is right-aligned (X) and bottom-aligned (Y). The world
+    // background has k_width+2 / k_height+2 tiles (interior + walls added by
+    // calculate_background_dimensions). The viewport shows VISIBLE_X/Y tiles.
+    // The offset is (background_tiles - viewport_tiles) in each axis.
+    const int scroll_x_px = (k_width + 2 - VISIBLE_X_TILES) * tile_w_px;
+    const int scroll_y_px = (k_height - VISIBLE_Y_TILES) * tile_h_px;
 
-    WorldPoint interior_relative{
-        // Legacy X is measured from screen-left (includes wood + first tile).
-        // Convert to interior map space (0,0 = interior top-left), then add
-        // right-edge scroll.
-        x - LegacyConstants::WOOD_BORDER_WIDTH_LEFT - 48 -
-            LegacyConstants::RESTAURANT_TILE_WIDTH + scroll_x_px,
+    WorldPoint interior_relative{x - LegacyConstants::WOOD_BORDER_WIDTH_LEFT -
+                                     LegacyConstants::RESTAURANT_TILE_WIDTH +
+                                     scroll_x_px,
 
-        // Legacy Y includes the +176 bias and top wooden bar; convert to
-        // interior map space, then add bottom-edge scroll. Do a random -8 to be
-        // a bit closer to the original, not sure what I'm missing but this is
-        // close enough™
-        y - y_offset_from_original + scroll_y_px -
-            LegacyConstants::RESTAURANT_TILE_HEIGHT - 28};
+                                 y - y_offset_from_original + scroll_y_px -
+                                     LegacyConstants::WOOD_BORDER_HEIGHT_TOP -
+                                     LegacyConstants::RESTAURANT_TILE_HEIGHT};
 
     // Add wall offset to convert to world coordinates
     return WorldPoint{interior_relative.x + tile_w_px,

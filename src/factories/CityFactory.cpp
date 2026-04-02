@@ -74,8 +74,11 @@ std::unique_ptr<City> CityFactory::create_city(core::CityId cid) {
   factory.load_district_bez(id);
   factory.load_map_data(id);
   factory.populate_types();
-  factory.populate_properties(id);
-  return factory.build_city_object(id);
+
+  auto city = std::make_unique<City>(core::CityId{id});
+  factory.populate_properties(*city);
+  factory.build_city_object(*city, id);
+  return city;
 }
 
 void CityFactory::load_color_definition() {
@@ -460,27 +463,22 @@ CityFactory::invert_transform_phone_number(uint32_t transformed_value) {
   return phone_number;
 }
 
-std::unique_ptr<City> CityFactory::build_city_object(int id) {
-  auto city = std::make_unique<City>(core::CityId{id});
-
-  city->data_length(data_length_);
-  city->map_data(map_data_);
-  city->named_buildings(named_buildings_);
-  city->city_name(city_name_);
-  city->building_names(building_names_, building_name_count_);
-  city->type_names(type_names_);
+void CityFactory::build_city_object(City& city, int id) {
+  city.data_length(data_length_);
+  city.map_data(map_data_);
+  city.named_buildings(named_buildings_);
+  city.city_name(city_name_);
+  city.building_names(building_names_, building_name_count_);
+  city.type_names(type_names_);
   // ensure each district has a pointer to the city, do this
   // before std::moving the districts to city:
   for (auto& district : districts_) {
-    district->city(city.get());
+    district->city(&city);
   }
-  city->districts(std::move(districts_));
-  city->types(types_);
-  city->district_bez(district_bez_);
-  for (auto& [_, bp] : properties_) {
-    bp->city(city.get());
-  }
-  city->properties(std::move(properties_));
+  city.districts(std::move(districts_));
+  city.types(types_);
+  city.district_bez(district_bez_);
+  city.properties(std::move(properties_));
 
   std::array<ActorType, NUMBER_OF_ACTOR_TYPES> type_list = {
       ActorType::REALTOR, ActorType::BANK,  ActorType::INSURANCE,
@@ -550,16 +548,16 @@ std::unique_ptr<City> CityFactory::build_city_object(int id) {
       actor_id++;
     }
   }
-  city->police_id(*police_id);
-  city->mayor_id(*mayor_id);
-  city->actors(std::move(actor_map));
-  city->bank_settings(bank_settings_map);
-  city->insurance_settings(insurance_settings_map);
-  city->mafia_settings(mafia_settings_map);
-  city->realtor_settings(realtor_settings_map);
+  city.police_id(*police_id);
+  city.mayor_id(*mayor_id);
+  city.actors(std::move(actor_map));
+  city.bank_settings(bank_settings_map);
+  city.insurance_settings(insurance_settings_map);
+  city.mafia_settings(mafia_settings_map);
+  city.realtor_settings(realtor_settings_map);
 
-  city->suppliers(std::move(suppliers_));
-  city->ingredient_base_prices(ingredient_base_prices_);
+  city.suppliers(std::move(suppliers_));
+  city.ingredient_base_prices(ingredient_base_prices_);
 
   // Initialize advertising campaign options (randomized per city)
   // Assembly: init_city.asm lines 342-367
@@ -582,20 +580,18 @@ std::unique_ptr<City> CityFactory::build_city_object(int id) {
         (tv_eff + engine::random::rand_max_n(20)) * 100 * 100;
   }
 
-  city->poster_rates(poster_options);
-  city->tv_ad_rates(tv_ad_options);
+  city.poster_rates(poster_options);
+  city.tv_ad_rates(tv_ad_options);
 
   // Initialize known arms dealers for all players
   for (int player_idx = 0; player_idx < NUMBER_OF_PLAYERS; ++player_idx) {
-    city->initialize_known_arms_dealers(core::PlayerId{player_idx});
+    city.initialize_known_arms_dealers(core::PlayerId{player_idx});
   }
 
   // Seed the economy graph with 10 initial data points
   for (int i = 0; i < 10; ++i) {
-    city->economy_trend().daily_tick();
+    city.economy_trend().daily_tick();
   }
-
-  return city;
 }
 
 void CityFactory::populate_types() {
@@ -660,13 +656,10 @@ void CityFactory::populate_types() {
   }
 }
 
-void CityFactory::populate_properties(int city_id) {
+void CityFactory::populate_properties(City& city) {
   // For every tile check if it's a business premise, and if it is
   // figure out which district it's in, then generate a Property
   // based on the average size of the property.
-  int sum = 0;
-  int sum2 = 0;
-  int sum3 = 0;
   for (std::size_t index = 0; index < map_data_.size(); ++index) {
     auto type = map_data_[index];
     if (City::is_business_premise_by_type(type) || type == 0x04) {
@@ -693,16 +686,11 @@ void CityFactory::populate_properties(int city_id) {
         // Status 1=FOR_RENT, 2=FOR_SALE, 3=FOR_SALE_RENT
         status = static_cast<PremiseStatus>(engine::random::rand_max_n(3) + 1);
       }
-      // We'll set the city pointer later
       auto bp = std::make_unique<Property>(index, prop_type, Size{w, h}, r_id,
-                                           status, nullptr);
+                                           status, city);
       properties_[index] = std::move(bp);
-      // sum++;
     }
   }
-  //  Logger::debug("{} has a total of {} + {} + {} = {} properties!", city_id,
-  //  sum,
-  //         sum2, sum3, sum + sum2 + sum3);
 }
 
 void CityFactory::load_district_bez(int id) {

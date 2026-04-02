@@ -16,36 +16,39 @@
 #include "core/food/IngredientCategory.h"
 #include "core/restaurant/AIEconomy.h"
 #include "core/restaurant/DemographicTiming.h"
+#include "core/restaurant/ManagerFeedback.h"
+#include "core/restaurant/ManagerRoutine.h"
 #include "core/restaurant/Menu.h"
 #include "core/restaurant/PizzaDemand.h"
+#include "core/restaurant/StaffEvents.h"
 #include "core/state/GameState.h"
+#include "core/status/StatusHub.h"
 #include "engine/Fatal.h"
 #include "engine/Logger.h"
-#include "factories/FurnitureFactory.h"
 
-Restaurant::Restaurant(Property* property, Size kitchen_size,
-                       core::RestaurantId id, const std::string& name)
+Restaurant::Restaurant(Property& property, Size kitchen_size,
+                       core::RestaurantId id, std::string name)
     : property_(property), kitchen_size_(kitchen_size), restaurant_id_(id),
-      name_(name), layout_(std::make_unique<RestaurantLayout>(property->size(),
-                                                              kitchen_size)) {}
+      name_(std::move(name)), layout_(std::make_unique<RestaurantLayout>(
+                                  property.size(), kitchen_size)) {}
 
 Restaurant::~Restaurant() = default;
 
 void Restaurant::init_ai_economy(const Player& player) {
-  ai_tier_ = static_cast<uint8_t>(engine::random::rand_max_n(4) + 1);
+  ai_tier_ = engine::random::rand_max_n(4) + 1;
 
   ai_capacity_target_ = ai_tier_ * 2 + 6;
 
-  uint8_t cooking = player.character().cooking();
-  uint8_t intelligence = player.character().intelligence();
+  auto cooking = player.character().cooking();
+  auto intelligence = player.character().intelligence();
 
   for (auto ct : ALL_CONSUMER_TYPES) {
     int mf = (cooking > 0 ? engine::random::rand_max_n(cooking) : 0) + 20;
-    economy_.menu_factor()[ct] = static_cast<uint8_t>(std::min(mf, 255));
+    economy_.menu_factor()[ct] = std::min(mf, 255);
 
     int fa =
         (intelligence > 0 ? engine::random::rand_max_n(intelligence) : 0) + 20;
-    economy_.furniture_appeal()[ct] = static_cast<uint8_t>(std::min(fa, 255));
+    economy_.furniture_appeal()[ct] = std::min(fa, 255);
   }
 }
 
@@ -69,10 +72,7 @@ void Restaurant::wants_open(bool wants) {
 void Restaurant::force_close(int days) { forced_days_remaining_ = days; }
 
 void Restaurant::update_demographics(const core::food::PlayerRecipes& recipes) {
-  if (!property_) {
-    return;
-  }
-  property_->calculate_demographics(this);
+  property_.calculate_demographics(this);
   economy_.calculate_furniture_appeal(*this);
   economy_.calculate_competitive_strength(*this, &recipes);
 }
@@ -80,11 +80,11 @@ void Restaurant::update_demographics(const core::food::PlayerRecipes& recipes) {
 void Restaurant::process_daily_reputation_deltas() {
   // 4 reputation damage slots that decay toward 0 each day
   for (int i = 0; i < 4; i++) {
-    int8_t damage_val = event_reputation_penalties_[i];
-    int8_t decay_rate = event_reputation_recovery_[i];
+    auto damage_val = event_reputation_penalties_[i];
+    auto decay_rate = event_reputation_recovery_[i];
 
-    int abs_damage = std::abs(static_cast<int>(damage_val));
-    int abs_decay = std::abs(static_cast<int>(decay_rate));
+    int abs_damage = std::abs(damage_val);
+    int abs_decay = std::abs(decay_rate);
 
     if (abs_damage > abs_decay) {
       event_reputation_penalties_[i] += decay_rate;
@@ -96,7 +96,7 @@ void Restaurant::process_daily_reputation_deltas() {
   }
 }
 
-int8_t Restaurant::get_active_reputation_penalty() const {
+int Restaurant::get_active_reputation_penalty() const {
   // Returns the highest-index non-zero penalty
   for (int i = 3; i >= 0; i--) {
     if (event_reputation_penalties_[i] != 0) {
@@ -106,8 +106,7 @@ int8_t Restaurant::get_active_reputation_penalty() const {
   return 0;
 }
 
-void Restaurant::add_reputation_damage(int8_t penalty,
-                                       int8_t recovery_per_day) {
+void Restaurant::add_reputation_damage(int penalty, int recovery_per_day) {
   // Find first empty slot; if all full, silently fail
   for (int i = 0; i < 4; i++) {
     if (event_reputation_penalties_[i] == 0) {
@@ -115,39 +114,42 @@ void Restaurant::add_reputation_damage(int8_t penalty,
       event_reputation_recovery_[i] = recovery_per_day;
       Logger::info("[Restaurant] {} - Added reputation damage: {} (recovery: "
                    "{}/day) in slot {}",
-                   name_, static_cast<int>(penalty),
-                   static_cast<int>(recovery_per_day), i);
+                   name_, penalty, recovery_per_day, i);
       return;
     }
   }
 
   Logger::warn(
       "[Restaurant] {} - Cannot add reputation damage {}: all 4 slots full",
-      name_, static_cast<int>(penalty));
+      name_, penalty);
 }
 
 void Restaurant::apply_sabotage(core::item::Item item) {
   using core::item::Item;
 
   struct SabotageEffect {
-    int8_t contamination_delta;
-    int8_t reputation_penalty;
-    int8_t decay_rate;
+    int contamination_delta;
+    int reputation_penalty;
+    int decay_rate;
   };
 
   SabotageEffect effect{};
   switch (item) {
   case Item::SmellyCheese:
-    effect = {-30, -20, 4};
+    effect = {
+        .contamination_delta = -30, .reputation_penalty = -20, .decay_rate = 4};
     break;
   case Item::Laxatives:
-    effect = {-40, -30, 5};
+    effect = {
+        .contamination_delta = -40, .reputation_penalty = -30, .decay_rate = 5};
     break;
   case Item::Rats:
-    effect = {-60, -40, 8};
+    effect = {
+        .contamination_delta = -60, .reputation_penalty = -40, .decay_rate = 8};
     break;
   case Item::StinkBomb:
-    effect = {0, -60, 10};
+    effect = {
+        .contamination_delta = 0, .reputation_penalty = -60, .decay_rate = 10};
     break;
   default:
     Logger::warn("[Restaurant] {} - apply_sabotage called with non-sabotage "
@@ -157,22 +159,19 @@ void Restaurant::apply_sabotage(core::item::Item item) {
   }
 
   if (effect.contamination_delta != 0) {
-    int new_val =
-        static_cast<int>(sabotage_contamination_) + effect.contamination_delta;
-    sabotage_contamination_ =
-        static_cast<int8_t>(std::clamp(new_val, -120, 120));
+    int new_val = sabotage_contamination_ + effect.contamination_delta;
+    sabotage_contamination_ = std::clamp(new_val, -120, 120);
   }
 
   add_reputation_damage(effect.reputation_penalty, effect.decay_rate);
 
   Logger::info("[Restaurant] {} - Sabotaged with {}: contamination={}, "
                "reputation penalty={}",
-               name_, core::item::to_string(item),
-               static_cast<int>(sabotage_contamination_),
-               static_cast<int>(effect.reputation_penalty));
+               name_, core::item::to_string(item), sabotage_contamination_,
+               effect.reputation_penalty);
 }
 
-Size Restaurant::size() const { return property_->size(); }
+Size Restaurant::size() const { return property_.size(); }
 
 Size Restaurant::kitchen_size() const { return kitchen_size_; }
 
@@ -318,7 +317,11 @@ int Restaurant::calculate_daily_chef_throughput() const {
   int total = 0;
   for (const auto& cook : cooks_) {
     if (cook.has_value() && !cook->is_away()) {
-      total += cook->pizzas_per_day();
+      int contribution = cook->pizzas_per_day();
+      if (cook->is_late()) {
+        contribution /= 2;
+      }
+      total += contribution;
     }
   }
   return total;
@@ -328,7 +331,11 @@ int Restaurant::calculate_daily_waiter_throughput() const {
   int total = 0;
   for (const auto& waiter : waiters_) {
     if (waiter.has_value() && !waiter->is_away()) {
-      total += waiter->pizzas_per_day();
+      int contribution = waiter->pizzas_per_day();
+      if (waiter->is_late()) {
+        contribution /= 2;
+      }
+      total += contribution;
     }
   }
   return total;
@@ -369,7 +376,7 @@ Restaurant::Occupancy Restaurant::guest_occupancy() const {
     }
   }
   if (seat_count == 0) {
-    return {0, 0};
+    return {.guests = 0, .seats = 0};
   }
 
   int total_daily = 0;
@@ -382,9 +389,9 @@ Restaurant::Occupancy Restaurant::guest_occupancy() const {
   const float current_demand =
       static_cast<float>(total_daily) * avg_seating_time / 720.0f;
 
-  const int guests =
-      std::min(static_cast<int>(current_demand + 0.5f), seat_count);
-  return {guests, seat_count};
+  const int guests = std::min(
+      static_cast<int>(std::lround(current_demand + 0.5f)), seat_count);
+  return {.guests = guests, .seats = seat_count};
 }
 
 ProductionScreenData Restaurant::get_production_screen_data() const {
@@ -396,7 +403,7 @@ ProductionScreenData Restaurant::get_production_screen_data() const {
     demand_sum += factor;
   }
   float raw_orders =
-      static_cast<float>(demand_sum) * economy_.quality_rating() / 720.0f;
+      static_cast<float>(demand_sum * economy_.quality_rating()) / 720.0f;
   data.order_count = std::min(static_cast<int>(raw_orders), 20);
 
   data.fulfillment_rate = fulfillment_rate_;
@@ -526,7 +533,7 @@ ServiceTimeData Restaurant::calculate_service_time_data() const {
     int demo_index = 0;
     for (ConsumerType demographic : ALL_CONSUMER_TYPES) {
       // Add 1 to each demand count to avoid zero weights
-      float demand =
+      auto demand =
           static_cast<float>(economy_.customer_counts()[demographic] + 1);
       weighted_sum +=
           demand * static_cast<float>(DEMOGRAPHIC_EATING_TIMES[demo_index]);
@@ -684,7 +691,7 @@ int Restaurant::calculate_stock_capacity(
     for (int i = 0; i < pizza_count; i++) {
       pizza_weights[i] = 100.0f;
     }
-    total_demand = 100.0f * pizza_count;
+    total_demand = 100.0f * static_cast<float>(pizza_count);
   }
 
   Logger::debug("[Stock Capacity] Initial total demand: {}", total_demand);
@@ -903,13 +910,14 @@ int Restaurant::calculate_block_throughput() const {
 
 void Restaurant::end_of_day(GameState& game_state) {
   auto* player = game_state.active_player();
+  assert(player);
   const auto& date = game_state.time().current_date();
 
   // Pay monthly rent on the last day of the month
-  if (date.is_end_of_month() && property_ && property_->is_rented()) {
-    Money monthly_rent = property_->get_monthly_rent();
+  if (date.is_end_of_month() && property_.is_rented()) {
+    Money monthly_rent = property_.get_monthly_rent();
 
-    if (monthly_rent.cents > 0 && player) {
+    if (monthly_rent.cents > 0) {
       player->financials().transfer(date, Account::Cash, Account::Rents,
                                     monthly_rent, restaurant_id_,
                                     AccountingScope::Operational);
@@ -935,6 +943,39 @@ void Restaurant::end_of_day(GameState& game_state) {
 
     ai::process_restaurant_revenue(*this, *player, date);
     return;
+  }
+
+  // Staff processing runs at end of day. Flag resets and absence timer
+  // decrements happen for all restaurants (open or closed). Event generation
+  // and manager routine are skipped for closed restaurants.
+  {
+    auto reset_daily_staff = [](Staff& s) {
+      s.late(false);
+      s.stole_money(false);
+      s.wants_to_quit(false);
+      s.demands_raise(false);
+      s.tick_days_away();
+    };
+    for (auto& cook : cooks_) {
+      if (cook) {
+        reset_daily_staff(*cook);
+      }
+    }
+    for (auto& waiter : waiters_) {
+      if (waiter) {
+        reset_daily_staff(*waiter);
+      }
+    }
+    if (manager_) {
+      reset_daily_staff(*manager_);
+    }
+
+    core::restaurant::StaffEvents staff_events(this, &game_state);
+    staff_events.daily_processing();
+    pending_staff_events_ = staff_events.take_pending_dialogs();
+
+    core::restaurant::ManagerRoutine manager_routine(*this, game_state);
+    manager_routine.run_daily();
   }
 
   if (!is_open(game_state.time().time_of_day())) {
@@ -994,6 +1035,34 @@ void Restaurant::eod_batch_order_fulfillment(class GameState& game_state) {
     total_orders += predicted;
   }
 
+  // Staff shortage augmentation: if the manager is present and staff_shortage
+  // is ActYourself, the manager fills in for the deficient role.
+  if (manager_ && !manager_->is_away()) {
+    const auto& settings = manager_settings_;
+    if (settings.staff_shortage == ManagerReaction::ActYourself) {
+      int manager_capacity = manager_->pizzas_per_day();
+      if (chef_capacity < total_orders && chef_capacity <= waiter_capacity) {
+        chef_capacity += manager_capacity;
+        manager_augmenting_ = 1;
+      }
+      else if (waiter_capacity < total_orders) {
+        waiter_capacity += manager_capacity;
+        manager_augmenting_ = 2;
+      }
+    }
+    else if (settings.staff_shortage == ManagerReaction::CallMe) {
+      int effective = std::min({oven_capacity, chef_capacity, waiter_capacity});
+      if (effective < total_orders) {
+        game_state.status().post(StatusMsg{
+            .payload = compat::format(
+                "Manager: We had a staff shortage today in {}!", name_),
+            .severity = StatusSeverity::Warning,
+            .scope = StatusScope::Restaurant,
+        });
+      }
+    }
+  }
+
   int effective_capacity =
       std::min({oven_capacity, chef_capacity, waiter_capacity});
 
@@ -1014,6 +1083,7 @@ void Restaurant::eod_batch_order_fulfillment(class GameState& game_state) {
 
     for (int order_idx = 0; order_idx < predicted; order_idx++) {
       stats_.today.orders_generated++;
+      stats_.today.pizza_sales[entry.recipe_id].record_demand();
 
       stats_.today.record_order(entry.price);
 
@@ -1073,8 +1143,7 @@ void Restaurant::eod_batch_order_fulfillment(class GameState& game_state) {
   }
 
   if (total_orders > 0) {
-    fulfillment_rate_ =
-        static_cast<uint8_t>((total_fulfilled * 100) / total_orders);
+    fulfillment_rate_ = (total_fulfilled * 100) / total_orders;
   }
   else {
     fulfillment_rate_ = 100;
@@ -1196,14 +1265,12 @@ void Restaurant::calculate_pizza_quality_rating(
   int base_stock = inventory_.average_stock_quality() / 4;
   int base_cook = calculate_average_cook_quality() / 4;
   int base_oven = calculate_average_oven_quality() / 4;
-  // Arithmetic right shift preserves sign for negative contamination
-  int base_contamination = static_cast<int>(sabotage_contamination_) / 4;
+  int base_contamination = sabotage_contamination_ / 4;
 
-  pizza_quality_factors_.ingredients = static_cast<int8_t>(base_stock);
-  pizza_quality_factors_.chef = static_cast<int8_t>(base_cook);
-  pizza_quality_factors_.oven = static_cast<int8_t>(base_oven);
-  pizza_quality_factors_.contamination =
-      static_cast<int8_t>(base_contamination);
+  pizza_quality_factors_.ingredients = base_stock;
+  pizza_quality_factors_.chef = base_cook;
+  pizza_quality_factors_.oven = base_oven;
+  pizza_quality_factors_.contamination = base_contamination;
 
   int base_sum = base_stock + base_cook + base_oven + base_contamination;
 
@@ -1244,8 +1311,7 @@ void Restaurant::calculate_pizza_quality_rating(
     return;
   }
 
-  pizza_quality_rating_ =
-      static_cast<uint8_t>(std::clamp(total_quality / pizza_count, 0, 100));
+  pizza_quality_rating_ = std::clamp(total_quality / pizza_count, 0, 100);
 }
 
 void Restaurant::update_star_rating() {
@@ -1355,68 +1421,20 @@ Popularity Restaurant::calculate_furniture_appeal_popularity() const {
   return economy_.calculate_furniture_appeal_popularity(*this);
 }
 
-float Restaurant::calculate_time_of_day_multiplier(
-    const core::time::TimeOfDay& current_time) const {
-  // Demand curve with lunch (11:30-13:30) and dinner (18:00-21:00) peaks
-
-  int hour = current_time.hour;
-  int minute = current_time.minute;
-  float time_hours = hour + (minute / 60.0f);
-
-  if (time_hours < 10.0f) {
-    return 0.1f;
-  }
-  if (time_hours < 11.5f) {
-    float t = (time_hours - 10.0f) / 1.5f; // 0.0 to 1.0
-    return 0.3f + (t * 0.5f);              // 0.3 to 0.8
-  }
-  if (time_hours < 13.5f) {
-    float t = (time_hours - 11.5f) / 2.0f; // 0.0 to 1.0
-    float peak_factor =
-        1.0f - std::abs((t - 0.5f) * 2.0f); // 0.0 at edges, 1.0 at center
-    return 1.5f + (peak_factor * 0.5f);     // 1.5 to 2.0
-  }
-  if (time_hours < 17.0f) {
-    return 0.6f;
-  }
-  if (time_hours < 18.5f) {
-    float t = (time_hours - 17.0f) / 1.5f; // 0.0 to 1.0
-    return 0.7f + (t * 0.5f);              // 0.7 to 1.2
-  }
-  if (time_hours < 20.5f) {
-    float t = (time_hours - 18.5f) / 2.0f; // 0.0 to 1.0
-    float peak_factor =
-        1.0f - std::abs((t - 0.5f) * 2.0f); // 0.0 at edges, 1.0 at center
-    return 1.8f + (peak_factor * 0.2f);     // 1.8 to 2.0
-  }
-  if (time_hours < 22.0f) {
-    float t = (time_hours - 20.5f) / 1.5f; // 0.0 to 1.0
-    return 1.0f - (t * 0.6f);              // 1.0 to 0.4
-  }
-  return 0.15f;
-}
-
-int8_t Restaurant::calculate_trend_appeal(const City& city) const {
-  int16_t total = 0;
+int Restaurant::calculate_trend_appeal(const City& city) const {
+  int total = 0;
   const auto& trends = city.ingredient_trends();
 
   for (int category = 0; category < NUM_INGREDIENT_CATEGORIES; category++) {
-    uint8_t ingredient_id = top_ingredients_[category];
-
-    // TODO: Maybe change to optional?
-    if (ingredient_id == 0xFF) {
+    auto ingredient_id = top_ingredients_[category];
+    if (!ingredient_id) {
       continue;
     }
 
-    if (ingredient_id >= trends.size()) {
-      continue;
-    }
-
-    total += trends[ingredient_id];
+    total += trends[*ingredient_id];
   }
 
-  return static_cast<int8_t>(
-      std::clamp(total, static_cast<int16_t>(-125), static_cast<int16_t>(125)));
+  return std::clamp(total, -125, 125);
 }
 
 void Restaurant::start_of_day(GameState& game_state) {
@@ -1429,13 +1447,11 @@ void Restaurant::start_of_day(GameState& game_state) {
 
   if (auto* player = game_state.active_player()) {
     if (player->is_human_controlled()) {
-      if (property_ && property_->city()) {
-        const auto& city = *property_->city();
-        const auto& district = property_->district();
+      const auto& city = property_.city();
+      const auto& district = property_.district();
 
-        calculate_popularity(*player, city, district);
-        economy_.total_popularity(static_cast<int16_t>(popularity_.total()));
-      }
+      calculate_popularity(*player, city, district);
+      economy_.total_popularity(static_cast<int16_t>(popularity_.total()));
 
       update_demographics(player->recipes());
     }
@@ -1446,10 +1462,10 @@ void Restaurant::start_of_day(GameState& game_state) {
     }
   }
 
-  if (wants_open_ && forced_days_remaining_ == 0 && property_) {
+  if (wants_open_ && forced_days_remaining_ == 0) {
     int total_customers = 0;
     for (auto demo : ALL_CONSUMER_TYPES) {
-      total_customers += property_->potential_customers()[demo];
+      total_customers += property_.potential_customers()[demo];
     }
 
     Logger::info(
@@ -1495,11 +1511,8 @@ void Restaurant::calculate_daily_pizza_sales_distribution(
     return;
   }
 
-  if (!property_ || !property_->city()) {
-    return;
-  }
-  const City& city = *property_->city();
-  const District& district = property_->district();
+  const City& city = property_.city();
+  const District& district = property_.district();
 
   int total_serving_quality = 0;
   int waiter_count = 0;
@@ -1560,12 +1573,11 @@ void Restaurant::calculate_daily_pizza_sales_distribution(
 
     int serving_bonus = avg_serving_quality >> 3;
     int menu_stat = avg_top5 + serving_bonus;
-    economy_.menu_factor()[demo_type] =
-        static_cast<uint8_t>(std::clamp(menu_stat, 1, 255));
+    economy_.menu_factor()[demo_type] = std::clamp(menu_stat, 1, 255);
 
     // Distribute customers proportionally by pizza demand
     if (total_demand > 0.0f) {
-      float customer_count =
+      auto customer_count =
           static_cast<float>(economy_.customer_counts()[demo_type]);
 
       for (int pizza_idx = 0; pizza_idx < pizza_count; pizza_idx++) {
@@ -1603,11 +1615,11 @@ void Restaurant::calculate_daily_pizza_sales_distribution(
                 economy_.menu_factor()[ConsumerType::SeniorCitizens]);
 }
 
-void Restaurant::calculate_popularity(const Player& player, const City& city,
+void Restaurant::calculate_popularity(const Player& player,
+                                      const City& /* city */,
                                       const District& district) {
   auto service_data = calculate_service_time_data();
-  service_time_minutes_ =
-      static_cast<uint8_t>(service_data.service_time_minutes);
+  service_time_minutes_ = service_data.service_time_minutes;
 
   popularity_ = RestaurantPopularity{};
   int pizzas_on_menu = static_cast<int>(menu_.entries().size());

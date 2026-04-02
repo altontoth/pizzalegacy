@@ -33,8 +33,10 @@ struct CharacterFileDOS {
   char first_name[16];
   char last_name[16];
 
-  uint8_t unknown1[11];
-  uint8_t pregancy_possible;
+  uint8_t unknown1_a[9];      // +0x1F .. +0x27
+  uint8_t field_28;           // +0x28
+  uint8_t unknown1_b[1];      // +0x29
+  uint8_t pregnancy_possible; // 0x4C / 0x2A
   uint8_t unknown2[22];
 
   // Starting money (10 bytes read; first 8 bytes interpreted as a double).
@@ -49,22 +51,22 @@ struct CharacterFileDOS {
   uint8_t unknown6;
   uint8_t unknown7;
 
-  uint8_t age;
-  uint8_t popularity;
-  uint8_t health;
-  uint8_t energy;
-  uint8_t intelligence;
-  uint8_t charisma;
-  uint8_t dexterity;
-  uint8_t personality;
-  uint8_t courage;
-  uint8_t experience;
+  uint8_t age;          // 0x52 / 0x30
+  uint8_t popularity;   // 0x53 / 0x31
+  uint8_t health;       // 0x54 / 0x32
+  uint8_t energy;       // 0x55 / 0x33
+  uint8_t intelligence; // 0x56 / 0x34
+  uint8_t charisma;     // 0x57 / 0x35
+  uint8_t dexterity;    // 0x58 / 0x36
+  uint8_t personality;  // 0x59 / 0x37
+  uint8_t courage;      // 0x5A / 0x38
+  uint8_t experience;   // 0x5B / 0x39
   // Trustworthiness is reliability, not honesty (that's a hidden stat)
-  uint8_t trustworthiness;
-  uint8_t honesty;
-  uint8_t cooking;
-  uint8_t serving;
-  uint8_t management;
+  uint8_t trustworthiness; // 0x5C / 0x3A
+  uint8_t honesty;         // 0x5D / 0x3B
+  uint8_t cooking;         // 0x5E / 0x3C
+  uint8_t serving;         // 0x5F / 0x3D
+  uint8_t management;      // 0x60 / 0x3E
 
   // Skip 2 unknown bytes. Fun fact, in the Amiga code we find references to
   // skills like 'selling', 'driving', 'IT skills' and 'irritability', could be
@@ -94,8 +96,10 @@ struct CharacterFileAmiga {
   char first_name[16];
   char last_name[16];
 
-  uint8_t unknown1[11];
-  uint8_t pregancy_possible;
+  uint8_t unknown1_a[9];
+  uint8_t field_28;
+  uint8_t unknown1_b[1];
+  uint8_t pregnancy_possible;
   uint8_t unknown2[22];
 
   // Starting money (10 bytes read; first 8 bytes interpreted as a double).
@@ -172,10 +176,9 @@ static void populate_character_data(core::character::CharacterData* c,
   c->management = cf.management;
   c->motivation = cf.motivation;
 
-  Logger::debug(
-      "{} {} has piz/day {} pregnancy: {} and unknowns: {}, {}, {}, {}, {}",
-      cf.first_name, cf.last_name, cf.pizzas_per_day, cf.pregancy_possible,
-      cf.unknown3, cf.unknown4, cf.unknown5, cf.unknown6, cf.unknown6);
+  Logger::debug("{} {} has piz/day {} pregnancy: {} and field 28: {}",
+                cf.first_name, cf.last_name, cf.pizzas_per_day,
+                cf.pregnancy_possible, cf.field_28);
 }
 
 core::character::CharacterData*

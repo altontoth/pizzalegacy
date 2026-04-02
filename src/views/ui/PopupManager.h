@@ -6,9 +6,10 @@
 
 #pragma once
 
+#include <functional>
 #include <memory>
 #include <optional>
-#include <vector>
+#include <queue>
 #include "core/util/GameContext.h"
 #include "engine/DebugLabel.h"
 #include "engine/DisplayConstants.h"
@@ -27,12 +28,22 @@ class PopupManager : public Renderable,
 public:
   PopupManager(GameContext& gc);
 
+  // Show a popup. If one is already active, queues it to appear after the
+  // current one (and any others already queued) are dismissed.
   template <class Popup, class... Args> void create(Args&&... args) {
     static_assert(std::is_base_of_v<BasePopup, Popup>);
-    auto popup = std::make_unique<Popup>(context_, std::forward<Args>(args)...);
-    ViewPoint org = pending_origin_.value_or(center_origin(*popup));
-    popups_.emplace_back(PopupEntry{std::move(popup), org});
-    pending_origin_.reset();
+    if (active_popup_) {
+      pending_creates_.push(
+          [this, t = std::make_tuple(std::forward<Args>(args)...)]() mutable {
+            std::apply(
+                [this](auto&&... a) {
+                  this->template do_create<Popup>(std::move(a)...);
+                },
+                std::move(t));
+          });
+      return;
+    }
+    do_create<Popup>(std::forward<Args>(args)...);
   }
 
   void origin(ViewPoint p);
@@ -49,10 +60,12 @@ public:
   void palette_handle(PaletteHandle p);
 
 private:
-  struct PopupEntry {
-    std::unique_ptr<BasePopup> popup;
-    ViewPoint origin;
-  };
+  template <class Popup, class... Args> void do_create(Args&&... args) {
+    active_popup_ =
+        std::make_unique<Popup>(context_, std::forward<Args>(args)...);
+    active_origin_ = pending_origin_.value_or(center_origin(*active_popup_));
+    pending_origin_.reset();
+  }
 
   static ViewPoint center_origin(const BasePopup& popup) {
     auto sz = popup.popup_size();
@@ -66,7 +79,9 @@ private:
 
   const GameContext& context_;
   std::optional<ViewPoint> pending_origin_;
-  std::vector<PopupEntry> popups_;
+  std::unique_ptr<BasePopup> active_popup_;
+  ViewPoint active_origin_;
+  std::queue<std::function<void()>> pending_creates_;
   PaletteHandle palette_{0};
   views::ui::InteractionLayers interactions_;
 };

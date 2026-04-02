@@ -12,8 +12,24 @@ Staff::Staff(core::character::JobRole job_role,
              core::character::Character character)
     : job_role_(job_role), character_(character) {}
 
-int Staff::time_until_back() const { return 0; }
-bool Staff::is_away() const { return false; }
+int Staff::time_until_back() const { return days_away_remaining_; }
+
+bool Staff::is_away() const {
+  return days_away_remaining_ > 0 || current_training_.has_value();
+}
+
+void Staff::days_away(int days) { days_away_remaining_ = days; }
+
+void Staff::tick_days_away() {
+  if (days_away_remaining_ <= 0) {
+    return;
+  }
+  --days_away_remaining_;
+  if (days_away_remaining_ == 0) {
+    is_sick_ = false;
+    is_pregnant_ = false;
+  }
+}
 void Staff::send_on_training(Training& training) {
   current_training_ = training;
 }

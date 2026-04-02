@@ -267,9 +267,7 @@ void RestaurantMenu::render_customer_ratings_view(const RenderContext& ctx) {
   // Ensure demographics are calculated for the property
   // This populates potential_customers_ which is needed for accurate
   // calculations
-  if (restaurant_->property()) {
-    restaurant_->property()->calculate_demographics(restaurant_);
-  }
+  restaurant_->property().calculate_demographics(restaurant_);
 
   // Get the menu popularity from the restaurant
   const auto& recipes = state_.active_player()->recipes();

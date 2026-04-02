@@ -122,8 +122,6 @@ CityView::CityView(GameContext& context, GameState& state, core::CityId id)
   // restore_view_state, so the camera is properly configured even on first load
   apply_zoom_profile(zoom_);
 
-  restore_view_state(state_.city_view_view_state());
-
   create_buttons();
 
   constexpr int tab_width = 104;
@@ -134,7 +132,8 @@ CityView::CityView(GameContext& context, GameState& state, core::CityId id)
                      ViewRect{0, 0, tab_width, tab_height}, 1);
   tabs_.emplace_back(CityViewTabType::MAP,
                      ViewRect{0, 0, tab_width, tab_height}, 2);
-  update_tab_positions();
+
+  restore_view_state(state_.city_view_view_state());
 
   create_dropdowns();
 
@@ -148,9 +147,9 @@ CityView::CityView(GameContext& context, GameState& state, core::CityId id)
   for (int i = 0; i < 4; ++i) {
     const auto& rgb = SEASON_COLORS[season_idx][i];
     season_palette_[SEASON_INDICES[i]] = {
-        static_cast<uint8_t>(rgb[0] << 2),
-        static_cast<uint8_t>(rgb[1] << 2),
-        static_cast<uint8_t>(rgb[2] << 2),
+        .r = static_cast<uint8_t>(rgb[0] << 2),
+        .g = static_cast<uint8_t>(rgb[1] << 2),
+        .b = static_cast<uint8_t>(rgb[2] << 2),
     };
   }
 
@@ -1010,6 +1009,19 @@ void CityView::update_tab_positions() {
   mark_dirty();
 }
 
+void CityView::set_active_tab(CityViewTabType type) {
+  auto it =
+      std::find_if(tabs_.begin(), tabs_.end(),
+                   [type](const CityViewTab& t) { return t.type() == type; });
+  if (it != tabs_.end()) {
+    CityViewTab tab = *it;
+    tabs_.erase(it);
+    tabs_.push_back(tab);
+    active_tab_type_ = type;
+    update_tab_positions();
+  }
+}
+
 void CityView::render_tabs(const RenderContext& ctx) {
   show_tabs(ctx);
 
@@ -1049,18 +1061,7 @@ void CityView::render_tabs(const RenderContext& ctx) {
           case views::ui::InteractionEvent::Type::ButtonDown:
             if (ev.button == views::ui::MouseButton::Left) {
               if (ttype != active_tab_type_) {
-                // move clicked tab to front and set active
-                auto it = std::find_if(tabs_.begin(), tabs_.end(),
-                                       [ttype](const CityViewTab& e) {
-                                         return e.type() == ttype;
-                                       });
-                if (it != tabs_.end()) {
-                  CityViewTab clicked = *it; // copy
-                  active_tab_type_ = it->type();
-                  tabs_.erase(it);
-                  tabs_.push_back(clicked); // becomes front-most
-                  update_tab_positions();
-                }
+                set_active_tab(ttype);
               }
               mark_dirty();
             }
@@ -1191,8 +1192,11 @@ void CityView::create_buttons() {
                            });
 
   input_panel_->add_button(Icon::SUNSET, ButtonType::Square,
-                           ButtonPosition::BottomRight, "End turn",
-                           [this] { state_.request_end_of_turn(); });
+                           ButtonPosition::BottomRight, "End turn", [this] {
+                             store_state_in_city(
+                                 CityViewReentryMode::RESTORE_ALL);
+                             state_.request_end_of_turn();
+                           });
 }
 
 void CityView::create_dropdowns() {
@@ -1606,7 +1610,7 @@ CityViewMapState CityView::capture_view_state() const {
 void CityView::restore_view_state(const CityViewMapState& state) {
   if (state.reentry_mode == CityViewReentryMode::RESTORE_ALL) {
     zoom_ = state.zoom;
-    active_tab_type_ = state.active_tab;
+    set_active_tab(state.active_tab);
 
     // Apply zoom profile first to configure camera geometry
     apply_zoom_profile(zoom_);

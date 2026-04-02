@@ -38,15 +38,12 @@ void ControlMap::build(const GameState& game_state, const City& city) {
     }
 
     for (auto* rest : game_state.restaurants_for(player->id())) {
-      if (!rest->property()) {
-        continue;
-      }
       // Only consider restaurants in this city
-      if (rest->property()->city() != &city) {
+      if (rest->property().city().id() != city.id()) {
         continue;
       }
 
-      int idx = rest->property()->index();
+      int idx = rest->property().index();
       int tile_x = City::index_to_x(idx);
       int tile_y = City::index_to_y(idx);
       int range = rest->economy().range_tiles() + 1;

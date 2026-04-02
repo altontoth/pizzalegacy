@@ -22,8 +22,10 @@ constexpr int header_text_color = 240;
 constexpr int header_secondary_color = 11;
 
 WeeksTakings::WeeksTakings(GameContext& context, GameState& state,
-                           core::RestaurantId restaurant_id)
-    : MainPanelView(context, state), restaurant_id_(restaurant_id) {
+                           core::RestaurantId restaurant_id,
+                           bool end_of_week_mode)
+    : MainPanelView(context, state), restaurant_id_(restaurant_id),
+      end_of_week_mode_(end_of_week_mode) {
   restaurant_ = state_.restaurant(restaurant_id_);
   create_buttons();
 }
@@ -107,6 +109,7 @@ WeeksTakings::WeeklyTakings WeeksTakings::aggregate_weekly_takings() const {
     for (const auto& [recipe_id, sales] : day.pizza_sales) {
       auto& agg = aggregated[recipe_id];
       agg.pizza_id = recipe_id;
+      agg.count_ordered += sales.count_ordered;
       agg.count_sold += sales.count_sold;
       agg.revenue = agg.revenue + sales.revenue;
       agg.ingredient_cost = agg.ingredient_cost + sales.ingredient_cost;
@@ -235,7 +238,7 @@ void WeeksTakings::render_pizza_sales_page(const RenderContext& ctx,
     // Get pizza name from menu
     std::string pizza_name = "Unknown";
     if (restaurant_) {
-      auto owner_id = restaurant_->property()->owner_or_tenant();
+      auto owner_id = restaurant_->property().owner_or_tenant();
       auto* owner =
           owner_id ? state_.player(*owner_id) : state_.active_player();
       const auto* recipe = owner ? owner->recipes().find(recipe_id) : nullptr;
@@ -485,6 +488,8 @@ void WeeksTakings::render_expenses_page(const RenderContext& ctx,
 }
 
 void WeeksTakings::dismiss() {
-  state_.show_staff_invoice_popup(restaurant_id_);
+  if (end_of_week_mode_) {
+    state_.show_staff_invoice_popup(restaurant_id_);
+  }
   state_.ui().pop();
 }

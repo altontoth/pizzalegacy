@@ -7,6 +7,7 @@
 #pragma once
 
 #include <memory>
+#include <vector>
 
 #include "core/character/Staff.h"
 #include "core/item/Item.h"
@@ -15,6 +16,7 @@
 #include "core/restaurant/RestaurantInventory.h"
 #include "core/restaurant/RestaurantLayout.h"
 #include "core/restaurant/RestaurantStats.h"
+#include "core/restaurant/StaffEventData.h"
 #include "core/time/TimeOfDay.h"
 
 namespace core::food {
@@ -119,10 +121,10 @@ struct FurnitureStats {
 };
 
 struct PizzaQualityFactors {
-  int8_t ingredients{0};   // stock_quality / 4
-  int8_t chef{0};          // avg_cooking_skill / 4
-  int8_t oven{0};          // avg_oven_quality / 4
-  int8_t contamination{0}; // sabotage_contamination / 4 (negative = sabotaged)
+  int ingredients{0};
+  int chef{0};
+  int oven{0};
+  int contamination{0};
 
   std::array<int, 4> as_array() const {
     return {ingredients, chef, oven, contamination};
@@ -139,15 +141,9 @@ struct RestaurantPopularity {
   int DemandFulfillment = 0;
   int UnexpectedEvents = 0;
 
-  std::array<int8_t, 8> as_array() const {
-    return {static_cast<int8_t>(WaitingTime),
-            static_cast<int8_t>(PizzaPrices),
-            static_cast<int8_t>(RecipesOnMenu),
-            static_cast<int8_t>(Advertising),
-            static_cast<int8_t>(StarRating),
-            static_cast<int8_t>(Furnishing),
-            static_cast<int8_t>(DemandFulfillment),
-            static_cast<int8_t>(UnexpectedEvents)};
+  std::array<int, 8> as_array() const {
+    return {WaitingTime, PizzaPrices, RecipesOnMenu,     Advertising,
+            StarRating,  Furnishing,  DemandFulfillment, UnexpectedEvents};
   }
 
   int total() const {
@@ -158,8 +154,8 @@ struct RestaurantPopularity {
 
 class Restaurant {
 public:
-  Restaurant(Property* property, Size kitchen_size, core::RestaurantId id,
-             const std::string& name);
+  Restaurant(Property& property, Size kitchen_size, core::RestaurantId id,
+             std::string name);
   ~Restaurant();
   core::RestaurantId id() const { return restaurant_id_; }
   // Derived open state: true when player wants open, not force-closed,
@@ -200,7 +196,8 @@ public:
   const std::string& name() const;
   core::restaurant::Menu& menu() { return menu_; }
   const core::restaurant::Menu& menu() const { return menu_; }
-  Property* property() const { return property_; }
+  Property& property() { return property_; }
+  const Property& property() const { return property_; }
   int range() const { return economy_.range_tiles(); }
   int range_raw() const { return economy_.range_raw(); }
   void range_raw(int raw) { economy_.range_raw(raw); }
@@ -208,13 +205,13 @@ public:
   int total_popularity() const;
 
   // Jukebox/TV settings (0 = none, 1-6 = demographic targeting)
-  uint8_t jukebox_music() const { return economy_.jukebox_music(); }
-  void jukebox_music(uint8_t music) { economy_.jukebox_music(music); }
-  uint8_t tv_channel() const { return economy_.tv_channel(); }
-  void tv_channel(uint8_t channel) { economy_.tv_channel(channel); }
+  int jukebox_music() const { return economy_.jukebox_music(); }
+  void jukebox_music(int music) { economy_.jukebox_music(music); }
+  int tv_channel() const { return economy_.tv_channel(); }
+  void tv_channel(int channel) { economy_.tv_channel(channel); }
 
-  uint8_t pizza_quality_rating() const { return pizza_quality_rating_; }
-  void set_pizza_quality_rating(uint8_t val) { pizza_quality_rating_ = val; }
+  int pizza_quality_rating() const { return pizza_quality_rating_; }
+  void set_pizza_quality_rating(int val) { pizza_quality_rating_ = val; }
   const PizzaQualityFactors& pizza_quality_factors() const {
     return pizza_quality_factors_;
   }
@@ -225,20 +222,20 @@ public:
   // Sabotage: apply contamination + reputation damage for a sabotage item.
   void apply_sabotage(core::item::Item item);
 
-  int8_t sabotage_contamination() const { return sabotage_contamination_; }
-  void set_sabotage_contamination(int8_t val) { sabotage_contamination_ = val; }
+  int sabotage_contamination() const { return sabotage_contamination_; }
+  void set_sabotage_contamination(int val) { sabotage_contamination_ = val; }
 
   // Direct access to reputation damage slots for save/load
-  std::array<int8_t, 4>& event_reputation_penalties() {
+  std::array<int, 4>& event_reputation_penalties() {
     return event_reputation_penalties_;
   }
-  const std::array<int8_t, 4>& event_reputation_penalties() const {
+  const std::array<int, 4>& event_reputation_penalties() const {
     return event_reputation_penalties_;
   }
-  std::array<int8_t, 4>& event_reputation_recovery() {
+  std::array<int, 4>& event_reputation_recovery() {
     return event_reputation_recovery_;
   }
-  const std::array<int8_t, 4>& event_reputation_recovery() const {
+  const std::array<int, 4>& event_reputation_recovery() const {
     return event_reputation_recovery_;
   }
 
@@ -269,11 +266,11 @@ public:
   void process_daily_reputation_deltas();
 
   // Returns the last non-zero value from the 4 event penalty slots
-  int8_t get_active_reputation_penalty() const;
+  int get_active_reputation_penalty() const;
 
   // Add a temporary reputation penalty that heals over time.
   // Finds first empty slot, or overwrites slot 0 if all full.
-  void add_reputation_damage(int8_t penalty, int8_t recovery_per_day);
+  void add_reputation_damage(int penalty, int recovery_per_day);
 
   int calculate_weighted_average_oven_time() const;
 
@@ -334,21 +331,22 @@ public:
 
   // Sets AI tier/capacity from the player's character stats
   void init_ai_economy(const class Player& player);
-  uint8_t ai_tier() const { return ai_tier_; }
-  uint8_t ai_capacity_target() const { return ai_capacity_target_; }
-  int16_t ai_profit_days() const { return ai_profit_days_; }
+  int ai_tier() const { return ai_tier_; }
+  int ai_capacity_target() const { return ai_capacity_target_; }
+  int ai_profit_days() const { return ai_profit_days_; }
   void ai_increment_profit_days() { ai_profit_days_++; }
 
   void start_of_day(class GameState& game_state);
   void end_of_day(class GameState& game_state);
+  // Returns (and clears) player-facing staff event dialogs queued during
+  // end_of_day.
+  std::vector<core::restaurant::StaffEventData> take_pending_staff_events() {
+    return std::move(pending_staff_events_);
+  }
   void eod_batch_order_fulfillment(class GameState& game_state);
   void calculate_daily_pizza_sales_distribution(GameState& game_state);
 
   int get_predicted_daily_orders(core::RecipeId recipe_id) const;
-
-  // 0.0-2.0 based on current time block (lunch/dinner peaks)
-  float calculate_time_of_day_multiplier(
-      const core::time::TimeOfDay& current_time) const;
 
   // 0-100, derived from menu/staff/ingredients. Drives star ratings.
   void calculate_pizza_quality_rating(const core::food::PlayerRecipes& recipes);
@@ -358,11 +356,28 @@ public:
 
   static constexpr int NUM_INGREDIENT_CATEGORIES = 4;
 
+  // Manager shopping: preferred supplier ID per ingredient category.
+  // 0xFF = none set (manager picks first available supplier).
+  std::array<std::optional<int>, NUM_INGREDIENT_CATEGORIES>&
+  preferred_suppliers() {
+    return preferred_suppliers_;
+  }
+  const std::array<std::optional<int>, NUM_INGREDIENT_CATEGORIES>&
+  preferred_suppliers() const {
+    return preferred_suppliers_;
+  }
+
+  // Manager staff shortage augmentation: tracks which role the manager
+  // helped with yesterday (0 = none, 1 = cook, 2 = waiter).
+  // TODO: Change to an enum
+  int manager_augmenting() const { return manager_augmenting_; }
+  void set_manager_augmenting(int role) { manager_augmenting_ = role; }
+
   auto& top_ingredients() { return top_ingredients_; }
   const auto& top_ingredients() const { return top_ingredients_; }
 
   // Trend appeal bonus (-125 to +125) from top 4 trending ingredients
-  int8_t calculate_trend_appeal(const class City& city) const;
+  int calculate_trend_appeal(const class City& city) const;
 
   // Calculates all 8 popularity components. Component 7 (UnexpectedEvents)
   // flows into total_popularity() => competitive_strength => customer demand.
@@ -373,8 +388,8 @@ public:
   // changes (e.g. forced closure) are captured before daily decay.
   int sync_reputation_and_total_popularity();
 
-  uint8_t service_time_minutes() const { return service_time_minutes_; }
-  uint8_t fulfillment_rate() const { return fulfillment_rate_; }
+  int service_time_minutes() const { return service_time_minutes_; }
+  int fulfillment_rate() const { return fulfillment_rate_; }
   ManagerSettings& manager_settings() { return manager_settings_; };
 
   // Mafia protection racket timer.
@@ -392,7 +407,7 @@ private:
   int calculate_average_oven_quality() const;
   int calculate_ingredient_quality_for_pizza(
       const core::food::Pizza& pizza) const;
-  Property* property_{nullptr};
+  Property& property_;
   bool wants_open_{false};
   bool ever_opened_{false};
   Size kitchen_size_;
@@ -401,7 +416,7 @@ private:
   std::unique_ptr<RestaurantLayout> layout_;
   // Mayor awards stars when pizza_quality > star_rating * 16 + 24,
   // removes one when pizza_quality < star_rating * 16 + 8.
-  uint8_t star_rating_{0};
+  int star_rating_{0};
   std::array<std::optional<Staff>, MAXIMUM_STAFF_PER_CATEGORY> cooks_;
   std::array<std::optional<Staff>, MAXIMUM_STAFF_PER_CATEGORY> waiters_;
   std::optional<Staff> manager_;
@@ -413,30 +428,30 @@ private:
   core::time::TimeOfDay closing_time_{21, 0};
   ManagerSettings manager_settings_;
   std::optional<int> protection_timer_;
+  std::vector<core::restaurant::StaffEventData> pending_staff_events_;
 
-  uint8_t pizza_quality_rating_{0};
+  int pizza_quality_rating_{0};
   PizzaQualityFactors pizza_quality_factors_{};
 
   // Sabotage contamination level, clamped to [-120, +120].
   // Divided by 4 to produce the contamination quality factor.
   // Original game bug: never decays. We fix this when fix_legacy_bugs is on.
-  int8_t sabotage_contamination_{0};
+  int sabotage_contamination_{0};
 
   // Top ingredient per category (veg, meat, fruit, cheese)
-  // 0xFF means no ingredient in that category
-  std::array<uint8_t, NUM_INGREDIENT_CATEGORIES> top_ingredients_{0xFF, 0xFF,
-                                                                  0xFF, 0xFF};
+  std::array<std::optional<int>, NUM_INGREDIENT_CATEGORIES> top_ingredients_{
+      std::nullopt, std::nullopt, std::nullopt, std::nullopt};
 
   // 8 popularity component scores; total feeds into economy_ for demand
   RestaurantPopularity popularity_{};
 
-  uint8_t service_time_minutes_{0}; // max(chef, oven) + waiter
-  uint8_t fulfillment_rate_{0};     // can-make vs demanded, 0-100%
+  int service_time_minutes_{0}; // max(chef, oven) + waiter
+  int fulfillment_rate_{0};     // can-make vs demanded, 0-100%
 
   // Temporary reputation penalties from events (sabotage, mistakes, etc.)
   // that decay toward 0 each day at the corresponding recovery rate.
-  std::array<int8_t, 4> event_reputation_penalties_{};
-  std::array<int8_t, 4> event_reputation_recovery_{};
+  std::array<int, 4> event_reputation_penalties_{};
+  std::array<int, 4> event_reputation_recovery_{};
 
   // Forecasted orders per recipe, calculated at day start
   std::unordered_map<core::RecipeId, int, core::RecipeId::Hasher>
@@ -446,8 +461,18 @@ private:
   // Decremented each start_of_day; at 0 the restaurant is eligible to open.
   int forced_days_remaining_{0};
 
+  // Manager preferred supplier ID per ingredient category (0=veg,1=meat,
+  // 2=fruit, 3=cheese). 0xFF means no preference - use first available.
+  std::array<std::optional<int>, NUM_INGREDIENT_CATEGORIES>
+      preferred_suppliers_{std::nullopt, std::nullopt, std::nullopt,
+                           std::nullopt};
+
+  // Manager augmentation flag: which role the manager helped with today
+  // (0 = none, 1 = cook, 2 = waiter). Read and cleared next morning.
+  int manager_augmenting_{0};
+
   // 0 = human, 1-4 = AI tier level
-  uint8_t ai_tier_{0};
-  uint8_t ai_capacity_target_{0};
-  int16_t ai_profit_days_{0};
+  int ai_tier_{0};
+  int ai_capacity_target_{0};
+  int ai_profit_days_{0};
 };

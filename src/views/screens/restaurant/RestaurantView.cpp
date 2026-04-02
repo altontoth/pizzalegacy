@@ -138,7 +138,6 @@ RestaurantView::RestaurantView(GameContext& context, GameState& state,
                    "positioned. There are some customers waiting impatiently "
                    "outside!",
         .scope = StatusScope::Restaurant,
-        .type = TransientType::Ephemeral,
         .ttl = std::nullopt,
         .coalesce_key = "furniture_reposition_close",
     });
@@ -213,9 +212,7 @@ bool RestaurantView::on_action(const input::ActionEvent& ev) {
   }
 
   const auto current_id = restaurant_->id();
-  const auto owner_pid =
-      restaurant_->property()
-          ->owner_or_tenant(); // or however you obtain the player
+  const auto owner_pid = restaurant_->property().owner_or_tenant();
   if (!owner_pid) {
     fatal("My current restaurant is not owned by me?!");
   }
@@ -223,9 +220,9 @@ bool RestaurantView::on_action(const input::ActionEvent& ev) {
   auto push_view = [&](core::RestaurantId rid) {
     // Update the stored city view scroll to center on the new restaurant
     auto* rest = state_.restaurant(rid);
-    if (rest && rest->property()) {
+    if (rest) {
       auto cvs = state_.city_view_view_state();
-      cvs.center_on_index(rest->property()->index());
+      cvs.center_on_index(rest->property().index());
       state_.city_view_view_state(cvs);
     }
 
@@ -421,7 +418,7 @@ void RestaurantView::register_interactions_viewport() {
             // Only update cursor if it's visible (mouse is in viewport)
             if (show_furniture_cursor_) {
               context_.cursor->custom_cursor(
-                  current_bob_renderer().image(*on_cursor_), false);
+                  bob_renderer_for(*on_cursor_).image(*on_cursor_), false);
             }
             mark_dirty();
           }
@@ -488,7 +485,7 @@ void RestaurantView::register_interactions_viewport() {
             // Mouse over valid area and not clamped - show custom cursor
             if (!show_furniture_cursor_) {
               context_.cursor->custom_cursor(
-                  current_bob_renderer().image(*on_cursor_), false);
+                  bob_renderer_for(*on_cursor_).image(*on_cursor_), false);
               show_furniture_cursor_ = true;
             }
           }
@@ -552,12 +549,14 @@ void RestaurantView::toggle_kitchen_view() {
 
   // Set alignment based on view:
   // - Restaurant view: bottom-left (Start, End) to show entrance at bottom
-  // - Kitchen view: top-right (End, Start) to show dividing wall on right
+  // - Kitchen view: bottom-right (End, End) matching original right+bottom
+  // align
   if (kitchen_view_) {
-    camera_.align(Camera::Align::End, Camera::Align::Start);
-    // Scroll to show right side of kitchen (where the door is)
+    camera_.align(Camera::Align::End, Camera::Align::End);
+    // Scroll to show bottom-right of kitchen (initial view in original)
     const int init_x = std::max(0, background_width_ - MAIN_PANEL_WIDTH);
-    camera_.scroll(WorldPoint{init_x, 0});
+    const int init_y = std::max(0, background_height_ - MAIN_PANEL_HEIGHT);
+    camera_.scroll(WorldPoint{init_x, init_y});
   }
   else {
     camera_.align(Camera::Align::Start, Camera::Align::End);
@@ -623,20 +622,19 @@ void RestaurantView::handle_furniture_click(const PlacedFurniture* pf) {
     const auto ftype = pf->furniture()->type();
     if (ftype == FurnitureType::JUKEBOX) {
       context_.popup->origin({66, 72});
-      context_.popup->create<JukeboxPopup>(*restaurant_);
+      context_.popup->create<JukeboxPopup>(restaurant_);
     }
     else if (ftype == FurnitureType::TV_AERIAL ||
              ftype == FurnitureType::TV_CABLE ||
              ftype == FurnitureType::TV_SATELLITE) {
       context_.popup->origin({66, 72});
-      context_.popup->create<TvPopup>(*restaurant_);
+      context_.popup->create<TvPopup>(restaurant_);
     }
     else {
       StatusMsg msg{
           .payload =
               "You can rearrange furniture only when the restaurant is closed!",
           .scope = StatusScope::Restaurant,
-          .type = TransientType::Ephemeral,
           .ttl = std::nullopt,
           .coalesce_key = "furniture_reposition_close",
       };
@@ -765,14 +763,13 @@ inline ViewRect rect_centered_at(Size sz, ViewPoint c) {
 // table.
 bool RestaurantView::decor_conflicts_on_table(
     const WorldRect& candidate_map, const WorldRect& table_map_rect) const {
-  const auto& r = current_bob_renderer();
   for (const auto& up : current_furniture_list()) {
     const auto* of = up->furniture();
     if (of->category() != FurnitureCategory::DECOR ||
         of->placement_layer() != PlacementLayer::Top) {
       continue;
     }
-    const WorldRect other_map = rect_of(*up, r);
+    const WorldRect other_map = rect_of(*up, bob_renderer_for(*up));
     if (!other_map.intersects(table_map_rect)) {
       continue; // decor not on this table
     }
@@ -784,7 +781,6 @@ bool RestaurantView::decor_conflicts_on_table(
 }
 
 void RestaurantView::render_placement_layer(PlacementLayer placement) {
-  const auto& r = current_bob_renderer();
   const auto& pf_list = current_furniture_list();
   const Point wall_offsets =
       Point{RESTAURANT_TILE_WIDTH, RESTAURANT_TILE_HEIGHT};
@@ -799,6 +795,7 @@ void RestaurantView::render_placement_layer(PlacementLayer placement) {
       continue;
     }
 
+    const auto& r = bob_renderer_for(*pf);
     WorldPoint wp = pf->origin();
     const Size sz = r.size(*pf);
 
@@ -860,8 +857,8 @@ void RestaurantView::render_placement_layer(PlacementLayer placement) {
 
                   // Use the ghost position (already tracking the correct
                   // placement position)
-                  const auto& r = current_bob_renderer();
-                  const Size decor_sz = r.size(*on_cursor_);
+                  const Size decor_sz =
+                      bob_renderer_for(*on_cursor_).size(*on_cursor_);
                   const WorldRect decor_world{ghost_furniture_topleft_->x,
                                               ghost_furniture_topleft_->y,
                                               decor_sz.w, decor_sz.h};
@@ -899,7 +896,7 @@ void RestaurantView::render_placement_layer(PlacementLayer placement) {
                 // Only update cursor if it's visible (mouse is in viewport)
                 if (show_furniture_cursor_) {
                   context_.cursor->custom_cursor(
-                      current_bob_renderer().image(*on_cursor_), false);
+                      bob_renderer_for(*on_cursor_).image(*on_cursor_), false);
                 }
                 mark_dirty();
               }
@@ -1143,15 +1140,13 @@ std::optional<int> RestaurantView::click_guest(core::FurnitureId chair_id) {
           info.pizza_taste = pizza.popularity()[demo];
           info.pizza_price = entry.price;
           info.pizza_quality = pizza.normality();
-          if (const auto* prop = restaurant_->property()) {
-            info.district_price_level =
-                prop->district().average_income_factor();
-          }
+          info.district_price_level =
+              restaurant_->property().district().average_income_factor();
         }
       }
 
       context_.popup->origin({62, 60});
-      context_.popup->create<GuestTalkPopup>(info, *restaurant_);
+      context_.popup->create<GuestTalkPopup>(info, restaurant_);
       guest_talked_to_[chair_id] = true;
       return i;
     }
@@ -1159,8 +1154,11 @@ std::optional<int> RestaurantView::click_guest(core::FurnitureId chair_id) {
   return std::nullopt;
 }
 
-const BobRenderer& RestaurantView::current_bob_renderer() const {
-  return kitchen_view_ ? oven_renderer_ : furniture_renderer_;
+const BobRenderer&
+RestaurantView::bob_renderer_for(const PlacedFurniture& pf) const {
+  return pf.furniture()->category() == FurnitureCategory::KITCHENWARE
+             ? oven_renderer_
+             : furniture_renderer_;
 }
 
 const std::vector<std::unique_ptr<PlacedFurniture>>&
@@ -1311,7 +1309,7 @@ RestaurantView::make_cursor_for_batch(const FurnitureBatch& b) {
 
 WorldRect RestaurantView::candidate_rect(WorldPoint p,
                                          const PlacedFurniture& ghost) const {
-  const auto size = current_bob_renderer().size(ghost);
+  const auto size = bob_renderer_for(ghost).size(ghost);
   // Furniture top-left should be at the click point
   return WorldRect{p.x, p.y, size.w, size.h};
 }
@@ -1335,7 +1333,7 @@ bool RestaurantView::intersects_any_blocking_furniture(
   };
 
   for (const auto& pf : current_furniture_list()) {
-    const auto other_size = current_bob_renderer().size(*pf);
+    const auto other_size = bob_renderer_for(*pf).size(*pf);
     const WorldRect other{pf->origin(), other_size};
 
     if (!candidate.intersects(other)) {
@@ -1711,7 +1709,7 @@ void RestaurantView::render_side_and_bottom_walls() {
 
 WorldPoint
 RestaurantView::clamp_furniture_to_interior(WorldPoint mouse_world) const {
-  const auto sz = current_bob_renderer().size(*on_cursor_);
+  const auto sz = bob_renderer_for(*on_cursor_).size(*on_cursor_);
   const auto room_size =
       kitchen_view_ ? restaurant_->kitchen_size() : restaurant_->size();
 
@@ -1753,7 +1751,7 @@ void RestaurantView::render_furniture_ghost() {
     return;
   }
 
-  const auto& bob_surface = current_bob_renderer().image(*on_cursor_);
+  const auto& bob_surface = bob_renderer_for(*on_cursor_).image(*on_cursor_);
 
   // Render furniture ghost at the clamped position (frozen)
   ViewPoint dst{ghost_furniture_topleft_->x, ghost_furniture_topleft_->y};
@@ -1991,7 +1989,6 @@ void RestaurantView::update_status_display(const PlacedFurniture* pf) {
   StatusMsg msg{
       .payload = recipe,
       .scope = StatusScope::Restaurant,
-      .type = TransientType::Ephemeral,
       .ttl = std::nullopt,
       .coalesce_key = "furniture_reposition_close",
   };

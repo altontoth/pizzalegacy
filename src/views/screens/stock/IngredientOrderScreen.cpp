@@ -68,13 +68,10 @@ IngredientOrderScreen::IngredientOrderScreen(GameContext& context,
   const auto& inventory = restaurant->inventory();
 
   // Calculate daily ingredient demand in grams (always from restaurant)
-  core::food::IngredientDemand demand_grams{};
-
   auto* player = state_.active_player();
-  if (player) {
-    demand_grams =
-        restaurant->calculate_daily_ingredient_demand_grams(player->recipes());
-  }
+  assert(player);
+  auto demand_grams =
+      restaurant->calculate_daily_ingredient_demand_grams(player->recipes());
 
   auto [start_id, end_id] = core::food::CategoryRegistry::id_range(category);
   for (int ing_id = start_id; ing_id < end_id; ing_id++) {
@@ -516,7 +513,6 @@ void IngredientOrderScreen::handle_button_press(size_t ingredient_index,
             .payload = "The quality of this ingredient is lower than expected "
                        "from the supplier selected!",
             .severity = StatusSeverity::Warning,
-            .type = TransientType::Temporary,
             .ttl = std::chrono::milliseconds{3000},
         });
         return;

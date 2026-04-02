@@ -30,9 +30,7 @@ void Demographics::render(const RenderContext& ctx) {
   ctx.surface->blit_raw(context_.vga->get("gfx/back9"));
   ctx.surface->palette({7});
 
-  if (restaurant_->property()) {
-    restaurant_->property()->calculate_demographics(restaurant_);
-  }
+  restaurant_->property().calculate_demographics(restaurant_);
 
   const auto popularity = restaurant_->calculate_furniture_appeal_popularity();
 

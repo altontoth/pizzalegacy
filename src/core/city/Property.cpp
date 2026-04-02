@@ -25,7 +25,7 @@ std::ostream& operator<<(std::ostream& os, const Property& premise) {
      << ", height: " << static_cast<int>(premise.size().h)
      << ", realtor_id: " << static_cast<int>(premise.realtor_id())
      << ", status: " << static_cast<int>(premise.status())
-     << ", city: " << (premise.city() ? premise.city()->name() : "None") << ")";
+     << ", city: " << premise.city().name() << ")";
   return os;
 }
 
@@ -48,7 +48,7 @@ const uint8_t residential_pop_table[8][6] = {
     {1, 1, 2, 5, 25, 6}};
 
 Property::Property(int index, PropertyType type, Size size, int realtor_id,
-                   PremiseStatus status, City* city)
+                   PremiseStatus status, City& city)
     : index_(index), type_(type), size_(size), realtor_id_(realtor_id),
       status_(status), city_(city) {}
 
@@ -59,9 +59,8 @@ void Property::realtor_id(int realtor_id) { realtor_id_ = realtor_id; }
 PremiseStatus Property::status() const { return status_; }
 void Property::status(PremiseStatus status) { status_ = status; }
 
-void Property::city(const City* city) { city_ = city; }
-
-const City* Property::city() const { return city_; }
+City& Property::city() { return city_; }
+const City& Property::city() const { return city_; }
 
 int Property::index() const { return index_; }
 PropertyType Property::type() const { return type_; }
@@ -151,8 +150,8 @@ void Property::calculate_demographics(const Restaurant* restaurant) {
   int max_y = std::min(MAP_TILES_PER_COLUMN - 1, prop_y + radius);
 
   // Pre-calculate base multipliers for all demographics
-  auto property_district_id = city_->district_by_index(index_);
-  const auto& property_district = city_->district(property_district_id);
+  auto property_district_id = city_.district_by_index(index_);
+  const auto& property_district = city_.district(property_district_id);
   const auto& demographic_demand = property_district.demographic_demand();
 
   DemographicArray<float> base_multipliers{};
@@ -181,7 +180,7 @@ void Property::calculate_demographics(const Restaurant* restaurant) {
       }
 
       int tile_index = City::x_y_to_index(x, y);
-      uint8_t tile_type = city_->type(tile_index);
+      uint8_t tile_type = city_.type(tile_index);
 
       // Calculate contribution for all demographics
       for (auto demographic : ALL_CONSUMER_TYPES) {
@@ -250,8 +249,8 @@ float Property::calculate_tile_population(uint8_t tile_type,
 }
 
 Money Property::get_purchase_price() const {
-  auto district_index = city_->district_by_index(index_);
-  const auto& district_ptr = city_->district(district_index);
+  auto district_index = city_.district_by_index(index_);
+  const auto& district_ptr = city_.district(district_index);
   Logger::warn("Price lvel is {} and wxh is {}", district_ptr.price_level(),
                size_);
 
@@ -265,8 +264,8 @@ Money Property::get_purchase_price() const {
 }
 
 Money Property::get_monthly_rent() const {
-  auto district_index = city_->district_by_index(index_);
-  const auto& district_ptr = city_->district(district_index);
+  auto district_index = city_.district_by_index(index_);
+  const auto& district_ptr = city_.district(district_index);
 
   int base_rent = district_ptr.rent_level() * static_cast<int>(size_.w) *
                   static_cast<int>(size_.h) * 100;
@@ -288,6 +287,6 @@ std::optional<core::RestaurantId> Property::restaurant_id() const {
 }
 
 const District& Property::district() const {
-  auto district_index = city_->district_by_index(index_);
-  return city_->district(district_index);
+  auto district_index = city_.district_by_index(index_);
+  return city_.district(district_index);
 }

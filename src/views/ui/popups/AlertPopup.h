@@ -24,8 +24,9 @@ private:
   callback_t cb_;
   const RawRenderable* renderable_;
   PopupButton btn_ok_;
-  static constexpr int popup_width_ = 362;
+  static constexpr int popup_width_ = 380;
   static constexpr int popup_height_ = 136;
-  static constexpr int text_left_margin_ = 20;
+  static constexpr int text_left_margin_ = 6;
+  static constexpr int text_top_margin_ = 20;
   static constexpr int button_bottom_margin_ = 20;
 };

@@ -20,9 +20,9 @@ static constexpr std::array<const char*, 7> tv_channels = {
 
 ViewRect TvPopup::row_rect(int i) { return {46, 44 + (i * 20), 220, 22}; }
 
-TvPopup::TvPopup(const GameContext& ctx, Restaurant& restaurant)
+TvPopup::TvPopup(const GameContext& ctx, Restaurant* restaurant)
     : BasePopup(ctx), restaurant_(restaurant),
-      selected_channel_(restaurant.tv_channel()) {}
+      selected_channel_(restaurant->tv_channel()) {}
 
 void TvPopup::add_interactions(views::ui::InteractionContext ictx,
                                ViewPoint origin) {
@@ -45,7 +45,7 @@ void TvPopup::add_interactions(views::ui::InteractionContext ictx,
             break;
 
           case views::ui::InteractionEvent::Type::Click:
-            restaurant_.tv_channel(i);
+            restaurant_->tv_channel(i);
             finished();
             break;
 

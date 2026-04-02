@@ -22,7 +22,8 @@ StatusHub::Subscription StatusHub::subscribe(Subscriber s) {
 
 void StatusHub::set_baseline(BaselineProvider p) {
   baseline_ = std::move(p);
-  clear_overlay();
+  active_.clear();
+  prev_index_.reset();
   rebuild_and_push();
 }
 
@@ -80,20 +81,9 @@ void StatusHub::post(StatusMsg m) {
   if (suppressed_) {
     return;
   }
-  insert_or_replace(std::move(m));
 
-  // Compose a snapshot for prev_stack_ and (optionally) for ephemeral_log_
-  rebuild_and_push(); // updates current_
-
-  // Push snapshot into prev_stack_ (ring)
-  prev_stack_.push_front(current_);
-  if (prev_stack_.size() > prev_cap) {
-    prev_stack_.pop_back();
-  }
-  prev_index_.reset(); // remain in live view unless the UI requested otherwise
-
-  // If ephemeral, also store into the log
-  if (m.type == TransientType::Ephemeral) {
+  // Log all posted messages immediately regardless of queue position
+  {
     EphemeralEntry e{
         .time = core::time::make_stamp(time_),
         .snapshot = current_,
@@ -106,10 +96,27 @@ void StatusHub::post(StatusMsg m) {
       ephemeral_log_.pop_back();
     }
   }
+
+  // If a delay was requested, or something is already displaying, queue it
+  if (m.delay_blocks > 0 || !active_.empty()) {
+    const int not_before_block = time_.time_blocks() + m.delay_blocks;
+    pending_.push_back(PendingMsg{std::move(m), not_before_block});
+    return;
+  }
+
+  insert_or_replace(std::move(m));
+  rebuild_and_push(); // updates current_
+
+  prev_stack_.push_front(current_);
+  if (prev_stack_.size() > prev_cap) {
+    prev_stack_.pop_back();
+  }
+  prev_index_.reset();
 }
 
 void StatusHub::clear_overlay() {
   active_.clear();
+  pending_.clear();
   prev_index_.reset();
   rebuild_and_push();
 }
@@ -117,6 +124,7 @@ void StatusHub::clear_overlay() {
 void StatusHub::show_baseline() {
   prev_index_.reset(); // return to live composite
   active_.clear();
+  pending_.clear();
   rebuild_and_push();
 }
 
@@ -135,10 +143,29 @@ void StatusHub::update(uint64_t dt_ms) {
   if (prev_index_.has_value()) {
     return; // frozen in history view
   }
-  if (decay_overlays(dt_ms)) {
-    // Soemthing expired, return to live
+  const auto dt = milliseconds{static_cast<milliseconds::rep>(dt_ms)};
+  bool changed = decay_overlays(dt);
+
+  // Promote the front of pending_ if active_ is clear and its game-time
+  // threshold has passed
+  bool promoted = false;
+  if (active_.empty() && !pending_.empty() &&
+      time_.time_blocks() >= pending_.front().not_before_block) {
+    insert_or_replace(std::move(pending_.front().msg));
+    pending_.pop_front();
+    changed = true;
+    promoted = true;
+  }
+
+  if (changed) {
     prev_index_.reset();
     rebuild_and_push();
+    if (promoted) {
+      prev_stack_.push_front(current_);
+      if (prev_stack_.size() > prev_cap) {
+        prev_stack_.pop_back();
+      }
+    }
   }
 }
 

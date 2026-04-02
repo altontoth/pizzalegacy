@@ -20,11 +20,6 @@
 
 enum class StatusSeverity { Info, Warning, Error };
 enum class StatusScope { Global, City, Restaurant, View };
-enum class TransientType {
-  Static,    // sort of temporary but doesn't expire
-  Temporary, // goes away after a while
-  Ephemeral, // also goes away but is logged and retrievable
-}; // Only Ephemeral -> list
 
 // This is an instruction/event: show this payload right now:
 struct StatusMsg {
@@ -33,9 +28,10 @@ struct StatusMsg {
 
   StatusSeverity severity = StatusSeverity::Info;
   StatusScope scope = StatusScope::Global;
-  TransientType type = TransientType::Temporary;
 
-  std::optional<std::chrono::milliseconds> ttl{2500};
+  std::optional<std::chrono::milliseconds> ttl{6000};
+  int delay_blocks{
+      0}; // wait this many 10-minute game-time blocks before showing
   std::string coalesce_key; // replace existing with same key
   int priority = 0;
 };
@@ -121,7 +117,12 @@ public:
 private:
   struct LiveMsg {
     StatusMsg msg;
-    std::optional<std::chrono::milliseconds> remaining_ms; // unix ms
+    std::optional<std::chrono::milliseconds> remaining_ms;
+  };
+
+  struct PendingMsg {
+    StatusMsg msg;
+    int not_before_block{0}; // absolute game-time block threshold
   };
 
   void rebuild_and_push(); // baseline + active overlay -> current_
@@ -138,6 +139,8 @@ private:
   Subscriber subscriber_;
 
   std::vector<LiveMsg> active_; // currently overlaying (TTL-managed)
+  std::deque<PendingMsg>
+      pending_;                 // queued, waiting for active_ to drain + delay
   StatusDisplayRecipe current_; // last published composite
 
   // Right-click "previous" history (short ring)

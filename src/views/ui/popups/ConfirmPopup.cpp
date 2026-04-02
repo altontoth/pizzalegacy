@@ -61,6 +61,7 @@ void ConfirmPopup::add_interactions(views::ui::InteractionContext ictx,
 void ConfirmPopup::render(Surface& surface, ViewPoint origin) {
   int height = popup_height_;
   int text_x = text_left_margin_;
+  constexpr int text_color = 10;
 
   if (renderable_) {
     // Render character picture on the left
@@ -77,7 +78,7 @@ void ConfirmPopup::render(Surface& surface, ViewPoint origin) {
     // Render text on the right (after the picture + some spacing)
     text_x = text_left_margin_ + picture.width() + 10;
     font_->render_text_onto(s, text_, {text_x, text_left_margin_},
-                            FontFace::ASTANDAR, 8);
+                            FontFace::ASTANDAR, text_color);
 
     btn_yes_.render_with(*this, s);
     btn_no_.render_with(*this, s);
@@ -87,7 +88,7 @@ void ConfirmPopup::render(Surface& surface, ViewPoint origin) {
     // No picture, use default layout
     auto s = popup_surface(popup_width_, height);
     font_->render_text_onto(s, text_, {text_left_margin_, text_left_margin_},
-                            FontFace::ASTANDAR, 8);
+                            FontFace::ASTANDAR, text_color);
 
     btn_yes_.render_with(*this, s);
     btn_no_.render_with(*this, s);

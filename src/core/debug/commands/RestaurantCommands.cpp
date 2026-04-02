@@ -69,7 +69,7 @@ Examples:
         }
 
         // Check ownership via property
-        auto owner = restaurant->property()->owner_or_tenant();
+        auto owner = restaurant->property().owner_or_tenant();
         if (!owner || *owner != player_id) {
           return CommandResult::error(
               compat::format("Restaurant {} is not owned by player {}",
@@ -118,7 +118,7 @@ Examples:
               compat::format("Restaurant {} not found", restaurant_id.value));
         }
 
-        auto owner = restaurant->property()->owner_or_tenant();
+        auto owner = restaurant->property().owner_or_tenant();
         if (!owner || *owner != player_id) {
           return CommandResult::error(
               compat::format("Restaurant {} is not owned by player {}",
@@ -157,7 +157,7 @@ Examples:
               compat::format("Restaurant {} not found", restaurant_id.value));
         }
 
-        auto owner = restaurant->property()->owner_or_tenant();
+        auto owner = restaurant->property().owner_or_tenant();
         if (!owner || *owner != player_id) {
           return CommandResult::error(
               compat::format("Restaurant {} is not owned by player {}",
@@ -266,7 +266,7 @@ Examples:
               compat::format("Restaurant {} not found", restaurant_id.value));
         }
 
-        auto owner = restaurant->property()->owner_or_tenant();
+        auto owner = restaurant->property().owner_or_tenant();
         if (!owner || *owner != player_id) {
           return CommandResult::error(
               compat::format("Restaurant {} is not owned by player {}",
@@ -352,7 +352,7 @@ Examples:
               compat::format("Restaurant {} not found", restaurant_id.value));
         }
 
-        auto owner = restaurant->property()->owner_or_tenant();
+        auto owner = restaurant->property().owner_or_tenant();
         if (!owner || *owner != player_id) {
           return CommandResult::error(
               compat::format("Restaurant {} is not owned by player {}",
@@ -398,7 +398,7 @@ Examples:
               compat::format("Restaurant {} not found", restaurant_id.value));
         }
 
-        auto owner = restaurant->property()->owner_or_tenant();
+        auto owner = restaurant->property().owner_or_tenant();
         if (!owner || *owner != player_id) {
           return CommandResult::error(
               compat::format("Restaurant {} is not owned by player {}",

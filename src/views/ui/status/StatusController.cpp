@@ -24,51 +24,22 @@ void StatusController::show_city_default(const CityCtx& c) {
   emit_baseline(build_city_default(c));
 }
 void StatusController::show_city_property_info(const CityCtx& c, int index) {
-  StatusMsg msg{
-      .payload = build_city_property_info(c, index),
-      .scope = StatusScope::City,
-      .type = TransientType::Static,
-      .ttl = std::nullopt,
-      .coalesce_key = compat::format("prop:{}:info", index),
-  };
-  emit_status_msg(msg);
+  emit_baseline(build_city_property_info(c, index));
 }
 void StatusController::show_city_competitor_restaurant(const CityCtx& c,
                                                        int index) {
-  StatusMsg msg{
-      .payload = build_city_competitor_restaurant(c, index),
-      .scope = StatusScope::City,
-      .type = TransientType::Static,
-      .ttl = std::nullopt,
-      .coalesce_key = compat::format("prop:{}:info", index),
-  };
-  emit_status_msg(msg);
+  emit_baseline(build_city_competitor_restaurant(c, index));
 }
 void StatusController::show_city_customer_info(const CityCtx& c, int index) {
-  StatusMsg msg{
-      .payload = build_city_customer_info(c, index),
-      .scope = StatusScope::City,
-      .type = TransientType::Static,
-      .ttl = std::nullopt,
-      .coalesce_key = compat::format("prop:{}:cust", index),
-  };
-  emit_status_msg(msg);
+  emit_baseline(build_city_customer_info(c, index));
 }
 void StatusController::show_city_named_building(const CityCtx& c, int index) {
-  StatusMsg msg{
-      .payload = build_city_named_building(c, index),
-      .scope = StatusScope::City,
-      .type = TransientType::Static,
-      .ttl = std::nullopt,
-      .coalesce_key = compat::format("name:{}:building", index),
-  };
-  emit_status_msg(msg);
+  emit_baseline(build_city_named_building(c, index));
 }
 void StatusController::show_city_type_name(const CityCtx& c, int index) {
   StatusMsg msg{
       .payload = build_city_type_name(c, index),
       .scope = StatusScope::City,
-      .type = TransientType::Ephemeral,
       .ttl = std::chrono::milliseconds{5000},
       .coalesce_key = compat::format("name:{}:type", index),
   };
@@ -101,21 +72,19 @@ void StatusController::emit_status_msg(StatusMsg msg) {
 StatusDisplayRecipe StatusController::build_city_default(const CityCtx& c) {
   auto* state = c.state;
   auto* player = state->active_player();
+  assert(player);
 
   StatusDisplayRecipe r;
   r.add_header(c.city->name());
   r.add_header(
       compat::format("IN {}", GameTime::to_string(state->time().season())));
-  if (player) {
-    r.add_header(player->name());
-    r.add_two_column(
-        "RESTAURANTS",
-        std::to_string(player->restaurant_count_for_city(c.city->id())));
-    r.add_two_column("RECIPES", std::to_string(player->recipe_count()));
-    r.add_two_column(
-        "CONTRACTS",
-        std::to_string(player->contract_count_for_city(c.city->id())));
-  }
+  r.add_header(player->name());
+  r.add_two_column(
+      "RESTAURANTS",
+      std::to_string(player->restaurant_count_for_city(c.city->id())));
+  r.add_two_column("RECIPES", std::to_string(player->recipe_count()));
+  r.add_two_column("CONTRACTS", std::to_string(player->contract_count_for_city(
+                                    c.city->id())));
   r.add_header("DISTRICT:");
   auto district_id = state->active_district_id();
   r.add_single(district_id ? c.city->district(*district_id).name()
@@ -275,13 +244,11 @@ StatusDisplayRecipe
 StatusController::build_competitor_restaurant(const CityCtx& c,
                                               const Restaurant& rest) {
   Player* owner = nullptr;
-  if (rest.property() && rest.property()->owner_or_tenant()) {
-    owner = c.state->player(*rest.property()->owner_or_tenant());
+  if (rest.property().owner_or_tenant()) {
+    owner = c.state->player(*rest.property().owner_or_tenant());
   }
   std::string district_name = "unknown";
-  if (rest.property()) {
-    district_name = rest.property()->district().name();
-  }
+  district_name = rest.property().district().name();
   return build_competitor_recipe(c, owner, district_name);
 }
 
@@ -348,7 +315,7 @@ StatusController::build_restaurant(const RestaurantCtx& rctx) {
   auto* rest = rctx.rest;
   auto* state = rctx.state;
   const auto* city = state->active_city();
-  auto district_id = city->district_by_index(rest->property()->index());
+  auto district_id = city->district_by_index(rest->property().index());
   const auto& district = city->district(district_id);
 
   // Get real values from restaurant

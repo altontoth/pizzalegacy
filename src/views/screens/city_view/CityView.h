@@ -80,6 +80,7 @@ private:
   void show_tabs(const RenderContext& ctx);
   void render_tabs(const RenderContext& ctx);
   void update_tab_positions();
+  void set_active_tab(CityViewTabType type);
 
   // One off initialisation methods
   void create_dropdowns();

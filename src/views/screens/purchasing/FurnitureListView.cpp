@@ -157,7 +157,6 @@ void FurnitureListView::draw_furniture_list(const RenderContext& ctx) {
               StatusMsg msg{
                   .payload = "You can only order 99 at a time!",
                   .scope = StatusScope::Restaurant,
-                  .type = TransientType::Ephemeral,
                   .ttl = std::nullopt,
                   .coalesce_key = "furniture_reposition_close",
               };

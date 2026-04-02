@@ -246,7 +246,6 @@ void Player::end_of_week(GameState& game_state) {
         .payload = "You were not able to repay your debts. Hard luck! You are "
                    "now on the streets.",
         .scope = StatusScope::Global,
-        .type = TransientType::Temporary,
         .coalesce_key = "bankruptcy",
     };
     game_state.status().post(msg);
@@ -521,15 +520,12 @@ void Player::check_ai_expansion(GameState& game_state) {
   if (rest) {
     rest->wants_open(true);
     std::string district_name = "unknown";
-    if (rest->property()) {
-      district_name = rest->property()->district().name();
-    }
+    district_name = rest->property().district().name();
     Logger::info("[AI] {} opens a new restaurant in {}", name_, district_name);
     game_state.status().post(StatusMsg{
         .payload = compat::format("{} opens a new restaurant in {}!", name_,
                                   district_name),
         .scope = StatusScope::City,
-        .type = TransientType::Ephemeral,
     });
   }
 

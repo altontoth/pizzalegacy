@@ -27,15 +27,15 @@ std::ostream& operator<<(std::ostream& os, const Property& premise);
 class Property {
 public:
   Property(int index, PropertyType type, Size size, int realtor_id,
-           PremiseStatus, City* city);
+           PremiseStatus, City& city);
   Size size() const;
   void size(Size size);
   int realtor_id() const;
   void realtor_id(int realtor_id);
   PremiseStatus status() const;
   void status(PremiseStatus);
-  void city(const City*);
-  const City* city() const;
+  City& city();
+  const City& city() const;
   int index() const;
   PropertyType type() const;
   std::optional<core::PlayerId> owner_or_tenant() const;
@@ -76,7 +76,7 @@ private:
   Size size_;
   int realtor_id_;
   PremiseStatus status_;
-  const City* city_;
+  City& city_;
   std::optional<core::PlayerId> owner_tenant_;
   std::optional<core::RestaurantId> restaurant_id_;
   CustomerCounts potential_customers_{};

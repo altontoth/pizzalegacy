@@ -19,7 +19,8 @@ class MafiaConversation : public BaseConversation<MafiaLine> {
 public:
   MafiaConversation(
       GameState&, const Actor*, MafiaMode,
-      std::optional<core::RestaurantId> restaurant_id = std::nullopt);
+      std::optional<core::RestaurantId> restaurant_id = std::nullopt,
+      bool first_contact = false);
   Emotion emotion() const override;
   std::vector<ConversationLine<MafiaLine>> lines() const override;
   bool advance() override;
@@ -30,7 +31,8 @@ public:
 private:
   static MafiaLine compute_start_line(GameState& state, const Actor*,
                                       MafiaMode mm,
-                                      std::optional<core::RestaurantId>);
+                                      std::optional<core::RestaurantId>,
+                                      bool first_contact);
   std::optional<MafiaMission> generate_mission(int rank);
 
   void apply_npc_effects(GameState& state, MafiaMode mm);

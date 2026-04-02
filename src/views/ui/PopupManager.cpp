@@ -7,7 +7,6 @@
 #include "views/ui/PopupManager.h"
 #include "engine/DisplayConstants.h"
 #include "engine/ui/InteractionLayers.h"
-#include "views/base/ViewDefs.h"
 
 PopupManager::PopupManager(GameContext& gc)
     : context_(gc), interactions_(gc.interaction->make_layer(),
@@ -16,45 +15,46 @@ PopupManager::PopupManager(GameContext& gc)
 void PopupManager::origin(ViewPoint p) { pending_origin_ = p; }
 
 void PopupManager::tick() {
-  // remove finished popups
   bool did_change = false;
-  while (!popups_.empty() && popups_.back().popup->is_finished()) {
-    popups_.pop_back();
-    // compositor must re-blit now that it's gone
+
+  if (active_popup_ && active_popup_->is_finished()) {
+    active_popup_.reset();
     request_recompose();
     did_change = true;
+
+    if (!pending_creates_.empty()) {
+      auto fn = std::move(pending_creates_.front());
+      pending_creates_.pop();
+      fn();
+    }
   }
 
-  // toggle active state only when it really changes
-  if (popups_.empty()) {
+  if (!active_popup_) {
     if (is_active()) {
       hide();
       did_change = true;
     }
   }
   else {
-    if (!is_active()) { // first popup just arrived
+    if (!is_active()) {
       show();
       did_change = true;
     }
   }
 
-  // if any transition happened, mark underlying popup dirty
-  if (did_change && !popups_.empty()) {
-    popups_.back().popup->mark_dirty();
+  if (did_change && active_popup_) {
+    active_popup_->mark_dirty();
   }
 
-  if (!popups_.empty()) {
-    popups_.back().popup->tick();
+  if (active_popup_) {
+    active_popup_->tick();
   }
 }
 
 void PopupManager::render(const RenderContext& ctx) {
   interactions_.begin_frame();
   ctx.surface->palette(palette_);
-  if (!popups_.empty()) {
-    auto& top = popups_.back();
-
+  if (active_popup_) {
     // Create backdrop first
     interactions_.create_frame_item(
         ViewRect{0, 0, DisplayConstants::SCREEN_WIDTH,
@@ -66,15 +66,15 @@ void PopupManager::render(const RenderContext& ctx) {
 
     views::ui::InteractionContext ui{
         .layers = interactions_, .invalidate = [this] { mark_self_dirty(); }};
-    top.popup->add_interactions(ui, top.origin);
+    active_popup_->add_interactions(ui, active_origin_);
 
-    top.popup->render(*ctx.surface, top.origin);
+    active_popup_->render(*ctx.surface, active_origin_);
   }
 }
 
 bool PopupManager::is_dirty() const {
-  if (!popups_.empty()) {
-    return popups_.back().popup->is_dirty();
+  if (active_popup_) {
+    return active_popup_->is_dirty();
   }
   return Dirtyable::is_dirty();
 }
@@ -84,8 +84,8 @@ bool PopupManager::needs_force_recompose() const {
 }
 
 void PopupManager::clean() {
-  if (!popups_.empty()) {
-    popups_.back().popup->clean();
+  if (active_popup_) {
+    active_popup_->clean();
   }
   else {
     Dirtyable::clean();
@@ -93,18 +93,18 @@ void PopupManager::clean() {
 }
 
 void PopupManager::mark_dirty() {
-  if (!popups_.empty()) {
-    popups_.back().popup->mark_dirty();
+  if (active_popup_) {
+    active_popup_->mark_dirty();
   }
   else {
     Dirtyable::mark_dirty();
   }
 }
 
-bool PopupManager::blocks() const { return !popups_.empty(); }
+bool PopupManager::blocks() const { return active_popup_ != nullptr; }
 
 ViewPoint PopupManager::origin() const {
-  return popups_.empty() ? ViewPoint{0, 0} : popups_.back().origin;
+  return active_popup_ ? active_origin_ : ViewPoint{0, 0};
 }
 
 std::vector<LayerInfo> PopupManager::get_layers() {

@@ -80,14 +80,11 @@ bool check_bankruptcy(Restaurant& restaurant, Player& player,
     return false;
   }
 
-  auto* property = restaurant.property();
-  std::string district_name =
-      property ? property->district().name() : "unknown";
+  auto& property = restaurant.property();
+  std::string district_name = property.district().name();
 
   restaurant.wants_open(false);
-  if (property) {
-    game_state.end_property_lease(*property, player);
-  }
+  game_state.end_property_lease(property, player);
 
   Logger::info("[AI] {} closes a restaurant in {}", player.name(),
                district_name);
@@ -95,7 +92,6 @@ bool check_bankruptcy(Restaurant& restaurant, Player& player,
       .payload = compat::format("{} closes down restaurant in {}.",
                                 player.name(), district_name),
       .scope = StatusScope::City,
-      .type = TransientType::Ephemeral,
   });
   return true;
 }

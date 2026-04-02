@@ -34,6 +34,7 @@ set(GAME_PLEGACY_SOURCES
     src/core/debug/commands/NewspaperCommands.cpp
     src/core/debug/commands/PlayerCommands.cpp
     src/core/debug/commands/RestaurantCommands.cpp
+    src/core/debug/commands/StaffCommands.cpp
     src/core/economy/WeaponMarket.cpp
     src/core/events/FullscreenMessageManager.cpp
     src/core/finance/BalanceSheet.cpp
@@ -54,12 +55,14 @@ set(GAME_PLEGACY_SOURCES
     src/core/restaurant/AIEconomy.cpp
     src/core/restaurant/Furniture.cpp
     src/core/restaurant/ManagerFeedback.cpp
+    src/core/restaurant/ManagerRoutine.cpp
     src/core/restaurant/PizzaDemand.cpp
     src/core/restaurant/PlacedFurniture.cpp
     src/core/restaurant/Restaurant.cpp
     src/core/restaurant/RestaurantEconomy.cpp
     src/core/restaurant/RestaurantLayout.cpp
     src/core/restaurant/RestaurantStats.cpp
+    src/core/restaurant/StaffEventDialogs.cpp
     src/core/restaurant/StaffEvents.cpp
     src/core/save/SaveGameCharacter.cpp
     src/core/save/SaveGameCity.cpp
@@ -170,6 +173,7 @@ set(GAME_PLEGACY_SOURCES
     src/views/ui/popups/InvoicePopup.cpp
     src/views/ui/popups/JukeboxPopup.cpp
     src/views/ui/popups/NumberInputPopup.cpp
+    src/views/ui/popups/OptionsPopup.cpp
     src/views/ui/popups/PopupButton.cpp
     src/views/ui/popups/TextInputPopup.cpp
     src/views/ui/popups/TvPopup.cpp
@@ -307,6 +311,7 @@ set(PLEGACY_HEADERS
     src/core/debug/commands/NewspaperCommands.h
     src/core/debug/commands/PlayerCommands.h
     src/core/debug/commands/RestaurantCommands.h
+    src/core/debug/commands/StaffCommands.h
     src/core/economy/WeaponMarket.h
     src/core/events/FullscreenMessageManager.h
     src/core/events/LeventId.h
@@ -347,6 +352,7 @@ set(PLEGACY_HEADERS
     src/core/restaurant/Furniture.h
     src/core/restaurant/FurnitureBatch.h
     src/core/restaurant/ManagerFeedback.h
+    src/core/restaurant/ManagerRoutine.h
     src/core/restaurant/Menu.h
     src/core/restaurant/PizzaDemand.h
     src/core/restaurant/PlacedFurniture.h
@@ -356,6 +362,8 @@ set(PLEGACY_HEADERS
     src/core/restaurant/RestaurantLayout.h
     src/core/restaurant/RestaurantStats.h
     src/core/restaurant/RestaurantTypes.h
+    src/core/restaurant/StaffEventData.h
+    src/core/restaurant/StaffEventDialogs.h
     src/core/restaurant/StaffEvents.h
     src/core/save/SaveGameCharacter.h
     src/core/save/SaveGameCity.h
@@ -591,6 +599,7 @@ set(PLEGACY_HEADERS
     src/views/ui/popups/InvoicePopup.h
     src/views/ui/popups/JukeboxPopup.h
     src/views/ui/popups/NumberInputPopup.h
+    src/views/ui/popups/OptionsPopup.h
     src/views/ui/popups/PopupButton.h
     src/views/ui/popups/TextInputPopup.h
     src/views/ui/popups/TvPopup.h

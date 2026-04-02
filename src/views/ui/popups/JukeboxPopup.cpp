@@ -26,9 +26,9 @@ static constexpr std::array<const char*, 7> music_titles = {
 // Popup-local rect for row i (0=OFF, 1-6=music tracks).
 ViewRect JukeboxPopup::row_rect(int i) { return {46, 44 + (i * 20), 220, 22}; }
 
-JukeboxPopup::JukeboxPopup(const GameContext& ctx, Restaurant& restaurant)
+JukeboxPopup::JukeboxPopup(const GameContext& ctx, Restaurant* restaurant)
     : BasePopup(ctx), restaurant_(restaurant), audio_(ctx.audio),
-      selected_music_(restaurant.jukebox_music()) {}
+      selected_music_(restaurant->jukebox_music()) {}
 
 void JukeboxPopup::add_interactions(views::ui::InteractionContext ictx,
                                     ViewPoint origin) {
@@ -51,7 +51,7 @@ void JukeboxPopup::add_interactions(views::ui::InteractionContext ictx,
             break;
 
           case views::ui::InteractionEvent::Type::Click:
-            restaurant_.jukebox_music(i);
+            restaurant_->jukebox_music(i);
             if (i == 0) {
               if (audio_) {
                 audio_->stop_music();
