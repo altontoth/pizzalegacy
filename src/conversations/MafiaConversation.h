@@ -50,4 +50,5 @@ private:
   std::string tip_opener_text_;
   std::string tip_result_text_;
   mutable bool game_over_pending_ = false;
+  mutable bool star_message_pending_ = false;
 };

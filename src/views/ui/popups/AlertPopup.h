@@ -27,6 +27,6 @@ private:
   static constexpr int popup_width_ = 380;
   static constexpr int popup_height_ = 136;
   static constexpr int text_left_margin_ = 6;
-  static constexpr int text_top_margin_ = 20;
+  static constexpr int text_top_margin_ = 16;
   static constexpr int button_bottom_margin_ = 20;
 };

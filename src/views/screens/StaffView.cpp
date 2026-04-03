@@ -1235,7 +1235,7 @@ void StaffView::add_overview_buttons() {
         if (!selected_slot_index_.has_value()) {
           context_.popup->origin(ViewPoint{52, 80});
           context_.popup->create<AlertPopup>(
-              "To fire somebody, you|must first select that|person!");
+              "To fire somebody, you must first select that person!");
           return;
         }
         context_.popup->origin(ViewPoint{52, 80});
@@ -1299,7 +1299,7 @@ void StaffView::add_overview_buttons() {
         if (!selected_slot_index_.has_value()) {
           context_.popup->origin(ViewPoint{52, 80});
           context_.popup->create<AlertPopup>(
-              "To change somebody's|wages, you must first|select that person!");
+              "To change somebody's wages, you must first select that person!");
           return;
         }
 
@@ -1456,8 +1456,8 @@ void StaffView::add_overview_buttons() {
                              if (!selected_slot_index_.has_value()) {
                                context_.popup->origin(ViewPoint{52, 80});
                                context_.popup->create<AlertPopup>(
-                                   "To send somebody on a|course, you must "
-                                   "first|select that person!");
+                                   "To send somebody on a course, you must "
+                                   "first select that person!");
                                return;
                              }
                              change_screen(StaffScreen::TRAINING);
@@ -1592,7 +1592,7 @@ void StaffView::add_applicant_buttons() {
                                    ? "waiter"
                                    : "manager";
         std::string message = compat::format(
-            "Do you want to|hire {}|{}as|{} in this|restaurant?",
+            "Do you want to hire {} {} as {} in this restaurant?",
             char_data->first_name, char_data->last_name, job_name);
 
         context_.popup->origin(ViewPoint{26, 44});
@@ -1659,12 +1659,12 @@ void StaffView::add_applicant_buttons() {
                 else if (result == HiringResult::NoSlotsAvailable) {
                   context_.popup->origin(ViewPoint{52, 80});
                   context_.popup->create<AlertPopup>(
-                      "No slots available|for this job role!");
+                      "No slots available for this job role!");
                 }
                 else if (result == HiringResult::AlreadyHasManager) {
                   context_.popup->origin(ViewPoint{52, 80});
                   context_.popup->create<AlertPopup>(
-                      "You already have|a manager!");
+                      "You already have a manager!");
                 }
               }
             },

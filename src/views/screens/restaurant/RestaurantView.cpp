@@ -595,7 +595,7 @@ void RestaurantView::tick() {
 
 void RestaurantView::handle_furniture_click(const PlacedFurniture* pf) {
   const auto prop_id = pf->id();
-  if (!restaurant_->is_open(state_.time().time_of_day()) &&
+  if ((kitchen_view_ || !restaurant_->is_open(state_.time().time_of_day())) &&
       last_clicked_furniture_index_ &&
       *last_clicked_furniture_index_ == prop_id) {
     auto picked = restaurant_->layout()->remove_by_id(prop_id, kitchen_view_);

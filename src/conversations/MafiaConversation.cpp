@@ -144,10 +144,7 @@ void MafiaConversation::apply_npc_effects(GameState& state, MafiaMode mm) {
       ch.energy(ch.energy() / 2);
       state.adjust_underworld_score(*player, -30);
       player->mafia_state().active_mission = std::nullopt;
-
-      state_.message_manager().schedule_message(
-          core::events::LeventId::YouSeeStarsAndHearPlentyOfBirdSong,
-          player->id(), date);
+      star_message_pending_ = true;
     }
     break;
   }
@@ -768,6 +765,13 @@ bool MafiaConversation::has_ended() const {
           player->id(), state_.time().current_date());
       state_.ui().push<GameOverState>(player->id());
     }
+    if (star_message_pending_) {
+      star_message_pending_ = false;
+      auto* player = state_.active_player();
+      state_.message_manager().schedule_message(
+          core::events::LeventId::YouSeeStarsAndHearPlentyOfBirdSong,
+          player->id(), state_.time().current_date());
+    }
     return true;
   default:
     return false;
@@ -879,14 +883,11 @@ std::optional<MafiaMission> MafiaConversation::generate_mission(int rank) {
     mission.dropoff.hour = delivery_hour;
     mission.dropoff.minute = delivery_minute;
 
-    mission.risk_pct = (difficulty * 3) + clan_danger_ +
-                       rand_max_n(std::max(difficulty * 3, 1));
+    mission.risk_pct =
+        (difficulty * 3) + clan_danger_ + rand_max_n(difficulty * 3);
 
-    int reward_raw =
-        rand_max_n(60) * (clan_danger_ + 5) * (mission.risk_pct + 60);
-    mission.reward = Money{
-        static_cast<int64_t>(math::round_up_to_next_power10<2>(reward_raw)) *
-        100};
+    int reward_raw = (rand_max_n(60) + 60) * (clan_danger_ + 5);
+    mission.reward = Money{static_cast<int64_t>(reward_raw) * 100};
 
     mission.active = true;
     mission.deadline = delivery_date;
@@ -911,11 +912,9 @@ std::optional<MafiaMission> MafiaConversation::generate_mission(int rank) {
                        rand_max_n(std::max(difficulty * 3, 1));
 
     int weapon_price = rand_between(200, 500);
-    int reward_raw =
-        weapon_price * mission.quantity * (mission.risk_pct + 80) / 100;
-    mission.reward = Money{
-        static_cast<int64_t>(math::round_up_to_next_power10<2>(reward_raw)) *
-        100};
+    int reward_raw = weapon_price * mission.quantity *
+                     ((mission.risk_pct * 2) + (rand_max_n(80) + 80)) / 100;
+    mission.reward = Money{static_cast<int64_t>(reward_raw) * 100};
 
     mission.deadline = delivery_date;
     break;
@@ -942,9 +941,7 @@ std::optional<MafiaMission> MafiaConversation::generate_mission(int rank) {
         static_cast<int>((static_cast<int64_t>(amount_10k) * 10'000 *
                           (mission.risk_pct + rand_max_n(10))) /
                          100);
-    mission.reward = Money{
-        static_cast<int64_t>(math::round_up_to_next_power10<2>(reward_raw)) *
-        100};
+    mission.reward = Money{static_cast<int64_t>(reward_raw) * 100};
 
     mission.active = true;
     break;

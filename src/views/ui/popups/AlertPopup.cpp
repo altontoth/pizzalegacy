@@ -43,7 +43,8 @@ void AlertPopup::render(Surface& surface, ViewPoint origin) {
              button_bottom_margin_;
 
     auto s = popup_surface(popup_width_, height);
-    s.blit_raw(picture, {10, 10});
+    const int border_size = 10;
+    s.blit_raw(picture, {border_size, border_size});
 
     // Render text on the right (after the picture + some spacing)
     text_x = text_left_margin_ + picture.width() + 10;
@@ -56,8 +57,9 @@ void AlertPopup::render(Surface& surface, ViewPoint origin) {
   else {
     // No picture, use default layout
     auto s = popup_surface(popup_width_, height);
-    font_->render_text_onto(s, text_, {text_left_margin_, text_left_margin_},
-                            FontFace::ASTANDAR, text_color);
+    font_->render_into_rect(s, text_,
+                            {text_left_margin_ * 2, text_top_margin_, 247, 300},
+                            FontFace::ASTANDAR, TextStyle{.color = text_color});
 
     btn_ok_.render_with(*this, s);
     surface.blit_raw(s, origin);

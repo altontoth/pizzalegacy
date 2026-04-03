@@ -60,7 +60,8 @@ The engine parses the original 1994 asset formats:
 - **CMF music** (Creative Music Format, OPL3 FM synthesis via libADLMIDI)
 - **VOC audio** (Creative Voice Format, decoded and resampled to stereo)
 - **Imploder decompression** for Amiga IMP!-compressed assets
-- City maps, ingredient databases, and character data from proprietary formats (DOS version only)
+- City map data, pizza recipes, restaurant layouts, and character data from
+  original formats (DOS version only)
 
 All assets are loaded on demand through a template-based `ResourceManager<T, Loader>`
 that caches resources by filename.

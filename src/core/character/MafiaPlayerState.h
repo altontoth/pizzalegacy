@@ -47,6 +47,7 @@ struct MafiaMission {
   int deadline_hour = 0;
   int deadline_minute = 0;
   bool completed = false;
+  bool pickup_done = false;
   bool busted =
       false; // Pre-rolled on acceptance; if true, pickup triggers police
   int item_index = 0;

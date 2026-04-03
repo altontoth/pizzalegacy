@@ -35,6 +35,9 @@ private:
   input::ListenerToken input_;
   static constexpr int popup_width_ = 362;
   static constexpr int popup_height_ = 136;
-  static constexpr int text_left_margin_ = 20;
+  static constexpr int pic_text_left_margin_ = 10;
+  static constexpr int pic_text_top_margin_ = 10;
+  static constexpr int text_left_margin_ = 4;
+  static constexpr int text_top_margin_ = 4;
   static constexpr int button_bottom_margin_ = 20;
 };

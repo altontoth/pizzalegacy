@@ -58,4 +58,5 @@ struct TextStyle {
   std::optional<ShadowStyle> shadow = std::nullopt;
   std::optional<int> character_spacing = std::nullopt; // pixels between chars
   int line_spacing{0}; // extra pixels added between lines (multi-line only)
+  bool soft_hyphens{false}; // treat letter-dash-letter as break hints
 };

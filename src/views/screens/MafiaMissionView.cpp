@@ -21,7 +21,10 @@ MafiaMissionView::MafiaMissionView(GameContext& context, GameState& state,
     : MainPanelView(context, state), line_(line) {
   auto& mission = state_.active_player()->mafia_state().active_mission;
   if (mission) {
-    if (line_ == MafiaLine::COME_ON_HAND_IT_OVER) {
+    if (line_ == MafiaLine::SSSHHH_HERE_TAKE_THIS_SUITCASE) {
+      mission->pickup_done = true;
+    }
+    else if (line_ == MafiaLine::COME_ON_HAND_IT_OVER) {
       mission->completed = true;
     }
   }

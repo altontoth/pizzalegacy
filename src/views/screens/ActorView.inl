@@ -380,7 +380,8 @@ void ActorView<LineEnum>::render_dialog(const RenderContext& ctx) {
     auto metrics = context_.font->render_into_rect(
         *ctx.surface, line.text,
         ViewRect{line_x, line_y, dialog_w - text_x_pos, dialog_h - text_y_pos},
-        FontFace::PIZ_NUMB, {.color = gfx::ColorIndex{15}});
+        FontFace::PIZ_NUMB,
+        {.color = gfx::ColorIndex{15}, .soft_hyphens = true});
 
     if (line.is_option) {
       interactions_.create_frame_item(

@@ -61,28 +61,24 @@ RenderedTextMetrics Font::render_text_onto(Surface& surface,
 
   // Flow text path: variable width wrapping
   if (flow.has_value()) {
-    // Process soft hyphens in the entire text
     std::string cleaned_text;
-    cleaned_text.reserve(text.size());
-
-    for (size_t i = 0; i < text.size(); ++i) {
-      char ch = text[i];
-
-      // Check if this is a soft hyphen
-      if (ch == '-' && i > 0 && i < text.size() - 1) {
-        char before = text[i - 1];
-        char after = text[i + 1];
-
-        // Soft hyphen if surrounded by letters
-        if (std::isalpha(static_cast<unsigned char>(before)) &&
-            std::isalpha(static_cast<unsigned char>(after))) {
-          // Skip the soft hyphen
-          continue;
+    if (style.soft_hyphens) {
+      cleaned_text.reserve(text.size());
+      for (size_t i = 0; i < text.size(); ++i) {
+        char ch = text[i];
+        if (ch == '-' && i > 0 && i < text.size() - 1) {
+          char before = text[i - 1];
+          char after = text[i + 1];
+          if (std::isalpha(static_cast<unsigned char>(before)) &&
+              std::isalpha(static_cast<unsigned char>(after))) {
+            continue;
+          }
         }
+        cleaned_text += ch;
       }
-
-      // Regular character or non-soft-hyphen dash
-      cleaned_text += ch;
+    }
+    else {
+      cleaned_text = std::string(text);
     }
 
     // Get lines with their Y positions
@@ -405,7 +401,13 @@ std::vector<std::string> Font::word_wrap_line(std::string_view input_line,
 
     auto raw_word = input_line.substr(w_begin, w_end - w_begin);
     auto ws = input_line.substr(ws_begin, ws_end - ws_begin);
-    auto bw = analyze_word_breaks(raw_word);
+    BreakableWord bw;
+    if (style.soft_hyphens) {
+      bw = analyze_word_breaks(raw_word);
+    }
+    else {
+      bw.clean_text = std::string(raw_word);
+    }
     const int w_width = size_text(bw.clean_text, wrap_style).width;
     const int ws_width = ws.empty() ? 0 : size_text(ws, wrap_style).width;
 

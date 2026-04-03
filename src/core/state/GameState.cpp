@@ -1157,9 +1157,10 @@ void GameState::check_mafia_events() {
   // Mission deadline check
   if (mission && mission->active) {
     // Package missions fail immediately once the pickup window has passed,
-    // since without the item the dropoff can never succeed.
+    // since without the item the dropoff can never succeed. But if the
+    // player already picked up the package, the window passing is expected.
     if (mission->mission_type == MafiaMissionType::Package &&
-        !mission->completed && mission->pickup.has_passed(time_)) {
+        !mission->pickup_done && mission->pickup.has_passed(time_)) {
       ui_.push<MafiaState>(MafiaState{.id = mafia_id,
                                       .mode = MafiaMode::MissionOverdue,
                                       .restaurant_id = std::nullopt});

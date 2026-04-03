@@ -12,20 +12,24 @@ ConfirmPopup::ConfirmPopup(const GameContext& ctx, std::string text,
                            callback_t cb, const RawRenderable* renderable)
     : BasePopup(ctx), text_(std::move(text)), cb_(std::move(cb)),
       renderable_(renderable),
-      btn_yes_({30,
-                renderable ? (text_left_margin_ +
-                              renderable->picture_height() * 2 /* scale */ +
-                              text_left_margin_)
-                           : 80,
-                74, 38},
-               "Yes", [this] { confirm(true); }),
-      btn_no_({240,
-               renderable ? (text_left_margin_ +
-                             renderable->picture_height() * 2 /* scale */ +
-                             text_left_margin_)
-                          : 80,
-               74, 38},
-              "No", [this] { confirm(false); }) {
+      btn_yes_(
+          {30,
+           renderable
+               ? (((renderable_ ? pic_text_left_margin_ : text_left_margin_) *
+                   2) +
+                  (renderable->picture_height() * 2))
+               : 80,
+           74, 38},
+          "Yes", [this] { confirm(true); }),
+      btn_no_(
+          {240,
+           renderable
+               ? (((renderable_ ? pic_text_left_margin_ : text_left_margin_) *
+                   2) +
+                  (renderable->picture_height() * 2))
+               : 80,
+           74, 38},
+          "No", [this] { confirm(false); }) {
   input_ = ctx.input->register_listener(*this);
 }
 
@@ -60,8 +64,8 @@ void ConfirmPopup::add_interactions(views::ui::InteractionContext ictx,
 
 void ConfirmPopup::render(Surface& surface, ViewPoint origin) {
   int height = popup_height_;
-  int text_x = text_left_margin_;
   constexpr int text_color = 10;
+  const int border_size = 10;
 
   if (renderable_) {
     // Render character picture on the left
@@ -69,16 +73,17 @@ void ConfirmPopup::render(Surface& surface, ViewPoint origin) {
     auto picture = renderer.surface(*renderable_);
 
     // Calculate popup height based on picture size + margins + button height
-    height = text_left_margin_ + picture.height() + text_left_margin_ + 38 +
-             button_bottom_margin_;
+    height = pic_text_top_margin_ + picture.height() + pic_text_top_margin_ +
+             38 + button_bottom_margin_;
 
     auto s = popup_surface(popup_width_, height);
-    s.blit_raw(picture, {text_left_margin_, text_left_margin_});
+    s.blit_raw(picture, {border_size, border_size});
 
     // Render text on the right (after the picture + some spacing)
-    text_x = text_left_margin_ + picture.width() + 10;
-    font_->render_text_onto(s, text_, {text_x, text_left_margin_},
-                            FontFace::ASTANDAR, text_color);
+    const int text_x = border_size + picture.width() + pic_text_left_margin_;
+    font_->render_into_rect(
+        s, text_, {text_x, pic_text_top_margin_ + border_size, 212, 300},
+        FontFace::ASTANDAR, TextStyle{.color = text_color});
 
     btn_yes_.render_with(*this, s);
     btn_no_.render_with(*this, s);
@@ -87,8 +92,10 @@ void ConfirmPopup::render(Surface& surface, ViewPoint origin) {
   else {
     // No picture, use default layout
     auto s = popup_surface(popup_width_, height);
-    font_->render_text_onto(s, text_, {text_left_margin_, text_left_margin_},
-                            FontFace::ASTANDAR, text_color);
+    font_->render_into_rect(s, text_,
+                            {border_size + text_left_margin_,
+                             border_size + text_top_margin_, 352, 300},
+                            FontFace::ASTANDAR, TextStyle{.color = text_color});
 
     btn_yes_.render_with(*this, s);
     btn_no_.render_with(*this, s);
