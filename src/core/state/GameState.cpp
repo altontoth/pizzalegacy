@@ -1038,7 +1038,7 @@ void GameState::check_market_share_milestones(const City& city) {
     if (!player(pid)) {
       continue;
     }
-    int pct = pcts[p];
+    float pct = pcts[p];
     // Original game bug: checks 5% but displays "10% market share" message
     int first_threshold = options().fix_legacy_bugs ? 10 : 5;
     if (pct >= 50) {

@@ -51,7 +51,7 @@ private:
   void render_paper(const RenderContext& ctx, ViewRect box, int bg_color = 21);
   void render_bar_diagram_background(const RenderContext& ctx);
   void render_bar_chart(const RenderContext& ctx, BarChartMode mode,
-                        const std::array<int, NUMBER_OF_PLAYERS>& values);
+                        const std::array<float, NUMBER_OF_PLAYERS>& values);
 
   const District& district_;
   MarketResearchScreen current_screen_{MarketResearchScreen::Area_Info};

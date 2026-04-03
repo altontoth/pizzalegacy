@@ -30,7 +30,7 @@ public:
     return cell_owners_[cell_index];
   }
 
-  int player_percentage(int player_index) const {
+  float player_percentage(int player_index) const {
     return player_percentages_[player_index];
   }
 
@@ -43,18 +43,18 @@ public:
   cell_owners() const {
     return cell_owners_;
   }
-  const std::array<int, NUMBER_OF_PLAYERS>& player_percentages() const {
+  const std::array<float, NUMBER_OF_PLAYERS>& player_percentages() const {
     return player_percentages_;
   }
   void set_cell_owners(
       std::array<std::optional<core::PlayerId>, CONTROL_MAP_CELLS> owners) {
     cell_owners_ = owners;
   }
-  void set_player_percentages(std::array<int, NUMBER_OF_PLAYERS> pcts) {
+  void set_player_percentages(std::array<float, NUMBER_OF_PLAYERS> pcts) {
     player_percentages_ = pcts;
   }
 
 private:
   std::array<std::optional<core::PlayerId>, CONTROL_MAP_CELLS> cell_owners_{};
-  std::array<int, NUMBER_OF_PLAYERS> player_percentages_{};
+  std::array<float, NUMBER_OF_PLAYERS> player_percentages_{};
 };

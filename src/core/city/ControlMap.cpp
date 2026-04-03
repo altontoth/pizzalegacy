@@ -113,12 +113,13 @@ void ControlMap::build(const GameState& game_state, const City& city) {
 
   // Convert cell counts to percentages
   for (int p = 0; p < NUMBER_OF_PLAYERS; ++p) {
-    player_percentages_[p] = (cell_counts[p] * 100) / CONTROL_MAP_CELLS;
+    player_percentages_[p] =
+        (static_cast<float>(cell_counts[p]) * 100.0f) / CONTROL_MAP_CELLS;
   }
 }
 
 std::optional<core::PlayerId> ControlMap::market_leader() const {
-  int best = 0;
+  float best = 0.0f;
   std::optional<core::PlayerId> leader;
   for (int p = 0; p < NUMBER_OF_PLAYERS; ++p) {
     if (player_percentages_[p] > best) {

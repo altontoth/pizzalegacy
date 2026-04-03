@@ -31,7 +31,7 @@ constexpr int text_color = 10;
 
 void MarketResearch::render_bar_chart(
     const RenderContext& ctx, BarChartMode mode,
-    const std::array<int, NUMBER_OF_PLAYERS>& values) {
+    const std::array<float, NUMBER_OF_PLAYERS>& values) {
   ctx.surface->fill({15});
   constexpr int edge_offset = 6;
   views::ui::render_decorated_corners(
@@ -55,7 +55,8 @@ void MarketResearch::render_bar_chart(
     subtitle = "market shares in %";
   }
   else {
-    int max_val = *std::max_element(values.begin(), values.end());
+    int max_val =
+        static_cast<int>(*std::max_element(values.begin(), values.end()));
     // Original game starts at $10K chunks; qol_improvements allows finer $1K
     const bool fine_scale = context_.config->options().qol_improvements;
     constexpr std::array<int, 5> original_units = {10'000, 100'000, 1'000'000,
@@ -110,15 +111,15 @@ void MarketResearch::render_bar_chart(
   for (int i = 0; i < NUMBER_OF_PLAYERS; ++i) {
     int center_x = graph_box.x + (i * slot_width) + (slot_width / 2);
     // Show a at least a tiny bar by default, so just bump everything by one
-    const int value = values[i] + 1;
+    const float value = values[i] + 1.0f;
 
     // Compute bar height
     int bar_height;
     if (mode == BarChartMode::Percentage) {
-      bar_height = value * 2;
+      bar_height = static_cast<int>(value * 2.0f);
     }
     else {
-      bar_height = (value * 20) / std::max(scale_unit, 1);
+      bar_height = static_cast<int>((value * 20.0f) / std::max(scale_unit, 1));
     }
     bar_height = std::clamp(bar_height, 0, bar_area_height);
 
@@ -146,13 +147,13 @@ void MarketResearch::render_bar_chart(
 
     // Hover tooltip showing actual value
     if (context_.config->options().qol_improvements) {
-      int display_value = values[i];
+      float display_value = values[i];
       std::string tip;
       if (mode == BarChartMode::Percentage) {
-        tip = compat::format("{:.1f}%", static_cast<double>(display_value));
+        tip = compat::format("{:.1f}%", display_value);
       }
       else {
-        tip = "$" + std::to_string(display_value);
+        tip = "$" + std::to_string(static_cast<int>(display_value));
       }
       interactions_.create_frame_item(
           {icon_x, icon_y, icon_size, icon_size},
@@ -734,13 +735,13 @@ void MarketResearch::render_pizza_charts(const RenderContext& ctx) {
 }
 
 void MarketResearch::render_competitors(const RenderContext& ctx) {
-  std::array<int, NUMBER_OF_PLAYERS> values{};
+  std::array<float, NUMBER_OF_PLAYERS> values{};
   auto players = state_.players();
   for (int i = 0; i < NUMBER_OF_PLAYERS; ++i) {
     if (players[i]) {
       // Revenue accounts carry negative (credit) balances, negate for display
-      values[i] =
-          static_cast<int>(-players[i]->financials().total_receipts().whole());
+      values[i] = static_cast<float>(
+          -players[i]->financials().total_receipts().whole());
     }
   }
   render_bar_chart(ctx, BarChartMode::Currency, values);

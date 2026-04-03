@@ -257,11 +257,11 @@ void json_to_control_map(const json& j, ControlMap& cm) {
     cm.set_cell_owners(owners);
   }
   if (j.contains("player_percentages")) {
-    std::array<int, NUMBER_OF_PLAYERS> pcts{};
+    std::array<float, NUMBER_OF_PLAYERS> pcts{};
     const auto& arr = j["player_percentages"];
     for (int i = 0; i < NUMBER_OF_PLAYERS && i < static_cast<int>(arr.size());
          ++i) {
-      pcts[i] = arr[i].get<int>();
+      pcts[i] = arr[i].get<float>();
     }
     cm.set_player_percentages(pcts);
   }
