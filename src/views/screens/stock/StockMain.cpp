@@ -53,16 +53,19 @@ void StockMain::render(const RenderContext& ctx) {
   std::string kg_text = compat::format("{} kg", total_kg);
   std::string value_text = compat::format("{:w}", total_value);
 
+  TextStyle style{.color = 12, .character_spacing = 1};
   context_.font->render_text_onto(*ctx.surface, "kilogram", ViewPoint{130, 210},
-                                  FontFace::PIZ_NUMB, 12);
+                                  FontFace::PIZ_NUMB, style);
   context_.font->render_text_onto(*ctx.surface, "value", ViewPoint{130, 240},
-                                  FontFace::PIZ_NUMB, 12);
+                                  FontFace::PIZ_NUMB, style);
 
+  style.color = 8;
+  style.align = AlignX::Right;
   context_.font->render_text_onto(*ctx.surface, kg_text, ViewPoint{-106, 210},
-                                  FontFace::PIZ_NUMB, 8, AlignX::Right);
+                                  FontFace::PIZ_NUMB, style);
   context_.font->render_text_onto(*ctx.surface, value_text,
-                                  ViewPoint{-110, 240}, FontFace::PIZ_NUMB, 8,
-                                  AlignX::Right);
+                                  ViewPoint{-110, 240}, FontFace::PIZ_NUMB,
+                                  style);
 }
 
 void StockMain::set_up_input_panel() {
