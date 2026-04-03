@@ -5,14 +5,14 @@
  */
 
 #include "core/debug/command/CommandContext.h"
-#include "engine/Fatal.h"
+#include <stdexcept>
 
 namespace debug::command {
 
 const ParsedValue& CommandContext::arg(size_t index) const {
   if (index >= args.size()) {
-    fatal(compat::format("Argument {} not provided (have {} arguments)", index,
-                         args.size()));
+    throw std::runtime_error(compat::format(
+        "Argument {} not provided (have {} arguments)", index, args.size()));
   }
   return args[index];
 }

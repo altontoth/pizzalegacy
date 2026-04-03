@@ -290,35 +290,35 @@ static CommandDef make_restaurant_stock_fill() {
       .name = "fill",
       .description = "Fill all ingredient stocks to specified quantity",
       .help_text =
-          R"(Usage: restaurant stock fill [quantity] [quality] [player_id] [restaurant_id]
+          R"(Usage: restaurant stock fill <quantity> <quality> [player_id] [restaurant_id]
 
 Fills all ingredient stocks to the specified quantity and quality.
 
 Arguments:
-  quantity      - Quantity in grams per ingredient (default: 10000)
-  quality       - Quality 0-100 (default: 100)
+  quantity      - Quantity in kilogram per ingredient
+  quality       - Quality 0-100
   player_id     - Player ID (@ for active player)
   restaurant_id - Restaurant ID (@ for active restaurant)
 
 Examples:
-  restaurant stock fill              # Fill all to 10kg at quality 100
-  restaurant stock fill 20000        # Fill all to 20kg at quality 100
-  restaurant stock fill 15000 80     # Fill all to 15kg at quality 80
+  restaurant stock fill 10 100    # Fill all to 10kg at quality 100
+  restaurant stock fill 20 100    # Fill all to 20kg at quality 100
+  restaurant stock fill 15 80     # Fill all to 15kg at quality 80
 )",
       .args =
           {
               ArgSpec{
                   .name = "quantity",
                   .type = ArgType::Int,
-                  .optional = true,
-                  .description = "Quantity in grams",
+                  .optional = false,
+                  .description = "Quantity in kilogram",
                   .min_value = 0,
-                  .max_value = 1000000,
+                  .max_value = 650,
               },
               ArgSpec{
                   .name = "quality",
                   .type = ArgType::Int,
-                  .optional = true,
+                  .optional = false,
                   .description = "Quality 0-100",
                   .min_value = 0,
                   .max_value = 100,
@@ -341,8 +341,8 @@ Examples:
               },
           },
       .handler = [](const CommandContext& ctx) -> CommandResult {
-        auto quantity = ctx.args.size() > 0 ? ctx.int_arg(0) : 10000;
-        auto quality = ctx.args.size() > 1 ? ctx.int_arg(1) : 100;
+        auto quantity = ctx.int_arg(0) * 1000;
+        auto quality = ctx.int_arg(1);
         auto player_id = ctx.player_id(2);
         auto restaurant_id = ctx.restaurant_id(3);
 
