@@ -1184,7 +1184,7 @@ void CityView::create_buttons() {
                                  ScreenTag::Kind::GlobalStats);
                            });
 
-  input_panel_->add_button(Icon::TELEPHONE, ButtonType::Square,
+  input_panel_->add_button(Icon::COMPUTER, ButtonType::Square,
                            ButtonPosition::BottomCenter, "Terminal", [this] {
                              ui_push_store_position<TerminalState>(
                                  CityViewReentryMode::RESTORE_ALL,
