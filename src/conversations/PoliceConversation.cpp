@@ -37,7 +37,8 @@ PoliceConversation::PoliceConversation(GameState& state, const Actor* actor,
     int raw_bribe = (engine::random::rand_max_n(500) + 500) *
                     (sentence_days_ + player->criminal_record());
     bribe_or_fine_cost_ =
-        std::max(math::round_up_to_next_power10<3>(raw_bribe), 4000);
+        static_cast<int>(std::max(math::round_up_to_next_power10<3>(raw_bribe),
+                                  static_cast<int64_t>(4000)));
 
     player->increment_criminal_record();
     apply_confiscation();
@@ -205,7 +206,6 @@ bool PoliceConversation::advance_line_choice(PoliceLine choice) {
             IF_YOUR_TRYING_TO_BRIBE_ME_YOUVE_GOT_THE_WRONG_PERSON_2_DAYS_JAIL);
     break;
 
-  // Voluntary: option 4 — donation
   case PoliceLine::DID_YOU_LOSE_THIS_WALLET:
   case PoliceLine::NEED_A_DONATION_TO_THE_LOCAL_POLICE: {
     Money donation{static_cast<int64_t>(donation_amount_) * 100};

@@ -117,6 +117,15 @@ json player_to_json(const Player& player) {
   }
   j["loans"] = loans_obj;
 
+  // Save investments (array of up to 4 optional slots)
+  json inv_array = json::array();
+  for (const auto& slot : player.investments()) {
+    if (slot.has_value()) {
+      inv_array.push_back(investment_to_json(*slot));
+    }
+  }
+  j["investments"] = inv_array;
+
   j["inventory"] = inventory_to_json(player.inventory());
 
   j["social_score"] = player.social_status().social_score;
@@ -196,6 +205,13 @@ json_to_player(const json& j, GameContext& context,
         Loan loan = json_to_loan(loan_j);
         player->loans_in_city(city_id).push_back(loan);
       }
+    }
+  }
+
+  // Restore investments
+  if (j.contains("investments")) {
+    for (const auto& inv_j : j["investments"]) {
+      player->add_investment(json_to_investment(inv_j));
     }
   }
 
@@ -452,6 +468,27 @@ Loan json_to_loan(const json& j) {
       j["interest_percentage"].get<uint8_t>(), j["start_months"].get<int>(),
       j["months_left"].get<int>(), Money{j["monthly_principal"].get<int64_t>()},
       Money{j["monthly_interest"].get<int64_t>()});
+}
+
+json investment_to_json(const Investment& inv) {
+  json j;
+  j["bank_id"] = inv.bank_id().value;
+  j["city_id"] = inv.city_id().value;
+  j["amount"] = inv.amount().cents;
+  j["return_rate"] = inv.return_rate();
+  j["start_months"] = inv.start_months();
+  j["months_left"] = inv.months_left();
+  j["monthly_return"] = inv.monthly_return().cents;
+  return j;
+}
+
+Investment json_to_investment(const json& j) {
+  return Investment::from_save(
+      core::BankId{j["bank_id"].get<int32_t>()},
+      core::CityId{j["city_id"].get<int32_t>()},
+      Money{j["amount"].get<int64_t>()}, j["return_rate"].get<int>(),
+      j["start_months"].get<int>(), j["months_left"].get<int>(),
+      Money{j["monthly_return"].get<int64_t>()});
 }
 
 json posting_to_json(const Posting& posting) {

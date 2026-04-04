@@ -64,7 +64,7 @@ RestaurantView::RestaurantView(GameContext& context, GameState& state,
   // Set this restaurant as the active one so other views know which restaurant
   // we're working with
   state_.active_restaurant(r_state.id);
-  state_.prevent_end_of_day(false);
+  state_.prevent_auto_end_of_turn(false);
   if (furniture_placement_.empty()) {
     state_.resume_time_advancement();
   }
@@ -153,7 +153,7 @@ RestaurantView::RestaurantView(GameContext& context, GameState& state,
 }
 
 RestaurantView::~RestaurantView() {
-  state_.prevent_end_of_day(true);
+  state_.prevent_auto_end_of_turn(true);
   if (context_.audio) {
     context_.audio->stop_music();
     if (current_restaurant_noise_) {

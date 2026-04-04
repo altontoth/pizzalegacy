@@ -101,7 +101,7 @@ CityView::CityView(GameContext& context, GameState& state, core::CityId id)
   state_.active_city(id);
   state_.resume_time_advancement();
   city_ = state_.active_city();
-  state_.prevent_end_of_day(false);
+  state_.prevent_auto_end_of_turn(false);
 
   if (auto* player = state_.active_player()) {
     state_.on_city_entered(id, *player);
@@ -167,7 +167,7 @@ CityView::~CityView() {
   if (state_.active_player() && state_.active_player()->is_human_controlled()) {
     build_default_city_status_recipe();
   }
-  state_.prevent_end_of_day(true);
+  state_.prevent_auto_end_of_turn(true);
   stop_city_sound();
 }
 

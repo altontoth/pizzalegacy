@@ -12,6 +12,7 @@
 #include "core/newspaper/NewspaperState.h"
 #include "core/state/GameState.h"
 #include "core/time/GameTime.h"
+#include "engine/Random.h"
 
 using core::food::IngredientType;
 using enum TrendDuration;
@@ -147,14 +148,18 @@ bool NewspaperEventSystem::execute_named_event(NewspaperEvent event,
     break;
 
   // --- Interest rate events ---
-  case InterestRatesRising:
-    // TODO: Modifies interest rate (increases by random 2-6)-this system does
-    // not seem to be implemented in the game though, doesn't have an effect
-    // afaict.
+  case InterestRatesRising: {
+    auto new_rate =
+        state.global_interest_rate() + engine::random::rand_max_n(4) + 2;
+    state.global_interest_rate(new_rate);
     break;
-  case InterestRatesFalling:
-    // TODO: Same as rising but negative
+  }
+  case InterestRatesFalling: {
+    auto new_rate = std::max(
+        state.global_interest_rate() - engine::random::rand_max_n(4) + 2, 0);
+    state.global_interest_rate(new_rate);
     break;
+  }
   case LandPricesRising:
     // TODO: Set something related to land prices to (2, 30) but doesn't seem to
     // have effect in game.

@@ -31,6 +31,7 @@ enum class Account {
   Furniture,
   Protection,
   Repayment,
+  Investments,
   Others,
   // Balance sheet:
   Cash,
@@ -93,6 +94,8 @@ inline std::string to_string(Account account) {
     return "debts";
   case Account::Cheat:
     return "cheat";
+  case Account::Investments:
+    return "investments";
   }
   return "unknown";
 }

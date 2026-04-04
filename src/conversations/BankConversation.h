@@ -29,10 +29,12 @@ public:
 
 private:
   Loan propose_loan() const;
+  Investment propose_investment() const;
   int round_to_nearest(int value, int rounding_unit) const;
   static BankLine compute_start_line(const GameState& state, const Actor*);
   Loan proposed_loan_{};
   Loan* repaying_loan_{nullptr};
   const BankSettings& bank_settings_;
   bool wants_cheque_{false};
+  Investment proposed_investment_;
 };

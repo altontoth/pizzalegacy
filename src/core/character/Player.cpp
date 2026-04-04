@@ -297,27 +297,69 @@ bool Player::has_loan_with_bank(core::CityId city_id, BankId bank_id) const {
       loans, [bank_id](const Loan& loan) { return loan.bank_id() == bank_id; });
 }
 
-void Player::add_investment(core::CityId city_id, Investment investment) {
-  investments_[city_id].push_back(investment);
-}
-
-std::vector<Investment>& Player::investments_in_city(core::CityId city_id) {
-  return investments_[city_id];
-}
-
-const std::vector<Investment>&
-Player::investments_in_city(core::CityId city_id) const {
-  static const std::vector<Investment> empty;
-  if (investments_.contains(city_id)) {
-    return investments_.at(city_id);
+bool Player::add_investment(Investment investment) {
+  for (auto& slot : investments_) {
+    if (!slot.has_value()) {
+      slot = investment;
+      return true;
+    }
   }
-  return empty;
+  return false;
+}
+
+const std::array<std::optional<Investment>, Player::max_investment_count>&
+Player::investments() const {
+  return investments_;
 }
 
 int Player::number_of_investments() const {
   int total = 0;
-  for (const auto& [city_id, investments] : investments_) {
-    total += static_cast<int>(investments.size());
+  for (const auto& slot : investments_) {
+    if (slot.has_value()) {
+      total++;
+    }
+  }
+  return total;
+}
+
+void Player::apply_monthly_investment_payouts(const GameDate& date,
+                                              bool fix_legacy_bugs) {
+  for (auto& slot : investments_) {
+    if (!slot.has_value()) {
+      continue;
+    }
+    if (slot->is_matured()) {
+      // Legacy: principal returned the month after the last interest payment
+      financials_.transfer(date, Account::Investments, Account::Cash,
+                           slot->amount(), AccountingScope::Operational);
+      Logger::info("[Finance] {} - Investment matured, principal returned: {}",
+                   name_, slot->amount());
+      slot.reset();
+    }
+    else {
+      financials_.transfer(date, Account::Investments, Account::Cash,
+                           slot->monthly_return(),
+                           AccountingScope::Operational);
+      slot->end_of_month();
+      // Fixed: if this was the final month, pay principal now too
+      if (fix_legacy_bugs && slot->is_matured()) {
+        financials_.transfer(date, Account::Investments, Account::Cash,
+                             slot->amount(), AccountingScope::Operational);
+        Logger::info(
+            "[Finance] {} - Investment matured, principal returned: {}", name_,
+            slot->amount());
+        slot.reset();
+      }
+    }
+  }
+}
+
+Money Player::monthly_investment_returns() const {
+  Money total{0};
+  for (const auto& slot : investments_) {
+    if (slot.has_value() && !slot->is_matured()) {
+      total += slot->monthly_return();
+    }
   }
   return total;
 }

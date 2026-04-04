@@ -117,6 +117,9 @@ public:
   // Show the monthly costs invoice popup (loans + rent) via PopupManager
   void show_monthly_invoice_popup(core::PlayerId player);
 
+  int global_interest_rate() const { return global_interest_rate_; }
+  void global_interest_rate(int rate) { global_interest_rate_ = rate; }
+
   // City  management
   core::CityId active_city_id() const;
   ViewPoint city_position() const;
@@ -186,20 +189,22 @@ public:
   [[nodiscard]] bool is_time_advancement_enabled() const {
     return time_advancement_enabled_;
   }
-  [[nodiscard]] bool is_past_closing_time() const;
-  void prevent_end_of_day(bool prevent) {
-    prevent_end_of_day_ = prevent;
-    if (!prevent_end_of_day_) {
-      if (is_past_closing_time()) {
+  [[nodiscard]] bool is_player_day_over() const;
+  void prevent_auto_end_of_turn(bool prevent) {
+    prevent_auto_end_of_turn_ = prevent;
+    if (!prevent_auto_end_of_turn_) {
+      if (is_player_day_over()) {
         request_end_of_turn();
       }
     }
   }
-  bool allow_end_of_day() const { return prevent_end_of_day_; }
+  bool is_auto_end_of_turn_prevented() const {
+    return prevent_auto_end_of_turn_;
+  }
 
   // Advance time by n blocks (10 min each) - used for explicit time costs
-  // (furniture placement, phone calls, etc.). Stops early if closing time
-  // is reached. Returns true if closing time was reached.
+  // (furniture placement, phone calls, etc.). Stops early if end-of-day
+  // is reached. Returns true if end-of-day was reached.
   bool advance_time_blocks(int n);
 
   int difficulty_level() const { return difficulty_level_; };
@@ -324,7 +329,7 @@ private:
   bool should_end_of_turn_{false};
   bool suppress_end_of_turn_reports_{false};
   bool time_advancement_enabled_{false};
-  bool prevent_end_of_day_{false};
+  bool prevent_auto_end_of_turn_{false};
   uint32_t time_accumulator_{0};
   std::optional<core::RestaurantId> active_restaurant_;
   GameMode game_mode_;
@@ -369,4 +374,6 @@ private:
   // Not quite week number, we start at 1 at start of the game (1st of March)
   // then reset it every year.
   int business_week_nr{1};
+  // Global interest rate to influence loans and investments
+  int global_interest_rate_{8};
 };

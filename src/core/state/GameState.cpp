@@ -236,6 +236,7 @@ void GameState::show_monthly_invoice_popup(core::PlayerId player_id) {
     }
   }
 
+  Money investment_returns = player->monthly_investment_returns();
   Money total = loan_costs.repayment + loan_costs.interest + total_rent;
 
   views::ui::finance::InvoiceConfig cfg;
@@ -250,12 +251,14 @@ void GameState::show_monthly_invoice_popup(core::PlayerId player_id) {
   cfg.lines.push_back({"LOAN REPAYMENT:", loan_costs.repayment});
   cfg.lines.push_back({"LOAN INTEREST:", loan_costs.interest});
   cfg.lines.push_back({"RENT:", total_rent});
+  cfg.lines.push_back({"INVESTMENT RETURNS:", investment_returns});
   cfg.lines.push_back(empty_line);
   cfg.lines.push_back({"TOTAL:", total});
 
   cfg.on_dismiss = [this, player, rents = std::move(rents)]() {
     const auto& date = time_.current_date();
     player->apply_monthly_loan_payments(date);
+    player->apply_monthly_investment_payouts(date, options().fix_legacy_bugs);
     for (const auto& entry : rents) {
       player->financials().transfer(date, Account::Cash, Account::Rents,
                                     entry.amount, entry.restaurant_id,
@@ -424,14 +427,14 @@ void GameState::resume_time_advancement() {
 
   // Immediately check if we should end the turn - don't wait for the
   // next accumulator tick. This handles the case where time advanced
-  // past closing during furniture placement.
-  if (is_past_closing_time()) {
+  // past end-of-day during furniture placement.
+  if (is_player_day_over()) {
     request_end_of_turn();
   }
 }
 
-bool GameState::is_past_closing_time() const {
-  if (prevent_end_of_day_) {
+bool GameState::is_player_day_over() const {
+  if (prevent_auto_end_of_turn_) {
     return false;
   }
   if (active_player_.value < 0) {
@@ -445,10 +448,10 @@ bool GameState::advance_time_blocks(int n) {
   for (int i = 0; i < n; ++i) {
     advance_game_time();
 
-    if (is_past_closing_time()) {
-      // Reached closing time - stop advancing but don't auto-trigger
+    if (is_player_day_over()) {
+      // Reached player end-of-day - stop advancing but don't auto-trigger
       // end_of_turn. This matches original behavior where terminal
-      // conversations can continue past closing time.
+      // conversations can continue past end-of-day.
       return true;
     }
   }
@@ -490,7 +493,7 @@ void GameState::update(uint32_t elapsed_ms) {
     while (time_accumulator_ >= PASS_TEN_MINUTES_MS) {
       advance_game_time();
 
-      if (is_past_closing_time()) {
+      if (is_player_day_over()) {
         request_end_of_turn();
       }
       time_accumulator_ -= PASS_TEN_MINUTES_MS;

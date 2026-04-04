@@ -12,6 +12,7 @@
 #include "conversations/BankLine.h"
 #include "core/character/Actor.h"
 #include "core/character/Player.h"
+#include "engine/Math.h"
 
 constexpr int MAX_NUMBER_OF_LOANS = 6;
 
@@ -31,6 +32,7 @@ bool BankConversation::advance() {
   case BankLine::YOU_DONT_HAVE_LOAN_WITH_US:
   case BankLine::TRANSFER_SUCCEEDED:
   case BankLine::TRANSFER_FAILED:
+  case BankLine::SORRY_WE_DONT_HAVE_INVESTMENT_FOR_YOU:
     current_line(BankLine::I_NEED_LOAN);
     break;
   default:
@@ -87,6 +89,18 @@ bool BankConversation::advance_line_choice(BankLine choice) {
       }
     }
     break;
+  case BankLine::I_WANT_TO_INVEST: {
+    auto* player = state_.active_player();
+    if (player->cash_balance() < 20'000_usd ||
+        player->number_of_investments() >= Player::max_investment_count) {
+      current_line(BankLine::SORRY_WE_DONT_HAVE_INVESTMENT_FOR_YOU);
+    }
+    else {
+      proposed_investment_ = propose_investment();
+      current_line(BankLine::LATEST_INVESTMENT_TIP);
+    }
+    break;
+  }
   default:
     std::cerr << "I don't know how to advance with choice " << choice
               << " from state " << current_line_ << "\n";
@@ -117,6 +131,18 @@ bool BankConversation::advance_proposal(bool agree) {
       repaying_loan_->repay();
     }
     current_line(BankLine::I_NEED_LOAN);
+    break;
+  case BankLine::LATEST_INVESTMENT_TIP:
+    if (agree) {
+      (void)state_.active_player()->spend_cash(state_.time().current_date(),
+                                               Account::Investments,
+                                               proposed_investment_.amount());
+      state_.active_player()->add_investment(proposed_investment_);
+      current_line(BankLine::YOUR_MONEY_IS_SAFE_WITH_US);
+    }
+    else {
+      current_line(BankLine::I_NEED_LOAN);
+    }
     break;
   default:
     // If there is no choice then just advance.
@@ -166,11 +192,16 @@ std::vector<ConversationLine<BankLine>> BankConversation::lines() const {
         make_line(BankLine::TOO_RISKY_FOR_LOAN),
     };
     break;
-  case BankLine::LATEST_INVESTMENT_TIP:
+  case BankLine::LATEST_INVESTMENT_TIP: {
     return {
-        make_line(BankLine::LATEST_INVESTMENT_TIP),
+        make_proposal(BankLine::LATEST_INVESTMENT_TIP,
+                      compat::format(" {}, Period: {} months, interest: {}%",
+                                     proposed_investment_.amount(),
+                                     proposed_investment_.start_months(),
+                                     proposed_investment_.return_rate())),
     };
     break;
+  }
   case BankLine::OF_50:
     return {
         make_line(BankLine::OF_50),
@@ -375,8 +406,7 @@ Loan BankConversation::propose_loan() const {
   // Round to nearest 1000
   loan_amount = math::round_up_to_next_power10<3>(loan_amount);
 
-  // Calculate interest rate (TODO move to a GameState constant or something)
-  int base_interest_rate = 8;
+  int base_interest_rate = state_.global_interest_rate();
   int interest_rate =
       base_interest_rate + bank_settings_.interest_rate_modifier;
 
@@ -385,6 +415,17 @@ Loan BankConversation::propose_loan() const {
 
   return Loan(core::BankId{actor_->id()}, Money{loan_amount * 100},
               interest_rate, months);
+}
+
+Investment BankConversation::propose_investment() const {
+  auto* player = state_.active_player();
+  auto cash = player->cash_balance();
+  Money amount = math::round_up_to_next_power10<3>(cash * 0.5);
+  if (cash > 3'000'000'000_usd) {
+    amount = 2'000'000'000_usd;
+  }
+  // Investments are hardcoded to 8% interest and 2 months
+  return {core::BankId{actor_->id()}, state_.active_city_id(), amount, 8, 2};
 }
 
 int BankConversation::round_to_nearest(int value, int rounding_unit) const {

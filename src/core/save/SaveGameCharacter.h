@@ -40,6 +40,10 @@ void load_inventory(const json& j, core::inventory::Inventory& inventory);
 json loan_to_json(const Loan& loan);
 Loan json_to_loan(const json& j);
 
+// Investment serialization
+json investment_to_json(const Investment& investment);
+Investment json_to_investment(const json& j);
+
 // Mafia state serialization
 json mafia_state_to_json(const MafiaPlayerState& state);
 MafiaPlayerState json_to_mafia_state(const json& j);

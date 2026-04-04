@@ -19,7 +19,7 @@ class BalanceSheet {
   }
 
 public:
-  BalanceSheet(const Player&);
+  BalanceSheet(const Player&, bool fix_legacy_bugs = false);
   std::vector<BalanceEntry> assets() const;
   std::vector<BalanceEntry> liabilities() const;
   Money total_assets() const;
@@ -27,4 +27,5 @@ public:
 
 private:
   const Player& player_;
+  bool fix_legacy_bugs_;
 };

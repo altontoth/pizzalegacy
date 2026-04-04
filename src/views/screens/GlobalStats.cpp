@@ -479,50 +479,48 @@ void GlobalStats::render_loans(const RenderContext& ctx) {
   auto cities = state_.visited_cities();
 
   constexpr int col_city = 4;
-  constexpr int col_amount = 222;
+  constexpr int col_amount = 232;
   constexpr int col_time = 246;
   constexpr int col_pct = 276;
   constexpr int col_month = 380;
 
-  std::vector<std::pair<const City*, const Loan*>> active_loans;
+  struct LoanEntry {
+    core::CityId city_id;
+    const Loan* loan;
+  };
+  std::vector<LoanEntry> active_loans;
   for (auto* city : cities) {
     for (const auto& loan : player->loans_in_city(city->id())) {
       if (!loan.is_settled()) {
-        active_loans.emplace_back(city, &loan);
+        active_loans.push_back({city->id(), &loan});
       }
     }
   }
 
+  auto active_city_id = state_.active_city_id();
+
   constexpr int loan_row_y0 = 92;
   constexpr int loan_row_height = 20;
   for (int i = 0; i < std::min(4, (int)active_loans.size()); i++) {
-    const auto& [city, loan] = active_loans[i];
+    const auto& [city_id, loan] = active_loans[i];
     int y = loan_row_y0 + (i * loan_row_height);
-    context_.font->render_text_onto(*ctx.surface, city->name(), {col_city, y},
-                                    FontFace::PIZ_NUMB, 240);
 
-    if (context_.config->options().qol_improvements) {
-      // Tooltip on hover: show which bank this loan is with
+    if (city_id == active_city_id) {
+      const auto* city = state_.city(city_id);
       const Actor* bank =
-          city->actor_by_id(static_cast<uint8_t>(loan->bank_id().value));
-      std::string bank_name = bank ? bank->name() : "Unknown bank";
-      interactions_.create_frame_item(
-          {col_city, y, 120, loan_row_height},
-          compat::format("loan_city_{}", i),
-          [](const views::ui::InteractionEvent&) {},
-          [bank_name](const views::ui::InteractionEvent& ie) {
-            return TooltipRequest{
-                .text = bank_name,
-                .anchor = TooltipAnchor::Mouse,
-                .screenPos = ie.pos,
-                .palette = 8,
-                .bg_color = 29,
-                .text_color = 240,
-                .border_color = 240,
-                .padding = 4,
-            };
-          });
+          city ? city->actor_by_id(static_cast<uint8_t>(loan->bank_id().value))
+               : nullptr;
+      std::string label = bank ? bank->name() : "Unknown bank";
+      context_.font->render_text_onto(*ctx.surface, label, {col_city, y},
+                                      FontFace::PIZ_NUMB, 240);
     }
+    else {
+      const auto* city = state_.city(city_id);
+      std::string label = city ? city->name() : "Unknown city";
+      context_.font->render_text_onto(*ctx.surface, label, {col_city, y},
+                                      FontFace::PIZ_NUMB, 240);
+    }
+
     context_.font->render_text_onto(
         *ctx.surface, compat::format("{}", loan->start_amount()),
         {col_amount, y}, FontFace::PIZ_NUMB, 240, AlignX::RightEdge);
@@ -544,29 +542,36 @@ void GlobalStats::render_loans(const RenderContext& ctx) {
   context_.font->render_text_onto(*ctx.surface, "investments", {12, 168},
                                   FontFace::ASTANDAR);
 
-  std::vector<std::pair<const City*, const Investment*>> all_investments;
-  for (auto* city : cities) {
-    for (const auto& inv : player->investments_in_city(city->id())) {
-      all_investments.emplace_back(city, &inv);
-    }
-  }
+  const auto& investments = player->investments();
 
   constexpr int inv_row_y0 = 224;
   constexpr int inv_row_height = 16;
-  for (int slot = 0; slot < 4; slot++) {
+  for (int slot = 0; slot < Player::max_investment_count; slot++) {
     int y = inv_row_y0 + (slot * inv_row_height);
-    if (slot >= (int)all_investments.size()) {
+    const auto& inv = investments[slot];
+    if (!inv.has_value() || inv->is_matured()) {
       continue;
     }
-    const auto& [city, inv] = all_investments[slot];
-    if (inv->is_matured()) {
-      continue;
+
+    if (inv->city_id() == active_city_id) {
+      const auto* city = state_.city(inv->city_id());
+      const Actor* bank =
+          city ? city->actor_by_id(static_cast<uint8_t>(inv->bank_id().value))
+               : nullptr;
+      std::string label = bank ? bank->name() : "Unknown bank";
+      context_.font->render_text_onto(*ctx.surface, label, {col_city, y},
+                                      FontFace::PIZ_NUMB, 240);
     }
-    context_.font->render_text_onto(*ctx.surface, city->name(), {col_city, y},
-                                    FontFace::PIZ_NUMB, 240);
+    else {
+      const auto* city = state_.city(inv->city_id());
+      std::string label = city ? city->name() : "Unknown city";
+      context_.font->render_text_onto(*ctx.surface, label, {col_city, y},
+                                      FontFace::PIZ_NUMB, 240);
+    }
+
     context_.font->render_text_onto(
-        *ctx.surface, compat::format("{}", inv->amount()), {col_amount, y},
-        FontFace::PIZ_NUMB, 240, AlignX::Right);
+        *ctx.surface, compat::format("{:i}", inv->amount()), {col_amount, y},
+        FontFace::PIZ_NUMB, 240, AlignX::RightEdge);
     context_.font->render_text_onto(
         *ctx.surface, compat::format("{}", inv->months_left()), {col_time, y},
         FontFace::PIZ_NUMB, 240, AlignX::Right);
@@ -729,7 +734,8 @@ void GlobalStats::render_balance(const RenderContext& ctx) {
         *ctx.surface, compat::format("{:i}", amount), pos + amount_pos_offset,
         FontFace::PIZ_NUMB, item_color, AlignX::Right);
   };
-  auto balance = BalanceSheet(*state_.active_player());
+  auto balance =
+      BalanceSheet(*state_.active_player(), state_.options().fix_legacy_bugs);
   // Assets
   ViewPoint label_pos{6, 120};
   Money loss_amount = 0_usd;

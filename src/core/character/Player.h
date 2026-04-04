@@ -26,6 +26,7 @@ class Player {
   friend std::ostream& operator<<(std::ostream& os, const Player& player);
 
 public:
+  static constexpr int max_investment_count = 4;
   Player(core::PlayerId pid, core::character::Character character,
          bool is_human = true);
   ~Player();
@@ -62,11 +63,13 @@ public:
   }
   int number_of_loans() const;
   bool has_loan_with_bank(core::CityId city_id, core::BankId bank_id) const;
-  void add_investment(core::CityId city_id, Investment investment);
-  std::vector<Investment>& investments_in_city(core::CityId city_id);
-  const std::vector<Investment>&
-  investments_in_city(core::CityId city_id) const;
+  bool add_investment(Investment investment);
+  const std::array<std::optional<Investment>, max_investment_count>&
+  investments() const;
   int number_of_investments() const;
+  void apply_monthly_investment_payouts(const GameDate& date,
+                                        bool fix_legacy_bugs);
+  Money monthly_investment_returns() const;
   core::character::Character& character() { return character_; }
   const core::character::Character& character() const { return character_; }
   PlayerFinancials& financials() { return financials_; }
@@ -142,7 +145,7 @@ private:
   std::optional<int> jail_days_left_;
   std::string name_;
   std::map<core::CityId, std::vector<Loan>> loans_;
-  std::map<core::CityId, std::vector<Investment>> investments_;
+  std::array<std::optional<Investment>, max_investment_count> investments_;
   core::inventory::Inventory inventory_;
   core::food::PlayerRecipes recipes_;
   bool is_human_{true};

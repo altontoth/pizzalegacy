@@ -8,7 +8,8 @@
 
 #include "BalanceSheet.h"
 
-BalanceSheet::BalanceSheet(const Player& player) : player_(player) {}
+BalanceSheet::BalanceSheet(const Player& player, bool fix_legacy_bugs)
+    : player_(player), fix_legacy_bugs_(fix_legacy_bugs) {}
 
 std::vector<BalanceEntry> BalanceSheet::assets() const {
   std::vector<BalanceEntry> result;
@@ -22,6 +23,11 @@ std::vector<BalanceEntry> BalanceSheet::assets() const {
   result.push_back({Account::Stock, financials.balance(Account::Stock)});
   result.push_back({Account::Cash, financials.balance(Account::Cash)});
 
+  if (fix_legacy_bugs_) {
+    result.push_back(
+        {Account::Investments, financials.balance(Account::Investments)});
+  }
+
   // Sum all revenue/expense accounts not shown on balance sheet
   // (excluding Machines, Furniture, Stock which are shown as assets)
   Money other_accounts = financials.balance(Account::Sales) +
@@ -33,6 +39,12 @@ std::vector<BalanceEntry> BalanceSheet::assets() const {
                          financials.balance(Account::Repayment) +
                          financials.balance(Account::Others) +
                          financials.balance(Account::FinesAndBribes);
+
+  // In legacy mode, investments are lumped into P&L (original behavior).
+  // With fix_legacy_bugs, investments are shown as a separate asset line.
+  if (!fix_legacy_bugs_) {
+    other_accounts += financials.balance(Account::Investments);
+  }
 
   // Add to ProfitAndLoss for balance sheet display
   Money total_profit_and_loss =
@@ -72,6 +84,10 @@ std::vector<BalanceEntry> BalanceSheet::liabilities() const {
                          financials.balance(Account::Repayment) +
                          financials.balance(Account::Others) +
                          financials.balance(Account::FinesAndBribes);
+
+  if (!fix_legacy_bugs_) {
+    other_accounts += financials.balance(Account::Investments);
+  }
 
   // Add to ProfitAndLoss for balance sheet display
   Money total_profit_and_loss =
