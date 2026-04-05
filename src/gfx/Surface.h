@@ -18,9 +18,6 @@
 namespace gfx {
 
 constexpr uint8_t TRANSPARENT = 0;
-// Guaranteed to be black for amiga assets only! With our usual dos assets black
-// is usually 240:
-constexpr uint8_t OPAQUE_BLACK = 255;
 
 class Surface {
 public:

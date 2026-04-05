@@ -50,7 +50,7 @@ void SaveFileInputBox::draw(Surface& screen, ViewPoint p, bool is_selected) {
         // Display the filename being typed with cursor
         std::string display_text = new_filename_ + "_";
         context_.font->render_text_onto(block, display_text, ViewPoint{6, y},
-                                        FontFace::PIZ_NUMB, BLACK);
+                                        FontFace::PIZ_NUMB, 1);
       }
       else {
         // Draw gray background for hover on NEW NAME
@@ -61,7 +61,7 @@ void SaveFileInputBox::draw(Surface& screen, ViewPoint p, bool is_selected) {
         }
 
         context_.font->render_text_onto(block, " - NEW NAME -", ViewPoint{6, y},
-                                        FontFace::PIZ_NUMB, BLACK);
+                                        FontFace::PIZ_NUMB, 1);
       }
     }
     else {
@@ -88,7 +88,7 @@ void SaveFileInputBox::draw(Surface& screen, ViewPoint p, bool is_selected) {
       }
 
       context_.font->render_text_onto(block, display_name, ViewPoint{6, y},
-                                      FontFace::PIZ_NUMB, BLACK);
+                                      FontFace::PIZ_NUMB, 1);
     }
 
     y += LINE_HEIGHT;

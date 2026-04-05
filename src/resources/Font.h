@@ -16,25 +16,6 @@
 
 using gfx::Surface;
 
-static constexpr uint8_t BLACK = 1;
-static constexpr uint8_t WHITE = 255;
-static constexpr uint8_t YELLOW = 155;
-static constexpr uint8_t DISTRICT_WHITE = 15;
-static constexpr uint8_t TEXT_DARK_GRAY = 244;
-static constexpr uint8_t TEXT_MEDIUM_GRAY = 248;
-static constexpr uint8_t SCROLL_TABLE_BODY_TEXT = 13;
-static constexpr uint8_t RED = 32;
-static constexpr uint8_t TEXT_DARK_BROWN = 5;
-static constexpr uint8_t GRAY = 250;
-static constexpr uint8_t SCROLL_TABLE_HEADER_TEXT = 12;
-static constexpr uint8_t TEXT_DARKER_BROWN = 6;
-static constexpr uint8_t TEXT_BEIGE = 14;
-static constexpr uint8_t TEXT_LIGHT_GRAY = 251;
-static constexpr uint8_t BEIGE = 13;
-static constexpr uint8_t BRIGHTGREEN = 26;
-static constexpr uint8_t DARKGRAY = 247;
-static constexpr uint8_t GREEN = 96;
-
 struct RenderedTextMetrics {
   int width = 0;
   int height = 0;

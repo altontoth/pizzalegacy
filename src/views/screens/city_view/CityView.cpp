@@ -644,7 +644,7 @@ void CityView::render_map_zoom_close(const RenderContext& ctx) {
         if (i >= 0 && i < 1'000'000) {
           context_.font->render_text_onto(*ctx.surface, std::to_string(i),
                                           {dest_pos.x + 3, dest_pos.y + 4},
-                                          FontFace::MINI, WHITE);
+                                          FontFace::MINI, 255);
         }
       }
 
@@ -652,7 +652,7 @@ void CityView::render_map_zoom_close(const RenderContext& ctx) {
         char road_type_str[3];
         snprintf(road_type_str, 3, "%02x", type);
         auto roadTypeOpt = magic_enum::enum_cast<RoadType>(type);
-        auto color = roadTypeOpt.has_value() ? WHITE : RED;
+        auto color = roadTypeOpt.has_value() ? 255 : 32;
         context_.font->render_text_onto(*ctx.surface, road_type_str,
                                         {dest_pos.x + 3, dest_pos.y + 12},
                                         FontFace::MINI, color);
@@ -763,7 +763,7 @@ void CityView::render_map_zoom_far(const RenderContext& ctx) {
         0x0C, 0x0C, 0x0C, 0x0C};
 
     for (int i = 0; i < city_->data_length(); ++i) {
-      auto type = static_cast<uint8_t>(city_->type(i));
+      auto type = city_->type(i);
       int x_pos = (i % MAP_TILES_PER_ROW) * 2;
       int y_pos = (i / MAP_TILES_PER_ROW) * 2;
       ViewRect pixel_location(x_pos, y_pos, 2, 2);

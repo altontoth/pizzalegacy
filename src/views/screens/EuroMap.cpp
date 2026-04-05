@@ -252,9 +252,10 @@ void EuroMap::render(const RenderContext& ctx) {
                           ViewPoint{small_popup_box_.x, small_popup_box_.y});
   }
   else if (hovered_city_ != Destination::NONE) {
+    constexpr int text_color = 255;
     context_.font->render_text_onto(
         *ctx.surface, destination_name(hovered_city_), ViewPoint{-40, 190},
-        FontFace::ASTANDAR, WHITE, AlignX::Center);
+        FontFace::ASTANDAR, text_color, AlignX::Center);
   }
 }
 

@@ -58,7 +58,7 @@ void FontViewer::render(const RenderContext& ctx) {
       *ctx.surface,
       "!@#$%^&*()-_[]{}|0123456789|abcdefghijklmnopqrstuvwxyz|"
       "ABCDEFGHIJKLMNOPQRSTUVWX|YZ and backslash is \\ and u is ü",
-      ViewPoint{4, y}, current, BLACK);
+      ViewPoint{4, y}, current, 1);
   y += metrics.height;
   metrics = f->render_text_onto(*ctx.surface, "The quick brown dog \\",
                                 ViewPoint{4, y}, current, text_color);

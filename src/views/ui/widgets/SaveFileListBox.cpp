@@ -46,7 +46,7 @@ void SaveFileListBox::draw(Surface& screen, ViewPoint p, bool is_selected) {
     }
 
     context_.font->render_text_onto(block, display_name, ViewPoint{6, y},
-                                    FontFace::PIZ_NUMB, BLACK);
+                                    FontFace::PIZ_NUMB, 1);
     y += LINE_HEIGHT;
   }
 

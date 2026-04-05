@@ -215,8 +215,9 @@ Surface Menu::default_background(const std::string& title) const {
     gfx::draw::line(background, ViewPoint{seg.from_x, line_y},
                     ViewPoint{seg.to_x, line_y}, gray_index);
   }
+  constexpr int text_color = 1;
   context_.font->render_text_onto(background, title, ViewPoint{280, 76},
-                                  FontFace::MENU, BLACK);
+                                  FontFace::MENU, text_color);
   return background;
 }
 

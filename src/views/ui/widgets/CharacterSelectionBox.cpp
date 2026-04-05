@@ -63,19 +63,18 @@ void CharacterSelectionBox::draw(Surface& screen, ViewPoint p,
                                  : players_[*active_player_].character_name);
   context_.font->render_text_onto(block, character_name,
                                   ViewPoint{col1_x - 1, this_y},
-                                  FontFace::PIZ_NUMB, BLACK);
+                                  FontFace::PIZ_NUMB, 1);
   this_y += y_offset;
 
   for (const auto& item : items) {
-    context_.font->render_text_onto(block, item.label,
-                                    ViewPoint{col1_x, this_y},
-                                    FontFace::PIZ_NUMB, BLACK);
+    context_.font->render_text_onto(
+        block, item.label, ViewPoint{col1_x, this_y}, FontFace::PIZ_NUMB, 1);
 
     context_.font->render_text_onto(block, item.get_value(),
                                     // Because we're right aligned we move it a
                                     // bit away from the right border this way:
                                     ViewPoint{-8, this_y}, FontFace::PIZ_NUMB,
-                                    BLACK, AlignX::Right);
+                                    1, AlignX::Right);
 
     this_y += y_offset;
   }

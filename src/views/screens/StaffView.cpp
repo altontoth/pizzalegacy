@@ -228,7 +228,7 @@ Surface StaffView::create_top_bar(const std::string& title) {
   }
   auto this_top_bar = top_bar_->clone();
   context_.font->render_text_onto(this_top_bar, title, ViewPoint{28, 8},
-                                  FontFace::ASTANDAR, TEXT_LIGHT_GRAY);
+                                  FontFace::ASTANDAR, 251);
   return this_top_bar;
 }
 
@@ -1032,9 +1032,9 @@ Surface StaffView::create_application_card(uint8_t character_id) {
                    .right = text_right_margin};
 
   // Render the flowing text with soft hyphen support
-  context_.font->render_text_onto(
-      card, full_text, ViewPoint{text_start_x, text_start_y},
-      FontFace::CSTANDAR, TEXT_DARK_BROWN, AlignX::Left, flow);
+  context_.font->render_text_onto(card, full_text,
+                                  ViewPoint{text_start_x, text_start_y},
+                                  FontFace::CSTANDAR, 5, AlignX::Left, flow);
 
   return card;
 }
@@ -1093,7 +1093,7 @@ Surface StaffView::create_empty_card(const std::string& label) {
   return this_card;
 }
 
-void StaffView::handle_left_mouse_click(ViewPoint p) {
+void StaffView::handle_left_mouse_click(ViewPoint /*p*/) {
   assert(input_panel_ != nullptr);
 
   // If a hired employee card is visible on overview, clicking anywhere closes

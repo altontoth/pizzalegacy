@@ -12,7 +12,6 @@
 #include "engine/geom/Spaces.h"
 #include "engine/ui/InteractionEvent.h"
 #include "engine/ui/InteractionLayers.h"
-#include "gfx/Surface.h"
 #include "resources/BlitmapManager.h"
 #include "resources/FontManager.h"
 #include "views/helpers/ButtonGeometry.h"
@@ -99,9 +98,11 @@ public:
 
   void render_page_number(const RenderContext& ctx, GameContext& game_ctx,
                           std::size_t current_page) {
+    constexpr int text_color = 1;
     std::string page_nr = compat::format("- {} -", current_page + 1);
     game_ctx.font->render_text_onto(*ctx.surface, page_nr, ViewPoint{20, 316},
-                                    FontFace::PIZ_NUMB, BLACK, AlignX::Center);
+                                    FontFace::PIZ_NUMB, text_color,
+                                    AlignX::Center);
   }
 
   void setup_pagination_buttons(InputPanel* panel, std::size_t& current_page,

@@ -20,12 +20,16 @@
 #include "resources/FontManager.h"
 #include "resources/FontTypes.h"
 
-#define BLITMAP_OFFSET_X 76
-#define BLITMAP_OFFSET_Y 50
+namespace {
+constexpr int blitmap_offset_x = 76;
+constexpr int blitmap_offset_y = 50;
+constexpr int blitmap_box_w = 218;
+constexpr int blitmap_box_h = 42;
+constexpr int blitmap_box_spacing = 4;
 
-#define BLITMAP_BOX_W 218
-#define BLITMAP_BOX_H 42
-#define BLITMAP_BOX_DISTANCE 4 // distance between boxes
+constexpr int prompt_color = 13;    /* beige */
+constexpr int highlight_color = 26; /* bright green */
+} // namespace
 
 const std::map<TerminalCategory, std::string> category_to_string = {
     {TerminalCategory::REALTORS, "Realtors/Estate Agents"},
@@ -74,24 +78,24 @@ void Terminal::draw_main_menu(const RenderContext& ctx) {
   clip.h = 234;
   clip.x = clip.y = 0;
   ctx.surface->blit(category_background_, clip,
-                    {BLITMAP_OFFSET_X, BLITMAP_OFFSET_Y});
+                    {blitmap_offset_x, blitmap_offset_y});
 
-  context_.font->render_text_onto(*ctx.surface,
-                                  "INTERNATIONAL TELENET TERMINAL",
-                                  ViewPoint{6, 6}, FontFace::CSTANDAR, BEIGE);
-  context_.font->render_text_onto(*ctx.surface,
-                                  "LOADING MULTIMEDIA LIBRARY . . .",
-                                  ViewPoint{6, 20}, FontFace::CSTANDAR, BEIGE);
+  context_.font->render_text_onto(
+      *ctx.surface, "INTERNATIONAL TELENET TERMINAL", ViewPoint{6, 6},
+      FontFace::CSTANDAR, prompt_color);
+  context_.font->render_text_onto(
+      *ctx.surface, "LOADING MULTIMEDIA LIBRARY . . .", ViewPoint{6, 20},
+      FontFace::CSTANDAR, prompt_color);
 
   // TODO: Some less hardcoded way of figuring out the positions, make it more
   // centered too
-  ViewRect location(BLITMAP_OFFSET_X, BLITMAP_OFFSET_Y, 218, 42);
+  ViewRect location(blitmap_offset_x, blitmap_offset_y, 218, 42);
   int x = -6;
   int y = 68;
   int y_offset = 45;
   for (const auto& [key, value] : category_to_string) {
     context_.font->render_text_onto(*ctx.surface, value, ViewPoint{x, y},
-                                    FontFace::PIZ_NUMB, BRIGHTGREEN,
+                                    FontFace::PIZ_NUMB, highlight_color,
                                     AlignX::Center);
     y += y_offset;
   }
@@ -104,10 +108,10 @@ void Terminal::draw_main_menu(const RenderContext& ctx) {
 
   for (int i = 0; i < 5; ++i) {
     TerminalCategory category = categories[i];
-    const ViewRect hitbox{BLITMAP_OFFSET_X,
-                          BLITMAP_OFFSET_Y + (BLITMAP_BOX_H * i) +
-                              (BLITMAP_BOX_DISTANCE * i),
-                          BLITMAP_BOX_W, BLITMAP_BOX_H};
+    const ViewRect hitbox{blitmap_offset_x,
+                          blitmap_offset_y + (blitmap_box_h * i) +
+                              (blitmap_box_spacing * i),
+                          blitmap_box_w, blitmap_box_h};
     interactions_.create_frame_item(
         hitbox, magic_enum::enum_name(category),
         [this, category](views::ui::InteractionEvent ie) {
@@ -186,7 +190,7 @@ void Terminal::tick() {
     uint32_t phone_num = static_cast<uint32_t>(std::atoi(number_string));
     for (const auto& [category, _] : category_to_string) {
       auto actors = actors_by_category(category);
-      for (auto actor : actors) {
+      for (const auto* actor : actors) {
         if (actor->phone_number() == phone_num) {
           dialed_existing_number = true;
           pending_actor_type_ = actor->type();
@@ -194,8 +198,8 @@ void Terminal::tick() {
 
           // Track arms dealer as known if dialed
           if (actor->type() == ActorType::ARMS_DEALER) {
-            auto city = state_.active_city();
-            auto player = state_.active_player();
+            auto* city = state_.active_city();
+            auto* player = state_.active_player();
             auto player_id = player->id();
 
             if (!city->is_arms_dealer_known(player_id, actor->id())) {
@@ -245,7 +249,7 @@ void Terminal::draw_category(const RenderContext& ctx, TerminalCategory cat) {
 
   std::string title = category_to_string.at(cat);
   context_.font->render_text_onto(*ctx.surface, title, ViewPoint{-18, 46},
-                                  FontFace::PIZ_NUMB, BRIGHTGREEN,
+                                  FontFace::PIZ_NUMB, highlight_color,
                                   AlignX::Center);
 
   // Constants for table rendering
@@ -259,8 +263,8 @@ void Terminal::draw_category(const RenderContext& ctx, TerminalCategory cat) {
   // Filter arms dealers in OTHERS category based on discovery
   std::vector<const Actor*> actors_to_display;
   if (cat == TerminalCategory::OTHERS) {
-    auto city = state_.active_city();
-    auto player = state_.active_player();
+    auto* city = state_.active_city();
+    auto* player = state_.active_player();
     auto player_id = player->id();
 
     // Initialize on first access if needed (for save game compatibility)
@@ -281,7 +285,7 @@ void Terminal::draw_category(const RenderContext& ctx, TerminalCategory cat) {
       actors_to_display = all_actors;
     }
     else {
-      for (auto actor : all_actors) {
+      for (const auto* actor : all_actors) {
         if (actor->type() == ActorType::MAFIA) {
           // Mafia is always visible
           actors_to_display.push_back(actor);
@@ -310,18 +314,17 @@ void Terminal::draw_category(const RenderContext& ctx, TerminalCategory cat) {
     ViewPoint bottom_right =
         top_left + PxOffset{CELL_WIDTH_NAME + CELL_WIDTH_NUMBER, CELL_HEIGHT};
 
-    uint8_t color = 101;
-    gfx::draw::box(*ctx.surface, top_left, bottom_right, BRIGHTGREEN, 2);
+    gfx::draw::box(*ctx.surface, top_left, bottom_right, highlight_color, 2);
     context_.font->render_text_onto(
         *ctx.surface, name,
         ViewPoint{top_left.x + CELL_PADDING, top_left.y + CELL_PADDING},
-        FontFace::PIZ_NUMB, BRIGHTGREEN);
+        FontFace::PIZ_NUMB, highlight_color);
 
     context_.font->render_text_onto(
         *ctx.surface, phone_nr,
         ViewPoint{top_left.x + CELL_WIDTH_NAME + CELL_PADDING + CELL_PADDING,
                   top_left.y + CELL_PADDING},
-        FontFace::PIZ_NUMB, BRIGHTGREEN);
+        FontFace::PIZ_NUMB, highlight_color);
 
     const auto cb = [this, phone_nr](views::ui::InteractionEvent ie) {
       if (ie.type == views::ui::InteractionEvent::Type::Click &&
@@ -350,7 +353,8 @@ void Terminal::draw_dialing_prompt(const RenderContext& ctx) {
     int x = 76;
     int y = 330;
     context_.font->render_text_onto(*ctx.surface, "new number>",
-                                    ViewPoint{x, y}, FontFace::PIZ_NUMB, BEIGE);
+                                    ViewPoint{x, y}, FontFace::PIZ_NUMB,
+                                    prompt_color);
     x += 115;
 
     // Render each digit individually with pixel spacing
@@ -361,7 +365,7 @@ void Terminal::draw_dialing_prompt(const RenderContext& ctx) {
       }
       auto metrics = context_.font->render_text_onto(
           *ctx.surface, std::string(1, digit), ViewPoint{x, y},
-          FontFace::PIZ_NUMB, BRIGHTGREEN);
+          FontFace::PIZ_NUMB, highlight_color);
       // TODO: We have TextStyle now that can do this
       x += metrics.width + DIGIT_SPACING;
     }
@@ -514,7 +518,7 @@ void Terminal::start_dialing_sequence(const std::string& phone_number) {
   uint32_t phone_num = static_cast<uint32_t>(std::atoi(phone_number.c_str()));
   for (const auto& [category, _] : category_to_string) {
     auto actors = actors_by_category(category);
-    for (auto actor : actors) {
+    for (const auto* actor : actors) {
       if (actor->phone_number() == phone_num) {
         pending_actor_type_ = actor->type();
         pending_actor_id_ = actor->id();
@@ -541,7 +545,7 @@ void Terminal::transition_to_phase(DialingPhase phase) {
   switch (phase) {
   case DialingPhase::SUCCESSFUL_CONNECTION:
     prompt_animator_->set_text("connection successful", {24, 330},
-                               FontFace::PIZ_NUMB, BEIGE);
+                               FontFace::PIZ_NUMB, prompt_color);
     prompt_animator_->set_char_delay(1);
     prompt_animator_->start();
     phase_timer_ = 30;
@@ -666,7 +670,7 @@ void Terminal::setup_waiting_animation() {
   std::string text = "waiting for connection...";
 
   prompt_animator_->set_text(text, ViewPoint{76, 330}, FontFace::PIZ_NUMB,
-                             BEIGE);
+                             prompt_color);
   prompt_animator_->set_char_delay(1);
   prompt_animator_->start();
 
@@ -677,7 +681,7 @@ void Terminal::setup_connected_animation() {
   std::string text = "connection successful";
 
   prompt_animator_->set_text(text, ViewPoint{76, 330}, FontFace::PIZ_NUMB,
-                             BRIGHTGREEN);
+                             highlight_color);
   prompt_animator_->set_char_delay(1);
   prompt_animator_->start();
 
@@ -718,7 +722,7 @@ void Terminal::setup_error_animation() {
   std::string text = error_messages[message_index];
 
   prompt_animator_->set_text(text, ViewPoint{76, 330}, FontFace::PIZ_NUMB,
-                             BEIGE);
+                             prompt_color);
   prompt_animator_->set_char_delay(1);
   prompt_animator_->start();
 

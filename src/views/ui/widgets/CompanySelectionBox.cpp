@@ -87,7 +87,7 @@ void CompanySelectionBox::draw(Surface& screen, ViewPoint p,
     }
     context_.font->render_text_onto(block, render_name,
                                     ViewPoint{col_x, this_y} + text_padding,
-                                    FontFace::PIZ_NUMB, BLACK);
+                                    FontFace::PIZ_NUMB, 1);
 
     i++;
 
