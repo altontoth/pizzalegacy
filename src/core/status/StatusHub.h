@@ -29,6 +29,7 @@ struct StatusMsg {
   StatusSeverity severity = StatusSeverity::Info;
   StatusScope scope = StatusScope::Global;
 
+  int color = 0;
   std::optional<std::chrono::milliseconds> ttl{6000};
   int delay_blocks{
       0}; // wait this many 10-minute game-time blocks before showing

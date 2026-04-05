@@ -193,6 +193,14 @@ public:
   void prevent_auto_end_of_turn(bool prevent) {
     prevent_auto_end_of_turn_ = prevent;
     if (!prevent_auto_end_of_turn_) {
+      // Flush any staff event dialogs that were held back if we're not in the
+      // city/restaurant view at 10am. They fire before the end of the turn so
+      // the player sees them before the day closes out.
+      if (!showing_deferred_staff_event_ && !deferred_staff_events_.empty() &&
+          time_.is_past_time(10, 0)) {
+        show_next_deferred_staff_event();
+        return; // end-of-turn will be checked after the dialog chain finishes
+      }
       if (is_player_day_over()) {
         request_end_of_turn();
       }

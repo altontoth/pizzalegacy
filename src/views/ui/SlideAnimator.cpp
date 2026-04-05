@@ -117,6 +117,7 @@ bool SlideAnimator::bg_visible() const { return bg_visible_; }
 void SlideAnimator::snap_visible() {
   offset_ = target_offset_;
   state_ = SlideState::VISIBLE;
+  bg_visible_ = false; // push complete, bg no longer needed for rendering
 }
 
 // Snaps to the hidden state when DISAPPEARING animation completes.

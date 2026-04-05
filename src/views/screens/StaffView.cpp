@@ -80,8 +80,8 @@ StaffView::StaffView(GameContext& context, GameState& state)
 StaffView::~StaffView() { state_.advance_time_blocks(4); }
 
 void StaffView::tick() {
+  auto state_before = card_animator_.state();
   if (card_animator_.update()) {
-    // Logger::info("CA Logic did something");
     if (card_animator_.state() == SlideAnimator::SlideState::HIDDEN) {
       Logger::info("Animator hidden, resetting both cards.");
       fg_card_.reset();
@@ -89,11 +89,19 @@ void StaffView::tick() {
       // Clear selection only when animation completes
       selected_slot_index_.reset();
     }
-    else if (!card_animator_.bg_visible() && bg_card_) {
-      // pop() finished; background is now the only visible card
-      Logger::info("Moving back to forward card");
-      fg_card_ = std::move(*bg_card_);
-      bg_card_.reset(); // Clear bg_card_ after moving from it
+    else if (card_animator_.state() == SlideAnimator::SlideState::VISIBLE &&
+             bg_card_) {
+      if (state_before == SlideAnimator::SlideState::DISAPPEARING) {
+        // pop() finished; background is now the only visible card
+        Logger::info("Moving back to forward card");
+        fg_card_ = std::move(*bg_card_);
+        bg_card_.reset();
+      }
+      else {
+        // push() finished; discard the old background card
+        Logger::info("Push complete, discarding background card");
+        bg_card_.reset();
+      }
     }
     mark_dirty();
   }
@@ -617,10 +625,12 @@ Surface StaffView::create_staff_overview(Restaurant* r) {
   Money total_costs{0};
 
   for (const auto& slot : staff_array) {
-    if (slot.has_value() && !slot->is_away()) {
-      total_capacity += slot->pizzas_per_day();
-      total_quality +=
-          is_chef ? slot->character().cooking() : slot->character().serving();
+    if (slot.has_value()) {
+      if (!slot->is_away()) {
+        total_capacity += slot->pizzas_per_day();
+        total_quality +=
+            is_chef ? slot->character().cooking() : slot->character().serving();
+      }
       total_costs += slot->payment();
     }
   }
@@ -701,7 +711,8 @@ Surface StaffView::create_staff_slots(Restaurant* r) {
   // Column positions and styling
   constexpr int name_x = 22;         // X position for name column
   constexpr int days_absent_x = 138; // X position for capacity (pizzas_per_day)
-  constexpr int cap_x = 276;         // X position for capacity (pizzas_per_day)
+  constexpr int cap_header_x = 276;  // X position for capacity (pizzas_per_day)
+  constexpr int cap_x = 300;         // X position for capacity (pizzas_per_day)
   constexpr int pay_x = 324;         // X position for payment
   constexpr int header_y = 8;        // Y position for column headers
   constexpr int slot_start_y = 20;   // First slot starts at y=20
@@ -746,7 +757,7 @@ Surface StaffView::create_staff_slots(Restaurant* r) {
                                   ViewPoint{days_absent_x, header_y},
                                   FontFace::CSTANDAR, TEXT_COLOR_BLACK);
   context_.font->render_text_onto(this_staff_slots, "CAP",
-                                  ViewPoint{cap_x, header_y},
+                                  ViewPoint{cap_header_x, header_y},
                                   FontFace::CSTANDAR, TEXT_COLOR_BLACK);
   context_.font->render_text_onto(this_staff_slots, "PAY",
                                   ViewPoint{pay_x, header_y},
@@ -754,18 +765,30 @@ Surface StaffView::create_staff_slots(Restaurant* r) {
 
   // Render staff data into slots
   if (job_ == core::character::JobRole::MANAGER) {
-    std::string name = r->manager().has_value()
-                           ? r->manager()->character().first_name() + " " +
-                                 r->manager()->character().last_name()
+    auto& manager = r->manager();
+    std::string name = manager.has_value()
+                           ? manager->character().first_name() + " " +
+                                 manager->character().last_name()
                            : "  no manager";
     context_.font->render_text_onto(
         this_staff_slots, name, ViewPoint{name_x, slot_start_y + text_y_offset},
         FontFace::PIZ_NUMB, TEXT_COLOR_BLACK);
-    if (r->manager().has_value()) {
+    if (manager.has_value()) {
       context_.font->render_text_onto(
-          this_staff_slots, compat::format("{}", r->manager()->payment()),
+          this_staff_slots, compat::format("{}", manager->payment()),
           ViewPoint{pay_x, slot_start_y + text_y_offset}, FontFace::PIZ_NUMB,
           TEXT_COLOR_BLACK);
+
+      std::string capacity =
+          manager->is_absent()
+              ? compat::format("{} {}", manager->days_away_remaining(),
+                               manager->absence_reason())
+              : std::to_string(manager->pizzas_per_day());
+
+      context_.font->render_text_onto(
+          this_staff_slots, capacity,
+          ViewPoint{cap_x, slot_start_y + text_y_offset}, FontFace::PIZ_NUMB,
+          TEXT_COLOR_BLACK, AlignX::RightEdge);
     }
   }
   else {
@@ -777,19 +800,23 @@ Surface StaffView::create_staff_slots(Restaurant* r) {
       if (staff) {
         const auto& character = staff->character();
         int slot_y = slot_start_y + (static_cast<int>(i) * slot_height);
-
         std::string full_name =
             character.first_name() + " " + character.last_name();
+        std::string capacity =
+            staff->is_absent()
+                ? compat::format("{} {}", staff->days_away_remaining(),
+                                 staff->absence_reason())
+                : std::to_string(staff->pizzas_per_day());
+
         context_.font->render_text_onto(
             this_staff_slots, full_name,
             ViewPoint{name_x, slot_y + text_y_offset}, FontFace::PIZ_NUMB,
             TEXT_COLOR_BLACK);
 
-        std::string capacity = std::to_string(staff->pizzas_per_day());
         context_.font->render_text_onto(
             this_staff_slots, capacity,
             ViewPoint{cap_x, slot_y + text_y_offset}, FontFace::PIZ_NUMB,
-            TEXT_COLOR_BLACK);
+            TEXT_COLOR_BLACK, AlignX::RightEdge);
 
         context_.font->render_text_onto(
             this_staff_slots, compat::format("{}", staff->payment()),
@@ -1238,49 +1265,53 @@ void StaffView::add_overview_buttons() {
               "To fire somebody, you must first select that person!");
           return;
         }
+
+        int slot_index = selected_slot_index_.value();
+        auto* restaurant = state_.active_restaurant();
+
+        const Staff* staff_ptr = nullptr;
+        if (job_ == core::character::JobRole::MANAGER) {
+          if (restaurant->manager().has_value()) {
+            staff_ptr = &restaurant->manager().value();
+          }
+        }
+        else {
+          const auto& staff_array = (job_ == core::character::JobRole::CHEF)
+                                        ? restaurant->cooks()
+                                        : restaurant->waiters();
+          if (slot_index >= 0 &&
+              slot_index < static_cast<int>(staff_array.size()) &&
+              staff_array[slot_index].has_value()) {
+            staff_ptr = &staff_array[slot_index].value();
+          }
+        }
+
+        if (staff_ptr == nullptr) {
+          return;
+        }
+
+        if (staff_ptr->is_absent()) {
+          const auto& ch = staff_ptr->character();
+          context_.popup->origin(ViewPoint{52, 80});
+          context_.popup->create<AlertPopup>(
+              compat::format("{} {} is away right now and cannot be fired!",
+                             ch.first_name(), ch.last_name()));
+          return;
+        }
+
+        uint8_t character_id = staff_ptr->character().id();
+
         context_.popup->origin(ViewPoint{52, 80});
         context_.popup->create<ConfirmPopup>(
-            "Are you sure you want to fire me?", [this](bool sure) {
+            "Are you sure you want to fire me?",
+            [this, slot_index, character_id](bool sure) {
               if (sure) {
                 auto* restaurant = state_.active_restaurant();
                 auto* city = state_.active_city();
-                if (!restaurant || !city || !selected_slot_index_.has_value()) {
-                  Logger::warn(
-                      "Cannot fire: missing restaurant/city/selection");
-                  return;
-                }
-
-                int slot_index = selected_slot_index_.value();
-
-                // Get the character ID before firing
-                uint8_t character_id = 0;
-                if (job_ == core::character::JobRole::MANAGER) {
-                  if (restaurant->manager().has_value()) {
-                    character_id = restaurant->manager()->character().id();
-                  }
-                }
-                else {
-                  const auto& staff_array =
-                      (job_ == core::character::JobRole::CHEF)
-                          ? restaurant->cooks()
-                          : restaurant->waiters();
-                  if (slot_index >= 0 &&
-                      slot_index < static_cast<int>(staff_array.size())) {
-                    if (staff_array[slot_index].has_value()) {
-                      character_id = staff_array[slot_index]->character().id();
-                    }
-                  }
-                }
-
-                // Fire the staff member
                 bool fired = restaurant->fire_staff(job_, slot_index);
                 if (fired && character_id != 0) {
                   Logger::info("Fired staff member with ID {}", character_id);
-
-                  // Add to blacklist for 30 days
                   city->add_to_blacklist(character_id, 30);
-
-                  // Clear selection and hide card
                   selected_slot_index_.reset();
                   card_animator_.start_hide();
                 }

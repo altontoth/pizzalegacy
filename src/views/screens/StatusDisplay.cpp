@@ -8,6 +8,7 @@
 
 #include "core/character/Player.h"
 #include "core/state/GameState.h"
+#include "core/util/ConfigManager.h"
 #include "engine/geom/Spaces.h"
 #include "resources/FontManager.h"
 #include "views/base/ViewDefs.h"
@@ -63,7 +64,6 @@ void StatusDisplay::render(const RenderContext& ctx) {
   render_header_info(ctx);
 
   // Render the dynamic recipe content
-  constexpr int content_start_y = 16;
   render_recipe(recipe_, ctx);
 }
 
@@ -80,39 +80,88 @@ void StatusDisplay::render_recipe(const StatusDisplayRecipe& recipe,
       break;
     }
   };
-  int y = 16;
-  const int color_yellow = 16;
+
+  constexpr int content_top_y = 16;
+  constexpr int content_bottom_y = 163;
+  constexpr int default_line_h = 12;
   const int color_white = 14;
-  for (const auto& item : recipe.items()) {
+
+  constexpr int panel_width = views::base::STATUS_PANEL_WIDTH;
+
+  // Measure item height accounting for word wrap
+  auto measure_item = [&](const StatusItem& item) -> int {
     switch (item.kind) {
-    case StatusItemKind::Header:
-      context_.font->render_text_onto(*ctx.surface, item.col1.text,
-                                      ViewPoint{item.col1.x, y},
-                                      FontFace::SUPERSMA, color_white);
-      y += 12;
+    case StatusItemKind::Header: {
+      int lines = context_.font->count_wrapped_lines(
+          item.col1.text, FontFace::SUPERSMA, panel_width);
+      return std::max(1, lines) * default_line_h;
+    }
+    case StatusItemKind::TwoColumn:
+    case StatusItemKind::Single:
+      return default_line_h;
+    case StatusItemKind::Spacer:
+      return item.lines * default_line_h;
+    }
+    return default_line_h;
+  };
+
+  // When content overflows, find the first item (from the top) where
+  // everything from that item onward fits. Render from there at content_top_y.
+  const auto& items = recipe.items();
+  size_t start_index = 0;
+  if (ConfigManager::instance()->options().qol_improvements) {
+    int available = content_bottom_y - content_top_y + 1;
+    // Accumulate heights from the end backward to find the cutoff
+    int accum = 0;
+    for (size_t i = items.size(); i-- > 0;) {
+      int h = measure_item(items[i]);
+      if (accum + h > available) {
+        start_index = i + 1;
+        break;
+      }
+      accum += h;
+    }
+  }
+
+  int y = content_top_y;
+  for (size_t idx = start_index; idx < items.size(); ++idx) {
+    const auto& item = items[idx];
+    int item_h = measure_item(item);
+
+    // Stop if we're past the bottom
+    if (y > content_bottom_y) {
       break;
+    }
+
+    int c = (item.color != 0) ? item.color : color_white;
+    switch (item.kind) {
+    case StatusItemKind::Header: {
+      auto metrics = context_.font->render_text_onto(
+          *ctx.surface, item.col1.text, ViewPoint{item.col1.x, y},
+          FontFace::SUPERSMA, c);
+      item_h = metrics.height > 0 ? metrics.height : default_line_h;
+      break;
+    }
     case StatusItemKind::TwoColumn: {
       const auto& col1 = item.col1;
       const auto& col2 = item.col2;
       context_.font->render_text_onto(*ctx.surface, col1.text,
                                       ViewPoint{col1.x, y}, FontFace::SUPERSMA,
-                                      color_white, to_alignment(col1.align));
+                                      c, to_alignment(col1.align));
       context_.font->render_text_onto(*ctx.surface, col2.text,
                                       ViewPoint{col2.x, y}, FontFace::SUPERSMA,
-                                      color_white, to_alignment(col2.align));
-      y += 12;
+                                      c, to_alignment(col2.align));
       break;
     }
     case StatusItemKind::Single:
       context_.font->render_line_onto(
           *ctx.surface, item.col1.text, ViewPoint{item.col1.x, y},
-          FontFace::SUPERSMA, color_white, to_alignment(item.col1.align));
-      y += 12;
+          FontFace::SUPERSMA, c, to_alignment(item.col1.align));
       break;
     case StatusItemKind::Spacer:
-      y += item.lines * 12;
       break;
     }
+    y += item_h;
   }
 }
 

@@ -37,8 +37,18 @@ public:
   void adjust_health(int change);
 
   // Event flags (set when events occur)
+  bool is_absent() const { return is_sick_ || is_pregnant_; }
   bool is_late() const { return is_late_; }
   bool is_sick() const { return is_sick_; }
+  std::string_view absence_reason() const {
+    if (is_sick_) {
+      return "sick";
+    }
+    if (is_pregnant_) {
+      return "pregnant";
+    }
+    return "";
+  }
   bool is_pregnant() const { return is_pregnant_; }
   bool stole_money() const { return stole_money_; }
   bool wants_to_quit() const { return wants_to_quit_; }

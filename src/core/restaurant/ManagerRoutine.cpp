@@ -46,43 +46,36 @@ void ManagerRoutine::run_daily() {
     return;
   }
 
-  // 1. Availability check
+  // Availability check
   if (manager->is_away()) {
     Logger::info("[Manager] {} - Manager unavailable (away)",
                  restaurant_.name());
     return;
   }
 
-  // 2. Report previous day's shortages
   report_previous_day_shortages();
 
-  // 3. Activity gate: motivation% chance to be active today
+  // Activity gate: motivation% chance to be active today
   if (!rand_percentage_chance(manager->character().motivation())) {
     Logger::info("[Manager] {} - Manager idle today (motivation check failed)",
                  restaurant_.name());
     return;
   }
 
-  // 4. Shopping (always attempted when active)
   do_shopping();
 
-  // 5. Laziness gate: laziness% chance to skip remaining duties.
-  // Laziness = 100 - management stat (proxy for original +3Eh stat).
-  // High management = lower laziness = more likely to continue.
+  // High management = more likely to continue.
   int laziness = 100 - manager->character().management();
   if (rand_percentage_chance(laziness)) {
-    Logger::info("[Manager] {} - Manager skipped remaining duties (laziness)",
+    Logger::info("[Manager] {} - Manager skipped remaining duties",
                  restaurant_.name());
     return;
   }
 
-  // 6. Price adjustment
   do_price_adjustment();
-
-  // 7. Turnover monitoring
   do_turnover_monitoring();
 
-  // 8. Staff behavior influence
+  // Staff behavior influence
   ManagerFeedback feedback(&restaurant_);
   feedback.daily_adjustments();
 }
@@ -95,11 +88,11 @@ void ManagerRoutine::report_previous_day_shortages() {
 
   // TODO Check "call me" setting and show actual popup instead of status
   // manager
-  const char* role = (augmenting == 1) ? "cook" : "waiter";
+  const char* role = (augmenting == 1) ? "cooks" : "waiters";
   game_state_.status().post(StatusMsg{
       .payload =
-          compat::format("Manager: Yesterday I had to help as a {} in {}.",
-                         role, restaurant_.name()),
+          compat::format("Boss! Yesterday in restaurant {} I had {} shortage.",
+                         restaurant_.name(), role),
       .severity = StatusSeverity::Info,
       .scope = StatusScope::Restaurant,
   });
@@ -148,7 +141,7 @@ void ManagerRoutine::do_shopping() {
       if (s->category() != category) {
         continue;
       }
-      if (preferred_id == 0xFF || s->id() == preferred_id) {
+      if (!preferred_id || s->id() == preferred_id) {
         supplier = s.get();
         if (s->id() == preferred_id) {
           break; // Found exact match
@@ -179,10 +172,12 @@ void ManagerRoutine::do_shopping() {
     }
 
     if (settings.supply_shortage == ManagerReaction::CallMe) {
+      // TODO: In the original this triggers a popup dialog with the
+      // manager's portrait, not a status panel message.
       game_state_.status().post(StatusMsg{
-          .payload =
-              compat::format("Manager: We urgently need {} supplies in {}.",
-                             range.name, restaurant_.name()),
+          .payload = compat::format(
+              "Boss! In restaurant {} we haven't got enough {} supplies!",
+              restaurant_.name(), range.name),
           .severity = StatusSeverity::Warning,
           .scope = StatusScope::Restaurant,
       });
@@ -196,6 +191,7 @@ void ManagerRoutine::do_shopping() {
     // Buy 2 days of demand for each low ingredient
     Money category_total{0};
     int category_qty = 0;
+    int best_discount = 0;
 
     for (int i = 0; i < range.count; ++i) {
       auto ingredient_type =
@@ -222,6 +218,9 @@ void ManagerRoutine::do_shopping() {
       if (rand_percentage_chance(manager->character().experience())) {
         int discount = rand_max_n(manager->character().motivation() / 2);
         price_per_kg = Money{price_per_kg.cents * (100 - discount) / 100};
+        if (discount > best_discount) {
+          best_discount = discount;
+        }
       }
 
       Money total_cost{price_per_kg.cents * buy_kg};
@@ -241,10 +240,13 @@ void ManagerRoutine::do_shopping() {
     }
 
     if (category_qty > 0) {
+      // Original: "Your manager goes shopping for %s and buys %s for $%d
+      // with %d% discount"
       game_state_.status().post(StatusMsg{
-          .payload = compat::format("Manager bought {} from {} ({} kg, {})",
-                                    range.name, supplier->name(), category_qty,
-                                    category_total),
+          .payload = compat::format(
+              "Your manager goes shopping for {} and buys {} for {} "
+              "with {}% discount",
+              range.name, supplier->name(), category_total, best_discount),
           .severity = StatusSeverity::Info,
           .scope = StatusScope::Restaurant,
       });
@@ -357,11 +359,13 @@ void ManagerRoutine::do_turnover_monitoring() {
 
   const char* trend_word = (management > 60) ? "profit" : "turnover";
 
+  // TODO: In the original these are popup dialogs with the manager's
+  // portrait, not status panel messages.
   if (settings.turnover_decrease == ManagerReaction::CallMe &&
       revenue_diff > INCREASE_THRESHOLD) {
     game_state_.status().post(StatusMsg{
-        .payload = compat::format("Manager: {} is increasing in {}.",
-                                  trend_word, restaurant_.name()),
+        .payload = compat::format("Boss! In restaurant {} the {} is going up!",
+                                  restaurant_.name(), trend_word),
         .severity = StatusSeverity::Info,
         .scope = StatusScope::Restaurant,
     });
@@ -370,8 +374,9 @@ void ManagerRoutine::do_turnover_monitoring() {
   if (settings.turnover_increase == ManagerReaction::CallMe &&
       revenue_diff < -DECREASE_THRESHOLD) {
     game_state_.status().post(StatusMsg{
-        .payload = compat::format("Manager: {} is decreasing in {}.",
-                                  trend_word, restaurant_.name()),
+        .payload =
+            compat::format("Boss! In restaurant {} the {} is going down!",
+                           restaurant_.name(), trend_word),
         .severity = StatusSeverity::Warning,
         .scope = StatusScope::Restaurant,
     });

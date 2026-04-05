@@ -23,6 +23,7 @@
 #include "core/restaurant/StaffEvents.h"
 #include "core/state/GameState.h"
 #include "core/status/StatusHub.h"
+#include "core/util/ConfigManager.h"
 #include "engine/Fatal.h"
 #include "engine/Logger.h"
 
@@ -270,7 +271,7 @@ int Restaurant::count_ovens() const {
 int Restaurant::count_cooks() const {
   int count = 0;
   for (const auto& cook : cooks_) {
-    if (cook.has_value() && !cook->is_away()) {
+    if (cook.has_value()) {
       count++;
     }
   }
@@ -280,7 +281,7 @@ int Restaurant::count_cooks() const {
 int Restaurant::count_waiters() const {
   int count = 0;
   for (const auto& waiter : waiters_) {
-    if (waiter.has_value() && !waiter->is_away()) {
+    if (waiter.has_value()) {
       count++;
     }
   }
@@ -1051,11 +1052,19 @@ void Restaurant::eod_batch_order_fulfillment(class GameState& game_state) {
       }
     }
     else if (settings.staff_shortage == ManagerReaction::CallMe) {
-      int effective = std::min({oven_capacity, chef_capacity, waiter_capacity});
-      if (effective < total_orders) {
+      // TODO: CallMe needs to be a popup, not a status message
+      if (chef_capacity < total_orders) {
         game_state.status().post(StatusMsg{
             .payload = compat::format(
-                "Manager: We had a staff shortage today in {}!", name_),
+                "Boss! In restaurant {} we haven't got enough cooks!", name_),
+            .severity = StatusSeverity::Warning,
+            .scope = StatusScope::Restaurant,
+        });
+      }
+      if (waiter_capacity < total_orders) {
+        game_state.status().post(StatusMsg{
+            .payload = compat::format(
+                "Boss! In restaurant {} we haven't got enough waiters!", name_),
             .severity = StatusSeverity::Warning,
             .scope = StatusScope::Restaurant,
         });
@@ -1065,6 +1074,68 @@ void Restaurant::eod_batch_order_fulfillment(class GameState& game_state) {
 
   int effective_capacity =
       std::min({oven_capacity, chef_capacity, waiter_capacity});
+
+  // Shortage warnings (direct status messages, independent of manager).
+  // only the lowest actually fires.
+  constexpr int status_color_yellow = 16;
+  std::string shortage_msg;
+  int remaining_demand = total_orders;
+
+  if (remaining_demand > 0) {
+    // Supplies: check if ingredient stock covers total demand
+    auto demand_grams = calculate_daily_ingredient_demand_grams(recipes);
+    float supply_ratio = 1.0f;
+    for (int i = 0; i < max_ingredient_count; ++i) {
+      int needed = demand_grams[i];
+      if (needed <= 0) {
+        continue;
+      }
+      int available =
+          inventory_.get_stock(static_cast<core::food::IngredientType>(i))
+              .quantity;
+      if (available < needed) {
+        float ratio =
+            static_cast<float>(available) / static_cast<float>(needed);
+        supply_ratio = std::min(ratio, supply_ratio);
+      }
+    }
+    if (supply_ratio < 1.0f) {
+      shortage_msg = "There aren't enough supplies to satisfy demand!";
+      remaining_demand =
+          static_cast<int>(static_cast<float>(remaining_demand) * supply_ratio);
+      remaining_demand = std::max(remaining_demand, 1);
+    }
+
+    // Ovens
+    if (oven_capacity < remaining_demand) {
+      shortage_msg = "Too few ovens to satisfy present demand!";
+      remaining_demand = oven_capacity;
+    }
+
+    // Cooks (possibly augmented by manager)
+    if (chef_capacity < remaining_demand) {
+      shortage_msg = "Too few cooks to satisfy present demand!";
+      remaining_demand = chef_capacity;
+    }
+
+    // Waiters (same)
+    if (waiter_capacity < remaining_demand) {
+      shortage_msg = "Too few waiters to satisfy present demand!";
+      remaining_demand = waiter_capacity;
+    }
+  }
+
+  if (!shortage_msg.empty()) {
+    if (ConfigManager::instance()->options().qol_improvements) {
+      shortage_msg = compat::format("{}: {}", name_, shortage_msg);
+    }
+    game_state.status().post(StatusMsg{
+        .payload = std::move(shortage_msg),
+        .severity = StatusSeverity::Warning,
+        .scope = StatusScope::Restaurant,
+        .color = status_color_yellow,
+    });
+  }
 
   for (const auto& entry : menu_entries) {
     int predicted = get_predicted_daily_orders(entry.recipe_id);

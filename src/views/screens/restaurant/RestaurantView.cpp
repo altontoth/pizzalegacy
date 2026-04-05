@@ -1937,7 +1937,9 @@ void RestaurantView::update_status_display(const PlacedFurniture* pf) {
   if (!pf) {
     recipe.add_single("nothing");
   }
-  else if (kitchen_view_) {
+  else if (kitchen_view_ &&
+           pf->furniture()->type() != FurnitureType::ASHES_SMALL &&
+           pf->furniture()->type() != FurnitureType::ASHES_LARGE) {
     const auto* furniture = pf->furniture();
     auto category = furniture->category();
     if (category != FurnitureCategory::KITCHENWARE) {

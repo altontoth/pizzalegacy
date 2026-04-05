@@ -380,7 +380,8 @@ void GameState::advance_game_time() {
   // on every block while time >= 10:00, matching the original's behaviour
   // where the popup fires at the first update_status_and_time call >= 0x3C.
   if (!end_of_turn_state_ && !showing_deferred_staff_event_ &&
-      !deferred_staff_events_.empty() && time_.is_past_time(10, 0)) {
+      !prevent_auto_end_of_turn_ && !deferred_staff_events_.empty() &&
+      time_.is_past_time(10, 0)) {
     show_next_deferred_staff_event();
   }
 }
@@ -568,9 +569,22 @@ void GameState::process_next_restaurant() {
     }
 
     // Queue player-facing staff event dialogs for delivery next day at 10 AM.
+    // Replace any existing queued event for the same staff member so that
+    // only the most recent event survives
     if (state.is_human) {
       for (auto& ev : restaurant->take_pending_staff_events()) {
-        deferred_staff_events_.push_back({ev, restaurant->id()});
+        auto it = std::find_if(deferred_staff_events_.begin(),
+                               deferred_staff_events_.end(),
+                               [&](const DeferredStaffEvent& d) {
+                                 return d.event.staff == ev.staff &&
+                                        d.restaurant_id == restaurant->id();
+                               });
+        if (it != deferred_staff_events_.end()) {
+          it->event = ev;
+        }
+        else {
+          deferred_staff_events_.push_back({ev, restaurant->id()});
+        }
       }
     }
 
@@ -598,6 +612,12 @@ void GameState::process_next_restaurant() {
 void GameState::show_next_deferred_staff_event() {
   if (deferred_staff_events_.empty()) {
     showing_deferred_staff_event_ = false;
+    // The dialog chain may have been started from the
+    // prevent_auto_end_of_turn setter, which deferred the end-of-turn
+    // check. Now that all dialogs are done, check if we should end the turn.
+    if (is_player_day_over()) {
+      request_end_of_turn();
+    }
     return;
   }
   showing_deferred_staff_event_ = true;
