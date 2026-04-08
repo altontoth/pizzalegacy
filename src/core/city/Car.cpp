@@ -45,7 +45,7 @@ void Car::update(const WorldRect& view, const City& city,
     return;
   }
 
-  // We're at a tile border, move to the next tile
+  // Step to the next tile
   switch (dir_) {
   case Dir::E:
     tile_x_ += 1;
@@ -61,50 +61,58 @@ void Car::update(const WorldRect& view, const City& city,
     break;
   }
 
-  // Check boundaries on each axis separately
-  int pixel_x = tile_x_ * tile_width_pixels;
-  int pixel_y = tile_y_ * tile_width_pixels;
-  constexpr int wrap_margin = CAR_WRAP_MARGIN_PIXELS;
-
-  bool out_of_x_bounds =
-      pixel_x < view.x - wrap_margin || pixel_x > view.x + view.w + wrap_margin;
-  bool out_of_y_bounds =
-      pixel_y < view.y - wrap_margin || pixel_y > view.y + view.h + wrap_margin;
-
-  // Determine if we should wrap based on direction and travel axis
-  bool should_wrap = false;
-  if (dir_ == Dir::E || dir_ == Dir::W) {
-    // East/West: only wrap when leaving X-axis bounds
-    should_wrap = out_of_x_bounds;
+  // Check if the car has driven off the screen in its direction of travel.
+  constexpr int margin = CAR_WRAP_MARGIN_PIXELS;
+  const int pixel_x = tile_x_ * tile_width_pixels;
+  const int pixel_y = tile_y_ * tile_width_pixels;
+  bool off_screen = false;
+  switch (dir_) {
+  case Dir::E:
+    off_screen = pixel_x > view.x + view.w + margin;
+    break;
+  case Dir::W:
+    off_screen = pixel_x < view.x - margin;
+    break;
+  case Dir::N:
+    off_screen = pixel_y < view.y - margin;
+    break;
+  case Dir::S:
+    off_screen = pixel_y > view.y + view.h + margin;
+    break;
   }
-  else {
-    // North/South: only wrap when leaving Y-axis bounds
-    should_wrap = out_of_y_bounds;
-  }
 
-  if (should_wrap) {
-    // Crossed boundary on our travel axis - attempt to wrap to opposite lane
-    if (!randomize_car_and_turn_around(city)) {
-      // Opposite lane is not a road - mark for removal by setting position far
-      // out
-      step_timer_ = INITIAL_STEP_TIMER;
-      position_ = WorldPoint{-1, -1};
-      return;
+  if (off_screen) {
+    // Move to the return lane and reverse direction. Tile coordinates are
+    // intentionally left just off-screen for INITIAL_STEP_TIMER ticks; no
+    // map read happens during that window.
+    switch (dir_) {
+    case Dir::E:
+      tile_y_ -= 1;
+      dir_ = Dir::W;
+      break;
+    case Dir::W:
+      tile_y_ += 1;
+      dir_ = Dir::E;
+      break;
+    case Dir::N:
+      tile_x_ -= 1;
+      dir_ = Dir::S;
+      break;
+    case Dir::S:
+      tile_x_ += 1;
+      dir_ = Dir::N;
+      break;
     }
+    car_type_ = engine::random::rand_max_n(4);
+    step_timer_ = INITIAL_STEP_TIMER;
   }
   else {
-    // Car is within keepalive bounds on travel axis
-    // Check if visible for tile logic
-    bool is_visible = !new_tiles_are_out_of_view(view, tile_x_, tile_y_);
-
-    // Also check if tile is within map bounds
-    bool is_in_bounds = (tile_x_ >= 0 && tile_x_ < MAP_TILES_PER_ROW &&
-                         tile_y_ >= 0 && tile_y_ < MAP_TILES_PER_COLUMN);
-
-    if (is_visible && is_in_bounds) {
-      // Normal in-view tile logic
-      auto index = tile_y_ * 160 + tile_x_;
-      auto type = city.type(index);
+    // CAR_WRAP_MARGIN_PIXELS (24px) is less than one tile (32px), so when the
+    // viewport is scrolled to the map edge a car can step past the boundary
+    // before off_screen fires. Guard the map read.
+    if (tile_x_ >= 0 && tile_x_ < MAP_TILES_PER_ROW && tile_y_ >= 0 &&
+        tile_y_ < MAP_TILES_PER_COLUMN) {
+      auto type = city.type((tile_y_ * MAP_TILES_PER_ROW) + tile_x_);
       auto new_dir = decide_desired_direction(type);
       bool did_left_turn = is_left_turn(dir_, new_dir);
       if (new_dir != dir_) {
@@ -117,79 +125,11 @@ void Car::update(const WorldRect& view, const City& city,
       }
     }
     else {
-      // Car is in keepalive zone but not visible - just keep driving
       step_timer_ = INITIAL_STEP_TIMER;
     }
   }
 
   calc_screen_pos();
-}
-
-bool Car::randomize_car_and_turn_around(const City& city) {
-  using enum Dir;
-
-  auto old_tile_x = tile_x_;
-  auto old_tile_y = tile_y_;
-  auto old_dir = dir_;
-
-  // Move to the opposite lane and reverse direction
-  switch (dir_) {
-  case E:
-    tile_y_ -= 1; // East/West roads: switch lanes via Y
-    dir_ = W;     // Reverse to West
-    break;
-  case W:
-    tile_y_ += 1;
-    dir_ = E; // Reverse to East
-    break;
-  case N:
-    tile_x_ -= 1; // North/South roads: switch lanes via X
-    dir_ = S;     // Reverse to South
-    break;
-  case S:
-    tile_x_ += 1;
-    dir_ = N; // Reverse to North
-    break;
-  }
-
-  // Check if the new position is within map bounds
-  if (tile_x_ < 0 || tile_x_ >= MAP_TILES_PER_ROW || tile_y_ < 0 ||
-      tile_y_ >= MAP_TILES_PER_COLUMN) {
-    // New position is out of bounds - restore old position and return false
-    tile_x_ = old_tile_x;
-    tile_y_ = old_tile_y;
-    dir_ = old_dir;
-    return false;
-  }
-
-  // Check if the new tile is a road
-  auto new_index = (tile_y_ * 160) + tile_x_;
-  auto new_tile_type = city.type(new_index);
-  auto spawn_mask_value = spawn_mask(new_tile_type);
-
-  if (spawn_mask_value == 0) {
-    // Opposite lane is not a road - restore position and return false
-    tile_x_ = old_tile_x;
-    tile_y_ = old_tile_y;
-    dir_ = old_dir;
-    return false;
-  }
-
-  car_type_ = engine::random::rand_max_n(4);
-  step_timer_ = INITIAL_STEP_TIMER;
-  return true;
-}
-
-bool Car::new_tiles_are_out_of_view(const WorldRect& view, int tile_x,
-                                    int tile_y) const {
-  int pixel_x = tile_x * tile_width_pixels;
-  int pixel_y = tile_y * tile_width_pixels;
-
-  constexpr int margin = CAR_WRAP_MARGIN_PIXELS;
-
-  return pixel_x < view.x - margin || pixel_y < view.y - margin ||
-         pixel_x >= (view.x + view.w + margin) ||
-         pixel_y >= (view.y + view.h + margin);
 }
 
 void Car::calc_screen_pos() {

@@ -67,10 +67,6 @@ private:
   [[nodiscard]] Dir decide_desired_direction(uint8_t tile_type) const;
   Dir choose_turn(bool previous_left_turn, Dir straight_dir,
                   Dir turn_dir) const;
-  // returns false if opposite lane is not a road:
-  bool randomize_car_and_turn_around(const City& city);
-  bool new_tiles_are_out_of_view(const WorldRect& view, int tile_x,
-                                 int tile_y) const;
   static Dir direction_for_tile(uint8_t tile_type);
 
   int tile_x_;
