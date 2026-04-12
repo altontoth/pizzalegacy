@@ -6,21 +6,11 @@
 
 #pragma once
 
-#include <array>
 #include <string>
-#include "core/util/Constants.h"
+#include "core/save/SaveGameManager.h"
 #include "engine/DebugLabel.h"
 #include "engine/geom/Spaces.h"
 #include "views/ui/widgets/MenuItem.h"
-
-struct SaveFileInfo {
-  std::string filename;
-  std::string saved_at;
-  std::string game_date;
-  std::array<std::string, NUMBER_OF_PLAYERS> player_names;
-  int active_player = -1;
-  int active_city = -1;
-};
 
 class SaveFileInfoBox : public MenuItem,
                         public debug::AutoLabel<SaveFileInfoBox> {
@@ -39,5 +29,5 @@ public:
 
 private:
   bool has_info_ = false;
-  SaveFileInfo info_;
+  save::SaveMetadata info_;
 };

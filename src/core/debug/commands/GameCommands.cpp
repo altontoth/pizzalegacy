@@ -20,13 +20,13 @@ static CommandDef make_game_save() {
       .description = "Save the game to a file",
       .help_text = R"(Usage: game save <filename>
 
-Saves the current game state to a JSON file.
-The .json extension is added automatically if not provided.
+Saves the current game state to a compressed .plsave file.
+The .plsave extension is added automatically if not provided.
 
 Examples:
-  game save mygame         # Saves to mygame.json
-  game save backup.json    # Saves to backup.json
-  game save test           # Saves to test.json
+  game save mygame           # Saves to mygame.plsave
+  game save backup.plsave    # Saves to backup.plsave
+  game save test             # Saves to test.plsave
 )",
       .args =
           {
@@ -35,16 +35,16 @@ Examples:
                   .type = ArgType::String,
                   .optional = false,
                   .default_provider = DefaultProvider::None,
-                  .description = "Filename to save to (.json added if needed)",
+                  .description =
+                      "Filename to save to (.plsave added if needed)",
               },
           },
       .handler = [](const CommandContext& ctx) -> CommandResult {
         std::string filename = ctx.string_arg(0);
 
-        // Add .json extension if not present
-        if (filename.size() < 5 ||
-            filename.substr(filename.size() - 5) != ".json") {
-          filename += ".json";
+        // Add .plsave extension if not present
+        if (!filename.ends_with(".plsave")) {
+          filename += ".plsave";
         }
 
         bool success =
@@ -68,13 +68,13 @@ static CommandDef make_game_load() {
       .description = "Load a game from a file",
       .help_text = R"(Usage: game load <filename>
 
-Loads a saved game from a JSON file.
-The .json extension is added automatically if not provided.
+Loads a saved game from a compressed .plsave file.
+The .plsave extension is added automatically if not provided.
 
 Examples:
-  game load mygame         # Loads from mygame.json
-  game load backup.json    # Loads from backup.json
-  game load test           # Loads from test.json
+  game load mygame           # Loads from mygame.plsave
+  game load backup.plsave    # Loads from backup.plsave
+  game load test             # Loads from test.plsave
 )",
       .args =
           {
@@ -84,16 +84,15 @@ Examples:
                   .optional = false,
                   .default_provider = DefaultProvider::None,
                   .description =
-                      "Filename to load from (.json added if needed)",
+                      "Filename to load from (.plsave added if needed)",
               },
           },
       .handler = [](const CommandContext& ctx) -> CommandResult {
         std::string filename = ctx.string_arg(0);
 
-        // Add .json extension if not present
-        if (filename.size() < 5 ||
-            filename.substr(filename.size() - 5) != ".json") {
-          filename += ".json";
+        // Add .plsave extension if not present
+        if (!filename.ends_with(".plsave")) {
+          filename += ".plsave";
         }
 
         // Check if file is valid first

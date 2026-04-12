@@ -700,13 +700,82 @@ Examples:
       .category = "restaurant"};
 }
 
+static CommandDef make_restaurant_inspection_timer() {
+  return CommandDef{
+      .name = "inspection-timer",
+      .description = "Set the mayor inspection countdown on a restaurant",
+      .help_text =
+          R"(Usage: restaurant inspection-timer <days> [player_id] [restaurant_id]
+
+Sets the number of days until the next scheduled mayor inspection.
+The inspection fires naturally when the counter reaches zero at end-of-day.
+Use 'actor mayor inspect' to trigger one immediately without waiting.
+
+Examples:
+  restaurant inspection-timer 1      # Inspection fires next end-of-day
+  restaurant inspection-timer 0 @ 2  # Restaurant 2, fires immediately next EOD
+)",
+      .args =
+          {
+              ArgSpec{
+                  .name = "days",
+                  .type = ArgType::Int,
+                  .optional = false,
+                  .description = "Days until next inspection (0 = next EOD)",
+                  .min_value = 0,
+                  .max_value = 365,
+              },
+              ArgSpec{
+                  .name = "player_id",
+                  .type = ArgType::PlayerId,
+                  .optional = true,
+                  .default_provider = DefaultProvider::ActivePlayer,
+                  .description = "Player ID (@ for active player)",
+                  .min_value = 0,
+                  .max_value = NUMBER_OF_PLAYERS - 1,
+              },
+              ArgSpec{
+                  .name = "restaurant_id",
+                  .type = ArgType::RestaurantId,
+                  .optional = true,
+                  .default_provider = DefaultProvider::ActiveRestaurant,
+                  .description = "Restaurant ID (@ for active restaurant)",
+              },
+          },
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        int days = static_cast<int>(ctx.int_arg(0));
+        auto player_id = ctx.player_id(1);
+        auto restaurant_id = ctx.restaurant_id(2);
+
+        auto* restaurant = ctx.state.restaurant(restaurant_id);
+        if (!restaurant) {
+          return CommandResult::error(
+              compat::format("Restaurant {} not found", restaurant_id.value));
+        }
+
+        auto owner = restaurant->property().owner_or_tenant();
+        if (!owner || *owner != player_id) {
+          return CommandResult::error(
+              compat::format("Restaurant {} is not owned by player {}",
+                             restaurant_id.value, player_id.value));
+        }
+
+        restaurant->inspection_days_remaining(days);
+        return CommandResult::success().add_message(compat::format(
+            "Set inspection timer to {} day(s) for restaurant {}", days,
+            restaurant_id.value));
+      },
+      .category = "restaurant"};
+}
+
 CommandDef make_restaurant_commands() {
   return CommandDef{
       .name = "restaurant",
       .aliases = {"r", "rest"},
       .description = "Restaurant management commands",
       .help_text =
-          "Manage restaurants: info, clear, furniture, stock, create, qs",
+          "Manage restaurants: info, clear, furniture, stock, create, qs, "
+          "inspection-timer",
       .category = "restaurant",
   }
       .add_subcommand(make_restaurant_info())
@@ -714,7 +783,8 @@ CommandDef make_restaurant_commands() {
       .add_subcommand(make_restaurant_furniture())
       .add_subcommand(make_restaurant_stock())
       .add_subcommand(make_restaurant_create())
-      .add_subcommand(make_restaurant_qs());
+      .add_subcommand(make_restaurant_qs())
+      .add_subcommand(make_restaurant_inspection_timer());
 }
 
 } // namespace debug::commands

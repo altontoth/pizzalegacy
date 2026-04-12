@@ -52,10 +52,6 @@ public:
     items_.push_back(
         {StatusItemKind::Spacer, {}, {}, StatusAlignment::Left, lines});
   }
-  void append(const StatusDisplayRecipe& other) {
-    items_.insert(items_.end(), other.items().begin(), other.items().end());
-  }
-
   void clear() { items_.clear(); }
 
   [[nodiscard]] const std::vector<StatusItem>& items() const noexcept {

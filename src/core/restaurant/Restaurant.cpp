@@ -25,7 +25,9 @@
 #include "core/status/StatusHub.h"
 #include "core/util/ConfigManager.h"
 #include "engine/Fatal.h"
+#include "engine/FormatCompat.h"
 #include "engine/Logger.h"
+#include "engine/Random.h"
 
 Restaurant::Restaurant(Property& property, Size kitchen_size,
                        core::RestaurantId id, std::string name)
@@ -219,6 +221,17 @@ HiringResult Restaurant::add_staff(Staff& staff) {
     }
   }
   return HiringResult::Success;
+}
+
+Staff* Restaurant::staff_at(core::character::JobRole role, int slot_index) {
+  if (role == core::character::JobRole::MANAGER) {
+    return manager_.has_value() ? &*manager_ : nullptr;
+  }
+  auto& arr = (role == core::character::JobRole::CHEF) ? cooks_ : waiters_;
+  if (slot_index >= 0 && slot_index < static_cast<int>(arr.size())) {
+    return arr[slot_index].has_value() ? &*arr[slot_index] : nullptr;
+  }
+  return nullptr;
 }
 
 bool Restaurant::fire_staff(core::character::JobRole role, int slot_index) {
@@ -979,6 +992,17 @@ void Restaurant::end_of_day(GameState& game_state) {
     manager_routine.run_daily();
   }
 
+  // Inspection countdown: only ticks while the restaurant is open.
+  // When it reaches 0 an inspection is queued for delivery next morning.
+  if (wants_open() && !is_force_closed() && inspection_days_remaining_ > 0) {
+    inspection_days_remaining_--;
+    if (inspection_days_remaining_ == 0) {
+      pending_inspection_ = first_inspection_pending_;
+      first_inspection_pending_ = false;
+      inspection_days_remaining_ = engine::random::rand_max_n(60) + 60;
+    }
+  }
+
   if (!is_open(game_state.time().time_of_day())) {
     inventory_.apply_daily_degradation();
     stats_.end_of_day(0);
@@ -987,10 +1011,18 @@ void Restaurant::end_of_day(GameState& game_state) {
 
   inventory_.apply_daily_degradation();
 
+  int old_range_tiles = economy_.range_tiles();
   bool range_increased = economy_.update_restaurant_range();
   if (range_increased) {
     Logger::info("[Economy] {} - Range increased to {} tiles (raw: {})", name_,
                  economy_.range_tiles(), economy_.range_raw());
+    game_state.status().post(StatusMsg{
+        .payload =
+            compat::format("The range of {} rises from {} to {} tiles.", name_,
+                           old_range_tiles, economy_.range_tiles()),
+        .scope = StatusScope::Global,
+        .coalesce_key = compat::format("range_{}", name_),
+    });
   }
 
   // Sync popularity with current reputation, then decay for next day
@@ -1385,7 +1417,7 @@ void Restaurant::calculate_pizza_quality_rating(
   pizza_quality_rating_ = std::clamp(total_quality / pizza_count, 0, 100);
 }
 
-void Restaurant::update_star_rating() {
+std::optional<bool> Restaurant::update_star_rating() {
   // Mayor awards/removes stars based on pizza quality rating.
   // Gain threshold: quality > stars * 16 + 24
   // Loss threshold: quality < stars * 16 + 8
@@ -1399,14 +1431,21 @@ void Restaurant::update_star_rating() {
     Logger::info("[Restaurant] {} awarded star! Now {} stars (quality {} > "
                  "threshold {})",
                  name_, star_rating_, pizza_quality_rating_, award_threshold);
+    return true;
   }
-  else if (pizza_quality_rating_ < loss_threshold && star_rating_ > 0) {
+  if (pizza_quality_rating_ < loss_threshold && star_rating_ > 0) {
     // TODO: Original also gives -30 reputation, may force close for 7 days
     star_rating_--;
     Logger::info("[Restaurant] {} lost a star! Now {} stars (quality {} < "
                  "threshold {})",
                  name_, star_rating_, pizza_quality_rating_, loss_threshold);
+    return false;
   }
+  Logger::info("[Restaurant] {} didn't change star rating ({})! (quality {}, "
+               "up threshold {}, down threshold {})",
+               name_, star_rating_, pizza_quality_rating_, award_threshold,
+               loss_threshold);
+  return std::nullopt;
 }
 
 core::food::IngredientDemand

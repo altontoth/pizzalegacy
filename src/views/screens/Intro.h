@@ -34,6 +34,7 @@ public:
 
 private:
   uint32_t passed_ticks_{0};
+  bool audio_initialized_{false};
   int current_credit_line_{0};
   std::vector<std::string> credit_lines_;
   std::vector<std::pair<int, std::vector<int>>> credit_mapping_;

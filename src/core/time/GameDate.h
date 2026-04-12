@@ -21,6 +21,9 @@ inline constexpr std::array<std::string_view, 12> short_month_names = {
     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 };
 
+class GameDate;
+extern const GameDate game_start_date;
+
 class GameDate {
 public:
   friend std::ostream& operator<<(std::ostream& os, const GameDate& date) {
@@ -39,9 +42,9 @@ public:
 
   uint32_t month() const { return unsigned(ymd_.month()); }
 
-  uint32_t year() const { return int(ymd_.year()); }
+  int year() const { return int(ymd_.year()); }
 
-  uint32_t year_short() const { return int(ymd_.year()) - 1900; }
+  int year_short() const { return int(ymd_.year()) - 1900; }
 
   std::string to_string() const {
     auto y = int(ymd_.year());
@@ -142,9 +145,47 @@ public:
   bool is_end_of_week() const { return is_saturday(); }
   bool is_end_of_month() const { return *this == month_end(); }
   bool is_end_of_year() const { return month() == 12 && day() == 31; }
+  GameDate start_of_year() const {
+    return std::max(GameDate{year(), 1, 1}, game_start_date);
+  }
 
 private:
   std::chrono::year_month_day ymd_;
 };
 
 inline const GameDate game_start_date{1995, 3, 1};
+
+// {} or {:d} -> "1-Mar-1995"  (standard, matches to_string())
+// {:c}       -> "1-3-95"      (compact cv format, matches cv_date_string())
+template <> struct FORMAT_NAMESPACE::formatter<GameDate> {
+  enum class style { standard, compact };
+  style how{style::standard};
+
+  constexpr auto parse(FORMAT_NAMESPACE::format_parse_context& ctx) {
+    auto it = ctx.begin();
+    if (it != ctx.end() && *it != '}') {
+      switch (*it) {
+      case 'd':
+        how = style::standard;
+        break;
+      case 'c':
+        how = style::compact;
+        break;
+      default:
+        throw FORMAT_NAMESPACE::format_error("invalid GameDate format");
+      }
+      ++it;
+    }
+    if (it != ctx.end() && *it != '}') {
+      throw FORMAT_NAMESPACE::format_error("expected '}'");
+    }
+    return it;
+  }
+
+  template <typename Ctx> auto format(const GameDate& d, Ctx& ctx) const {
+    if (how == style::compact) {
+      return FORMAT_NAMESPACE::format_to(ctx.out(), "{}", d.cv_date_string());
+    }
+    return FORMAT_NAMESPACE::format_to(ctx.out(), "{}", d.to_string());
+  }
+};

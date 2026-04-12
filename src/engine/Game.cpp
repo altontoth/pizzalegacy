@@ -11,12 +11,11 @@
 #include <numeric>
 
 #include <magic_enum/magic_enum.hpp>
-#if PLEGACY_PNG_SUPPORT
 #include <savepng/savepng.h>
-#endif
 #include "conversations/BankConversation.h"
 #include "conversations/MafiaConversation.h"
 #include "conversations/MafiaLine.h"
+#include "conversations/MayorConversation.h"
 #include "conversations/PoliceConversation.h"
 #include "conversations/SupplierConversation.h"
 #include "core/character/Player.h"
@@ -105,7 +104,6 @@
 #include "views/viewers/VgaViewer.h"
 
 namespace {
-#if PLEGACY_PNG_SUPPORT
 SDL_Surface* format_for_png_fixed(SDL_Surface* input) {
   // Create a surface with explicitly defined RGBA masks;
   // when using SDL_PNGFormatAlpha something was wrong with the colors
@@ -130,7 +128,6 @@ SDL_Surface* format_for_png_fixed(SDL_Surface* input) {
 
   return output;
 }
-#endif
 
 std::string generate_screenshot_filename() {
   std::time_t t = std::time(nullptr);
@@ -142,11 +139,7 @@ std::string generate_screenshot_filename() {
 #endif
 
   std::ostringstream oss;
-#if PLEGACY_PNG_SUPPORT
   oss << "screenshot_" << std::put_time(&tm, "%Y%m%d_%H%M%S") << ".png";
-#else
-  oss << "screenshot_" << std::put_time(&tm, "%Y%m%d_%H%M%S") << ".bmp";
-#endif
   return oss.str();
 }
 
@@ -158,7 +151,6 @@ void save_screenshot(SDL_Surface* surface) {
   }
   std::string full_filename = dir + generate_screenshot_filename();
 
-#if PLEGACY_PNG_SUPPORT
   SDL_Surface* tmp = format_for_png_fixed(surface);
   if (!tmp) {
     Logger::warn("Failed to format surface for PNG");
@@ -171,14 +163,6 @@ void save_screenshot(SDL_Surface* surface) {
   else {
     Logger::info("Screenshot saved as {}", full_filename);
   }
-#else
-  if (SDL_SaveBMP(surface, full_filename.c_str()) != 0) {
-    Logger::warn("Failed to save BMP: {}", SDL_GetError());
-  }
-  else {
-    Logger::info("Screenshot saved as {}", full_filename);
-  }
-#endif
 }
 
 } // end namespace
@@ -575,33 +559,10 @@ bool Game::init(int display_height, ConfigManager& config_manager) {
     return false;
   }
 
-  // Initialize audio system (after SDL_Init)
+  // Create audio manager; init and asset loading are deferred to Intro
+  // so the Microprose logo is already visible before the slow adl_init call.
   audio_manager_ = std::make_unique<audio::AudioManager>();
-  audio_manager_->init();
   context.audio = audio_manager_.get();
-
-  if (audio_manager_->is_enabled()) {
-    // Load audio assets based on docs/directory_SOUND.md
-    // Each M file may contain multiple CMF and/or VOC assets
-    audio_manager_->load_m_container("sound/m0"); // Restaurant noise (VOC)
-    audio_manager_->load_m_container("sound/m1"); // Tech The Tronic (CMF)
-    audio_manager_->load_m_container("sound/m2"); // Jam The Scratch (CMF)
-    audio_manager_->load_m_container("sound/m3"); // Heavy Banger (CMF)
-    audio_manager_->load_m_container("sound/m4"); // Amore Mio (CMF)
-    audio_manager_->load_m_container("sound/m5"); // Elevator Music (CMF)
-    audio_manager_->load_m_container("sound/m6"); // Tea Shoppe (CMF)
-    audio_manager_->load_m_container("sound/m7"); // Traffic (VOC)
-    audio_manager_->load_m_container("sound/m8"); // Terminal (VOC)
-    audio_manager_->load_m_container("sound/m9"); // Hoover (VOC)
-    audio_manager_->load_m_container(
-        "sound/m10"); // Break-in music + burglary sounds (CMF + VOC)
-    audio_manager_->load_m_container("sound/m11"); // Break-in music (CMF)
-
-    Logger::info("Audio system initialized and assets loaded");
-  }
-  else {
-    Logger::warn("Audio system disabled (no sound card or SDL audio failed)");
-  }
 
   auto [win_w, win_h] = resolution_window_size(
       config_manager.options().resolution, display_height);
@@ -833,6 +794,29 @@ Renderable* Game::change_state(GameState& gs, LoopState& /*loop*/) {
             auto conversation = std::make_unique<MafiaConversation>(
                 gs, actor, mode, ms.restaurant_id, ms.first_contact);
             current_view_ = std::make_unique<ActorView<MafiaLine>>(
+                context, gs, actor, std::move(conversation));
+          },
+          [&](const MayorState& mys) {
+            auto* city = gs.active_city();
+            auto* actor = city->actor_by_id(mys.id);
+            std::optional<MayorConversation::InspectionOutcome> opt_outcome;
+            if (mys.is_first_inspection.has_value()) {
+              opt_outcome = MayorConversation::InspectionOutcome{
+                  .star_gained = mys.inspection_star_gained,
+                  .star_lost = mys.inspection_star_lost,
+                  .is_first = *mys.is_first_inspection,
+              };
+            }
+            std::string restaurant_name;
+            if (mys.restaurant_id.has_value()) {
+              if (auto* r = gs.restaurant(*mys.restaurant_id)) {
+                restaurant_name = r->name();
+              }
+            }
+            auto conversation = std::make_unique<MayorConversation>(
+                gs, actor, city->mayor_office(), mys.type, opt_outcome,
+                mys.award_winner_player_id, restaurant_name);
+            current_view_ = std::make_unique<ActorView<MayorLine>>(
                 context, gs, actor, std::move(conversation));
           },
           [&](const TerminalState& ts) {

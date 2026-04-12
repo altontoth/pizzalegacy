@@ -183,7 +183,7 @@ void StaffEvents::process_staff_member(Staff& staff, JobRole role, int slot) {
     return;
   }
 
-  StaffEventData base{.staff = &staff, .job_role = role, .slot_index = slot};
+  StaffEventData base{.job_role = role, .slot_index = slot};
 
   // Event chain priority order:
   // Late -> Sick -> Maternity -> Salary (silent) -> Quit -> Raise -> Theft ->

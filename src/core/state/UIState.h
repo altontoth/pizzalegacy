@@ -12,6 +12,7 @@
 #include <variant>
 #include <vector>
 #include "conversations/MafiaLine.h"
+#include "conversations/MayorLine.h"
 #include "core/GameTypes.h"
 #include "core/common/Ids.h"
 #include "core/events/LeventId.h"
@@ -205,11 +206,20 @@ struct MarketResearchState {
 struct MafiaMissionViewState {
   MafiaLine line;
 };
+struct MayorState {
+  ActorId id{};
+  MayorConversationType type{MayorConversationType::PhoneCall};
+  std::optional<core::RestaurantId> restaurant_id;
+  std::optional<bool> is_first_inspection; // true=first, false=regular
+  std::optional<int> award_winner_player_id;
+  bool inspection_star_gained{false};
+  bool inspection_star_lost{false};
+};
 
 using UIState = std::variant<
     ScreenTag, EuroMapState, PizzaJudgesState, CityViewState, PurchasingState,
     PurchasingDemographicState, ActorTerminalState, BankState, PoliceState,
-    MafiaState, RestaurantViewState, ViewerState, FloorListState,
+    MafiaState, MayorState, RestaurantViewState, ViewerState, FloorListState,
     FurnitureListState, CategoryOverviewState, SupplierListState,
     PizzaManagerState, RestaurantMenuState, RestaurantStatsState,
     WeeksTakingsState, AnimatedStatsState, IngredientCategoryViewState,

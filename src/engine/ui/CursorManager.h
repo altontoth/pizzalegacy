@@ -42,4 +42,5 @@ private:
   bool custom_cursor_active_{false};
   float last_scale_x_{1.0f};
   float last_scale_y_{1.0f};
+  bool custom_cursor_centered_{false};
 };

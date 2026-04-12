@@ -137,7 +137,8 @@ screenshots) are resolved automatically.
 - A C++20 compiler: **GCC 13+**, **Clang 17+**, or **MSVC 2022+**.
   GCC 12 works with the `libfmt-dev` library as a fallback for `std::format`. GCC 11 and below are not supported.
 - SDL2 (>= 2.0.16)
-- libpng (optional, for PNG screenshots)
+- libpng (for PNG screenshots)
+- libzstd (save file compression)
 - [libADLMIDI](https://github.com/Wohlstand/libADLMIDI) for music support
   (optional); you can install it on your system or download the sources and put them in
   `third_party/libadlmidi/` and it wil be picked up during the build

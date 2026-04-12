@@ -96,6 +96,21 @@ void AudioManager::init() {
                CHANNELS);
 }
 
+void AudioManager::load_default_assets() {
+  load_m_container("sound/m0");  // Restaurant noise (VOC)
+  load_m_container("sound/m1");  // Tech The Tronic (CMF)
+  load_m_container("sound/m2");  // Jam The Scratch (CMF)
+  load_m_container("sound/m3");  // Heavy Banger (CMF)
+  load_m_container("sound/m4");  // Amore Mio (CMF)
+  load_m_container("sound/m5");  // Elevator Music (CMF)
+  load_m_container("sound/m6");  // Tea Shoppe (CMF)
+  load_m_container("sound/m7");  // Traffic (VOC)
+  load_m_container("sound/m8");  // Terminal (VOC)
+  load_m_container("sound/m9");  // Hoover (VOC)
+  load_m_container("sound/m10"); // Break-in music + burglary sounds (CMF + VOC)
+  load_m_container("sound/m11"); // Break-in music (CMF)
+}
+
 void AudioManager::load_m_container(const std::string& m_file_path) {
   if (!audio_enabled_) {
     Logger::debug("Audio disabled, skipping load of {}", m_file_path);
@@ -131,17 +146,16 @@ void AudioManager::load_m_container(const std::string& m_file_path) {
 
       sounds_.push_back(std::move(sound));
 
-      // Trim annoying static from the beginning of the chopper sound
+      // Skip the static noise at the start of the chopper sound.
+      // We set start_offset instead of erasing so play_sound() resets to
+      // the right position without shifting the entire sample buffer.
       if (next_sound_slot_ == static_cast<size_t>(SoundId::CHOPPER)) {
-        // Skip first 500 frames; sample * channels * seconds is how
-        // you calculate the number of frames but by trial and error
-        // I found that 500 is enough for the noise at the start of
-        // this file.
         constexpr size_t skip_samples = 500;
-        auto& samples = sounds_.back()->samples;
-        if (samples.size() > skip_samples) {
-          samples.erase(samples.begin(), samples.begin() + skip_samples);
-          Logger::debug("Trimmed {} samples from CHOPPER sound", skip_samples);
+        auto& sound = *sounds_.back();
+        if (sound.samples.size() > skip_samples) {
+          sound.start_offset = skip_samples;
+          sound.playback_position = skip_samples;
+          Logger::debug("Set start_offset={} for CHOPPER sound", skip_samples);
         }
       }
 
@@ -171,7 +185,7 @@ void AudioManager::play_sound(SoundId id, bool loop) {
   }
 
   std::lock_guard<std::mutex> lock(sound_mutex_);
-  sounds_[slot]->playback_position = 0;
+  sounds_[slot]->playback_position = sounds_[slot]->start_offset;
   sounds_[slot]->playing = true;
   sounds_[slot]->loop = loop;
 }
@@ -288,23 +302,27 @@ void AudioManager::audio_callback(void* userdata, uint8_t* stream, int len) {
 }
 
 void AudioManager::fill_audio_buffer(int16_t* buffer, int sample_count) {
-  // Create floating-point mixing buffer
-  std::vector<float> mix_buffer(static_cast<size_t>(sample_count * CHANNELS),
-                                0.0f);
+  const int n = sample_count * CHANNELS;
+
+  // Reuse pre-allocated mix buffer; resize only when SDL changes buffer size
+  if (static_cast<int>(mix_buffer_.size()) != n) {
+    mix_buffer_.resize(static_cast<size_t>(n));
+  }
+  std::fill(mix_buffer_.begin(), mix_buffer_.end(), 0.0f);
 
   mix_music(buffer, sample_count);
-  for (int i = 0; i < sample_count * CHANNELS; ++i) {
-    mix_buffer[i] += (buffer[i] / 32768.0f) * music_volume_;
+  for (int i = 0; i < n; ++i) {
+    mix_buffer_[i] += (buffer[i] / 32768.0f) * music_volume_;
   }
 
   mix_sounds(buffer, sample_count);
-  for (int i = 0; i < sample_count * CHANNELS; ++i) {
-    mix_buffer[i] += (buffer[i] / 32768.0f) * sound_volume_;
+  for (int i = 0; i < n; ++i) {
+    mix_buffer_[i] += (buffer[i] / 32768.0f) * sound_volume_;
   }
 
   // Apply master volume and clamp to prevent overflow
-  for (int i = 0; i < sample_count * CHANNELS; ++i) {
-    float sample = mix_buffer[i] * master_volume_;
+  for (int i = 0; i < n; ++i) {
+    float sample = mix_buffer_[i] * master_volume_;
     sample = std::clamp(sample, -1.0f, 1.0f);
     buffer[i] = static_cast<int16_t>(sample * 32767.0f);
   }
@@ -333,22 +351,11 @@ void AudioManager::mix_music(int16_t* buffer, int sample_count) {
         drain_samples_ = 0;
       }
     }
-
-    // Boost raw OPL output to get the audio louder (too soft otherwise)
-    if (music_gain_ != 1.0f) {
-      for (int i = 0; i < generated; ++i) {
-        float boosted = buffer[i] * music_gain_;
-        buffer[i] =
-            static_cast<int16_t>(std::clamp(boosted, -32768.0f, 32767.0f));
-      }
-    }
   }
   else if (music_state_ == MusicState::DRAINING) {
     // Process the OPL3 chip's release envelopes without advancing the
     // MIDI sequencer or triggering new notes.
     // This makes it sound the same as the original
-    // TODO: Probably during drain we should still apply the music_gain_ from
-    // above
     generated = adl_generate(midi_player_.get(), sample_count * CHANNELS,
                              reinterpret_cast<short*>(buffer));
 
@@ -366,6 +373,15 @@ void AudioManager::mix_music(int16_t* buffer, int sample_count) {
     if (is_silent || drain_samples_ > MAX_DRAIN_SAMPLES) {
       music_state_ = MusicState::STOPPED;
       adl_reset(midi_player_.get());
+    }
+  }
+
+  // Boost raw OPL output to get the audio louder (too soft otherwise)
+  if (music_gain_ != 1.0f) {
+    for (int i = 0; i < generated; ++i) {
+      float boosted = buffer[i] * music_gain_;
+      buffer[i] =
+          static_cast<int16_t>(std::clamp(boosted, -32768.0f, 32767.0f));
     }
   }
 

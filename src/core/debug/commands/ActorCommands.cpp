@@ -442,7 +442,7 @@ Examples:
       .category = "actor"};
 }
 
-static CommandDef make_mafia_commands() {
+CommandDef make_mafia_commands() {
   return CommandDef{
       .name = "mafia",
       .description = "Mafia interaction commands",
@@ -562,7 +562,7 @@ Example:
       .category = "actor"};
 }
 
-static CommandDef make_police_commands() {
+CommandDef make_police_commands() {
   return CommandDef{
       .name = "police",
       .description = "Police interaction commands",
@@ -572,17 +572,6 @@ static CommandDef make_police_commands() {
       .add_subcommand(make_police_arrest())
       .add_subcommand(make_police_visit())
       .add_subcommand(make_police_status());
-}
-
-CommandDef make_actor_commands() {
-  return CommandDef{
-      .name = "actor",
-      .description = "Actor interaction commands",
-      .help_text = "Trigger NPC events (mafia, police, mayor)",
-      .category = "actor",
-  }
-      .add_subcommand(make_mafia_commands())
-      .add_subcommand(make_police_commands());
 }
 
 } // namespace debug::commands

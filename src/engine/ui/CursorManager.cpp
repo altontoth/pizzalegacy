@@ -59,6 +59,7 @@ CursorMode CursorManager::base_cursor_mode() const { return base_mode_; }
 void CursorManager::custom_cursor(const Surface& surface, bool centered) {
   custom_cursor_surface_.emplace(surface.clone());
   custom_cursor_active_ = true;
+  custom_cursor_centered_ = centered;
   // Rebuild with current scale factor if needed
   apply_cursor(*custom_cursor_surface_, centered);
 }
@@ -118,7 +119,7 @@ void CursorManager::update_scaled_cursor(int new_window_width,
 
   if (!cursor_hidden_) {
     if (custom_cursor_active_ && custom_cursor_surface_) {
-      apply_cursor(*custom_cursor_surface_, false);
+      apply_cursor(*custom_cursor_surface_, custom_cursor_centered_);
     }
     else {
       rebuild_base_cursor();

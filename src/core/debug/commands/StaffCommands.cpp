@@ -70,12 +70,6 @@ check_restaurant(const CommandContext& ctx, core::PlayerId player_id,
     return CommandResult::error(
         compat::format("Restaurant {} not found", restaurant_id.value));
   }
-  auto owner = out->property().owner_or_tenant();
-  if (!owner || *owner != player_id) {
-    return CommandResult::error(
-        compat::format("Restaurant {} is not owned by player {}",
-                       restaurant_id.value, player_id.value));
-  }
   return std::nullopt;
 }
 
@@ -209,7 +203,6 @@ Examples:
         }
 
         StaffEventData event{
-            .staff = staff,
             .job_role = role,
             .slot_index = array_index,
             .type = event_type,

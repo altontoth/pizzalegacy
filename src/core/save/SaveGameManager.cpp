@@ -9,9 +9,13 @@
 #include <ctime>
 #include <filesystem>
 #include <fstream>
+#include <vector>
+
+#include <zstd.h>
 
 #include "core/character/Player.h"
 #include "core/city/City.h"
+#include "core/city/MayorOffice.h"
 #include "core/city/Property.h"
 #include "core/events/FullscreenMessageManager.h"
 #include "core/restaurant/Restaurant.h"
@@ -59,17 +63,28 @@ bool SaveGameManager::save(const GameState& state, const GameContext& context,
     Logger::info("Saving game to {}", filename);
 
     json j = state_to_json(state, context);
+    std::string json_str = j.dump(2);
+
+    size_t bound = ZSTD_compressBound(json_str.size());
+    std::vector<char> compressed(bound);
+    size_t compressed_size =
+        ZSTD_compress(compressed.data(), bound, json_str.data(),
+                      json_str.size(), ZSTD_CLEVEL_DEFAULT);
+    if (ZSTD_isError(compressed_size)) {
+      Logger::warn("Compression failed: {}",
+                   ZSTD_getErrorName(compressed_size));
+      return false;
+    }
 
     std::string full_path = get_full_path(filename);
-    std::ofstream file(full_path);
-
+    std::ofstream file(full_path, std::ios::binary);
     if (!file.is_open()) {
       Logger::warn("Failed to open file for writing: {}", full_path);
       return false;
     }
 
-    // Pretty print with 2-space indentation
-    file << j.dump(2);
+    file.write(compressed.data(),
+               static_cast<std::streamsize>(compressed_size));
     file.close();
 
     Logger::info("Save completed successfully");
@@ -81,30 +96,97 @@ bool SaveGameManager::save(const GameState& state, const GameContext& context,
   }
 }
 
+std::optional<json>
+SaveGameManager::read_save_json(const std::string& filename) {
+  try {
+    std::string full_path = get_full_path(filename);
+    std::ifstream file(full_path, std::ios::binary);
+    if (!file.is_open()) {
+      return std::nullopt;
+    }
+
+    std::vector<char> compressed((std::istreambuf_iterator<char>(file)),
+                                 std::istreambuf_iterator<char>());
+
+    unsigned long long decompressed_size =
+        ZSTD_getFrameContentSize(compressed.data(), compressed.size());
+    if (decompressed_size == ZSTD_CONTENTSIZE_ERROR ||
+        decompressed_size == ZSTD_CONTENTSIZE_UNKNOWN) {
+      Logger::warn("Cannot determine decompressed size for: {}", filename);
+      return std::nullopt;
+    }
+
+    std::string json_str(static_cast<size_t>(decompressed_size), '\0');
+    size_t result = ZSTD_decompress(json_str.data(), decompressed_size,
+                                    compressed.data(), compressed.size());
+    if (ZSTD_isError(result)) {
+      Logger::warn("Decompression failed for {}: {}", filename,
+                   ZSTD_getErrorName(result));
+      return std::nullopt;
+    }
+
+    return json::parse(json_str);
+  }
+  catch (...) {
+    return std::nullopt;
+  }
+}
+
+std::optional<SaveMetadata>
+SaveGameManager::read_save_metadata(const std::string& filename) {
+  auto maybe_j = read_save_json(filename);
+  if (!maybe_j) {
+    return std::nullopt;
+  }
+  const json& j = *maybe_j;
+
+  SaveMetadata meta;
+
+  meta.display_name = filename;
+  if (meta.display_name.ends_with(".plsave")) {
+    meta.display_name =
+        meta.display_name.substr(0, meta.display_name.size() - 7);
+  }
+
+  meta.saved_at = j.value("saved_at", "Unknown");
+
+  if (j.contains("time") && j["time"].contains("display")) {
+    meta.game_date = j["time"]["display"].get<std::string>();
+  }
+
+  if (j.contains("players")) {
+    for (size_t i = 0;
+         i < j["players"].size() && i < static_cast<size_t>(NUMBER_OF_PLAYERS);
+         ++i) {
+      const auto& p = j["players"][i];
+      if (!p.is_null()) {
+        meta.player_names[i] = p.value("name", "");
+      }
+    }
+  }
+
+  meta.active_player = j.value("active_player", -1);
+  meta.active_city = j.value("active_city", -1);
+
+  return meta;
+}
+
 bool SaveGameManager::load(GameState& state, GameContext& context,
                            const std::string& filename) {
   try {
     Logger::info("Loading game from {}", filename);
 
-    std::string full_path = get_full_path(filename);
-    std::ifstream file(full_path);
-
-    if (!file.is_open()) {
-      Logger::warn("Failed to open file for reading: {}", full_path);
+    auto maybe_j = read_save_json(filename);
+    if (!maybe_j) {
+      Logger::warn("Failed to read save file: {}", filename);
       return false;
     }
+    const json& j = *maybe_j;
 
-    json j;
-    file >> j;
-    file.close();
-
-    // Check version
     int version = j.value("version", -1);
     if (version != SAVE_FORMAT_VERSION) {
       Logger::warn("Save file version mismatch: expected {}, got {}",
                    SAVE_FORMAT_VERSION, version);
-      // For now, reject mismatched versions
-      // Later we can add migration logic
       return false;
     }
 
@@ -121,47 +203,21 @@ bool SaveGameManager::load(GameState& state, GameContext& context,
 }
 
 bool SaveGameManager::is_valid_save(const std::string& filename) {
-  try {
-    std::string full_path = get_full_path(filename);
-
-    if (!fs::exists(full_path)) {
-      return false;
-    }
-
-    std::ifstream file(full_path);
-    if (!file.is_open()) {
-      return false;
-    }
-
-    json j;
-    file >> j;
-
-    // Check if it has required fields
-    return j.contains("version") && j.contains("time") &&
-           j.contains("active_player");
-  }
-  catch (...) {
+  auto maybe_j = read_save_json(filename);
+  if (!maybe_j) {
     return false;
   }
+  const json& j = *maybe_j;
+  return j.contains("version") && j.contains("time") &&
+         j.contains("active_player");
 }
 
 int SaveGameManager::get_save_version(const std::string& filename) {
-  try {
-    std::string full_path = get_full_path(filename);
-    std::ifstream file(full_path);
-
-    if (!file.is_open()) {
-      return -1;
-    }
-
-    json j;
-    file >> j;
-
-    return j.value("version", -1);
-  }
-  catch (...) {
+  auto maybe_j = read_save_json(filename);
+  if (!maybe_j) {
     return -1;
   }
+  return maybe_j->value("version", -1);
 }
 
 json time_to_json(const GameTime& time) {
@@ -266,6 +322,42 @@ json SaveGameManager::state_to_json(const GameState& state,
     }
   }
   j["restaurants"] = restaurants_array;
+
+  // Save deferred staff events (queued at EOD, delivered at 10am next day)
+  {
+    json staff_array = json::array();
+    for (const auto& ev : state.deferred_staff_events()) {
+      staff_array.push_back({{"restaurant_id", ev.restaurant_id.value},
+                             {"type", static_cast<int>(ev.event.type)},
+                             {"job_role", static_cast<int>(ev.event.job_role)},
+                             {"slot_index", ev.event.slot_index}});
+    }
+    j["deferred_staff_events"] = staff_array;
+  }
+
+  // Save deferred mayor events (queued at EOD, delivered at 10am next day)
+  {
+    json insp_array = json::array();
+    for (const auto& ev : state.deferred_mayor_inspections()) {
+      insp_array.push_back({{"restaurant_id", ev.restaurant_id.value},
+                            {"is_first", ev.is_first}});
+    }
+    j["deferred_mayor_inspections"] = insp_array;
+
+    json award_array = json::array();
+    for (const auto& ev : state.deferred_mayor_awards()) {
+      json entry = {{"type", static_cast<int>(ev.type)},
+                    {"is_ceremony", ev.is_ceremony}};
+      if (ev.winner_player_id.has_value()) {
+        entry["winner_player_id"] = *ev.winner_player_id;
+      }
+      else {
+        entry["winner_player_id"] = nullptr;
+      }
+      award_array.push_back(entry);
+    }
+    j["deferred_mayor_awards"] = award_array;
+  }
 
   // Save shown message history with dates (for CV display and deduplication)
   json shown_msgs;
@@ -408,6 +500,42 @@ void SaveGameManager::json_to_state(const json& j, GameState& state,
   if (j.contains("active_restaurant") && !j["active_restaurant"].is_null()) {
     core::RestaurantId rid{j["active_restaurant"].get<int>()};
     state.active_restaurant(rid);
+  }
+
+  // Restore deferred staff events
+  if (j.contains("deferred_staff_events")) {
+    for (const auto& ev : j["deferred_staff_events"]) {
+      core::restaurant::StaffEventData data;
+      data.type = static_cast<core::restaurant::StaffEventData::Type>(
+          ev["type"].get<int>());
+      data.job_role =
+          static_cast<core::character::JobRole>(ev["job_role"].get<int>());
+      data.slot_index = ev["slot_index"].get<int>();
+      state.restore_deferred_staff_event(
+          data, core::RestaurantId{ev["restaurant_id"].get<int>()});
+    }
+  }
+
+  // Restore deferred mayor events
+  if (j.contains("deferred_mayor_inspections")) {
+    for (const auto& ev : j["deferred_mayor_inspections"]) {
+      core::RestaurantId rid{ev["restaurant_id"].get<int>()};
+      bool is_first = ev["is_first"].get<bool>();
+      state.restore_deferred_mayor_inspection(rid, is_first);
+    }
+  }
+  if (j.contains("deferred_mayor_awards")) {
+    for (const auto& ev : j["deferred_mayor_awards"]) {
+      MayorAwardEvent award;
+      award.type = static_cast<MayorAwardType>(ev["type"].get<int>());
+      award.is_ceremony =
+          ev.contains("is_ceremony") && ev["is_ceremony"].get<bool>();
+      if (ev.contains("winner_player_id") &&
+          !ev["winner_player_id"].is_null()) {
+        award.winner_player_id = ev["winner_player_id"].get<int>();
+      }
+      state.restore_deferred_mayor_award(award);
+    }
   }
 
   // Reload article database (needed for newspaper display after load)

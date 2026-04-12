@@ -24,6 +24,10 @@ using namespace core::restaurant;
 using engine::random::rand_max_n;
 using engine::random::rand_percentage_chance;
 
+// Manager price adjustment steps (cents)
+static constexpr Money price_adjust_up = 30_c;
+static constexpr Money price_adjust_down = 40_c;
+
 // Ingredient type index ranges per category (start index, count)
 struct CategoryRange {
   int start;
@@ -272,7 +276,7 @@ void ManagerRoutine::do_price_adjustment() {
   // raising prices.
   if (restaurant_.fulfillment_rate() < 80 && settings.change_prices) {
     for (auto& entry : restaurant_.menu().entries()) {
-      entry.price = Money{entry.price.cents + 100};
+      entry.price = std::min(entry.price + 100_c, Menu::max_price);
     }
   }
 
@@ -318,10 +322,11 @@ void ManagerRoutine::do_price_adjustment() {
 
     if (settings.change_prices) {
       if (profit < -5000) {
-        entry.price = Money{std::max(0LL, entry.price.cents - 40)};
+        entry.price =
+            std::max(entry.price - price_adjust_down, Menu::min_price);
       }
       else if (profit > 2000) {
-        entry.price = Money{entry.price.cents + 30};
+        entry.price = std::min(entry.price + price_adjust_up, Menu::max_price);
       }
     }
   }

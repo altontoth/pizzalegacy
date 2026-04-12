@@ -12,6 +12,7 @@
 #include "core/debug/commands/DebugCommands.h"
 #include "core/debug/commands/DepotCommands.h"
 #include "core/debug/commands/GameCommands.h"
+#include "core/debug/commands/MayorCommands.h"
 #include "core/debug/commands/NavCommands.h"
 #include "core/debug/commands/NewspaperCommands.h"
 #include "core/debug/commands/PlayerCommands.h"
@@ -32,7 +33,9 @@ void register_debug_commands(DebugConsole& console, GameState& state,
   registry.register_command(debug::commands::make_debug_commands());
   registry.register_command(debug::commands::make_newspaper_commands());
   registry.register_command(debug::commands::make_city_commands());
-  registry.register_command(debug::commands::make_actor_commands());
+  registry.register_command(debug::commands::make_mafia_commands());
+  registry.register_command(debug::commands::make_police_commands());
+  registry.register_command(debug::commands::make_mayor_commands());
   registry.register_command(debug::commands::make_staff_commands());
 
   // Register top-level convenience commands

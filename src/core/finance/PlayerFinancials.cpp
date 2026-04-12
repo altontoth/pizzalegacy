@@ -187,3 +187,14 @@ Money PlayerFinancials::previous_month_operational(
                                  current_date.previous_month_end(),
                                  restaurant_id, AccountingScope::Operational);
 }
+
+Money PlayerFinancials::balance_between(
+    Account acct, GameDate from, GameDate to,
+    std::optional<uint32_t> restaurant) const {
+  std::optional<core::RestaurantId> rid =
+      restaurant.has_value()
+          ? std::optional<core::RestaurantId>{core::RestaurantId{
+                static_cast<int32_t>(*restaurant)}}
+          : std::nullopt;
+  return ledger_.balance_between(acct, from, to, rid);
+}

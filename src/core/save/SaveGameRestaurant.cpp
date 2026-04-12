@@ -351,6 +351,11 @@ json restaurant_to_json(const Restaurant& restaurant) {
   j["event_reputation_penalties"] = restaurant.event_reputation_penalties();
   j["event_reputation_recovery"] = restaurant.event_reputation_recovery();
 
+  // Mayor inspection state
+  j["star_rating"] = restaurant.star_rating();
+  j["inspection_days_remaining"] = restaurant.inspection_days_remaining();
+  j["first_inspection_pending"] = restaurant.first_inspection_pending();
+
   return j;
 }
 
@@ -563,6 +568,19 @@ std::unique_ptr<Restaurant> json_to_restaurant(const json& j,
          ++i) {
       recovery[i] = j["event_reputation_recovery"][i].get<int>();
     }
+  }
+
+  // Mayor inspection state
+  if (j.contains("star_rating")) {
+    restaurant->star_rating(j["star_rating"].get<int>());
+  }
+  if (j.contains("inspection_days_remaining")) {
+    restaurant->inspection_days_remaining(
+        j["inspection_days_remaining"].get<int>());
+  }
+  if (j.contains("first_inspection_pending")) {
+    restaurant->first_inspection_pending(
+        j["first_inspection_pending"].get<bool>());
   }
 
   return restaurant;

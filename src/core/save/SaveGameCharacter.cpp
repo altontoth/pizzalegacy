@@ -565,81 +565,32 @@ JournalEntry json_to_journal_entry(const json& j) {
 }
 
 json ledger_to_json(const Ledger& ledger) {
-  json j;
-
-  // Access journal through reflection (Ledger doesn't have a public getter)
-  // We'll need to add a getter or friend this function
-  // For now, we'll use the friend approach via PlayerFinancials
-
-  return j;
+  json entries_array = json::array();
+  for (const auto& entry : ledger.entries()) {
+    entries_array.push_back(journal_entry_to_json(entry));
+  }
+  return entries_array;
 }
 
 Ledger json_to_ledger(const json& j) {
   Ledger ledger;
+  for (const auto& entry_json : j) {
+    ledger.post(json_to_journal_entry(entry_json));
+  }
   return ledger;
 }
 
 json player_financials_to_json(const PlayerFinancials& financials) {
   json j;
-
-  // Get all account balances
-  json balances = json::object();
-
-  // Save all accounts
-  const std::vector<Account> all_accounts = {
-      Account::Sales,     Account::CoinMachines,  Account::Missions,
-      Account::Staff,     Account::Rents,         Account::Stock,
-      Account::Machines,  Account::Furniture,     Account::Protection,
-      Account::Repayment, Account::Others,        Account::Cash,
-      Account::Capital,   Account::ProfitAndLoss, Account::Loan,
-      Account::Property,  Account::Weapons,       Account::FinesAndBribes,
-      Account::Debts,     Account::DeliveryDebts, Account::Cheat};
-
-  for (Account account : all_accounts) {
-    Money balance = financials.balance(account);
-    balances[to_string(account)] = balance.cents;
-  }
-
-  j["balances"] = balances;
-
-  // TODO: We need to store the full ledger
-
+  j["journal"] = ledger_to_json(financials.ledger());
   return j;
 }
 
 PlayerFinancials json_to_player_financials(const json& j) {
   PlayerFinancials financials;
 
-  // Restore account balances by creating synthetic journal entries
-  if (j.contains("balances")) {
-    GameDate load_date{1995, 1, 1}; // Use a base date for initial balances
-
-    for (auto it = j["balances"].begin(); it != j["balances"].end(); ++it) {
-      int64_t balance_cents = it.value().get<int64_t>();
-
-      if (balance_cents != 0) {
-        // Find the account enum from string
-        std::string account_name = it.key();
-        auto account_opt = string_to_account(account_name);
-
-        if (!account_opt.has_value()) {
-          // Unknown account name, skip it
-          continue;
-        }
-
-        Account account = account_opt.value();
-
-        // Transfer from Capital to restore the balance
-        if (balance_cents > 0) {
-          financials.transfer(load_date, Account::Capital, account,
-                              Money{balance_cents}, AccountingScope::Capital);
-        }
-        else {
-          financials.transfer(load_date, account, Account::Capital,
-                              Money{-balance_cents}, AccountingScope::Capital);
-        }
-      }
-    }
+  if (j.contains("journal")) {
+    financials.restore_ledger(json_to_ledger(j["journal"]));
   }
 
   return financials;

@@ -10,6 +10,14 @@
 
 namespace math {
 
+int64_t round_up_power10(int64_t v) {
+  int64_t p = 1;
+  while (p < v) {
+    p *= 10;
+  }
+  return p;
+}
+
 uint16_t two_bytes_to_uint16(unsigned char a, unsigned char b, Endian e) {
   uint8_t byte1 = a;
   uint8_t byte2 = b;

@@ -13,8 +13,19 @@
 #include <string>
 
 #include "engine/Game.h"
+#include "engine/Version.h"
 
-[[noreturn]] static void usage(const char* prog, int code) {
+namespace { // anonymous
+[[noreturn]] void version() {
+  std::cout << "Version: Pizza Legacy " << game_meta::VERSION << "\n";
+  std::cout << "Copyright: 2026 Cowomaly\n";
+  std::cout << "License: GPL-3.0-or-later\n";
+  std::cout << "Website: https://pizzalegacy.nl/\n";
+  std::cout << "Repository: https://codeberg.org/cowomaly/pizzalegacy/\n";
+  std::exit(0);
+}
+
+[[noreturn]] void usage(const char* prog, int code) {
   std::cerr
       << "Usage:\n"
       << "  " << prog << "                        # normal boot (Intro)\n"
@@ -40,6 +51,7 @@
       << "  -h, --help\n";
   std::exit(code);
 }
+} // namespace
 
 static Game::LaunchOptions parse_args(int argc, char* argv[]) {
   Game::LaunchOptions opts;
@@ -50,6 +62,9 @@ static Game::LaunchOptions parse_args(int argc, char* argv[]) {
 
     if (arg == "-h" || arg == "--help") {
       usage(argv[0], 0);
+    }
+    if (arg == "-v" || arg == "--version") {
+      version();
     }
     else if (arg == "--") {
       // Everything after '--' is the first positional (viewer target).

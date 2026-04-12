@@ -180,6 +180,8 @@ public:
                   std::optional<core::RestaurantId> restaurant = std::nullopt,
                   std::optional<AccountingScope> scope = std::nullopt) const;
 
+  const std::vector<JournalEntry>& entries() const noexcept { return journal_; }
+
 private:
   std::vector<JournalEntry> journal_;
 };

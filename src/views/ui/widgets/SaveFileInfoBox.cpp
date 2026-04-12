@@ -6,18 +6,11 @@
 
 #include "views/ui/widgets/SaveFileInfoBox.h"
 
-#include <filesystem>
-#include <fstream>
-#include <nlohmann/json.hpp>
-
 #include "core/save/SaveGameManager.h"
 #include "core/util/Constants.h"
 #include "engine/FormatCompat.h"
-#include "engine/Logger.h"
 #include "engine/geom/Spaces.h"
 #include "resources/FontManager.h"
-
-using json = nlohmann::json;
 
 constexpr int INFO_BOX_W = 350;
 constexpr int INFO_BOX_H = 150;
@@ -26,59 +19,21 @@ constexpr int TEXT_COLOR = 240;
 constexpr int LABEL_COLOR = 1;
 
 void SaveFileInfoBox::set_file(const std::string& filename) {
-  info_ = SaveFileInfo{};
+  info_ = save::SaveMetadata{};
   has_info_ = false;
 
-  try {
-    namespace fs = std::filesystem;
-    auto full_path =
-        fs::path(save::SaveGameManager::get_saves_directory()) / filename;
-
-    std::ifstream file(full_path);
-    if (!file.is_open()) {
-      return;
-    }
-
-    json j;
-    file >> j;
-
-    info_.filename = filename;
-    // Strip .json extension for display
-    if (info_.filename.size() > 5 &&
-        info_.filename.substr(info_.filename.size() - 5) == ".json") {
-      info_.filename = info_.filename.substr(0, info_.filename.size() - 5);
-    }
-
-    info_.saved_at = j.value("saved_at", "Unknown");
-
-    if (j.contains("time") && j["time"].contains("display")) {
-      info_.game_date = j["time"]["display"].get<std::string>();
-    }
-
-    if (j.contains("players")) {
-      for (size_t i = 0; i < j["players"].size() && i < NUMBER_OF_PLAYERS;
-           ++i) {
-        const auto& p = j["players"][i];
-        if (p.is_null()) {
-          continue;
-        }
-        info_.player_names[i] = p.value("name", "");
-      }
-    }
-
-    info_.active_player = j.value("active_player", -1);
-    info_.active_city = j.value("active_city", -1);
-
-    has_info_ = true;
+  auto maybe_meta = save::SaveGameManager::read_save_metadata(filename);
+  if (!maybe_meta) {
+    return;
   }
-  catch (const std::exception& e) {
-    Logger::warn("Failed to read save file info: {}", e.what());
-  }
+
+  info_ = std::move(*maybe_meta);
+  has_info_ = true;
 }
 
 void SaveFileInfoBox::clear() {
   has_info_ = false;
-  info_ = SaveFileInfo{};
+  info_ = save::SaveMetadata{};
 }
 
 void SaveFileInfoBox::draw(Surface& screen, ViewPoint p, bool is_selected) {
@@ -97,9 +52,9 @@ void SaveFileInfoBox::draw(Surface& screen, ViewPoint p, bool is_selected) {
     return;
   }
 
-  context_.font->render_line_onto(block,
-                                  compat::format("File: {}", info_.filename),
-                                  text_pos, FontFace::SUPERSMA, TEXT_COLOR);
+  context_.font->render_line_onto(
+      block, compat::format("File: {}", info_.display_name), text_pos,
+      FontFace::SUPERSMA, TEXT_COLOR);
   text_pos.y += LINE_HEIGHT;
 
   context_.font->render_line_onto(block,

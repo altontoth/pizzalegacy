@@ -7,6 +7,7 @@
 #include "core/save/SaveGameCity.h"
 
 #include "core/city/City.h"
+#include "core/city/MayorOffice.h"
 #include "core/city/Property.h"
 #include "core/food/Ingredient.h"
 #include "core/food/IngredientCategory.h"
@@ -300,6 +301,93 @@ void json_to_economy_trend(const json& j, EconomyTrend& et) {
   }
 }
 
+json mayor_office_to_json(const MayorOffice& mo) {
+  json j;
+
+  json favor = json::array();
+  json investment = json::array();
+  json trade = json::array();
+  json fee_paid = json::array();
+  for (int i = 0; i < NUMBER_OF_PLAYERS; ++i) {
+    favor.push_back(mo.favor_score(i));
+    investment.push_back(mo.investment_activity(i));
+    trade.push_back(mo.trade_activity(i));
+    fee_paid.push_back(mo.fee_paid(i));
+  }
+  j["favor_score"] = favor;
+  j["investment_activity"] = investment;
+  j["trade_activity"] = trade;
+  j["fee_paid"] = fee_paid;
+
+  json competition_wins = json::array();
+  for (int i = 0; i < NUMBER_OF_PLAYERS; ++i) {
+    competition_wins.push_back(mo.pizza_competition_wins(i));
+  }
+  j["pizza_competition_wins"] = competition_wins;
+
+  j["appointment_day"] = mo.appointment_day();
+  j["current_quarterly_award"] = static_cast<int>(mo.current_quarterly_award());
+  j["award_announcement_day"] = mo.award_announcement_day();
+  j["award_ceremony_day"] = mo.award_ceremony_day();
+
+  return j;
+}
+
+void json_to_mayor_office(const json& j, MayorOffice& mo) {
+  if (j.contains("favor_score")) {
+    for (int i = 0;
+         i < NUMBER_OF_PLAYERS && i < static_cast<int>(j["favor_score"].size());
+         ++i) {
+      mo.set_favor(i, j["favor_score"][i].get<int>());
+    }
+  }
+  if (j.contains("investment_activity")) {
+    for (int i = 0; i < NUMBER_OF_PLAYERS &&
+                    i < static_cast<int>(j["investment_activity"].size());
+         ++i) {
+      mo.set_investment_activity(i, j["investment_activity"][i].get<int32_t>());
+    }
+  }
+  if (j.contains("trade_activity")) {
+    for (int i = 0; i < NUMBER_OF_PLAYERS &&
+                    i < static_cast<int>(j["trade_activity"].size());
+         ++i) {
+      mo.set_trade_activity(i, j["trade_activity"][i].get<int32_t>());
+    }
+  }
+  if (j.contains("fee_paid")) {
+    mo.clear_fee_paid();
+    for (int i = 0;
+         i < NUMBER_OF_PLAYERS && i < static_cast<int>(j["fee_paid"].size());
+         ++i) {
+      if (j["fee_paid"][i].get<bool>()) {
+        mo.set_fee_paid(i);
+      }
+    }
+  }
+  if (j.contains("pizza_competition_wins")) {
+    for (int i = 0; i < NUMBER_OF_PLAYERS &&
+                    i < static_cast<int>(j["pizza_competition_wins"].size());
+         ++i) {
+      mo.set_pizza_competition_wins(i,
+                                    j["pizza_competition_wins"][i].get<int>());
+    }
+  }
+  if (j.contains("appointment_day")) {
+    mo.set_appointment_day(j["appointment_day"].get<int>());
+  }
+  if (j.contains("current_quarterly_award")) {
+    mo.current_quarterly_award(
+        static_cast<MayorAwardType>(j["current_quarterly_award"].get<int>()));
+  }
+  if (j.contains("award_announcement_day")) {
+    mo.award_announcement_day(j["award_announcement_day"].get<int>());
+  }
+  if (j.contains("award_ceremony_day")) {
+    mo.award_ceremony_day(j["award_ceremony_day"].get<int>());
+  }
+}
+
 json city_to_json(const City& city) {
   json j;
   j["id"] = city.id().value;
@@ -380,6 +468,9 @@ json city_to_json(const City& city) {
     newspaper_j["target_ingredient"] = nullptr;
   }
   j["newspaper_state"] = newspaper_j;
+
+  // Save mayor office state
+  j["mayor_office"] = mayor_office_to_json(city.mayor_office());
 
   // Save scheduled newspaper events
   const auto& event_sys = city.newspaper_event_system();
@@ -522,6 +613,11 @@ void json_to_city(const json& j, City& city) {
     else {
       ns.target_ingredient = std::nullopt;
     }
+  }
+
+  // Restore mayor office state
+  if (j.contains("mayor_office")) {
+    json_to_mayor_office(j["mayor_office"], city.mayor_office());
   }
 
   // Restore scheduled newspaper events

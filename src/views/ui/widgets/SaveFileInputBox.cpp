@@ -80,11 +80,10 @@ void SaveFileInputBox::draw(Surface& screen, ViewPoint p, bool is_selected) {
         block.fill_rect(highlight_rect, gray);
       }
 
-      // Remove .json extension for display
+      // Remove .plsave extension for display
       std::string display_name = save_files_[file_index];
-      if (display_name.size() > 5 &&
-          display_name.substr(display_name.size() - 5) == ".json") {
-        display_name = display_name.substr(0, display_name.size() - 5);
+      if (display_name.ends_with(".plsave")) {
+        display_name = display_name.substr(0, display_name.size() - 7);
       }
 
       context_.font->render_text_onto(block, display_name, ViewPoint{6, y},
@@ -199,11 +198,10 @@ bool SaveFileInputBox::on_action(const input::ActionEvent& ev) {
   switch (ev.action) {
   case input::Action::SubmitInput:
     if (!new_filename_.empty()) {
-      // Add .json extension if not present
+      // Add .plsave extension if not present
       std::string filename = new_filename_;
-      if (filename.size() < 5 ||
-          filename.substr(filename.size() - 5) != ".json") {
-        filename += ".json";
+      if (!filename.ends_with(".plsave")) {
+        filename += ".plsave";
       }
       on_save_callback_(filename);
     }

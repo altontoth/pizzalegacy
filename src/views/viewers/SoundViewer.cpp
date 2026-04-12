@@ -15,6 +15,10 @@ SoundViewer::SoundViewer(GameContext& context, GameState& state)
     : View(context, state), audio_(context.audio), current_index_(0),
       currently_playing_index_(-1),
       listener_(context.input->register_listener(*this)) {
+  if (!audio_->is_initialized()) {
+    audio_->init();
+    audio_->load_default_assets();
+  }
   load_all_m_files();
 }
 

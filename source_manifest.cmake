@@ -30,6 +30,7 @@ set(GAME_PLEGACY_SOURCES
     src/core/debug/commands/DebugCommands.cpp
     src/core/debug/commands/DepotCommands.cpp
     src/core/debug/commands/GameCommands.cpp
+    src/core/debug/commands/MayorCommands.cpp
     src/core/debug/commands/NavCommands.cpp
     src/core/debug/commands/NewspaperCommands.cpp
     src/core/debug/commands/PlayerCommands.cpp
@@ -307,6 +308,7 @@ set(PLEGACY_HEADERS
     src/core/debug/commands/DebugCommands.h
     src/core/debug/commands/DepotCommands.h
     src/core/debug/commands/GameCommands.h
+    src/core/debug/commands/MayorCommands.h
     src/core/debug/commands/NavCommands.h
     src/core/debug/commands/NewspaperCommands.h
     src/core/debug/commands/PlayerCommands.h

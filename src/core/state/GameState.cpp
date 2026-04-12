@@ -12,6 +12,7 @@
 
 #include <magic_enum/magic_enum.hpp>
 #include <utility>
+#include "conversations/MayorConversation.h"
 #include "core/character/Actor.h"
 #include "core/character/Awards.h"
 #include "core/character/Player.h"
@@ -372,7 +373,11 @@ void GameState::advance_game_time() {
     });
   }
 
-  check_mafia_events();
+  // Prevent interruptions while player is in area where that would be
+  // inconvenient.
+  if (!prevent_auto_end_of_turn_) {
+    check_mafia_events();
+  }
   check_police_events();
   process_pending_messages();
 
@@ -380,9 +385,31 @@ void GameState::advance_game_time() {
   // on every block while time >= 10:00, matching the original's behaviour
   // where the popup fires at the first update_status_and_time call >= 0x3C.
   if (!end_of_turn_state_ && !showing_deferred_staff_event_ &&
-      !prevent_auto_end_of_turn_ && !deferred_staff_events_.empty() &&
-      time_.is_past_time(10, 0)) {
+      !showing_deferred_inspection_ && !prevent_auto_end_of_turn_ &&
+      !deferred_staff_events_.empty() && time_.is_past_time(10, 0)) {
     show_next_deferred_staff_event();
+  }
+
+  // Reset inspection gate when the MayorState conversation has ended.
+  if (showing_deferred_inspection_ && !ui_.is_top<MayorState>()) {
+    showing_deferred_inspection_ = false;
+  }
+
+  // Fire deferred mayor inspection events at 10 AM (after staff events drain).
+  if (!end_of_turn_state_ && !showing_deferred_staff_event_ &&
+      !showing_deferred_inspection_ && !prevent_auto_end_of_turn_ &&
+      !deferred_mayor_inspections_.empty() && time_.is_past_time(10, 0)) {
+    show_next_deferred_inspection();
+  }
+
+  // Fire deferred mayor award events at 10 AM (after inspections).
+  if (!end_of_turn_state_ && !showing_deferred_staff_event_ &&
+      !showing_deferred_inspection_ && !ui_.is_top<MayorState>() &&
+      !prevent_auto_end_of_turn_ && !deferred_mayor_awards_.empty() &&
+      time_.is_past_time(10, 0)) {
+    auto ev = deferred_mayor_awards_.front();
+    deferred_mayor_awards_.erase(deferred_mayor_awards_.begin());
+    process_mayor_award_event(ev);
   }
 }
 
@@ -434,15 +461,16 @@ void GameState::resume_time_advancement() {
   }
 }
 
+bool GameState::is_past_player_end_of_day() const {
+  auto end_time = active_player()->end_of_day_time();
+  return time_.is_past_time(end_time.hour, end_time.minute);
+}
+
 bool GameState::is_player_day_over() const {
   if (prevent_auto_end_of_turn_) {
     return false;
   }
-  if (active_player_.value < 0) {
-    return false;
-  }
-  auto end_time = players_[active_player_.value]->end_of_day_time();
-  return time_.is_past_time(end_time.hour, end_time.minute);
+  return is_past_player_end_of_day();
 }
 
 bool GameState::advance_time_blocks(int n) {
@@ -492,12 +520,17 @@ void GameState::update(uint32_t elapsed_ms) {
 
     constexpr uint32_t PASS_TEN_MINUTES_MS = 11 * 1000;
     while (time_accumulator_ >= PASS_TEN_MINUTES_MS) {
-      advance_game_time();
-
-      if (is_player_day_over()) {
-        request_end_of_turn();
-      }
       time_accumulator_ -= PASS_TEN_MINUTES_MS;
+
+      if (is_past_player_end_of_day()) {
+        time_accumulator_ = 0;
+        if (!prevent_auto_end_of_turn_) {
+          request_end_of_turn();
+        }
+        break;
+      }
+
+      advance_game_time();
     }
   }
 
@@ -568,6 +601,13 @@ void GameState::process_next_restaurant() {
       status_display_->mark_dirty();
     }
 
+    // Queue mayor inspection event for delivery next day at 10 AM.
+    if (state.is_human) {
+      if (auto insp = restaurant->take_pending_inspection()) {
+        deferred_mayor_inspections_.push_back({*insp, restaurant->id()});
+      }
+    }
+
     // Queue player-facing staff event dialogs for delivery next day at 10 AM.
     // Replace any existing queued event for the same staff member so that
     // only the most recent event survives
@@ -576,7 +616,8 @@ void GameState::process_next_restaurant() {
         auto it = std::find_if(deferred_staff_events_.begin(),
                                deferred_staff_events_.end(),
                                [&](const DeferredStaffEvent& d) {
-                                 return d.event.staff == ev.staff &&
+                                 return d.event.job_role == ev.job_role &&
+                                        d.event.slot_index == ev.slot_index &&
                                         d.restaurant_id == restaurant->id();
                                });
         if (it != deferred_staff_events_.end()) {
@@ -636,6 +677,229 @@ void GameState::show_next_deferred_staff_event() {
                           [this]() { show_next_deferred_staff_event(); });
 }
 
+void GameState::trigger_mayor_inspection(core::RestaurantId rid,
+                                         bool is_first) {
+  deferred_mayor_inspections_.push_back({is_first, rid});
+  if (!showing_deferred_inspection_) {
+    show_next_deferred_inspection();
+  }
+}
+
+void GameState::show_next_deferred_inspection() {
+  if (deferred_mayor_inspections_.empty()) {
+    showing_deferred_inspection_ = false;
+    if (is_player_day_over()) {
+      request_end_of_turn();
+    }
+    return;
+  }
+
+  auto* city = active_city();
+  if (!city) {
+    deferred_mayor_inspections_.clear();
+    showing_deferred_inspection_ = false;
+    return;
+  }
+
+  auto mayor_actors = city->actors(ActorType::MAYOR);
+  if (mayor_actors.empty()) {
+    deferred_mayor_inspections_.clear();
+    showing_deferred_inspection_ = false;
+    return;
+  }
+  int mayor_id = mayor_actors[0]->id();
+
+  auto deferred = deferred_mayor_inspections_.front();
+  deferred_mayor_inspections_.erase(deferred_mayor_inspections_.begin());
+  showing_deferred_inspection_ = true;
+
+  auto* restaurant = this->restaurant(deferred.restaurant_id);
+  if (!restaurant) {
+    // Restaurant gone since EOD, skip.
+    showing_deferred_inspection_ = false;
+    show_next_deferred_inspection();
+    return;
+  }
+
+  // Corruption check: if mayor favor score passes, award a star regardless of
+  // quality. Only applies on the upside.
+  auto* player = active_player();
+  bool corruption_pass = false;
+  if (player) {
+    int favor = city->mayor_office().favor_score(player->id().value);
+    corruption_pass = engine::random::rand_percentage_chance(favor) &&
+                      restaurant->star_rating() < 5;
+  }
+
+  MayorConversation::InspectionOutcome outcome;
+  outcome.is_first = deferred.is_first;
+
+  if (corruption_pass) {
+    restaurant->star_rating(restaurant->star_rating() + 1);
+    outcome.star_gained = true;
+  }
+  else {
+    auto result = restaurant->update_star_rating();
+    if (result.has_value()) {
+      outcome.star_gained = *result;
+      outcome.star_lost = !*result;
+    }
+  }
+
+  // Force-close for 7 days on first inspection with star loss (original rule)
+  if (outcome.star_lost && outcome.is_first) {
+    restaurant->force_close(7);
+  }
+
+  MayorConversationType conv_type =
+      deferred.is_first ? MayorConversationType::FirstQualityInspection
+                        : MayorConversationType::QualityInspection;
+  ui_.push<MayorState>(MayorState{.id = mayor_id,
+                                  .type = conv_type,
+                                  .restaurant_id = deferred.restaurant_id,
+                                  .is_first_inspection = deferred.is_first,
+                                  .award_winner_player_id = std::nullopt,
+                                  .inspection_star_gained = outcome.star_gained,
+                                  .inspection_star_lost = outcome.star_lost});
+}
+
+void GameState::process_mayor_award_event(const MayorAwardEvent& award_event) {
+  auto* city = active_city();
+  if (!city) {
+    return;
+  }
+  auto mayor_actors = city->actors(ActorType::MAYOR);
+  if (mayor_actors.empty()) {
+    return;
+  }
+  int mayor_id = mayor_actors[0]->id();
+
+  // For ceremonies, resolve the winner. Announcements always pass nullopt.
+  // Restaurant-based awards (MostBeautiful, GoldenBowTie) are computed here
+  // because MayorOffice has no access to restaurant data.
+  std::optional<int> award_winner = award_event.winner_player_id;
+
+  if (award_event.is_ceremony) {
+    auto all_players = players();
+    int pc = human_player_count();
+    auto& mayor_office = city->mayor_office();
+
+    if (award_event.type == MayorAwardType::MostBeautifulRestaurant) {
+      int best_score = -1;
+      award_winner = std::nullopt;
+      for (int i = 0; i < pc; ++i) {
+        if (!all_players[i] || !mayor_office.fee_paid(i)) {
+          continue;
+        }
+        int score = 0;
+        for (auto* rest : restaurants_for(all_players[i]->id())) {
+          for (int v : rest->economy().furniture_appeal()) {
+            score += v;
+          }
+        }
+        if (score > best_score) {
+          best_score = score;
+          award_winner = i;
+        }
+      }
+    }
+    else if (award_event.type == MayorAwardType::GoldenBowTie) {
+      int best_time = -1;
+      award_winner = std::nullopt;
+      for (int i = 0; i < pc; ++i) {
+        if (!all_players[i] || !mayor_office.fee_paid(i)) {
+          continue;
+        }
+        for (auto* rest : restaurants_for(all_players[i]->id())) {
+          int t = rest->calculate_service_time_minutes();
+          if (t > 0 && (best_time < 0 || t < best_time)) {
+            best_time = t;
+            award_winner = i;
+          }
+        }
+      }
+    }
+
+    // Grant a trophy level to the winner.
+    if (award_winner.has_value()) {
+      int winner_id = *award_winner;
+      if (winner_id >= 0 && winner_id < NUMBER_OF_PLAYERS &&
+          all_players[winner_id]) {
+        auto& player = *all_players[winner_id];
+        AwardCategory cat = AwardCategory::Heart;
+        switch (award_event.type) {
+        case MayorAwardType::MostBeautifulRestaurant:
+          cat = AwardCategory::Heart;
+          break;
+        case MayorAwardType::PizzaOfTheYear:
+          cat = AwardCategory::Pizza;
+          break;
+        case MayorAwardType::BestInvestorInTown:
+          cat = AwardCategory::Star;
+          break;
+        case MayorAwardType::BestImitator:
+          cat = AwardCategory::Spoon;
+          break;
+        case MayorAwardType::GoldenBowTie:
+          cat = AwardCategory::BowTie;
+          break;
+        case MayorAwardType::TransAtlanticTrade:
+          cat = AwardCategory::Cross;
+          break;
+        default:
+          break;
+        }
+        auto current = player.awards()[static_cast<int>(cat)];
+        if (current < AwardLevel::Gold) {
+          player.award(cat,
+                       static_cast<AwardLevel>(static_cast<int>(current) + 1));
+        }
+      }
+    }
+
+    // Awards without a "nobody won" dialog silently skip if no one qualified.
+    bool has_nobody_dialog =
+        (award_event.type == MayorAwardType::BestImitator ||
+         award_event.type == MayorAwardType::TransAtlanticTrade);
+    if (!award_winner.has_value() && !has_nobody_dialog) {
+      return;
+    }
+  }
+
+  // Map MayorAwardType to MayorConversationType
+  MayorConversationType conv_type = MayorConversationType::PhoneCall;
+  switch (award_event.type) {
+  case MayorAwardType::MostBeautifulRestaurant:
+    conv_type = MayorConversationType::MostBeautifulRestaurantAward;
+    break;
+  case MayorAwardType::PizzaOfTheYear:
+    conv_type = award_winner.has_value()
+                    ? MayorConversationType::PizzaOfTheYearWinner
+                    : MayorConversationType::PizzaOfTheYearCompetition;
+    break;
+  case MayorAwardType::BestInvestorInTown:
+    conv_type = MayorConversationType::BestInvestorInTownAward;
+    break;
+  case MayorAwardType::BestImitator:
+    conv_type = MayorConversationType::BestImitatorAward;
+    break;
+  case MayorAwardType::GoldenBowTie:
+    conv_type = MayorConversationType::GoldenBowTieAward;
+    break;
+  case MayorAwardType::TransAtlanticTrade:
+    conv_type = MayorConversationType::TransAtlanticTradeAward;
+    break;
+  case MayorAwardType::None:
+    return;
+  }
+
+  ui_.push<MayorState>(MayorState{.id = mayor_id,
+                                  .type = conv_type,
+                                  .restaurant_id = std::nullopt,
+                                  .is_first_inspection = std::nullopt,
+                                  .award_winner_player_id = award_winner});
+}
+
 void GameState::show_staff_event_dialog(
     const core::restaurant::StaffEventData& event, Restaurant* restaurant,
     std::function<void()> on_done) {
@@ -693,24 +957,30 @@ void GameState::show_staff_event_dialog(
   std::string o2_text = get_line(6 + e2);
   std::string o3_text = get_line(9 + e3);
 
-  uint8_t staff_char_id = event.staff ? event.staff->character().id() : 0;
-  // Get the picture from the factory because the Staff object can go
-  // away if they get fired.
-  const RawRenderable* staff_pic =
-      event.staff ? CharacterFactory::create_character(staff_char_id) : nullptr;
+  Staff* initial_staff = restaurant->staff_at(event.job_role, event.slot_index);
+  const RawRenderable* staff_pic = nullptr;
+  std::optional<uint8_t> staff_char_id;
+  if (initial_staff) {
+    staff_char_id = initial_staff->character().id();
+    // Get the picture from the factory because the Staff object can go
+    // away if they get fired. Technically I think we could hire a new character
+    // in that same slot, but I don't care enough to special case that.
+    staff_pic = CharacterFactory::create_character(*staff_char_id);
+  }
 
   // Callback that applies the game effect and shows the optional reply popup.
   // Using shared_ptr so it can be safely shared between three option
   // lambdas.
   auto handle = std::make_shared<std::function<void(int)>>(
-      [this, event, restaurant, is_persf, get_line, staff_char_id,
+      [this, event, restaurant, is_persf, get_line, staff_pic,
        on_done = std::move(on_done)](int outcome) {
-        const RawRenderable* staff_pic =
-            event.staff ? CharacterFactory::create_character(staff_char_id)
-                        : nullptr;
         using T = core::restaurant::StaffEventData::Type;
         using engine::random::rand_percentage_chance;
-        Staff* s = event.staff;
+        Staff* s = restaurant->staff_at(event.job_role, event.slot_index);
+        if (!s) {
+          Logger::warn("Staff is a nullptr in event handling, ignoring.");
+          return;
+        }
 
         if (event.type == T::Quit) {
           if (outcome == 0) {
@@ -981,6 +1251,14 @@ void GameState::end_of_day() {
       city->end_of_day(active_city_ == city->id());
       // Run newspaper event system for each loaded city
       city->newspaper_event_system().daily_update(*this, *city);
+
+      // Mayor account rotation and scheduling.
+      city->mayor_office().end_of_day(time_.current_date(), bank_accounts_);
+      auto award_events = city->mayor_office().process_daily_scheduling(
+          time_.current_date(), human_player_count(), bank_accounts_);
+      for (auto& ev : award_events) {
+        deferred_mayor_awards_.push_back(ev);
+      }
     }
   }
 
@@ -2050,5 +2328,23 @@ bool GameState::bank_transfer(int account_number, Money amount,
 
   // Track the deposit (for mafia/mayor to query)
   bank_accounts_.deposit(account_number, amount);
+
+  // Mayor side-effects: donations to the private account increase favor;
+  // transfers to the public account register payment of the award fee.
+  for (auto& city : cities_) {
+    if (!city) {
+      continue;
+    }
+    auto& mayor = city->mayor_office();
+    if (account_number == mayor.private_bank_account()) {
+      mayor.add_favor(sender.id().value, amount);
+      break;
+    }
+    if (account_number == mayor.public_bank_account()) {
+      mayor.set_fee_paid(sender.id().value);
+      break;
+    }
+  }
+
   return true;
 }

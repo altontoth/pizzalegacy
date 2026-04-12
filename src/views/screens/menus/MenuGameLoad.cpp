@@ -108,7 +108,7 @@ MenuGameLoad::MenuGameLoad(GameContext& context, GameState& state)
 }
 
 void MenuGameLoad::load_save_files() {
-  save_files_ = fileutils::list_files("saves", ".json");
+  save_files_ = fileutils::list_files("saves", ".plsave");
   Logger::info("Found {} save files", save_files_.size());
 }
 

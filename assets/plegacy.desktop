@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=Pizza Legacy
+Comment=Pizza Tycoon reimplementation
+Exec=plegacy
+Icon=plegacy
+Type=Application
+Categories=Game;

@@ -291,10 +291,53 @@ public:
                                Restaurant* restaurant,
                                std::function<void()> on_done);
 
+  // Queue a mayor inspection and show it immediately (debug use).
+  void trigger_mayor_inspection(core::RestaurantId rid, bool is_first);
+
+  // Push a mayor award event directly to the UI (debug use).
+  void process_mayor_award_event(const MayorAwardEvent& award_event);
+
+  // Mayor inspection events deferred from EOD to next-day 10 AM.
+  struct DeferredInspectionEvent {
+    bool is_first;
+    core::RestaurantId restaurant_id;
+  };
+
+  // Staff event dialogs deferred from EOD to next-day 10 AM.
+  struct DeferredStaffEvent {
+    core::restaurant::StaffEventData event;
+    core::RestaurantId restaurant_id;
+  };
+
+  // Save/load access to deferred queues. restore_* push without triggering.
+  const std::vector<DeferredStaffEvent>& deferred_staff_events() const {
+    return deferred_staff_events_;
+  }
+  void restore_deferred_staff_event(const core::restaurant::StaffEventData& ev,
+                                    core::RestaurantId rid) {
+    deferred_staff_events_.push_back({ev, rid});
+  }
+  const std::vector<DeferredInspectionEvent>&
+  deferred_mayor_inspections() const {
+    return deferred_mayor_inspections_;
+  }
+  void restore_deferred_mayor_inspection(core::RestaurantId rid,
+                                         bool is_first) {
+    deferred_mayor_inspections_.push_back({is_first, rid});
+  }
+  const std::vector<MayorAwardEvent>& deferred_mayor_awards() const {
+    return deferred_mayor_awards_;
+  }
+  void restore_deferred_mayor_award(const MayorAwardEvent& ev) {
+    deferred_mayor_awards_.push_back(ev);
+  }
+
 private:
+  bool is_past_player_end_of_day() const;
   void check_market_share_milestones(const City& city);
   void process_next_restaurant();
   void show_next_deferred_staff_event();
+  void show_next_deferred_inspection();
   void finish_end_of_turn();
   void deliver_depot_stock(core::PlayerId player_id);
 
@@ -307,13 +350,15 @@ private:
   };
   std::optional<EndOfTurnState> end_of_turn_state_;
 
-  // Staff event dialogs deferred from EOD to next-day 10 AM.
-  struct DeferredStaffEvent {
-    core::restaurant::StaffEventData event;
-    core::RestaurantId restaurant_id;
-  };
   std::vector<DeferredStaffEvent> deferred_staff_events_;
   bool showing_deferred_staff_event_{false};
+
+  std::vector<DeferredInspectionEvent> deferred_mayor_inspections_;
+  bool showing_deferred_inspection_{false};
+
+  // Mayor award events from end_of_day() queued for delivery on the
+  // active player's next turn.
+  std::vector<MayorAwardEvent> deferred_mayor_awards_;
 
   void load_initial_pizzas(GameContext& context, core::PlayerId player_id);
   Restaurant* create_ai_starting_restaurant(Player& player, City& city);

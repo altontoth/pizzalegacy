@@ -165,34 +165,38 @@ VocDecoder::resample_linear(const std::vector<int16_t>& input, int input_rate,
   }
 
   // Input is stereo (2 channels)
-  const size_t input_frames = input.size() / 2;
-  const size_t output_frames = (input_frames * output_rate) / input_rate;
+  constexpr int channels = 2;
+  const size_t input_frames = input.size() / channels;
+  const size_t output_frames =
+      (input_frames * static_cast<size_t>(output_rate)) /
+      static_cast<size_t>(input_rate);
 
-  std::vector<int16_t> output(output_frames * 2);
+  std::vector<int16_t> output(output_frames * channels);
 
-  const double ratio =
-      static_cast<double>(input_rate) / static_cast<double>(output_rate);
+  // 32.32 unsigned fixed-point (UQ32.32)accumulator: avoids a FP multiply per
+  // frame.
+  const uint64_t step_fp = (static_cast<uint64_t>(input_rate) << 32) /
+                           static_cast<uint64_t>(output_rate);
+  uint64_t pos_fp = 0;
 
   for (size_t out_frame = 0; out_frame < output_frames; ++out_frame) {
-    // Calculate position in input
-    double in_pos = out_frame * ratio;
-    size_t in_frame = static_cast<size_t>(in_pos);
-    double frac = in_pos - in_frame;
+    auto in_frame = static_cast<size_t>(pos_fp >> 32);
+    auto frac_fp = static_cast<uint32_t>(pos_fp);
 
-    // Clamp to valid range
     if (in_frame >= input_frames - 1) {
       in_frame = input_frames - 2;
-      frac = 1.0;
+      frac_fp = 0xFFFFFFFF;
     }
 
-    // Linear interpolation for both channels
-    for (int ch = 0; ch < 2; ++ch) {
-      int16_t sample1 = input[(in_frame * 2) + ch];
-      int16_t sample2 = input[((in_frame + 1) * 2) + ch];
-
-      double interpolated = sample1 + ((sample2 - sample1) * frac);
-      output[(out_frame * 2) + ch] = static_cast<int16_t>(interpolated);
+    for (int ch = 0; ch < channels; ++ch) {
+      int32_t s1 = input[(in_frame * channels) + static_cast<size_t>(ch)];
+      int32_t s2 = input[((in_frame + 1) * channels) + static_cast<size_t>(ch)];
+      output[(out_frame * channels) + static_cast<size_t>(ch)] =
+          static_cast<int16_t>(
+              s1 + (((s2 - s1) * static_cast<int64_t>(frac_fp)) >> 32));
     }
+
+    pos_fp += step_fp;
   }
 
   return output;

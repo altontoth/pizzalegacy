@@ -51,6 +51,9 @@ private:
   void render_property(const RenderContext& ctx);
   void render_balance(const RenderContext& ctx);
   void render_daily_profits(const RenderContext& ctx);
+  void render_bar_chart(const RenderContext& ctx,
+                        const std::vector<int64_t>& data,
+                        std::string_view title, std::string_view x_axis_label);
   void render_background(const RenderContext& ctx, bool grid);
   void render_binder(const RenderContext& ctx);
   void render_balance_lines(const RenderContext& ctx);

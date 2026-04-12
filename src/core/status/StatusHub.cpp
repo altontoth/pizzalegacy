@@ -9,8 +9,6 @@
 #include <algorithm>
 #include <chrono>
 
-#include "core/util/ConfigManager.h"
-
 using namespace std::chrono;
 
 StatusHub::Subscription StatusHub::subscribe(Subscriber s) {
@@ -24,6 +22,7 @@ StatusHub::Subscription StatusHub::subscribe(Subscriber s) {
 
 void StatusHub::set_baseline(BaselineProvider p) {
   baseline_ = std::move(p);
+  active_.clear();
   prev_index_.reset();
   rebuild_and_push();
 }
@@ -98,10 +97,8 @@ void StatusHub::post(StatusMsg m) {
     }
   }
 
-  // If a delay was requested, or something is already displaying, queue it.
-  // QoL: allow concurrent active messages (skip pending_ diversion).
-  bool qol = ConfigManager::instance()->options().qol_improvements;
-  if (m.delay_blocks > 0 || (!qol && !active_.empty())) {
+  // If a delay was requested, or something is already displaying, queue it
+  if (m.delay_blocks > 0 || !active_.empty()) {
     const int not_before_block = time_.time_blocks() + m.delay_blocks;
     pending_.push_back(PendingMsg{std::move(m), not_before_block});
     return;
@@ -149,12 +146,10 @@ void StatusHub::update(uint64_t dt_ms) {
   const auto dt = milliseconds{static_cast<milliseconds::rep>(dt_ms)};
   bool changed = decay_overlays(dt);
 
-  // Promote the front of pending_ when its game-time threshold has passed.
-  // QoL: promote even if active_ is non-empty (concurrent display).
+  // Promote the front of pending_ if active_ is clear and its game-time
+  // threshold has passed
   bool promoted = false;
-  bool qol = ConfigManager::instance()->options().qol_improvements;
-  bool can_promote = qol || active_.empty();
-  if (can_promote && !pending_.empty() &&
+  if (active_.empty() && !pending_.empty() &&
       time_.time_blocks() >= pending_.front().not_before_block) {
     insert_or_replace(std::move(pending_.front().msg));
     pending_.pop_front();
@@ -175,31 +170,10 @@ void StatusHub::update(uint64_t dt_ms) {
 }
 
 void StatusHub::rebuild_and_push() {
-  if (active_.empty()) {
-    current_ = baseline_ ? baseline_() : StatusDisplayRecipe{};
-    push_to_subscriber();
-    return;
-  }
+  // pick top overlay
+  const LiveMsg* best = find_best_overlay();
 
-  bool qol = ConfigManager::instance()->options().qol_improvements;
-  if (qol && active_.size() > 1) {
-    // QoL: combine all active messages into one recipe
-    StatusDisplayRecipe list;
-    for (const auto& live : active_) {
-      const auto& m = live.msg;
-      if (std::holds_alternative<std::string>(m.payload)) {
-        list.add_header(std::get<std::string>(m.payload), StatusAlignment::Left,
-                        m.color);
-      }
-      else {
-        list.append(std::get<StatusDisplayRecipe>(m.payload));
-      }
-    }
-    current_ = std::move(list);
-  }
-  else {
-    // Single message -- original behavior
-    const LiveMsg* best = find_best_overlay();
+  if (best) {
     StatusDisplayRecipe overlay;
     const auto& m = best->msg;
     if (std::holds_alternative<std::string>(m.payload)) {
@@ -209,7 +183,10 @@ void StatusHub::rebuild_and_push() {
     else {
       overlay = std::get<StatusDisplayRecipe>(m.payload);
     }
-    current_ = std::move(overlay);
+    current_ = std::move(overlay); // replace baseline
+  }
+  else {
+    current_ = baseline_ ? baseline_() : StatusDisplayRecipe{};
   }
 
   push_to_subscriber();

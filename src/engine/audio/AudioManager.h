@@ -77,6 +77,7 @@ struct SoundEffect {
   // Signed 16-bit stereo at 49716 Hz:
   std::vector<int16_t> samples;
   size_t playback_position = 0;
+  size_t start_offset = 0; // playback_position resets here, not to 0
   bool playing = false;
   bool loop = false;
 };
@@ -99,10 +100,12 @@ public:
   void sound_volume(float volume);
 
   void init();
+  void load_default_assets();
 
   // automatically distributes CMF/VOC to appropriate storage
   void load_m_container(const std::string& m_file_path);
 
+  bool is_initialized() const { return initialized_; }
   bool is_enabled() const { return audio_enabled_; }
   bool is_playing() const;
 
@@ -120,13 +123,14 @@ private:
 #endif
   // Indexed by MusicId:
   std::vector<std::vector<uint8_t>> music_data_;
+  std::vector<float> mix_buffer_; // pre-allocated, reused each callback
   std::mutex music_mutex_;
 
   std::vector<std::unique_ptr<SoundEffect>> sounds_;
   mutable std::mutex sound_mutex_;
 
   SDL_AudioDeviceID audio_device_{0};
-  static constexpr int SAMPLE_RATE = 49716;
+  static constexpr int SAMPLE_RATE = 44100;
   static constexpr int CHANNELS = 2;
 
   // Volume

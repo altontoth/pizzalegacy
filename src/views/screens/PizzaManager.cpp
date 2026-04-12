@@ -355,7 +355,27 @@ void PizzaManager::render(const RenderContext& ctx) {
         ViewRect{0, 0, views::base::MAIN_PANEL_WIDTH,
                  views::base::MAIN_PANEL_HEIGHT},
         "pizza fallback", [this](views::ui::InteractionEvent ui) {
-          if (ui.type != views::ui::InteractionEvent::Type::Click) {
+          using Type = views::ui::InteractionEvent::Type;
+          if (ui.type == Type::Enter) {
+            if (active_topping_) {
+              context_.cursor->custom_cursor(renderer_.image(*active_topping_));
+            }
+            return;
+          }
+          if (ui.type == Type::Leave) {
+            if (active_topping_) {
+              // Leave also fires when the cursor moves onto the chopper or the
+              // dropdown items, so we only clear when actually leaving the
+              // panel.
+              constexpr ViewRect panel{0, 0, views::base::MAIN_PANEL_WIDTH,
+                                       views::base::MAIN_PANEL_HEIGHT};
+              if (!panel.contains(ui.local)) {
+                context_.cursor->clear_custom_cursor();
+              }
+            }
+            return;
+          }
+          if (ui.type != Type::Click) {
             return;
           }
           if (ui.button == views::ui::MouseButton::Left) {
@@ -1358,6 +1378,8 @@ void PizzaManager::post_bake() {
 }
 
 void PizzaManager::cancel_bake() {
+  active_topping_.reset();
+  context_.cursor->clear_custom_cursor();
   change_mode(PizzaManagerMode::Recipes);
   bake_.reset();
 }

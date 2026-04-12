@@ -71,8 +71,6 @@ void Renderer::render() {
       RenderContext ctx{layer_surface.get()};
       view->render(ctx);
       update_cache(view, *layer_surface);
-      SDL_BlitSurface(cache_[view].get(), nullptr, backbuffer_.get(),
-                      &dest_rect);
       view->clean();
     }
     if (recomposite) {

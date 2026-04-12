@@ -7,8 +7,6 @@
 #pragma once
 #include "core/character/Character.h"
 
-class Staff;
-
 namespace core::restaurant {
 
 struct StaffEventData {
@@ -26,7 +24,6 @@ struct StaffEventData {
     ForgotToOpen,
   };
 
-  Staff* staff{nullptr};
   core::character::JobRole job_role{core::character::JobRole::NONE};
   int slot_index{-1};
   Type type{Type::Late};

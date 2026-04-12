@@ -8,6 +8,7 @@
 #include "core/Demographics.h"
 #include "core/city/Property.h"
 #include "core/finance/Ledger.h"
+#include "core/finance/Scale.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/state/GameState.h"
 #include "core/util/LegacyConstants.h"
@@ -852,30 +853,19 @@ void RestaurantStats::render_sales_curve(const RenderContext& ctx) {
   const auto& today_stats = restaurant_->stats().today;
   Money today_purchases = get_daily_purchases(today_stats);
 
-  // Auto-scale: find scale that keeps all values displayable (max height 100)
-  int scale = 100;
-  bool needs_rescale = true;
-  while (needs_rescale) {
-    needs_rescale = false;
-    for (const auto& day : week_data) {
-      int revenue_dollars = static_cast<int>(day.revenue.cents / 100);
-      int purchases_dollars =
-          static_cast<int>(get_daily_purchases(day).cents / 100);
-      if (revenue_dollars / scale > 100 || purchases_dollars / scale > 100) {
-        needs_rescale = true;
-        scale += 100;
-        break;
-      }
-    }
-    // Also check today's purchases for scaling when bug is enabled
-    if (keep_original_display_bug && !needs_rescale) {
-      auto today_purchases_dollars = static_cast<int>(today_purchases.whole());
-      if (today_purchases_dollars / scale > 100) {
-        needs_rescale = true;
-        scale += 100;
-      }
-    }
+  std::vector<int64_t> values;
+  values.reserve((week_data.size() * 2) + 1);
+
+  for (const auto& day : week_data) {
+    values.push_back(day.revenue.cents / 100);
+    values.push_back(get_daily_purchases(day).cents / 100);
   }
+
+  if (keep_original_display_bug) {
+    values.push_back(today_purchases.whole());
+  }
+
+  int scale = compute_scale(values.begin(), values.end(), 100);
 
   // Draw axis graphics (bob frame 0 = X-axis, frame 1 = Y-axis)
   const auto& stabo = context_.bob->get("bob/stabo.bob");

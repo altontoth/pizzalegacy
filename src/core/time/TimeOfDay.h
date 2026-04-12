@@ -52,3 +52,16 @@ struct TimeOfDay {
 };
 
 } // namespace core::time
+
+// {} -> "HH:MM"  (e.g. "09:30")
+template <> struct FORMAT_NAMESPACE::formatter<core::time::TimeOfDay> {
+  constexpr auto parse(FORMAT_NAMESPACE::format_parse_context& ctx) {
+    return ctx.begin();
+  }
+
+  template <typename Ctx>
+  auto format(const core::time::TimeOfDay& t, Ctx& ctx) const {
+    return FORMAT_NAMESPACE::format_to(ctx.out(), "{:02}:{:02}", t.hour,
+                                       t.minute);
+  }
+};

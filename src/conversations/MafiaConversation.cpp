@@ -100,8 +100,8 @@ MafiaConversation::MafiaConversation(
 
     // first_contact is passed from the caller since the protection_timer
     // is set before the conversation starts to prevent re-triggering.
-    auto player_cash = player->cash_balance().whole();
-    auto base_money = std::min(player_cash, 5000ll);
+    auto player_cash = player->cash_balance();
+    auto base_money = std::min(player_cash, 5000_usd);
     double multiplier = std::min(static_cast<double>(base_money) / 5000.0, 6.0);
     int base = rand_max_n(crime_stats + 60) + 1500 - uw_score;
     int amount = static_cast<int>(base * multiplier);

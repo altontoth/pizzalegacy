@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <unordered_map>
 #include <vector>
 #include "core/Demographics.h"
@@ -32,8 +33,14 @@ public:
   // Maximum pizzas allowed on menu (from original game)
   static constexpr int MAXIMUM_PIZZAS = 24;
 
-  // Adds or overwrites a slot with a recipe + price; returns index
+  // Price constraints enforced on all menu entries
+  static constexpr Money min_price = 1_usd;
+  static constexpr Money max_price = 50_usd;
+
+  // Adds or overwrites a slot with a recipe + price; returns index.
+  // Price is clamped to [min_price, max_price].
   int add_or_set(core::RecipeId id, Money price) {
+    price = std::clamp(price, min_price, max_price);
     if (auto it = by_id_.find(id); it != by_id_.end()) {
       auto idx = it->second;
       auto& e = entries_[idx];

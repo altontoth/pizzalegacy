@@ -18,6 +18,7 @@
 #include "core/restaurant/RestaurantStats.h"
 #include "core/restaurant/StaffEventData.h"
 #include "core/time/TimeOfDay.h"
+#include "engine/Random.h"
 
 namespace core::food {
 struct PlayerRecipes;
@@ -180,6 +181,7 @@ public:
   void layout(std::unique_ptr<RestaurantLayout> layout);
   HiringResult add_staff(Staff&);
   bool fire_staff(core::character::JobRole role, int slot_index);
+  Staff* staff_at(core::character::JobRole role, int slot_index);
   std::array<std::optional<Staff>, MAXIMUM_STAFF_PER_CATEGORY>& cooks();
   std::array<std::optional<Staff>, MAXIMUM_STAFF_PER_CATEGORY>& waiters();
   std::optional<Staff>& manager();
@@ -351,8 +353,24 @@ public:
   // 0-100, derived from menu/staff/ingredients. Drives star ratings.
   void calculate_pizza_quality_rating(const core::food::PlayerRecipes& recipes);
 
-  // Award/remove stars based on pizza_quality_rating (mayor visit)
-  void update_star_rating();
+  // Award/remove stars based on pizza_quality_rating (mayor visit).
+  // Returns true if a star was gained, false if lost, nullopt if unchanged.
+  std::optional<bool> update_star_rating();
+
+  int star_rating() const { return star_rating_; }
+  void star_rating(int v) { star_rating_ = v; } // for save/load
+
+  // Returns (and clears) a pending inspection event queued during end_of_day.
+  // Returns true if it is the first-ever inspection, false for subsequent.
+  // Returns nullopt if no inspection is pending.
+  std::optional<bool> take_pending_inspection() {
+    return std::exchange(pending_inspection_, std::nullopt);
+  }
+  // for save/load
+  void inspection_days_remaining(int v) { inspection_days_remaining_ = v; }
+  int inspection_days_remaining() const { return inspection_days_remaining_; }
+  void first_inspection_pending(bool v) { first_inspection_pending_ = v; }
+  bool first_inspection_pending() const { return first_inspection_pending_; }
 
   static constexpr int NUM_INGREDIENT_CATEGORIES = 4;
 
@@ -429,6 +447,12 @@ private:
   ManagerSettings manager_settings_;
   std::optional<int> protection_timer_;
   std::vector<core::restaurant::StaffEventData> pending_staff_events_;
+
+  // Mayor inspection countdown. Ticks down each open day.
+  // When it reaches 0 an inspection is queued.
+  int inspection_days_remaining_{engine::random::rand_max_n(20) + 12};
+  bool first_inspection_pending_{true};
+  std::optional<bool> pending_inspection_; // true=first, false=regular
 
   int pizza_quality_rating_{0};
   PizzaQualityFactors pizza_quality_factors_{};

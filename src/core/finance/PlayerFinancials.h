@@ -73,6 +73,10 @@ public:
                                    const GameDate& current_date,
                                    core::RestaurantId restaurant_id) const;
 
+  // For save/load only: direct ledger access
+  const Ledger& ledger() const noexcept { return ledger_; }
+  void restore_ledger(Ledger l) { ledger_ = std::move(l); }
+
 private:
   void post(const JournalEntry& je);
 

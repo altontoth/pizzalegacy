@@ -310,7 +310,14 @@ StatusController::build_restaurant(const RestaurantCtx& rctx) {
 
   r.add_header(std::string(rctx.label));
   r.add_header(rctx.rest->name());
-  r.add_two_column("----", "----");
+
+  // "----" + centered stars + "----", total 17 chars.
+  const int stars = rctx.rest->star_rating();
+  constexpr int center_width = 9;
+  const int pad_left = (center_width - stars) / 2;
+  const int pad_right = center_width - stars - pad_left;
+  r.add_single("----" + std::string(pad_left, ' ') + std::string(stars, '*') +
+               std::string(pad_right, ' ') + "----");
 
   auto* rest = rctx.rest;
   auto* state = rctx.state;

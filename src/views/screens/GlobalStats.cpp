@@ -10,8 +10,10 @@
 #include "core/city/District.h"
 #include "core/city/Property.h"
 #include "core/finance/BalanceSheet.h"
+#include "core/finance/Scale.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/state/GameState.h"
+#include "engine/ui/Alignment.h"
 #include "gfx/Draw.h"
 #include "resources/BlitmapManager.h"
 #include "views/base/ViewDefs.h"
@@ -456,7 +458,145 @@ void GlobalStats::render_month_overview_popup(
       views::ui::InteractionLayer::Exclusive);
 }
 
-void GlobalStats::render_cash_flow(const RenderContext& ctx) {}
+void GlobalStats::render_bar_chart(
+    const RenderContext& ctx, const std::vector<int64_t>& data,
+    std::string_view title,
+    std::string_view
+        x_axis_label) { // NOLINT(readability-convert-member-functions-to-static)
+  ctx.surface->palette({43});
+  ctx.surface->fill(29);
+
+  // The original allows bars to reach at most 100 scaled units; this bound
+  // determines the scale factor (and thus the "in $X units" label).
+  constexpr int max_scaled_units = 100;
+  // One scaled unit = 2 pixels in our 2x coordinate space vs. 1 in the
+  // original.
+  constexpr int pixels_per_scaled_unit = 2;
+  int scale = compute_scale(data.begin(), data.end(), max_scaled_units);
+
+  constexpr int edge_offset = 6;
+  views::ui::render_decorated_corners(
+      *ctx.surface, stanbobs_,
+      ViewRect{{edge_offset, edge_offset},
+               {views::base::MAIN_PANEL_WIDTH - (edge_offset * 2),
+                views::base::MAIN_PANEL_HEIGHT - (edge_offset * 2)}},
+      4, {11});
+
+  TextStyle ts{
+      .color = 12,
+      .align = AlignX::CenterPoint,
+  };
+  context_.font->render_text_onto(
+      *ctx.surface, std::string(title),
+      ViewPoint{views::base::MAIN_PANEL_WIDTH / 2, 14}, FontFace::RUBY, ts);
+
+  ts.color = 240;
+  context_.font->render_text_onto(
+      *ctx.surface, compat::format("in ${} units", scale * 10),
+      ViewPoint{views::base::MAIN_PANEL_WIDTH / 2, 38}, FontFace::PIZ_NUMB, ts);
+
+  constexpr int x_axis_x = 38;
+  constexpr int x_axis_y = 240;
+  constexpr int y_axis_x = 14;
+  constexpr int y_axis_y = 30;
+
+  // Draw axis graphics (bob frame 0 = X-axis, frame 1 = Y-axis)
+  const auto& stabo = context_.bob->get("bob/stabo.bob");
+  ctx.surface->blit_masked(stabo.frame(0), ViewPoint{x_axis_x, x_axis_y});
+  ctx.surface->blit_masked(stabo.frame(1), ViewPoint{y_axis_x, y_axis_y});
+  // X-axis label
+  context_.font->render_text_onto(*ctx.surface, x_axis_label,
+                                  ViewPoint{376, 266}, FontFace::CSTANDAR, 13,
+                                  AlignX::RightEdge);
+
+  constexpr int bottom_y = 258;
+  constexpr int x_start = 48;
+  constexpr int column_spacing = 6;
+
+  constexpr std::array<int, 6> bar_colors = {9, 26, 28, 30, 31, 24};
+  constexpr std::array<int, 7> thresholds = {
+      0, 10'000, 100'000, 500'000, 1'000'000, 5'000'000, 10'000'000};
+
+  constexpr int loss_color = 23;
+  constexpr int max_loss_height = 20 * pixels_per_scaled_unit;
+  auto scaled_px = [&](int64_t v) {
+    return static_cast<int>(v / scale) * pixels_per_scaled_unit;
+  };
+
+  int x = x_start;
+  for (auto value : data) {
+    if (value < 0) {
+      int bar_height = std::min(scaled_px(-value), max_loss_height);
+      if (bar_height > 0) {
+        gfx::draw::line(*ctx.surface, {x, bottom_y}, {x, bottom_y + bar_height},
+                        loss_color, 4);
+      }
+    }
+    else {
+      int cur_y = bottom_y;
+      for (size_t i = 0; i < bar_colors.size(); ++i) {
+        int upper = thresholds[i + 1];
+
+        if (value < upper) {
+          // partial segment
+          int top_y = bottom_y - scaled_px(value);
+          if (cur_y > top_y) {
+            gfx::draw::line(*ctx.surface, {x, cur_y}, {x, top_y}, bar_colors[i],
+                            4);
+          }
+          break;
+        }
+
+        // full segment
+        int next_y = bottom_y - scaled_px(upper);
+        if (cur_y > next_y) {
+          gfx::draw::line(*ctx.surface, {x, cur_y}, {x, next_y}, bar_colors[i],
+                          4);
+          cur_y = next_y;
+        }
+      }
+    }
+
+    x += column_spacing;
+  }
+}
+
+void GlobalStats::render_cash_flow(const RenderContext& ctx) {
+  auto& financials = state_.active_player()->financials();
+  auto today = state_.time().current_date();
+
+  // Show current year's weekly bars. Each bar's value is the true running cash
+  // balance queried from game_start_date, so initial capital is included.
+  std::vector<int64_t> weekly_dollars;
+  GameDate cursor = today.start_of_year();
+  while (cursor < today) {
+    GameDate next = cursor.add_days(7);
+    Money balance =
+        financials.balance_between(Account::Cash, game_start_date, next);
+    weekly_dollars.push_back(balance.whole());
+    cursor = next;
+  }
+
+  render_bar_chart(ctx, weekly_dollars, "liquidity", "weeks");
+}
+
+void GlobalStats::render_daily_profits(const RenderContext& ctx) {
+  auto& financials = state_.active_player()->financials();
+  auto today = state_.time().current_date();
+
+  // Net profit per day: receipts minus expenditures for each elapsed day.
+  constexpr int max_days = 30;
+  std::vector<int64_t> daily_dollars;
+  GameDate cursor = today.start_of_year();
+  while (cursor < today && static_cast<int>(daily_dollars.size()) < max_days) {
+    Money profit = -financials.total_receipts(cursor, cursor) -
+                   financials.total_expenditures(cursor, cursor);
+    daily_dollars.push_back(profit.whole());
+    cursor = cursor.add_days(1);
+  }
+
+  render_bar_chart(ctx, daily_dollars, "daily profits", "days");
+}
 
 void GlobalStats::render_loans(const RenderContext& ctx) {
   render_background(ctx, false);
@@ -479,7 +619,7 @@ void GlobalStats::render_loans(const RenderContext& ctx) {
   auto cities = state_.visited_cities();
 
   constexpr int col_city = 4;
-  constexpr int col_amount = 232;
+  constexpr int col_amount = 218;
   constexpr int col_time = 246;
   constexpr int col_pct = 276;
   constexpr int col_month = 380;
@@ -511,8 +651,14 @@ void GlobalStats::render_loans(const RenderContext& ctx) {
           city ? city->actor_by_id(static_cast<uint8_t>(loan->bank_id().value))
                : nullptr;
       std::string label = bank ? bank->name() : "Unknown bank";
-      context_.font->render_text_onto(*ctx.surface, label, {col_city, y},
-                                      FontFace::PIZ_NUMB, 240);
+      constexpr size_t max_len = 16;
+      if (label.size() > max_len) {
+        label.resize(max_len);
+        label[max_len - 1] = '.';
+      }
+      context_.font->render_text_onto(
+          *ctx.surface, label, {col_city, y}, FontFace::PIZ_NUMB,
+          TextStyle{.color = 240, .character_spacing = 1});
     }
     else {
       const auto* city = state_.city(city_id);
@@ -802,5 +948,3 @@ void GlobalStats::render_balance_lines(const RenderContext& ctx) {
   gfx::draw::line(*ctx.surface, {6, 330}, {376, 330}, line_color, line_width);
   gfx::draw::line(*ctx.surface, {6, 334}, {376, 334}, line_color, line_width);
 }
-
-void GlobalStats::render_daily_profits(const RenderContext& ctx) {}

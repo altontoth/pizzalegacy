@@ -310,6 +310,7 @@ public:
 
   core::city::CentralDepot& central_depot(int player_id);
   MayorOffice& mayor_office() { return mayor_office_; }
+  const MayorOffice& mayor_office() const { return mayor_office_; }
 
   PizzaCharts& pizza_charts() { return pizza_charts_; }
   const PizzaCharts& pizza_charts() const { return pizza_charts_; }

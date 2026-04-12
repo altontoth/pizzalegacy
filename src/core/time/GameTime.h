@@ -9,6 +9,7 @@
 #include <string>
 #include "core/time/GameDate.h"
 #include "core/time/TimeOfDay.h"
+#include "engine/FormatCompat.h"
 
 enum class Season {
   Spring,
@@ -130,4 +131,44 @@ public:
 private:
   static constexpr int BLOCKS_PER_DAY = 144;
   int blocks_since_start_;
+};
+
+// {}   -> "1-Mar-1995, 9:00"  (full date and time)
+// {:d} -> "1-Mar-1995"        (date only)
+// {:t} -> "9:00"              (time only)
+template <> struct FORMAT_NAMESPACE::formatter<GameTime> {
+  enum class style { full, date_only, time_only };
+  style how{style::full};
+
+  constexpr auto parse(FORMAT_NAMESPACE::format_parse_context& ctx) {
+    auto it = ctx.begin();
+    if (it != ctx.end() && *it != '}') {
+      switch (*it) {
+      case 'd':
+        how = style::date_only;
+        break;
+      case 't':
+        how = style::time_only;
+        break;
+      default:
+        throw FORMAT_NAMESPACE::format_error("invalid GameTime format");
+      }
+      ++it;
+    }
+    if (it != ctx.end() && *it != '}') {
+      throw FORMAT_NAMESPACE::format_error("expected '}'");
+    }
+    return it;
+  }
+
+  template <typename Ctx> auto format(const GameTime& t, Ctx& ctx) const {
+    switch (how) {
+    case style::date_only:
+      return FORMAT_NAMESPACE::format_to(ctx.out(), "{}", t.to_date_string());
+    case style::time_only:
+      return FORMAT_NAMESPACE::format_to(ctx.out(), "{}", t.to_time_string());
+    default:
+      return FORMAT_NAMESPACE::format_to(ctx.out(), "{}", t.to_string());
+    }
+  }
 };

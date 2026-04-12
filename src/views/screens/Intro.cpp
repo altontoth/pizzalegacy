@@ -70,10 +70,10 @@ Intro::Intro(GameContext& context, GameState& state)
       "intro_catchall", [this](views::ui::InteractionEvent ie) {
         if (ie.type == views::ui::InteractionEvent::Type::Click &&
             ie.button == views::ui::MouseButton::Left) {
-          // Bit annoying but matches the behavior of the original roughly,
-          // if you don't like it there is now the life improvement option
-          if (passed_ticks_ > 50 ||
-              context_.config->options().qol_improvements) {
+
+          // You have to wait for audio to be initialized to be able to skip
+          // the intro.
+          if (audio_initialized_) {
             state_.ui().push<ScreenTag>(ScreenTag::Kind::MenuMain);
           }
         }
@@ -90,12 +90,28 @@ bool Intro::on_action(const input::ActionEvent& ev) {
   if (!ev.state.pressed) {
     return false;
   }
+  if (!audio_initialized_) {
+    return true; // consume but ignore until audio is ready
+  }
   state_.ui().push<ScreenTag>(ScreenTag::Kind::MenuMain);
   return true;
 }
 
 void Intro::tick() {
   ++passed_ticks_;
+
+  // Initialize audio on the second tick so the Microprose logo has been
+  // rendered and presented at least once before we stall.
+  if (passed_ticks_ == 2 && !audio_initialized_) {
+    context_.audio->init();
+    context_.audio->load_default_assets();
+    audio_initialized_ = true;
+  }
+
+  // Hold on the first logo until audio is ready.
+  if (!audio_initialized_) {
+    return;
+  }
 
   // Every ticks_per_logo ticks, update either the logo or the credits.
   if (logo_sequence_[current_logo_index_] == Logo::NONE ||

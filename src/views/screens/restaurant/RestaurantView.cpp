@@ -487,6 +487,7 @@ void RestaurantView::register_interactions_viewport() {
               context_.cursor->custom_cursor(
                   bob_renderer_for(*on_cursor_).image(*on_cursor_), false);
               show_furniture_cursor_ = true;
+              state_.pause_time_advancement();
             }
           }
           mark_dirty();
@@ -1437,6 +1438,7 @@ void RestaurantView::place_cursor_item(WorldPoint wp) {
   }
 
   state_.advance_time_blocks(1);
+  state_.resume_time_advancement();
 
   // Clear ghost rendering state
   ghost_furniture_topleft_.reset();

@@ -13,7 +13,7 @@ configure_file(
 )
 
 # ---------------------------------------------------------
-#  User‑selectable options
+#  User selectable options
 # -----------------------------------------------------
 
 # Require C++20
@@ -121,7 +121,7 @@ endif()
 add_compile_definitions(HAS_STD_FORMAT=${HAS_STD_FORMAT_VALUE})
 
 # ---------------------------------------------------------
-#  Third‑party libraries – SDL2 (required)
+#  SDL2 - not much happening without that
 # -----------------------------------------------------
 if(WIN32)
     find_package(SDL2 CONFIG REQUIRED)
@@ -129,57 +129,49 @@ if(WIN32)
     set(SDL2_CFLAGS "")
 else()
     find_package(PkgConfig REQUIRED)
-    pkg_check_modules(SDL2 REQUIRED sdl2>=2.0.0)
+    pkg_check_modules(SDL2 REQUIRED sdl2>=2.0.16)
     set(SDL2_LIB_DIRS ${SDL2_LIBRARY_DIRS})
     set(SDL2_LIBS   ${SDL2_LIBRARIES})
     set(SDL2_CFLAGS ${SDL2_CFLAGS_OTHER})
 endif()
 
 # ---------------------------------------------------------
-#  PNG support (optional) – for PNG screenshots
-#  Set -DPLEGACY_PNG_SUPPORT=OFF to force BMP screenshots
+#  libpng - for PNG screenshots
 # -----------------------------------------------------
-option(PLEGACY_PNG_SUPPORT "Enable PNG screenshot support (requires libpng)" ON)
-
-if(PLEGACY_PNG_SUPPORT)
-    if(WIN32)
-        find_package(PNG CONFIG QUIET)
-        if(PNG_FOUND)
-            set(PNG_LIBS PNG::PNG)
-            set(PNG_CFLAGS "")
-            message(STATUS "libpng: found (system CONFIG package)")
-        else()
-            message(WARNING "PLEGACY_PNG_SUPPORT=ON but libpng not found; disabling PNG support")
-            set(PLEGACY_PNG_SUPPORT OFF)
-            set(PNG_LIBS "")
-            set(PNG_CFLAGS "")
-            set(PNG_INCLUDE_DIRS "")
-        endif()
-    else()
-        if(NOT PkgConfig_FOUND)
-            find_package(PkgConfig REQUIRED)
-        endif()
-        pkg_check_modules(PNG QUIET libpng)
-        if(PNG_FOUND)
-            set(PNG_LIBS    ${PNG_LIBRARIES})
-            set(PNG_CFLAGS  ${PNG_CFLAGS_OTHER})
-            message(STATUS "libpng: found (pkg-config)")
-        else()
-            message(WARNING "PLEGACY_PNG_SUPPORT=ON but libpng not found; disabling PNG support")
-            set(PLEGACY_PNG_SUPPORT OFF)
-            set(PNG_LIBS "")
-            set(PNG_CFLAGS "")
-            set(PNG_INCLUDE_DIRS "")
-        endif()
-    endif()
-else()
-    set(PNG_LIBS "")
+if(WIN32)
+    find_package(PNG CONFIG REQUIRED)
+    set(PNG_LIBS PNG::PNG)
     set(PNG_CFLAGS "")
-    set(PNG_INCLUDE_DIRS "")
+    message(STATUS "libpng: found (system CONFIG package)")
+else()
+    if(NOT PkgConfig_FOUND)
+        find_package(PkgConfig REQUIRED)
+    endif()
+    pkg_check_modules(PNG REQUIRED libpng)
+    set(PNG_LIBS    ${PNG_LIBRARIES})
+    set(PNG_CFLAGS  ${PNG_CFLAGS_OTHER})
+    message(STATUS "libpng: found (pkg-config)")
 endif()
 
-add_compile_definitions(PLEGACY_PNG_SUPPORT=$<BOOL:${PLEGACY_PNG_SUPPORT}>)
-
+# ---------------------------------------------------------
+#  zstd - save file compression
+# -----------------------------------------------------
+if(WIN32)
+    find_package(zstd CONFIG REQUIRED)
+    set(ZSTD_TARGET zstd::libzstd)
+    message(STATUS "libzstd: found (CMake config)")
+else()
+    if(NOT PkgConfig_FOUND)
+        find_package(PkgConfig REQUIRED)
+    endif()
+    pkg_check_modules(ZSTD REQUIRED libzstd)
+    add_library(zstd_pkgconfig INTERFACE IMPORTED)
+    target_link_libraries(zstd_pkgconfig INTERFACE ${ZSTD_LIBRARIES})
+    target_include_directories(zstd_pkgconfig INTERFACE ${ZSTD_INCLUDE_DIRS})
+    target_link_directories(zstd_pkgconfig INTERFACE ${ZSTD_LIBRARY_DIRS})
+    set(ZSTD_TARGET zstd_pkgconfig)
+    message(STATUS "libzstd: found (pkg-config)")
+endif()
 
 # ---------------------------------------------------------
 # Case sensitivy options
@@ -205,7 +197,7 @@ add_compile_definitions(PLEGACY_CASE_INSENSITIVE_FS=$<BOOL:${_PLEGACY_CASE_INSEN
 include(source_manifest.cmake)
 
 # ---------------------------------------------------------
-#  Music support – OPL2/CMF via libADLMIDI
+#  libADLMIDI - OPL2/CMF for music support
 #
 #  Search order when PLEGACY_ENABLE_MUSIC=ON:
 #    1. System-installed libADLMIDI (pkg-config on Unix, CONFIG on Windows)
@@ -301,12 +293,25 @@ endif()
 # We expose include dirs so that dependent targets can #include headers directly.
 target_include_directories(game_plegacy PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
+target_link_libraries(game_plegacy PUBLIC ${ZSTD_TARGET})
+
 # ---------------------------------------------------------
 #  Main executable "plegacy"
 # -----------------------------------------------------
 add_executable(plegacy
     ${ENGINE_PLEGACY_SOURCES}
 )
+
+# Windows-specific: embed the application icon + version info and set the output name
+if(WIN32)
+    configure_file(
+        "${CMAKE_CURRENT_SOURCE_DIR}/assets/Pizza Legacy.rc.in"
+        "${CMAKE_CURRENT_SOURCE_DIR}/assets/Pizza Legacy.rc"
+        @ONLY
+    )
+    target_sources(plegacy PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/assets/Pizza Legacy.rc")
+    set_target_properties(plegacy PROPERTIES OUTPUT_NAME "Pizza Legacy")
+endif()
 
 # Build as a proper macOS .app bundle when on Apple platforms
 if(APPLE)
@@ -392,7 +397,7 @@ foreach(_file README.md README.txt COPYING LICENSE)
 endforeach()
 
 # ---------------------------------------------------------
-#  Developer convenience targets: “format” and “tags”
+#  Developer convenience targets: "format" and "tags"
 # -----------------------------------------------------
 find_program(CLANG_FORMAT clang-format)
 if(CLANG_FORMAT)
@@ -431,7 +436,7 @@ target_include_directories(game_plegacy PRIVATE
 )
 
 # ---------------------------------------------------------
-#  Unit tests (Catch2) – disabled by default
+#  Unit tests (Catch2) - disabled by default
 #  Enable with -DPLEGACY_BUILD_TESTS=ON
 # -----------------------------------------------------
 option(PLEGACY_BUILD_TESTS "Build unit tests (requires Catch2 3)" OFF)
