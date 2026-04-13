@@ -154,6 +154,10 @@ private:
   std::vector<std::vector<uint8_t>> water_cycles_;
   PaletteCycleController water_animation_;
   int property_display_timer_ = 0;
+  // Tracks the property index currently toggled to customer-info view.
+  // Clicking the same property again toggles back to property info.
+  // Clicking a different property resets to property info for the new one.
+  std::optional<int> property_info_toggle_;
   PaletteHandle palette_;
   std::vector<gfx::Color> season_palette_;
   std::optional<Surface> far_map_cache_;

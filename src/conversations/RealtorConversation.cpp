@@ -341,14 +341,13 @@ bool RealtorConversation::advance_proposal(bool agree) {
         }
 
         if (furniture_amount > 0_usd || oven_amount > 0_usd) {
-          state_.status().post({
+          state_.status().post_direct({
               .payload = compat::format(
                   "Articles to a total of {:w}, were left in your restaurant. "
                   "The scrapdealer is happy now!!",
                   furniture_amount + oven_amount),
               .scope = StatusScope::Global,
               .ttl = std::chrono::milliseconds{6000},
-              .coalesce_key = "happy_scrapdealer",
           });
 
           auto owner = active_property()->owner_or_tenant();

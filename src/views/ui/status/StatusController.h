@@ -58,9 +58,6 @@ public:
   void show_competitor_restaurant(const CityCtx& c, const Restaurant& rest);
   void show_pizza(const PizzaCtx& p);
   void show_topping(const ToppingCtx& t);
-  [[nodiscard]] std::optional<const StatusMsg> current_status_msg() const {
-    return hub_.current_status_msg();
-  }
 
 private:
   // Builders

@@ -309,11 +309,9 @@ void PlayerProfile::change_mode(PlayerProfileMode mode) {
   if ((mode == PlayerProfileMode::CurriculumVitae ||
        mode == PlayerProfileMode::TargetCV) &&
       id_.value != state_.active_player()->id().value) {
-    state_.status().post({
+    state_.status().post_direct({
         .payload = "ACCESS TO OTHER PERSON'S CAREER PROHIBITED",
         .scope = StatusScope::Global,
-        .ttl = std::chrono::milliseconds{3000},
-        .coalesce_key = "access_denied_cv",
     });
     return;
   }

@@ -161,12 +161,6 @@ CityView::CityView(GameContext& context, GameState& state, core::CityId id)
 
 CityView::~CityView() {
   state_.clear_active_district();
-  // Rebuild to clear our district, but not during AI turns -- the
-  // baseline would pick up the AI player and leak their name into the
-  // StatusDisplay.
-  if (state_.active_player() && state_.active_player()->is_human_controlled()) {
-    build_default_city_status_recipe();
-  }
   state_.prevent_auto_end_of_turn(true);
   stop_city_sound();
 }
@@ -368,6 +362,9 @@ void CityView::zoom_out(ViewPoint p_view_local) {
   int new_y = 0;
 
   if (new_zoom == ZoomLevel::MEDIUM) {
+    // Reset any status display that was about close zoom level things
+    // that are now not visible in detail anymore.
+    state_.status().clear_overlay();
     // Keep the same world point under the *center* of the new view if possible.
     const ViewPoint o = camera_.origin_offset_in_view();
     const ViewPoint center_view{to.viewport_width / 2, to.viewport_height / 2};
@@ -387,6 +384,7 @@ void CityView::zoom_out(ViewPoint p_view_local) {
 
   // Set scroll (camera will clamp based on zoom and world_size)
   camera_.scroll(WorldPoint{new_x, new_y});
+  camctrl_.reset();
 
   mark_dirty();
 }
@@ -1529,16 +1527,19 @@ void CityView::setup_water_animation() {
 }
 
 void CityView::build_property_status_recipe(int clicked_index) {
+  state_.status().clear_overlay();
   if (city_->property_by_index(clicked_index)) {
-    const auto cur_msg = status_controller_.current_status_msg();
-    if (!cur_msg || cur_msg->coalesce_key !=
-                        compat::format("prop:{}:info", clicked_index)) {
-      status_controller_.show_city_property_info(
-          {.state = &state_, .city = city_}, clicked_index);
-    }
-    else {
+    if (property_info_toggle_ == clicked_index) {
+      // Second click on the same property: show customer demographics
       status_controller_.show_city_customer_info(
           {.state = &state_, .city = city_}, clicked_index);
+      property_info_toggle_ = std::nullopt;
+    }
+    else {
+      // First click (or different property): show property info and arm toggle
+      status_controller_.show_city_property_info(
+          {.state = &state_, .city = city_}, clicked_index);
+      property_info_toggle_ = clicked_index;
     }
   }
   else if (city_->is_named_building_by_index(clicked_index)) {

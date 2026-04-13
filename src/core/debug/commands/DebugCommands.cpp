@@ -358,8 +358,7 @@ Example:
                       StatusMsg msg;
                       msg.payload = "test 123";
                       msg.ttl = std::chrono::milliseconds{2500};
-                      msg.coalesce_key = "test";
-                      ctx.state.status().post(msg);
+                      ctx.state.status().post_direct(msg);
                       return CommandResult::success().add_message(
                           "Test message posted to status hub");
                     },
@@ -407,8 +406,7 @@ Example:
                       StatusMsg msg;
                       msg.payload = "test 123";
                       msg.ttl = std::chrono::milliseconds{2500};
-                      msg.coalesce_key = "test";
-                      ctx.state.status().post(msg);
+                      ctx.state.status().post_direct(msg);
                       return CommandResult::success().add_message(
                           "Test message posted to status hub");
                     },

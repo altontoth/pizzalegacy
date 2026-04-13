@@ -1016,12 +1016,11 @@ void Restaurant::end_of_day(GameState& game_state) {
   if (range_increased) {
     Logger::info("[Economy] {} - Range increased to {} tiles (raw: {})", name_,
                  economy_.range_tiles(), economy_.range_raw());
-    game_state.status().post(StatusMsg{
+    game_state.status().post_direct(StatusMsg{
         .payload =
             compat::format("The range of {} rises from {} to {} tiles.", name_,
                            old_range_tiles, economy_.range_tiles()),
         .scope = StatusScope::Global,
-        .coalesce_key = compat::format("range_{}", name_),
     });
   }
 
@@ -1161,7 +1160,7 @@ void Restaurant::eod_batch_order_fulfillment(class GameState& game_state) {
     if (ConfigManager::instance()->options().qol_improvements) {
       shortage_msg = compat::format("{}: {}", name_, shortage_msg);
     }
-    game_state.status().post(StatusMsg{
+    game_state.status().post_direct(StatusMsg{
         .payload = std::move(shortage_msg),
         .severity = StatusSeverity::Warning,
         .scope = StatusScope::Restaurant,

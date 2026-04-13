@@ -87,11 +87,10 @@ bool GameState::spend_cash(Player& player, Account to, Money amount) {
     return true;
   }
 
-  status_hub_.post({
+  status_hub_.post_direct({
       .payload = "YOU DON'T HAVE ENOUGH MONEY!!!",
       .scope = StatusScope::Global,
       .ttl = std::chrono::milliseconds{3000},
-      .coalesce_key = "insufficient_funds",
   });
   return false;
 }
@@ -115,11 +114,10 @@ bool GameState::spend_cash(Account to, Money amount,
     return true;
   }
 
-  status_hub_.post({
+  status_hub_.post_direct({
       .payload = "YOU DON'T HAVE ENOUGH MONEY!!!",
       .scope = StatusScope::Global,
       .ttl = std::chrono::milliseconds{3000},
-      .coalesce_key = "insufficient_funds",
   });
   return false;
 }
@@ -359,17 +357,15 @@ void GameState::advance_game_time() {
   const auto now = time_.time_of_day();
 
   if (now == TimeOfDay{9, 0}) {
-    status_hub_.post(StatusMsg{
+    status_hub_.post_direct(StatusMsg{
         .payload = "It's 9 am. The restaurants are opening.",
         .scope = StatusScope::Global,
-        .coalesce_key = "restaurant_open_close",
     });
   }
   else if (now == TimeOfDay{21, 0}) {
-    status_hub_.post(StatusMsg{
+    status_hub_.post_direct(StatusMsg{
         .payload = "It's 9 pm. The restaurants are closing.",
         .scope = StatusScope::Global,
-        .coalesce_key = "restaurant_open_close",
     });
   }
 
@@ -1148,13 +1144,6 @@ void GameState::finish_end_of_turn() {
   if (status_display_ && active_player()->is_human_controlled()) {
     status_display_->freeze();
   }
-
-  StatusMsg m{
-      .payload = "Please wait...",
-      .scope = StatusScope::Global,
-      .coalesce_key = "please_wait",
-  };
-  status_hub_.post(m);
 
   // Move to next player and check if we wrapped around
   auto previous_player_id = active_player_;
@@ -2250,6 +2239,11 @@ void GameState::on_player_turn_card_finished() {
     }
     return;
   }
+  StatusMsg m{
+      .payload = "Please wait...",
+      .scope = StatusScope::Global,
+  };
+  status_hub_.post_direct(m);
 }
 
 void GameState::request_fade_transition(int duration_frames) {

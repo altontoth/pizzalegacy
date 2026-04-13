@@ -246,9 +246,8 @@ void Player::end_of_week(GameState& game_state) {
         .payload = "You were not able to repay your debts. Hard luck! You are "
                    "now on the streets.",
         .scope = StatusScope::Global,
-        .coalesce_key = "bankruptcy",
     };
-    game_state.status().post(msg);
+    game_state.status().post_direct(msg);
   }
 }
 

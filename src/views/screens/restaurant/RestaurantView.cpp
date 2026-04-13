@@ -133,13 +133,11 @@ RestaurantView::RestaurantView(GameContext& context, GameState& state,
   }
 
   if (post_waiting_customers_msg) {
-    state_.status().post(StatusMsg{
+    state_.status().post_direct(StatusMsg{
         .payload = "The restaurant is closed while the furniture is being "
                    "positioned. There are some customers waiting impatiently "
                    "outside!",
         .scope = StatusScope::Restaurant,
-        .ttl = std::nullopt,
-        .coalesce_key = "furniture_reposition_close",
     });
   }
 
@@ -636,10 +634,8 @@ void RestaurantView::handle_furniture_click(const PlacedFurniture* pf) {
           .payload =
               "You can rearrange furniture only when the restaurant is closed!",
           .scope = StatusScope::Restaurant,
-          .ttl = std::nullopt,
-          .coalesce_key = "furniture_reposition_close",
       };
-      state_.status().post(msg);
+      state_.status().post_direct(msg);
     }
   }
   else if (!on_cursor_) {
@@ -1993,10 +1989,8 @@ void RestaurantView::update_status_display(const PlacedFurniture* pf) {
   StatusMsg msg{
       .payload = recipe,
       .scope = StatusScope::Restaurant,
-      .ttl = std::nullopt,
-      .coalesce_key = "furniture_reposition_close",
   };
-  hub.post(msg);
+  hub.post_direct(msg);
 }
 
 void RestaurantView::render_sabotage(const RenderContext& ctx) {

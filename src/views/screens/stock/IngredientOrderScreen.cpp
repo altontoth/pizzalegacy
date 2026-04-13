@@ -509,11 +509,10 @@ void IngredientOrderScreen::handle_button_press(size_t ingredient_index,
           depot.get_ingredient_stock(static_cast<int>(batch.ingredient_type));
       if (stock && supplier_ &&
           stock->weighted_avg_quality < supplier_->quality()) {
-        state_.status().post(StatusMsg{
+        state_.status().post_direct(StatusMsg{
             .payload = "The quality of this ingredient is lower than expected "
                        "from the supplier selected!",
             .severity = StatusSeverity::Warning,
-            .ttl = std::chrono::milliseconds{3000},
         });
         return;
       }

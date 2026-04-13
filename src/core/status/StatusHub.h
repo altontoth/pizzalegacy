@@ -6,14 +6,13 @@
 
 #pragma once
 
+#include <array>
 #include <chrono>
 #include <deque>
 #include <functional>
 #include <optional>
 #include <string>
-#include <string_view>
 #include <variant>
-#include <vector>
 #include "core/status/StatusDisplayRecipe.h"
 #include "core/time/GameTime.h"
 #include "core/time/GameTimestamp.h"
@@ -21,9 +20,8 @@
 enum class StatusSeverity { Info, Warning, Error };
 enum class StatusScope { Global, City, Restaurant, View };
 
-// This is an instruction/event: show this payload right now:
 struct StatusMsg {
-  // Either raw text banner or a fragment recipe to append
+  // Either raw text banner or a full recipe
   std::variant<std::string, StatusDisplayRecipe> payload;
 
   StatusSeverity severity = StatusSeverity::Info;
@@ -31,19 +29,17 @@ struct StatusMsg {
 
   int color = 0;
   std::optional<std::chrono::milliseconds> ttl{6000};
-  int delay_blocks{
-      0}; // wait this many 10-minute game-time blocks before showing
-  std::string coalesce_key; // replace existing with same key
-  int priority = 0;
+  // For queued messages: wait this many 10-minute blocks before showing.
+  // Converted to an absolute not_before_block at enqueue time.
+  int delay_blocks{0};
 };
 
-// Snapshot of an event we showed in the past:
+// Snapshot of an event for the future scroll-list UI:
 struct EphemeralEntry {
   core::time::GameTimestamp time;
-  StatusDisplayRecipe snapshot; // what was shown when posted
+  StatusDisplayRecipe snapshot;
   StatusSeverity severity = StatusSeverity::Info;
   StatusScope scope = StatusScope::Global;
-  std::string key;
 };
 
 class StatusHub {
@@ -91,21 +87,25 @@ public:
 
   // View lifecycle
   void set_baseline(BaselineProvider p);
-  void rebuild_now(); // baseline inputs changed
+  void rebuild_now(); // baseline inputs changed, re-push current composite
 
-  // Transients
-  void post(StatusMsg m); // Temporary or Ephemeral
-  void clear_overlay();   // Force only baseline
+  // Queued notification (15-slot array, time-block threshold, yellow)
+  void post(StatusMsg m);
+  // Direct message (immediate, preempts queued without consuming its slot)
+  void post_direct(StatusMsg m);
+  // Wipe all queued slots (call at day start)
+  void clear_queue();
+  // Force back to baseline (clears whatever is currently showing)
+  void clear_overlay();
 
-  // Suppress all posts (jail/holiday: events still process but player
-  // does not see the messages)
+  // Suppress all posts (jail/holiday: events process but player sees nothing)
   void suppress(bool s) { suppressed_ = s; }
 
   // Panel interactions
-  void show_baseline(); // Left-click
-  void show_previous(); // Right-click (one step back)
+  void show_baseline(); // Left-click: dismiss current, show baseline
+  void show_previous(); // Right-click: replay last message with fresh TTL
 
-  // Game loop hook to expire TTLs
+  // Game loop hook
   void update(uint64_t dt_ms);
 
   // For future scroll list UI
@@ -113,25 +113,31 @@ public:
     return ephemeral_log_;
   }
 
-  [[nodiscard]] std::optional<StatusMsg> current_status_msg() const;
-
 private:
-  struct LiveMsg {
+  // One slot in the 15-entry queued notification array
+  struct QueueSlot {
     StatusMsg msg;
-    std::optional<std::chrono::milliseconds> remaining_ms;
+    int not_before_block{0};
   };
 
-  struct PendingMsg {
+  // Currently-showing direct message (preempts queued)
+  struct ShowingDirect {
     StatusMsg msg;
-    int not_before_block{0}; // absolute game-time block threshold
+    std::chrono::milliseconds remaining_ms;
   };
 
-  void rebuild_and_push(); // baseline + active overlay -> current_
+  // Currently-showing queued message + which slot it occupies
+  struct ShowingQueued {
+    int slot_idx;
+    std::chrono::milliseconds remaining_ms;
+  };
+
+  void rebuild_and_push();
   void push_to_subscriber();
-  void insert_or_replace(StatusMsg m);
-  bool decay_overlays(std::chrono::milliseconds dt);
-  bool decay_overlays(uint64_t dt_ms);
-  const LiveMsg* find_best_overlay() const;
+  // Scan queue_ for the next eligible message and start showing it.
+  // Returns true if a message was found and started.
+  bool scan_queue();
+  void log_ephemeral(const StatusMsg& m);
 
   GameTime& time_;
 
@@ -139,21 +145,23 @@ private:
   BaselineProvider baseline_;
   Subscriber subscriber_;
 
-  std::vector<LiveMsg> active_; // currently overlaying (TTL-managed)
-  std::deque<PendingMsg>
-      pending_;                 // queued, waiting for active_ to drain + delay
+  // 15-slot queued notification array (indices 0-14)
+  static constexpr int QUEUE_SIZE = 15;
+  std::array<std::optional<QueueSlot>, QUEUE_SIZE> queue_{};
+
+  std::optional<ShowingDirect> showing_direct_;
+  std::optional<ShowingQueued> showing_queued_;
+
   StatusDisplayRecipe current_; // last published composite
 
-  // Right-click "previous" history (short ring)
-  static constexpr size_t prev_cap = 8;
-  std::deque<StatusDisplayRecipe> prev_stack_; // snapshots of composites
-  std::optional<int> prev_index_;              // => live view if not set
+  // Last message shown (for right-click replay)
+  std::optional<StatusMsg> last_shown_msg_;
 
   // Ephemeral log (longer ring, not for overlay, for future scroll)
   static constexpr size_t log_cap = 256;
   std::deque<EphemeralEntry> ephemeral_log_;
 
-  // Subscription bookkeeping (simple one-subscriber model; extend if needed)
+  // Subscription bookkeeping (single-subscriber model)
   bool subscribed_ = false;
   bool suppressed_ = false;
 };

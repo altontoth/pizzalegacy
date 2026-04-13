@@ -40,8 +40,7 @@ void StatusController::show_city_type_name(const CityCtx& c, int index) {
   StatusMsg msg{
       .payload = build_city_type_name(c, index),
       .scope = StatusScope::City,
-      .ttl = std::chrono::milliseconds{5000},
-      .coalesce_key = compat::format("name:{}:type", index),
+      .ttl = std::chrono::milliseconds{6000},
   };
   emit_status_msg(msg);
 }
@@ -66,7 +65,7 @@ void StatusController::emit_baseline(StatusDisplayRecipe r) {
 }
 
 void StatusController::emit_status_msg(StatusMsg msg) {
-  hub_.post(std::move(msg));
+  hub_.post_direct(std::move(msg));
 }
 
 StatusDisplayRecipe StatusController::build_city_default(const CityCtx& c) {

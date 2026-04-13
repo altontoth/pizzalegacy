@@ -21,11 +21,16 @@ StatusDisplay::StatusDisplay(GameContext& context, GameState& state,
 
   sub_ =
       hub_.subscribe([this](StatusDisplayRecipe r) { recipe(std::move(r)); });
+}
 
-  interactions_.create_persistent_item(
-      ViewRect{views::base::STATUS_PANEL_OFFSET_X,
-               views::base::STATUS_PANEL_OFFSET_Y,
-               views::base::STATUS_PANEL_WIDTH,
+void StatusDisplay::tick() {
+  // Re-register every frame: I used persistent frame in the past but
+  // interaction_manager_->clear() is called on every UI transition, so
+  // constructor-registered items don't survive screen changes (because status
+  // display now lives on in GameState even when not active).
+  interactions_.begin_frame();
+  interactions_.create_frame_item(
+      ViewRect{0, 0, views::base::STATUS_PANEL_WIDTH,
                views::base::STATUS_PANEL_HEIGHT},
       "status_panel", [this](views::ui::InteractionEvent ie) {
         if (ie.type != views::ui::InteractionEvent::Type::Click) {
@@ -37,10 +42,9 @@ StatusDisplay::StatusDisplay(GameContext& context, GameState& state,
         else if (ie.button == views::ui::MouseButton::Right) {
           state_.status().show_previous();
         }
+        mark_dirty();
       });
-}
 
-void StatusDisplay::tick() {
   const auto blocks = state_.time().time_blocks();
   if (previous_time_ != blocks) {
     previous_time_ = blocks;
