@@ -7,8 +7,8 @@
 #pragma once
 
 #include <memory>
-#include <vector>
 #include <utility>
+#include <vector>
 
 #include "core/character/Staff.h"
 #include "core/item/Item.h"
