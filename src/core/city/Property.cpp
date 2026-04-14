@@ -251,8 +251,8 @@ float Property::calculate_tile_population(uint8_t tile_type,
 Money Property::get_purchase_price() const {
   auto district_index = city_.district_by_index(index_);
   const auto& district_ptr = city_.district(district_index);
-  Logger::warn("Price lvel is {} and wxh is {}", district_ptr.price_level(),
-               size_);
+  Logger::debug("Price lvel is {} and wxh is {}", district_ptr.price_level(),
+                size_);
 
   int base_price = district_ptr.price_level() * size_.w * size_.h * 100;
 

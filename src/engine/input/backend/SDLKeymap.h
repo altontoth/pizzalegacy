@@ -11,6 +11,5 @@
 namespace input::backend {
 
 Key key_from_scancode(SDL_Scancode sc);
-SDL_Scancode scancode_from_key(Key k);
 
 } // namespace input::backend

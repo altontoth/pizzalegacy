@@ -217,8 +217,7 @@ void Advertising::render_purchasing_newspaper_ads(const RenderContext& ctx) {
 
 void Advertising::render_purchasing_tv_ads(const RenderContext& ctx) {
   assert(tv_ad_selection_.has_value());
-  gfx::blit::blit_with_palette(*ctx.surface,
-                               context_.vga->get("gfx/back24"));
+  gfx::blit::blit_with_palette(*ctx.surface, context_.vga->get("gfx/back24"));
   ctx.surface->blit_raw(tv_ads_.next_frame(), {106, 50});
 }
 

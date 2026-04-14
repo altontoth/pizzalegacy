@@ -13,7 +13,11 @@ std::vector<Logger::SinkFunc>& Logger::sinks_() {
 }
 
 LogLevel& Logger::min_lvl_() {
+#ifdef NDEBUG
+  static LogLevel lvl = LogLevel::Warning;
+#else
   static LogLevel lvl = LogLevel::Debug;
+#endif
   return lvl;
 }
 
