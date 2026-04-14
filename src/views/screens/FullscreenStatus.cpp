@@ -25,7 +25,7 @@ FullscreenStatus::FullscreenStatus(GameContext& context, GameState& state,
         assert(msg_data.background != core::events::ZwBackground::NONE);
 
         std::string bg_path = compat::format(
-            "gfx/zw{}.vga", static_cast<int>(msg_data.background));
+            "gfx/zw{}", static_cast<int>(msg_data.background));
         return context_.vga->get(bg_path);
       }()) {
 
