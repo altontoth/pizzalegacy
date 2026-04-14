@@ -68,7 +68,7 @@ void Advertising::render(const RenderContext& ctx) {
 
 void Advertising::render_overview(const RenderContext& ctx) {
   gfx::blit::blit_raw_with_palette(*ctx.surface,
-                                   context_.vga->get("gfx/back27.vga"));
+                                   context_.vga->get("gfx/back27"));
 
   for (int i = 0; i <= static_cast<int>(AdvertisingChannel::TV_ADS); ++i) {
     auto channel = static_cast<AdvertisingChannel>(i);
@@ -172,7 +172,7 @@ void Advertising::render_purchasing(const RenderContext& ctx) {
 void Advertising::render_purchasing_flyers(const RenderContext& ctx) {
   ctx.surface->fill(240); // TODO remove this because we have two already
   gfx::blit::blit_raw_with_palette(*ctx.surface,
-                                   context_.vga->get("gfx/back26.vga"));
+                                   context_.vga->get("gfx/back26"));
   context_.font->render_text_onto(
       *ctx.surface, compat::format("OUTPUT:  {} ITEMS", flyer_count_.value()),
       ViewPoint{176, 84}, FontFace::CSTANDAR);
@@ -189,9 +189,9 @@ void Advertising::render_purchasing_flyers(const RenderContext& ctx) {
 void Advertising::render_purchasing_posters(const RenderContext& ctx) {
   assert(poster_selection_);
   gfx::blit::blit_raw_with_palette(*ctx.surface,
-                                   context_.vga->get("gfx/back25.vga"));
+                                   context_.vga->get("gfx/back25"));
   std::string filename =
-      "gfx/plakat" + std::to_string(poster_selection_.value()) + ".vga";
+      "gfx/plakat" + std::to_string(poster_selection_.value());
   auto& poster = context_.vga->get(filename);
   ctx.surface->blit_raw(poster, {64, 18});
 }
@@ -202,7 +202,7 @@ void Advertising::render_purchasing_newspaper_ads(const RenderContext& ctx) {
   constexpr int number_of_werbung_lines_on_screen = 5;
 
   gfx::blit::blit_raw_with_palette(*ctx.surface,
-                                   context_.vga->get("gfx/back31.vga"));
+                                   context_.vga->get("gfx/back31"));
   if (werbung_e_.empty()) {
     auto file = fileutils::open("T/WERBUNG.E");
     std::string line;
@@ -218,7 +218,7 @@ void Advertising::render_purchasing_newspaper_ads(const RenderContext& ctx) {
 void Advertising::render_purchasing_tv_ads(const RenderContext& ctx) {
   assert(tv_ad_selection_.has_value());
   gfx::blit::blit_with_palette(*ctx.surface,
-                               context_.vga->get("gfx/back24.vga"));
+                               context_.vga->get("gfx/back24"));
   ctx.surface->blit_raw(tv_ads_.next_frame(), {106, 50});
 }
 
