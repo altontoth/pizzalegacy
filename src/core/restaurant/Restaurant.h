@@ -8,6 +8,7 @@
 
 #include <memory>
 #include <vector>
+#include <utility>
 
 #include "core/character/Staff.h"
 #include "core/item/Item.h"
