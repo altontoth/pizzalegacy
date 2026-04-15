@@ -688,7 +688,7 @@ void MarketResearch::render_pizza_charts(const RenderContext& ctx) {
   gfx::blit::blit_raw_with_palette(*ctx.surface,
                                    context_.vga->get("gfx/back30"));
 
-  const ViewPoint first_row{36, 76};
+  const ViewPoint first_row{38, 76};
   const int line_height = 22;
   constexpr int text_color = 240;
   constexpr int last_week_color = 12;
