@@ -7,6 +7,7 @@
 #include "views/screens/restaurant/WeeksTakings.h"
 
 #include "core/city/Property.h"
+#include "core/restaurant/PizzaSalesAggregator.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/state/GameState.h"
 #include "core/util/LegacyConstants.h"
@@ -99,23 +100,7 @@ WeeksTakings::WeeklyTakings WeeksTakings::aggregate_weekly_takings() const {
   auto week_data =
       restaurant_->stats().current_week(state_.time().current_date());
 
-  // Aggregate pizza sales across all days
-  std::unordered_map<core::RecipeId, core::restaurant::PizzaSalesData,
-                     core::RecipeId::Hasher>
-      aggregated;
-
   for (const auto& day : week_data) {
-    // Merge pizza sales
-    for (const auto& [recipe_id, sales] : day.pizza_sales) {
-      auto& agg = aggregated[recipe_id];
-      agg.pizza_id = recipe_id;
-      agg.count_ordered += sales.count_ordered;
-      agg.count_sold += sales.count_sold;
-      agg.revenue = agg.revenue + sales.revenue;
-      agg.ingredient_cost = agg.ingredient_cost + sales.ingredient_cost;
-      agg.profit = agg.profit + sales.profit;
-    }
-
     // Sum ingredient purchases by category (for expenses report)
     for (int i = 0; i < 4; ++i) {
       if (day.ingredient_purchases_by_category[i].cents > 0) {
@@ -134,37 +119,15 @@ WeeksTakings::WeeklyTakings WeeksTakings::aggregate_weekly_takings() const {
                 result.ingredient_purchases_by_category[2],
                 result.ingredient_purchases_by_category[3]);
 
-  // Now iterate over all pizzas on the menu
   if (restaurant_) {
-    const auto& menu = restaurant_->menu();
-    for (const auto& entry : menu.entries()) {
-      // Check if we have sales data for this pizza
-      auto it = aggregated.find(entry.recipe_id);
-      if (it != aggregated.end()) {
-        // We have sales data
-        result.pizza_sales.push_back({entry.recipe_id, it->second});
-        result.total_revenue = result.total_revenue + it->second.revenue;
-        result.total_costs = result.total_costs + it->second.ingredient_cost;
-        result.total_profit = result.total_profit + it->second.profit;
-      }
-      else {
-        // No sales - add with zeros
-        core::restaurant::PizzaSalesData zero_sales;
-        zero_sales.pizza_id = entry.recipe_id;
-        zero_sales.count_sold = 0;
-        zero_sales.revenue = Money{0};
-        zero_sales.ingredient_cost = Money{0};
-        zero_sales.profit = Money{0};
-        result.pizza_sales.push_back({entry.recipe_id, zero_sales});
-      }
+    result.pizza_sales = core::restaurant::aggregate_weekly_pizza_sales(
+        *restaurant_, state_.time().current_date());
+    for (const auto& [recipe_id, sales] : result.pizza_sales) {
+      result.total_revenue = result.total_revenue + sales.revenue;
+      result.total_costs = result.total_costs + sales.ingredient_cost;
+      result.total_profit = result.total_profit + sales.profit;
     }
   }
-
-  // Sort by recipe ID for consistent ordering
-  std::sort(result.pizza_sales.begin(), result.pizza_sales.end(),
-            [](const auto& a, const auto& b) {
-              return a.first.value < b.first.value;
-            });
 
   // Calculate weekly staff wages
   if (restaurant_) {

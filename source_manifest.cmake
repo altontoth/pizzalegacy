@@ -58,6 +58,7 @@ set(GAME_PLEGACY_SOURCES
     src/core/restaurant/ManagerFeedback.cpp
     src/core/restaurant/ManagerRoutine.cpp
     src/core/restaurant/PizzaDemand.cpp
+    src/core/restaurant/PizzaSalesAggregator.cpp
     src/core/restaurant/PlacedFurniture.cpp
     src/core/restaurant/Restaurant.cpp
     src/core/restaurant/RestaurantEconomy.cpp
@@ -326,6 +327,7 @@ set(PLEGACY_HEADERS
     src/core/finance/MoneyFormatter.h
     src/core/finance/MoneyParse.h
     src/core/finance/PlayerFinancials.h
+    src/core/finance/Scale.h
     src/core/food/BakeSession.h
     src/core/food/CanonicalPizza.h
     src/core/food/CustomerTasteProfiles.h
@@ -357,6 +359,7 @@ set(PLEGACY_HEADERS
     src/core/restaurant/ManagerRoutine.h
     src/core/restaurant/Menu.h
     src/core/restaurant/PizzaDemand.h
+    src/core/restaurant/PizzaSalesAggregator.h
     src/core/restaurant/PlacedFurniture.h
     src/core/restaurant/Restaurant.h
     src/core/restaurant/RestaurantEconomy.h

@@ -7,9 +7,12 @@
 #include "views/screens/restaurant/RestaurantMenu.h"
 
 #include <algorithm>
+#include <cassert>
 
 #include "core/city/Property.h"
+#include "core/restaurant/PizzaSalesAggregator.h"
 #include "core/state/GameState.h"
+#include "engine/ui/Alignment.h"
 #include "engine/ui/InteractionEvent.h"
 #include "gfx/Blit.h"
 #include "resources/BlitmapManager.h"
@@ -37,24 +40,23 @@ void RestaurantMenu::set_up_buttons() {
                              mark_dirty();
                            });
 
-  // Page up button (only active in menu view)
-  input_panel_->add_button(
-      Icon::ARROW_UP, ButtonType::Square, ButtonPosition::TopLeft, "Turn page",
-      [this] {
-        if (current_state_ != MenuViewState::MENU) {
-          return; // No-op if not in menu view
-        }
-        const auto& menu = restaurant_->menu();
-        const auto& rows = menu.entries();
-        const int page_size = 14;
-        const int page_count =
-            (static_cast<int>(rows.size()) + page_size - 1) / page_size;
+  input_panel_->add_button(Icon::ARROW_UP, ButtonType::Square,
+                           ButtonPosition::TopLeft, "Turn page", [this] {
+                             if (current_state_ != MenuViewState::MENU &&
+                                 current_state_ != MenuViewState::SALES) {
+                               return;
+                             }
+                             const int page_size = 14;
+                             const int item_count = static_cast<int>(
+                                 restaurant_->menu().entries().size());
+                             const int page_count =
+                                 (item_count + page_size - 1) / page_size;
 
-        if (current_page_ < page_count - 1) {
-          current_page_++;
-          mark_dirty();
-        }
-      });
+                             if (current_page_ < page_count - 1) {
+                               current_page_++;
+                               mark_dirty();
+                             }
+                           });
 
   // Sales view button (next to page down)
   input_panel_->add_button(Icon::CALCULATOR, ButtonType::Square,
@@ -65,11 +67,11 @@ void RestaurantMenu::set_up_buttons() {
                              mark_dirty();
                            });
 
-  // Page down button (only active in menu view)
   input_panel_->add_button(Icon::ARROW_DOWN, ButtonType::Square,
                            ButtonPosition::MiddleLeft, "Turn page", [this] {
-                             if (current_state_ != MenuViewState::MENU) {
-                               return; // No-op if not in menu view
+                             if (current_state_ != MenuViewState::MENU &&
+                                 current_state_ != MenuViewState::SALES) {
+                               return;
                              }
                              if (current_page_ > 0) {
                                current_page_--;
@@ -99,22 +101,20 @@ void RestaurantMenu::set_up_buttons() {
         if (!selected_row_) {
           context_.popup->origin(ViewPoint{52, 80});
           context_.popup->create<AlertPopup>(
-              "To remove a pizza from|your menu, you must|select it first!");
+              "To remove a pizza from your menu, you must select it first!");
           return;
         }
-        else if (restaurant_->count_menu_items() == 1) {
+        if (restaurant_->count_menu_items() == 1) {
           context_.popup->origin(ViewPoint{52, 80});
           context_.popup->create<AlertPopup>(
-              "At least one pizza must|remain in your menu.");
+              "At least one pizza must remain in your menu.");
           return;
         }
-        else {
-          const auto& rows = restaurant_->menu().entries();
-          const auto& entry = rows.at(*selected_row_);
-          restaurant_->menu().remove(entry.recipe_id);
-          mark_dirty();
-          selected_row_.reset();
-        }
+        const auto& rows = restaurant_->menu().entries();
+        const auto& entry = rows.at(*selected_row_);
+        restaurant_->menu().remove(entry.recipe_id);
+        mark_dirty();
+        selected_row_.reset();
       });
 }
 
@@ -161,7 +161,7 @@ void RestaurantMenu::render_menu_view(const RenderContext& ctx) {
 
   // Pagination
   const int available_h = list_box.h;
-  const int page_size = 14;
+  constexpr int page_size = 14;
   const int page_count =
       (static_cast<int>(rows.size()) + page_size - 1) / page_size;
 
@@ -170,21 +170,20 @@ void RestaurantMenu::render_menu_view(const RenderContext& ctx) {
   current_page_ = std::clamp(current_page_, 0, last_page);
 
   const int start_idx = current_page_ * page_size;
-  const int end_idx = std::min<int>(start_idx + page_size, rows.size());
+  const int end_idx =
+      std::min<int>(start_idx + page_size, static_cast<int>(rows.size()));
 
   // Draw rows
   int y = text_pos.y;
   for (int i = start_idx; i < end_idx; ++i, y += line_h) {
     const auto& row = rows[i];
     const auto* recipe = recipes.find(row.recipe_id);
-    // Defensive: skip missing recipes
+    // skip missing recipes
     if (!recipe) {
       continue;
     }
 
     // Selection background (full row width, behind all row text)
-    // Fill a band across the list area; leave a small vertical margin so it
-    // looks like the original.
     const int pad_y = 1;
     const ViewRect sel_band{list_box.x, // start at number column
                             y - pad_y, 216, 16};
@@ -228,13 +227,10 @@ void RestaurantMenu::render_menu_view(const RenderContext& ctx) {
                                     FontFace::CSTANDAR, line_style);
   }
 
-  // Page indicator centered at the bottom ("-N-", 1-based)
   const std::string page_text = "- " + std::to_string(current_page_ + 1) + " -";
   const TextStyle page_style{.color = 11, .align = AlignX::Center};
 
-  // Center within the list_box horizontally; place just below the list area.
-  const int page_y =
-      list_box.y + list_box.h + 4; // slight offset like the original
+  const int page_y = list_box.y + list_box.h + 4;
   const int page_center_x = 0;
   context_.font->render_line_onto(*ctx.surface, page_text,
                                   ViewPoint{page_center_x, page_y},
@@ -242,20 +238,98 @@ void RestaurantMenu::render_menu_view(const RenderContext& ctx) {
 }
 
 void RestaurantMenu::render_sales_view(const RenderContext& ctx) {
-  // Background
   gfx::blit::blit_raw_with_palette(*ctx.surface,
-                                   context_.vga->get("gfx/back2"));
+                                   context_.vga->get("gfx/back9"));
 
-  // Title
-  context_.font->render_line_onto(*ctx.surface, "Pizza Sales",
-                                  ViewPoint{80, 26}, FontFace::RUBY,
+  context_.font->render_line_onto(*ctx.surface, "Sales Figures",
+                                  ViewPoint{42, 22}, FontFace::RUBY,
+                                  {.color = 240});
+
+  context_.font->render_line_onto(*ctx.surface, "sales", ViewPoint{256, 44},
+                                  FontFace::SUPERSMA, {.color = 8});
+
+  context_.font->render_into_rect(*ctx.surface, "turn over",
+                                  ViewRect{312, 32, 40, 34}, FontFace::SUPERSMA,
                                   {.color = 8});
 
-  // TODO: Implement pizza sales statistics display
-  // For now, just show a placeholder message
+  constexpr int position_x = 34;
+  constexpr int pizza_name_x = 50;
+  constexpr int price_x = 250;
+  constexpr int sales_x = 288;
+  constexpr int turnover_x = 356;
+  constexpr int start_y = 58;
+  constexpr int row_h = 16;
+  constexpr int page_size = 14;
+  constexpr int row_text_color = 8;
+  constexpr FontFace row_font = FontFace::SUPERSMA;
+
+  const auto pizza_sales = core::restaurant::aggregate_weekly_pizza_sales(
+      *restaurant_, state_.time().current_date());
+  const auto& recipes = state_.active_player()->recipes();
+  const auto& menu_entries = restaurant_->menu().entries();
+
+  const int item_count = static_cast<int>(pizza_sales.size());
+  const int page_count = (item_count + page_size - 1) / page_size;
+  const int last_page = (page_count > 0) ? (page_count - 1) : 0;
+  current_page_ = std::clamp(current_page_, 0, last_page);
+
+  const int start_idx = current_page_ * page_size;
+  const int end_idx = std::min(start_idx + page_size, item_count);
+
+  int total_sales = 0;
+  Money total_turnover{0};
+
+  int y = start_y;
+  for (int i = start_idx; i < end_idx; ++i, y += row_h) {
+    const auto& [recipe_id, sales] = pizza_sales[i];
+    const auto& menu_entry = menu_entries[i];
+    assert(menu_entry.recipe_id == recipe_id);
+    const auto* recipe = recipes.find(recipe_id);
+
+    context_.font->render_line_onto(
+        *ctx.surface, std::to_string(i + 1), ViewPoint{position_x, y},
+        FontFace::CSTANDAR,
+        {.color = row_text_color, .align = AlignX::RightEdge});
+
+    if (recipe) {
+      context_.font->render_line_onto(*ctx.surface, recipe->display_name(),
+                                      ViewPoint{pizza_name_x, y}, row_font,
+                                      {.color = row_text_color});
+    }
+
+    context_.font->render_line_onto(
+        *ctx.surface, compat::format("{:n}", menu_entry.price),
+        ViewPoint{price_x, y}, row_font,
+        {.color = row_text_color, .align = AlignX::RightEdge});
+
+    context_.font->render_line_onto(
+        *ctx.surface, std::to_string(sales.count_sold), ViewPoint{sales_x, y},
+        row_font, {.color = row_text_color, .align = AlignX::RightEdge});
+
+    context_.font->render_line_onto(
+        *ctx.surface, compat::format("{:n}", sales.revenue),
+        ViewPoint{turnover_x, y}, row_font,
+        {.color = row_text_color, .align = AlignX::RightEdge});
+
+    total_sales += sales.count_sold;
+    total_turnover = total_turnover + sales.revenue;
+  }
+
+  constexpr int total_y = 290;
+
   context_.font->render_line_onto(
-      *ctx.surface, "Sales statistics coming soon...", ViewPoint{100, 150},
-      FontFace::CSTANDAR, {.color = 6});
+      *ctx.surface, std::to_string(total_sales), ViewPoint{sales_x, total_y},
+      row_font, {.color = row_text_color, .align = AlignX::RightEdge});
+
+  context_.font->render_line_onto(
+      *ctx.surface, compat::format("{:n}", total_turnover),
+      ViewPoint{turnover_x, total_y}, row_font,
+      {.color = row_text_color, .align = AlignX::RightEdge});
+
+  const std::string page_text = "- " + std::to_string(current_page_ + 1) + " -";
+  context_.font->render_line_onto(*ctx.surface, page_text, ViewPoint{0, 316},
+                                  FontFace::PIZ_NUMB,
+                                  {.color = 8, .align = AlignX::Center});
 }
 
 void RestaurantMenu::render_customer_ratings_view(const RenderContext& ctx) {
