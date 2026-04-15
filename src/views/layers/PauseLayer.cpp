@@ -5,6 +5,7 @@
  */
 
 #include "views/layers/PauseLayer.h"
+#include "core/state/GameState.h"
 #include "views/ui/PopupManager.h"
 #include "views/ui/popups/AlertPopup.h"
 
@@ -19,9 +20,12 @@ bool PauseLayer::on_action(const input::ActionEvent& ev) {
     if (!is_paused_) {
       mark_dirty();
       is_paused_ = true;
+      state_.pause_time_advancement();
       context_.popup->origin(ViewPoint{100, 100});
-      context_.popup->create<AlertPopup>("Pause!",
-                                         [this]() { is_paused_ = false; });
+      context_.popup->create<AlertPopup>("Pause!", [this]() {
+        is_paused_ = false;
+        state_.resume_time_advancement();
+      });
       return true;
     }
   }
