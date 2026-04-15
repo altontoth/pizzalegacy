@@ -248,9 +248,10 @@ void ManagerRoutine::do_shopping() {
       // with %d% discount"
       game_state_.status().post(StatusMsg{
           .payload = compat::format(
-              "Your manager goes shopping for {} and buys {} for {} "
+              "Your manager goes shopping for {} and buys {} at {} for {} "
               "with {}% discount",
-              range.name, supplier->name(), category_total, best_discount),
+              restaurant_.name(), range.name, supplier->name(), category_total,
+              best_discount),
           .severity = StatusSeverity::Info,
           .scope = StatusScope::Restaurant,
       });

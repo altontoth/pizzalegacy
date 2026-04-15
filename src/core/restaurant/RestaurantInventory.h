@@ -85,6 +85,7 @@ public:
   }
 
   uint8_t average_stock_quality() const { return average_stock_quality_; }
+  void set_average_stock_quality(uint8_t q) { average_stock_quality_ = q; }
 
   const core::food::IngredientArray<IngredientStock>& all_stocks() const {
     return stocks_;

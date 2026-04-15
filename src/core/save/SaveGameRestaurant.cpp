@@ -29,7 +29,7 @@ json staff_to_json(const Staff& staff) {
   j["job_role"] = static_cast<int>(staff.job_role());
   j["character"] = character_to_json(staff.character());
   j["payment_cents"] = staff.payment().cents;
-  // TODO: current_training serialization if needed
+  // TODO: current_training serialization
   return j;
 }
 
@@ -51,6 +51,47 @@ Staff json_to_staff(const json& j) {
 
   // TODO: current_training deserialization if needed
   return staff;
+}
+
+json manager_settings_to_json(const ManagerSettings& settings) {
+  json j;
+  j["shopping_if_needed"] = settings.shopping_if_needed;
+  j["change_prices"] = settings.change_prices;
+  j["overdraw_account"] = settings.overdraw_account;
+  j["turnover_decrease"] = static_cast<int>(settings.turnover_decrease);
+  j["turnover_increase"] = static_cast<int>(settings.turnover_increase);
+  j["supply_shortage"] = static_cast<int>(settings.supply_shortage);
+  j["staff_shortage"] = static_cast<int>(settings.staff_shortage);
+  j["behavior_towards_staff"] =
+      static_cast<int>(settings.behavior_towards_staff);
+  return j;
+}
+
+ManagerSettings json_to_manager_settings(const json& j) {
+  ManagerSettings m;
+  if (j.contains("shopping_if_needed")) {
+    m.shopping_if_needed = j["shopping_if_needed"].get<bool>();
+  }
+  if (j.contains("change_prices")) {
+    m.change_prices = j["change_prices"].get<bool>();
+  }
+  if (j.contains("overdraw_account")) {
+    m.overdraw_account = j["overdraw_account"].get<bool>();
+  }
+  auto restore_setting = [&](std::string_view setting, auto& member) {
+    if (j.contains(setting)) {
+      member = static_cast<ManagerReaction>(j[setting].get<int>());
+    }
+  };
+  restore_setting("turnover_decrease", m.turnover_decrease);
+  restore_setting("turnover_increase", m.turnover_increase);
+  restore_setting("supply_shortage", m.supply_shortage);
+  restore_setting("staff_shortage", m.staff_shortage);
+  if (j.contains("behavior_towards_staff")) {
+    m.behavior_towards_staff =
+        static_cast<ManagerBehavior>(j["behavior_towards_staff"].get<int>());
+  }
+  return m;
 }
 
 json menu_to_json(const core::restaurant::Menu& menu) {
@@ -290,6 +331,9 @@ json restaurant_to_json(const Restaurant& restaurant) {
   else {
     j["manager"] = nullptr;
   }
+  // And the manager settings
+  j["manager_settings"] =
+      manager_settings_to_json(restaurant.manager_settings());
 
   // Save layout
   if (restaurant.layout()) {
@@ -422,6 +466,11 @@ std::unique_ptr<Restaurant> json_to_restaurant(const json& j,
   // Restore manager
   if (j.contains("manager") && !j["manager"].is_null()) {
     restaurant->manager() = json_to_staff(j["manager"]);
+  }
+  // And the manager settings
+  if (j.contains("manager_settings") && !j["manager_settings"].is_null()) {
+    restaurant->manager_settings() =
+        json_to_manager_settings(j["manager_settings"]);
   }
 
   // Restore layout
@@ -799,9 +848,11 @@ core::restaurant::IngredientStock json_to_ingredient_stock(const json& j) {
 // RestaurantInventory serialization
 json restaurant_inventory_to_json(
     const core::restaurant::RestaurantInventory& inventory) {
-  json j = json::array();
+  json j;
+  j["average_stock_quality"] = inventory.average_stock_quality();
+  j["stocks"] = json::array();
   for (const auto& stock : inventory.all_stocks()) {
-    j.push_back(ingredient_stock_to_json(stock));
+    j["stocks"].push_back(ingredient_stock_to_json(stock));
   }
   return j;
 }
@@ -811,9 +862,12 @@ json_to_restaurant_inventory(const json& j) {
   core::restaurant::RestaurantInventory inventory;
   auto& stocks = inventory.all_stocks();
 
-  for (size_t i = 0; i < j.size() && i < stocks.size(); ++i) {
-    stocks[i] = json_to_ingredient_stock(j[i]);
+  for (size_t i = 0; i < j["stocks"].size() && i < stocks.size(); ++i) {
+    stocks[i] = json_to_ingredient_stock(j["stocks"][i]);
   }
+
+  inventory.set_average_stock_quality(
+      j["average_stock_quality"].get<uint8_t>());
 
   return inventory;
 }

@@ -410,6 +410,7 @@ public:
   int service_time_minutes() const { return service_time_minutes_; }
   int fulfillment_rate() const { return fulfillment_rate_; }
   ManagerSettings& manager_settings() { return manager_settings_; };
+  const ManagerSettings& manager_settings() const { return manager_settings_; };
 
   // Mafia protection racket timer.
   // nullopt = never contacted, 1 = expired (trigger visit), >1 = counting down.
