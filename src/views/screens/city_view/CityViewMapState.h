@@ -11,17 +11,11 @@
 #include "views/screens/city_view/CityViewCommon.h"
 #include "views/screens/city_view/ZoomConfig.h"
 
-enum class CityViewReentryMode {
-  RESTORE_ALL,
-  RESTORE_PARTIAL,
-};
-
 struct CityViewMapState {
   WorldPoint scroll = WorldPoint{-1, -1};
   ZoomLevel zoom = ZoomLevel::FAR;
   CityViewTabType active_tab = CityViewTabType::MAP;
   CityViewHighlight highlight{};
-  CityViewReentryMode reentry_mode = CityViewReentryMode::RESTORE_ALL;
 
   // Default just highlights the player 0 restaurants:
   CityViewMapState(core::PlayerId active_player_id = {0}) {

@@ -160,6 +160,9 @@ CityView::CityView(GameContext& context, GameState& state, core::CityId id)
 }
 
 CityView::~CityView() {
+  if (should_save_map_state_on_exit_) {
+    store_state_in_city(CityViewReentryMode::RESTORE_ALL);
+  }
   state_.clear_active_district();
   state_.prevent_auto_end_of_turn(true);
   stop_city_sound();
@@ -449,13 +452,12 @@ void CityView::handle_mouse_click_zoom_close(WorldPoint p) {
       }
 
       if (at_pickup) {
-        ui_push_store_position<MafiaMissionViewState>(
-            CityViewReentryMode::RESTORE_ALL,
+        state_.ui().push<MafiaMissionViewState>(
             MafiaLine::SSSHHH_HERE_TAKE_THIS_SUITCASE);
       }
       else {
-        ui_push_store_position<MafiaMissionViewState>(
-            CityViewReentryMode::RESTORE_ALL, MafiaLine::COME_ON_HAND_IT_OVER);
+        state_.ui().push<MafiaMissionViewState>(
+            MafiaLine::COME_ON_HAND_IT_OVER);
       }
       return;
     }
@@ -495,8 +497,7 @@ void CityView::handle_mouse_click_zoom_close(WorldPoint p) {
         map_mode = RestaurantViewMode::OPPONENT_VIEW;
       }
 
-      ui_push_store_position<RestaurantViewState>(
-          CityViewReentryMode::RESTORE_ALL, *r_id, map_mode);
+      state_.ui().push<RestaurantViewState>(*r_id, map_mode);
       return;
     }
     // Enter depot if owned/rented by current player
@@ -506,8 +507,7 @@ void CityView::handle_mouse_click_zoom_close(WorldPoint p) {
                     owner ? owner->value : -1, current_player->id().value);
       if (owner && *owner == current_player->id()) {
         Logger::debug("  Pushing DepotMainState!");
-        ui_push_store_position<DepotMainState>(CityViewReentryMode::RESTORE_ALL,
-                                               property);
+        state_.ui().push<DepotMainState>(property);
         return;
       }
     }
@@ -1141,60 +1141,43 @@ void CityView::create_buttons() {
 
   input_panel_->add_button(Icon::CHARACTER, ButtonType::Square,
                            ButtonPosition::TopCenter, "Character", [this] {
-                             ui_push_store_position<PlayerProfileState>(
-                                 CityViewReentryMode::RESTORE_ALL,
+                             state_.ui().push<PlayerProfileState>(
                                  state_.active_player()->id());
                            });
 
-  input_panel_->add_button(Icon::DISK, ButtonType::Square,
-                           ButtonPosition::TopRight, "Disk options", [this] {
-                             ui_push_store_position<ScreenTag>(
-                                 CityViewReentryMode::RESTORE_ALL,
-                                 ScreenTag::Kind::DiskMenu);
-                           });
+  input_panel_->add_button(
+      Icon::DISK, ButtonType::Square, ButtonPosition::TopRight, "Disk options",
+      [this] { state_.ui().push<ScreenTag>(ScreenTag::Kind::DiskMenu); });
 
-  input_panel_->add_button(Icon::MEGAPHONE, ButtonType::Square,
-                           ButtonPosition::MiddleLeft, "Advertising", [this] {
-                             ui_push_store_position<ScreenTag>(
-                                 CityViewReentryMode::RESTORE_ALL,
-                                 ScreenTag::Kind::Advertising);
-                           });
+  input_panel_->add_button(
+      Icon::MEGAPHONE, ButtonType::Square, ButtonPosition::MiddleLeft,
+      "Advertising",
+      [this] { state_.ui().push<ScreenTag>(ScreenTag::Kind::Advertising); });
 
   input_panel_->add_button(
       Icon::QUESTION_MARK, ButtonType::Square, ButtonPosition::MiddleCenter,
       "Market research", [this] {
-        ui_push_store_position<MarketResearchState>(
-            CityViewReentryMode::RESTORE_ALL,
+        state_.ui().push<MarketResearchState>(
             state_.active_district_id().value_or(core::DistrictId{0}));
       });
 
-  input_panel_->add_button(Icon::NEWSPAPER, ButtonType::Square,
-                           ButtonPosition::MiddleRight, "Newspaper", [this] {
-                             ui_push_store_position<ScreenTag>(
-                                 CityViewReentryMode::RESTORE_ALL,
-                                 ScreenTag::Kind::Newspaper);
-                           });
+  input_panel_->add_button(
+      Icon::NEWSPAPER, ButtonType::Square, ButtonPosition::MiddleRight,
+      "Newspaper",
+      [this] { state_.ui().push<ScreenTag>(ScreenTag::Kind::Newspaper); });
 
-  input_panel_->add_button(Icon::GRAPH, ButtonType::Square,
-                           ButtonPosition::BottomLeft, "Global stats", [this] {
-                             ui_push_store_position<ScreenTag>(
-                                 CityViewReentryMode::RESTORE_ALL,
-                                 ScreenTag::Kind::GlobalStats);
-                           });
+  input_panel_->add_button(
+      Icon::GRAPH, ButtonType::Square, ButtonPosition::BottomLeft,
+      "Global stats",
+      [this] { state_.ui().push<ScreenTag>(ScreenTag::Kind::GlobalStats); });
 
-  input_panel_->add_button(Icon::COMPUTER, ButtonType::Square,
-                           ButtonPosition::BottomCenter, "Terminal", [this] {
-                             ui_push_store_position<TerminalState>(
-                                 CityViewReentryMode::RESTORE_ALL,
-                                 std::nullopt);
-                           });
+  input_panel_->add_button(
+      Icon::COMPUTER, ButtonType::Square, ButtonPosition::BottomCenter,
+      "Terminal", [this] { state_.ui().push<TerminalState>(std::nullopt); });
 
   input_panel_->add_button(Icon::SUNSET, ButtonType::Square,
-                           ButtonPosition::BottomRight, "End turn", [this] {
-                             store_state_in_city(
-                                 CityViewReentryMode::RESTORE_ALL);
-                             state_.request_end_of_turn();
-                           });
+                           ButtonPosition::BottomRight, "End turn",
+                           [this] { state_.request_end_of_turn(); });
 }
 
 void CityView::create_dropdowns() {
@@ -1474,9 +1457,8 @@ core::DistrictId CityView::district_at(WorldPoint pw) {
 }
 
 void CityView::store_state_in_city(CityViewReentryMode entry_mode) {
-  auto view_state = capture_view_state();
-  view_state.reentry_mode = entry_mode;
-  state_.city_view_view_state(view_state);
+  state_.city_view_view_state(capture_view_state(entry_mode));
+  should_save_map_state_on_exit_ = false;
 }
 
 void CityView::update_water_palette(const RenderContext& ctx) {
@@ -1588,15 +1570,17 @@ void CityView::highlight_mode(const CityViewHighlight& highlight) {
   }
 }
 
-CityViewMapState CityView::capture_view_state() const {
+CityViewMapState CityView::capture_view_state(CityViewReentryMode mode) const {
   CityViewMapState state;
-  state.scroll = camera_.scroll();
-  state.zoom = zoom_;
-  state.active_tab = active_tab_type_;
-  state.highlight = highlight_mode_;
+  if (mode == CityViewReentryMode::RESTORE_ALL) {
+    state.scroll = camera_.scroll();
+    state.zoom = zoom_;
+    state.active_tab = active_tab_type_;
 
-  Logger::debug("CityView::capture_view_state - scroll: {}, zoom: {}",
-                state.scroll, static_cast<int>(state.zoom));
+    Logger::debug("CityView::capture_view_state - scroll: {}, zoom: {}",
+                  state.scroll, static_cast<int>(state.zoom));
+  }
+  state.highlight = highlight_mode_;
 
   assert(highlight_mode_.mode >= HighlightMode::NONE &&
          highlight_mode_.mode <= HighlightMode::PROPERTY_STATUS);
@@ -1609,23 +1593,15 @@ CityViewMapState CityView::capture_view_state() const {
 }
 
 void CityView::restore_view_state(const CityViewMapState& state) {
-  if (state.reentry_mode == CityViewReentryMode::RESTORE_ALL) {
-    zoom_ = state.zoom;
-    set_active_tab(state.active_tab);
+  zoom_ = state.zoom;
+  set_active_tab(state.active_tab);
+  apply_zoom_profile(zoom_);
 
-    // Apply zoom profile first to configure camera geometry
-    apply_zoom_profile(zoom_);
-
-    // Set scroll position (use {0,0} if state has default -1,-1)
-    WorldPoint scroll_pos = (state.scroll.x < 0 || state.scroll.y < 0)
-                                ? WorldPoint{0, 0}
-                                : state.scroll;
-
-    camera_.scroll(scroll_pos);
-
-    // Reset controller AFTER setting scroll so it syncs with the new position
-    camctrl_.reset();
-  }
+  WorldPoint scroll_pos = (state.scroll.x < 0 || state.scroll.y < 0)
+                              ? WorldPoint{0, 0}
+                              : state.scroll;
+  camera_.scroll(scroll_pos);
+  camctrl_.reset();
 
   highlight_mode(state.highlight);
 }

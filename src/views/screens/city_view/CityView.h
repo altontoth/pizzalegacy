@@ -103,9 +103,8 @@ private:
   core::DistrictId district_at(WorldPoint p);
 
   // State
-  bool restore_state_from_city();
   void store_state_in_city(CityViewReentryMode entry_mode);
-  CityViewMapState capture_view_state() const;
+  CityViewMapState capture_view_state(CityViewReentryMode mode) const;
   void restore_view_state(const CityViewMapState& state);
   void current_highlight(CityViewMapState);
   void highlight_mode(const CityViewHighlight& highlight);
@@ -167,4 +166,5 @@ private:
   ScrollEdges scroll_edges_{camctrl_, wood_edge_rects(panel_origin_)};
   gfx::PaletteOverride water_ovr_;
   std::vector<gfx::Color> water_buf_;
+  bool should_save_map_state_on_exit_ = true;
 };

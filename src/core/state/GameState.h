@@ -28,6 +28,7 @@
 #include <array>
 #include <deque>
 #include <functional>
+#include <optional>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -137,7 +138,7 @@ public:
   void city_position(ViewPoint p);
   void last_clicked_property_index(int);
   const CityViewMapState& city_view_view_state() const;
-  void city_view_view_state(const CityViewMapState);
+  void city_view_view_state(CityViewMapState);
 
   // Restaurant management
   void active_restaurant(core::RestaurantId r_id);
@@ -368,8 +369,7 @@ private:
   core::CityId active_city_{-1};
   ViewPoint city_position_{ViewPoint{-1, -1}};
   std::optional<core::DistrictId> active_district_id_;
-  // The original only had one view state so whatever the previous player
-  // did would be inherited by the next player. We do it per player:
+  // Per-player city view state, persisted across screen transitions.
   std::array<CityViewMapState, NUMBER_OF_PLAYERS> city_view_view_state_;
   std::array<std::unique_ptr<City>, NUMBER_OF_CITIES> cities_;
   std::array<std::unique_ptr<Player>, NUMBER_OF_PLAYERS> players_;

@@ -10,6 +10,11 @@
 #include "core/city/CityTypes.h"
 #include "core/common/Ids.h"
 
+enum class CityViewReentryMode {
+  RESTORE_ALL,
+  RESTORE_PARTIAL,
+};
+
 enum class ZoomLevel {
   CLOSE,
   MEDIUM,

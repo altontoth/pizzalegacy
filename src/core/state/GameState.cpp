@@ -1841,7 +1841,7 @@ bool GameState::end_property_lease(Property& property, Player& player) {
 const CityViewMapState& GameState::city_view_view_state() const {
   return city_view_view_state_[active_player_.value];
 }
-void GameState::city_view_view_state(const CityViewMapState cmvs) {
+void GameState::city_view_view_state(CityViewMapState cmvs) {
   city_view_view_state_[active_player_.value] = cmvs;
 }
 
