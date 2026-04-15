@@ -62,8 +62,16 @@ ActorView<LineEnum>::ActorView(
   phase_timer_ = DEFAULT_CONVERSATION_ANIMATION_DURATION;
 
   input_panel_->add_button(Icon::ARROW_BACK, ButtonType::Square,
-                           ButtonPosition::BottomRight, "Back",
-                           [&state] { state.ui().pop(); });
+                           ButtonPosition::BottomRight, "Back", [this, &state] {
+                             if (conversation_->back_allowed()) {
+                               state.ui().pop();
+                             }
+                             else {
+                               // If back is not allowed just treat it like
+                               // clicking anywhere else
+                               conversation_->advance();
+                             }
+                           });
 
   input_panel_->add_button(Icon::THUMBS_UP, ButtonType::Horizontal,
                            ButtonPosition::BottomLeft, "Agree",

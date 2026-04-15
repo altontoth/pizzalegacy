@@ -127,6 +127,8 @@ public:
     return !lines().empty() && lines().at(0).is_terminal;
   }
 
+  [[nodiscard]] virtual bool back_allowed() const { return true; }
+
 protected:
   // Helper to create a ConversationLine from the loaded text vector.
   [[nodiscard]] ConversationLine<LineEnum>

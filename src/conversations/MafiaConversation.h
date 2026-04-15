@@ -27,6 +27,7 @@ public:
   bool advance_line_choice(MafiaLine) override;
   bool advance_proposal(bool) override;
   bool has_ended() const override;
+  bool back_allowed() const override;
 
 private:
   static MafiaLine compute_start_line(GameState& state, const Actor*,

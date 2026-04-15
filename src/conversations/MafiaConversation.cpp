@@ -979,3 +979,17 @@ std::optional<MafiaMission> MafiaConversation::generate_mission(int rank) {
 
   return mission;
 }
+
+bool MafiaConversation::back_allowed() const {
+  switch (current_line_) {
+  case MafiaLine::NICE_PLACE_YOU_GOT_HERE:
+  case MafiaLine::HERE_WE_ARE_AGAIN_WE_WANT_THE_USUAL:
+  case MafiaLine::PLAYING_BIG_HERO_HUH:
+  case MafiaLine::OK_TODAY_IS_PAY_DAY:
+  case MafiaLine::I_HOPE_YOU_HAVENT_FORGOTTEN_THE_THREE_MONTHS_ARE_UP:
+    return false;
+  default:
+    return true;
+    break;
+  }
+}
