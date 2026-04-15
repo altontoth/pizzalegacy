@@ -285,9 +285,9 @@ case_insensitive_lookup(const std::filesystem::path& base,
 }
 
 std::vector<std::string> list_files(const std::string& directory,
-                                    const std::string& extension) {
+                                    const std::string& extension,
+                                    FileSortOrder sort) {
   namespace fs = std::filesystem;
-  std::vector<std::string> files;
 
   fs::path search_path;
 
@@ -298,15 +298,34 @@ std::vector<std::string> list_files(const std::string& directory,
     search_path = fs::path(game_data_path_) / directory;
   }
 
-  // Check if directory exists before iterating
   if (!fs::exists(search_path) || !fs::is_directory(search_path)) {
-    return files;
+    return {};
   }
 
+  std::vector<fs::directory_entry> entries;
   for (const auto& entry : fs::directory_iterator(search_path)) {
     if (entry.is_regular_file() && entry.path().extension() == extension) {
-      files.push_back(entry.path().filename().string());
+      entries.push_back(entry);
     }
+  }
+
+  if (sort == FileSortOrder::Alphabetical) {
+    std::sort(entries.begin(), entries.end(),
+              [](const fs::directory_entry& a, const fs::directory_entry& b) {
+                return a.path().filename() < b.path().filename();
+              });
+  }
+  else {
+    std::sort(entries.begin(), entries.end(),
+              [](const fs::directory_entry& a, const fs::directory_entry& b) {
+                return a.last_write_time() > b.last_write_time();
+              });
+  }
+
+  std::vector<std::string> files;
+  files.reserve(entries.size());
+  for (const auto& entry : entries) {
+    files.push_back(entry.path().filename().string());
   }
   return files;
 }

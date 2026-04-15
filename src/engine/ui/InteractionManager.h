@@ -206,7 +206,7 @@ private:
     }
     return nullptr;
   }
-  const std::string hot_item_name() const { return hot_item_name_; }
+  std::string hot_item_name() const { return hot_item_name_; }
   ViewPoint screen_to_view_point(ScreenPoint sp) const;
 
   TooltipManager& tt_mgr_;
@@ -217,6 +217,7 @@ private:
   std::string hot_item_name_;
   std::function<void()> on_hot_changed_;
   int display_height_{DisplayConstants::LOGICAL_HEIGHT};
+  ViewPoint last_logical_mouse_pos_;
 };
 
 } // namespace views::ui

@@ -13,10 +13,14 @@
 #include <vector>
 
 namespace fileutils {
+
+enum class FileSortOrder { Alphabetical, LastModified };
+
 std::ifstream open(const std::string& file_path,
                    std::ios::openmode mode = std::ios::binary);
-std::vector<std::string> list_files(const std::string& directory,
-                                    const std::string& extension);
+std::vector<std::string>
+list_files(const std::string& directory, const std::string& extension,
+           FileSortOrder sort = FileSortOrder::Alphabetical);
 bool fexists(const std::string& file_path);
 
 std::optional<std::filesystem::path>

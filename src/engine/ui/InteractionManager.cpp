@@ -160,10 +160,7 @@ void InteractionManager::process(const SDL_Event& e) {
   }
 
   case SDL_MOUSEWHEEL: {
-    int mouse_x, mouse_y;
-    SDL_GetMouseState(&mouse_x, &mouse_y);
-    ScreenPoint sp{mouse_x, mouse_y};
-    ViewPoint p = screen_to_view_point(sp);
+    ViewPoint p = last_logical_mouse_pos_;
 
     ItemID normal_id = 0;
     std::vector<ItemID> background_ids;
@@ -254,6 +251,7 @@ void InteractionManager::handle_tooltip(const InteractionItem& it,
 
 void InteractionManager::update_mouse(ScreenPoint sp) {
   ViewPoint p = screen_to_view_point(sp);
+  last_logical_mouse_pos_ = p;
 
   ItemID found_normal = 0;
   bool is_exclusive = false;
