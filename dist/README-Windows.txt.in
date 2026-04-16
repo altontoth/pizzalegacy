@@ -1,4 +1,4 @@
-Pizza Legacy v0.0.1 - Windows Release
+Pizza Legacy v@PROJECT_VERSION@ - Windows Release
 ===============================
 
 Pizza Legacy is an open-source reimplementation of the 1994 DOS game
@@ -17,18 +17,20 @@ under a euro.
 STATUS
 ------
 Alpha. Expect rough edges and missing features. Development is active.
-See https://pizzalegacy.nl for current status.
+See https://pizzalegacy.nl/ for current status.
 
-INCLUDED FILES
---------------
- plegacy.exe       - Game executable
- SDL2.dll          - SDL2 (zlib license)
- zlib1.dll         - zlib (zlib license)
- libpng16.dll      - libpng (libpng license)
- ADLMIDI.dll       - libADLMIDI (GPL v3+)
-                     Source: https://github.com/Wohlstand/libADLMIDI
+Find the full README online:
+https://codeberg.org/cowomaly/pizzalegacy/src/branch/main/README.md
+
+
+THIRD-PARTY SOFTWARE
+--------------------
+This build includes third-party libraries (SDL2, libpng, libADLMIDI, zlib,
+Zstd). Their individual licenses are included in the LICENSES\ directory.
+
 
 LICENSE
 -------
 Pizza Legacy is licensed under the GNU General Public License v3.0.
-Source code: https://codeberg.org/cowomaly/pizzalegacy
+LICENSE.txt contains the full license text.
+Source code: https://codeberg.org/cowomaly/pizzalegacy/

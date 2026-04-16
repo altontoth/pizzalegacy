@@ -1,19 +1,24 @@
 #!/usr/bin/env bash
-# make_appimage.sh - build AppImage for Linux
+# package_linux_appimage.sh - Build AppImage for Linux
 #
-# Usage: ./tools/make_appimage.sh [BUILD_DIR] [VERSION]
+# Usage: ./tools/package_linux_appimage.sh <build_dir> <version>
 #
-#   BUILD_DIR  path to cmake build output (default: build/release)
-#   VERSION    version string for the filename  (default: from build dir or "0.0.0")
+#   build_dir  path to cmake build output (e.g. build/release)
+#   version    version string for the filename (e.g. 0.0.2)
 #
 # Requires: linuxdeploy-x86_64.AppImage (downloaded automatically if missing)
 #
-# Run from project root.
+# Run from project root. The binary must already be built.
 
 set -euo pipefail
 
-BUILD_DIR="${1:-build/release}"
-VERSION="${2:-}"
+if [[ $# -lt 2 ]]; then
+    echo "Usage: $0 <build_dir> <version>"
+    exit 1
+fi
+
+BUILD_DIR="$1"
+VERSION="$2"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -25,11 +30,6 @@ if [[ ! -f "$BINARY" ]]; then
     echo "ERROR: binary not found at $BINARY"
     echo "  Build first: cmake --preset release && cmake --build --preset release -j"
     exit 1
-fi
-
-# Try to determine version from the binary or fallback
-if [[ -z "$VERSION" ]]; then
-    VERSION="$("$BINARY" --version 2>/dev/null | head -1 | grep -oP '\d+\.\d+\.\d+' || echo "0.0.0")"
 fi
 
 APPIMAGE_NAME="PizzaLegacy_v${VERSION}_linux-x86_64.AppImage"
@@ -49,9 +49,15 @@ rm -rf "$APPDIR"
 mkdir -p "$APPDIR/usr/bin"
 mkdir -p "$APPDIR/usr/share/applications"
 mkdir -p "$APPDIR/usr/share/icons/hicolor/256x256/apps"
+mkdir -p "$APPDIR/usr/share/licenses/plegacy"
+mkdir -p "$APPDIR/usr/share/doc/plegacy"
 
 cp "$BINARY" "$APPDIR/usr/bin/plegacy"
 cp "assets/plegacy.desktop" "$APPDIR/usr/share/applications/plegacy.desktop"
+
+cp LICENSES/* "$APPDIR/usr/share/licenses/plegacy/"
+cp "LICENSES/GPL-3.0-or-later.txt" "$APPDIR/usr/share/licenses/plegacy/LICENSE.txt"
+cp "$BUILD_DIR/dist/README-Linux.txt" "$APPDIR/usr/share/doc/plegacy/README.txt"
 
 ICON_SRC="assets/plegacy_256.png"
 ICON_DEST="$APPDIR/usr/share/icons/hicolor/256x256/apps/plegacy.png"

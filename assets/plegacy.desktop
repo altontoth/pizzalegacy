@@ -1,6 +1,6 @@
 [Desktop Entry]
 Name=Pizza Legacy
-Comment=Pizza Tycoon reimplementation
+Comment=Open source reimplementation of Pizza Tycoon/Pizza Connection (1994)
 Exec=plegacy
 Icon=plegacy
 Type=Application

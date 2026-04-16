@@ -12,6 +12,23 @@ configure_file(
     @ONLY
 )
 
+# Generate versioned READMEs for distribution packages into the build dir
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/dist/README-macOS.txt.in
+    ${CMAKE_BINARY_DIR}/dist/README-macOS.txt
+    @ONLY
+)
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/dist/README-Windows.txt.in
+    ${CMAKE_BINARY_DIR}/dist/README-Windows.txt
+    @ONLY
+)
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/dist/README-Linux.txt.in
+    ${CMAKE_BINARY_DIR}/dist/README-Linux.txt
+    @ONLY
+)
+
 # ---------------------------------------------------------
 #  User selectable options
 # -----------------------------------------------------
@@ -244,16 +261,16 @@ if(PLEGACY_ENABLE_MUSIC)
       set(USE_ESFMU_EMULATOR  OFF)
       set(USE_MAME_EMULATOR   OFF)
       set(WITH_ADLMIDI2       OFF)
-      set(libADLMIDI_STATIC   ON  CACHE BOOL "" FORCE)
-      set(libADLMIDI_SHARED   OFF CACHE BOOL "" FORCE)
+      set(libADLMIDI_STATIC   OFF  CACHE BOOL "" FORCE)
+      set(libADLMIDI_SHARED   ON CACHE BOOL "" FORCE)
 
       add_subdirectory(third_party/libadlmidi)
 
       # Suppress warnings from vendored C sources so they don't pollute output
       if(MSVC)
-        target_compile_options(ADLMIDI_static PRIVATE /W0)
+        target_compile_options(ADLMIDI_shared PRIVATE /W0)
       else()
-        target_compile_options(ADLMIDI_static PRIVATE -w)
+        target_compile_options(ADLMIDI_shared PRIVATE -w)
       endif()
     else()
       message(FATAL_ERROR
@@ -349,7 +366,7 @@ target_link_libraries(plegacy PRIVATE game_plegacy ${SDL2_LIBS} ${PNG_LIBS})
 # -----------------------------------------------------
 if(PLEGACY_ENABLE_MUSIC)
   if(_ADLMIDI_VENDORED)
-    target_link_libraries(plegacy PRIVATE ADLMIDI_static)
+    target_link_libraries(plegacy PRIVATE ADLMIDI)
     target_include_directories(plegacy PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/third_party/libadlmidi/include)
   elseif(WIN32)
@@ -358,6 +375,10 @@ if(PLEGACY_ENABLE_MUSIC)
     target_link_libraries(plegacy PRIVATE ${ADLMIDI_LIBRARIES})
     target_include_directories(plegacy PRIVATE ${ADLMIDI_INCLUDE_DIRS})
     target_link_directories(plegacy PRIVATE ${ADLMIDI_LIBRARY_DIRS})
+    if(APPLE AND ADLMIDI_LIBRARY_DIRS)
+      set_target_properties(plegacy PROPERTIES
+          BUILD_RPATH "${ADLMIDI_LIBRARY_DIRS}")
+    endif()
   endif()
 endif()
 
@@ -462,17 +483,49 @@ endif()
 
 
 # ---------------------------------------------------------
-#  Packaging (creates .zip distributables)
-# -----------------------------------------------------
+#  Release packaging targets
+#
+#  Usage (from project root):
+#    cmake --build --preset release --target release_linux
+#    cmake --build --preset release --target release_macos
+#    cmake --build --preset release --target release_windows
+# ---------------------------------------------------------
 
-set(CPACK_PACKAGE_NAME "plegacy")
-set(CPACK_PACKAGE_VENDOR "Cowomaly")
-set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
-set(CPACK_GENERATOR "ZIP")
+set(PLEGACY_TOOLS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/tools")
 
-# Nice filename
-set(CPACK_PACKAGE_FILE_NAME
-    "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CMAKE_SYSTEM_NAME}"
-)
+if(UNIX AND NOT APPLE)
+    add_custom_target(release_linux
+        DEPENDS plegacy
+        COMMAND "${PLEGACY_TOOLS_DIR}/package_linux_appimage.sh"
+                "${CMAKE_BINARY_DIR}"
+                "${PROJECT_VERSION}"
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+        COMMENT "Packaging Linux AppImage v${PROJECT_VERSION}"
+        VERBATIM
+    )
+endif()
 
-include(CPack)
+if(APPLE)
+    add_custom_target(release_macos
+        DEPENDS plegacy
+        COMMAND "${PLEGACY_TOOLS_DIR}/package_macos_app.sh"
+                "${CMAKE_BINARY_DIR}"
+                "${PROJECT_VERSION}"
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+        COMMENT "Packaging macOS app bundle v${PROJECT_VERSION}"
+        VERBATIM
+    )
+endif()
+
+if(WIN32)
+    add_custom_target(release_windows
+        DEPENDS plegacy
+        COMMAND powershell -ExecutionPolicy Bypass -File
+                "${PLEGACY_TOOLS_DIR}/package_windows_zip.ps1"
+                -BuildDir "${CMAKE_BINARY_DIR}"
+                -Version "${PROJECT_VERSION}"
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+        COMMENT "Packaging Windows ZIP v${PROJECT_VERSION}"
+        VERBATIM
+    )
+endif()

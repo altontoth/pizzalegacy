@@ -128,6 +128,12 @@ Builds on Linux, macOS, and Windows. SDL2 is confined to the engine layer; game
 logic never touches SDL directly. Platform-specific paths (config, saves,
 screenshots) are resolved automatically.
 
+### Enhancements
+
+While the goal of the project is a faithful reimplementation, Pizza Legacy
+includes several quality-of-life improvements and bug fixes for the original
+game. See docs/MODERNIZATIONS.md for a full list of intentional differences.
+
 ## Building
 
 ### Prerequisites
@@ -148,7 +154,7 @@ Platform-specific setup:
 
 - **Linux (Debian/Ubuntu):** `sudo apt-get install ninja-build libsdl2-dev libpng-dev pkg-config`
 - **macOS:** `brew install sdl2 libpng pkg-config ninja`
-- **Windows:** Install SDL2 and libpng via [vcpkg](https://vcpkg.io/)
+- **Windows:** Install SDL2 and libpng via `vcpkg`
 
 ### Compile
 
@@ -198,4 +204,4 @@ Pizza Legacy is licensed under the
 [GNU General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.html).
 
 Third-party libraries are in the `third_party/` directory, each with their
-own license.
+own license. See `docs/CREDITS.md` for details.
