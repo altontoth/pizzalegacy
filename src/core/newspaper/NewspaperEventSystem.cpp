@@ -9,6 +9,7 @@
 #include "core/city/City.h"
 #include "core/city/IngredientTrendSystem.h"
 #include "core/food/Ingredient.h"
+#include "core/food/IngredientType.h"
 #include "core/newspaper/NewspaperState.h"
 #include "core/state/GameState.h"
 #include "core/time/GameTime.h"
@@ -81,6 +82,7 @@ void NewspaperEventSystem::schedule_event(int slot, NewspaperEvent event,
 // events
 bool NewspaperEventSystem::execute_named_event(NewspaperEvent event,
                                                GameState& state, City& city) {
+  auto fix_bugs = state.options().fix_legacy_bugs;
   auto& ns = city.newspaper_state();
   auto& trends = city.ingredient_trend_system();
   auto event_id = static_cast<int>(event);
@@ -199,7 +201,7 @@ bool NewspaperEventSystem::execute_named_event(NewspaperEvent event,
 
   case NoPineappleDemand: // BUG: "No pineapples" affects raspberries (58)
     trends.apply_effect(
-        IngredientType::RASPBERRIES,
+        fix_bugs ? IngredientType::PINEAPPLE : IngredientType::RASPBERRIES,
         {.initial_value = -20, .control = 30, .duration = Countdown});
     break;
 
@@ -211,7 +213,7 @@ bool NewspaperEventSystem::execute_named_event(NewspaperEvent event,
 
   case KiwiMegaIn: // BUG: "Kiwi mega-in" affects blackberries (59)
     trends.apply_effect(
-        IngredientType::BLACKBERRIES,
+        fix_bugs ? IngredientType::KIWI : IngredientType::BLACKBERRIES,
         {.initial_value = 50, .control = 30, .duration = Countdown});
     break;
 
@@ -235,21 +237,26 @@ bool NewspaperEventSystem::execute_named_event(NewspaperEvent event,
     trends.apply_effect(IngredientType::W_MUSHROOMS, {0, -100, Exponential});
     break;
 
-  case SalmonHealthy: // BUG: off-by-one, uses LOBSTER (37) instead of SALMON
-                      // (36)
-    trends.apply_effect(IngredientType::LOBSTER, {0, 65, Exponential});
+  case SalmonHealthy: // BUG: uses LOBSTER instead of SALMON
+    trends.apply_effect(fix_bugs ? IngredientType::SALMON
+                                 : IngredientType::LOBSTER,
+                        {0, 65, Exponential});
     break;
 
   case TroutContaminated: // BUG: "Trout" affects SQUID (trout doesn't exist)
     trends.apply_effect(IngredientType::SQUID, {0, -80, Exponential});
     break;
 
-  case CaviareMegaOut: // BUG: "Caviare mega-out" affects COCKLES (39)
-    trends.apply_effect(IngredientType::COCKLES, {0, -60, Exponential});
+  case CaviarMegaOut: // BUG: affects COCKLES (39)
+    trends.apply_effect(fix_bugs ? IngredientType::CAVIAR
+                                 : IngredientType::COCKLES,
+                        {0, -60, Exponential});
     break;
 
-  case LobsterBoycotted: // BUG: "Lobster boycotted" affects CAVIAR (38)
-    trends.apply_effect(IngredientType::CAVIAR, {0, -90, Exponential});
+  case LobsterBoycotted: // BUG: "Lobster boycotted" affects CAVIAR
+    trends.apply_effect(fix_bugs ? IngredientType::LOBSTER
+                                 : IngredientType::CAVIAR,
+                        {0, -90, Exponential});
     break;
 
   case BeefRising:

@@ -60,7 +60,7 @@ enum class NewspaperEvent {
   MushroomsContaminated = 40,
   SalmonHealthy = 41,
   TroutContaminated = 42,
-  CaviareMegaOut = 43,
+  CaviarMegaOut = 43,
   LobsterBoycotted = 44,
   BeefRising = 45,
   NoDemandForEggs = 46,
@@ -153,8 +153,8 @@ constexpr std::string_view to_string(NewspaperEvent event) {
     return "SalmonHealthy";
   case NewspaperEvent::TroutContaminated:
     return "TroutContaminated";
-  case NewspaperEvent::CaviareMegaOut:
-    return "CaviareMegaOut";
+  case NewspaperEvent::CaviarMegaOut:
+    return "CaviarMegaOut";
   case NewspaperEvent::LobsterBoycotted:
     return "LobsterBoycotted";
   case NewspaperEvent::BeefRising:
