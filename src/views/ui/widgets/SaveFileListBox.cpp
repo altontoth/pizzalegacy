@@ -5,6 +5,10 @@
  */
 
 #include "views/ui/widgets/SaveFileListBox.h"
+
+#include <chrono>
+#include "core/time/GameDate.h"
+#include "engine/FormatCompat.h"
 #include "engine/geom/Spaces.h"
 #include "resources/FontManager.h"
 
@@ -39,13 +43,26 @@ void SaveFileListBox::draw(Surface& screen, ViewPoint p, bool is_selected) {
     }
 
     // Remove .plsave extension for display
-    std::string display_name = save_files_[file_index];
+    std::string display_name = save_files_[file_index].filename;
     if (display_name.ends_with(".plsave")) {
       display_name = display_name.substr(0, display_name.size() - 7);
     }
 
+    auto delta = save_files_[file_index].last_write_time -
+                 std::filesystem::file_time_type::clock::now();
+    std::time_t tt = std::chrono::system_clock::to_time_t(
+        std::chrono::time_point_cast<std::chrono::system_clock::duration>(
+            std::chrono::system_clock::now() + delta));
+
+    std::tm tm = *std::localtime(&tt);
+    std::string display_date =
+        compat::format("{} {} {:02d}:{:02d}", tm.tm_mday,
+                       short_month_names[tm.tm_mon], tm.tm_hour, tm.tm_min);
+
     context_.font->render_text_onto(block, display_name, ViewPoint{6, y},
                                     FontFace::PIZ_NUMB, 1);
+    context_.font->render_text_onto(block, display_date, ViewPoint{174, y + 4},
+                                    FontFace::MINI, 1);
     y += LINE_HEIGHT;
   }
 
@@ -100,7 +117,7 @@ bool SaveFileListBox::on_interaction(views::ui::InteractionEvent ie) {
       ie.button == views::ui::MouseButton::Left) {
     if (hovered_index_ >= 0 &&
         hovered_index_ < static_cast<int>(save_files_.size())) {
-      on_file_clicked_(save_files_[hovered_index_]);
+      on_file_clicked_(save_files_[hovered_index_].filename);
       return true;
     }
   }
@@ -109,7 +126,7 @@ bool SaveFileListBox::on_interaction(views::ui::InteractionEvent ie) {
       ie.button == views::ui::MouseButton::Left) {
     if (on_file_double_clicked_ && hovered_index_ >= 0 &&
         hovered_index_ < static_cast<int>(save_files_.size())) {
-      on_file_double_clicked_(save_files_[hovered_index_]);
+      on_file_double_clicked_(save_files_[hovered_index_].filename);
       return true;
     }
   }

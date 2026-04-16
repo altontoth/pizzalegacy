@@ -16,9 +16,14 @@ namespace fileutils {
 
 enum class FileSortOrder { Alphabetical, LastModified };
 
+struct FileEntry {
+  std::string filename;
+  std::filesystem::file_time_type last_write_time;
+};
+
 std::ifstream open(const std::string& file_path,
                    std::ios::openmode mode = std::ios::binary);
-std::vector<std::string>
+std::vector<FileEntry>
 list_files(const std::string& directory, const std::string& extension,
            FileSortOrder sort = FileSortOrder::Alphabetical);
 bool fexists(const std::string& file_path);

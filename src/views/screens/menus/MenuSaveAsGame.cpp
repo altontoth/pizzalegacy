@@ -60,10 +60,8 @@ MenuSaveAsGame::MenuSaveAsGame(GameContext& context, GameState& state)
         }
       }));
 
-  // Position marker for Back button column
-  add_menu_item(std::make_unique<PositionMarkerMenuItem>(context, 60, 120));
-
   // Back button
+  add_menu_item(std::make_unique<PositionMarkerMenuItem>(context, 234, 248));
   add_menu_item(std::make_unique<TextMenuItem>(
       context, "Back",
       [this] {
@@ -71,12 +69,13 @@ MenuSaveAsGame::MenuSaveAsGame(GameContext& context, GameState& state)
         state_.ui().pop();
         state_.ui().pop();
       },
-      face, style, sel_style));
+      FontFace::RUBY, style, sel_style));
 }
 
 void MenuSaveAsGame::load_save_files() {
-  save_files_ = fileutils::list_files("saves", ".plsave");
-  Logger::info("Found {} save files", save_files_.size());
+  auto sort = sort_by_date_ ? fileutils::FileSortOrder::LastModified
+                            : fileutils::FileSortOrder::Alphabetical;
+  save_files_ = fileutils::list_files("saves", ".plsave", sort);
 }
 
 void MenuSaveAsGame::save_to_file(const std::string& filename) {
@@ -85,7 +84,7 @@ void MenuSaveAsGame::save_to_file(const std::string& filename) {
   // Check if file already exists
   bool file_exists = false;
   for (const auto& existing_file : save_files_) {
-    if (existing_file == filename) {
+    if (existing_file.filename == filename) {
       file_exists = true;
       break;
     }

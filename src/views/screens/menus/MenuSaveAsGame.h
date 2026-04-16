@@ -8,6 +8,7 @@
 
 #include <string>
 #include <vector>
+#include "resources/util/FileUtils.h"
 #include "views/base/Menu.h"
 
 class MenuSaveAsGame : public Menu {
@@ -20,6 +21,7 @@ private:
   void save_to_file(const std::string& filename);
   void save_to_existing_file(const std::string& filename);
 
-  std::vector<std::string> save_files_;
+  std::vector<fileutils::FileEntry> save_files_;
   int scroll_offset_ = 0;
+  bool sort_by_date_ = true;
 };

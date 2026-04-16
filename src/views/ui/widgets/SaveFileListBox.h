@@ -10,13 +10,15 @@
 #include <vector>
 #include "engine/DebugLabel.h"
 #include "engine/geom/Spaces.h"
+#include "resources/util/FileUtils.h"
 #include "views/ui/widgets/MenuItem.h"
 
 class SaveFileListBox : public MenuItem,
                         public debug::AutoLabel<SaveFileListBox> {
 public:
   SaveFileListBox(
-      GameContext& gc, std::vector<std::string>& save_files, int* scroll_offset,
+      GameContext& gc, std::vector<fileutils::FileEntry>& save_files,
+      int* scroll_offset,
       std::function<void(const std::string&)> on_file_clicked,
       std::function<void(const std::string&)> on_file_double_clicked = nullptr)
       : MenuItem(gc), save_files_(save_files), scroll_offset_(scroll_offset),
@@ -30,7 +32,7 @@ public:
   bool on_interaction(views::ui::InteractionEvent ie) override;
 
 private:
-  std::vector<std::string>& save_files_;
+  std::vector<fileutils::FileEntry>& save_files_;
   int* scroll_offset_;
   std::function<void(const std::string&)> on_file_clicked_;
   std::function<void(const std::string&)> on_file_double_clicked_;

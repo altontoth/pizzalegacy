@@ -9,7 +9,6 @@
 #include <algorithm>
 #include <cassert>
 #include <filesystem>
-#include "core/init/NewGameConfig.h"
 #include "core/save/SaveGameManager.h"
 #include "core/state/GameState.h"
 #include "core/state/UIState.h"
@@ -24,7 +23,6 @@
 #include "views/ui/widgets/PositionMarkerMenuItem.h"
 #include "views/ui/widgets/SaveFileInfoBox.h"
 #include "views/ui/widgets/SaveFileListBox.h"
-#include "views/ui/widgets/SpacerMenuItem.h"
 #include "views/ui/widgets/TextMenuItem.h"
 
 using namespace views::ui::menu;
@@ -100,6 +98,16 @@ MenuGameLoad::MenuGameLoad(GameContext& context, GameState& state)
       context, "Delete", [this] { delete_selected_file(); }, face, style,
       sel_style));
 
+  // Sort toggle
+  add_menu_item(std::make_unique<PositionMarkerMenuItem>(context, 244, 244));
+  add_menu_item(std::make_unique<TextMenuItem>(
+      context, compat::format("Sort: Name / Date"),
+      [this] {
+        sort_by_date_ = !sort_by_date_;
+        load_save_files();
+        mark_dirty();
+      },
+      FontFace::SUPERSMA, style, sel_style));
   // Back button
   add_menu_item(std::make_unique<PositionMarkerMenuItem>(context, 510, 244));
   add_menu_item(std::make_unique<TextMenuItem>(
@@ -108,8 +116,9 @@ MenuGameLoad::MenuGameLoad(GameContext& context, GameState& state)
 }
 
 void MenuGameLoad::load_save_files() {
-  save_files_ = fileutils::list_files("saves", ".plsave");
-  Logger::info("Found {} save files", save_files_.size());
+  auto sort = sort_by_date_ ? fileutils::FileSortOrder::LastModified
+                            : fileutils::FileSortOrder::Alphabetical;
+  save_files_ = fileutils::list_files("saves", ".plsave", sort);
 }
 
 void MenuGameLoad::select_file(const std::string& filename) {

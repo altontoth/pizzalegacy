@@ -284,9 +284,9 @@ case_insensitive_lookup(const std::filesystem::path& base,
   return current;
 }
 
-std::vector<std::string> list_files(const std::string& directory,
-                                    const std::string& extension,
-                                    FileSortOrder sort) {
+std::vector<FileEntry> list_files(const std::string& directory,
+                                  const std::string& extension,
+                                  FileSortOrder sort) {
   namespace fs = std::filesystem;
 
   fs::path search_path;
@@ -322,10 +322,11 @@ std::vector<std::string> list_files(const std::string& directory,
               });
   }
 
-  std::vector<std::string> files;
+  std::vector<FileEntry> files;
   files.reserve(entries.size());
   for (const auto& entry : entries) {
-    files.push_back(entry.path().filename().string());
+    files.push_back(
+        {entry.path().filename().string(), entry.last_write_time()});
   }
   return files;
 }

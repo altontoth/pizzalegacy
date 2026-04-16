@@ -81,7 +81,7 @@ void SaveFileInputBox::draw(Surface& screen, ViewPoint p, bool is_selected) {
       }
 
       // Remove .plsave extension for display
-      std::string display_name = save_files_[file_index];
+      std::string display_name = save_files_[file_index].filename;
       if (display_name.ends_with(".plsave")) {
         display_name = display_name.substr(0, display_name.size() - 7);
       }
@@ -157,7 +157,7 @@ bool SaveFileInputBox::on_interaction(views::ui::InteractionEvent ie) {
       // Existing file - trigger save callback with filename
       int file_index = hovered_index_ - 1;
       if (file_index < static_cast<int>(save_files_.size())) {
-        on_save_callback_(save_files_[file_index]);
+        on_save_callback_(save_files_[file_index].filename);
         return true;
       }
     }

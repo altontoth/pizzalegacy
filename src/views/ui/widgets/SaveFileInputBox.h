@@ -12,13 +12,15 @@
 #include <vector>
 #include "engine/DebugLabel.h"
 #include "engine/geom/Spaces.h"
+#include "resources/util/FileUtils.h"
 #include "views/ui/widgets/MenuItem.h"
 
 class SaveFileInputBox : public MenuItem,
                          public input::InputListener,
                          public debug::AutoLabel<SaveFileInputBox> {
 public:
-  SaveFileInputBox(GameContext& gc, std::vector<std::string>& save_files,
+  SaveFileInputBox(GameContext& gc,
+                   std::vector<fileutils::FileEntry>& save_files,
                    int* scroll_offset,
                    std::function<void(const std::string&)> on_save_callback)
       : MenuItem(gc), save_files_(save_files), scroll_offset_(scroll_offset),
@@ -41,7 +43,7 @@ public:
 private:
   void mark_dirty();
 
-  std::vector<std::string>& save_files_;
+  std::vector<fileutils::FileEntry>& save_files_;
   int* scroll_offset_;
   std::function<void(const std::string&)> on_save_callback_;
   int hovered_index_ = -1;
