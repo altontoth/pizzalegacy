@@ -5,6 +5,7 @@
  */
 
 #include "core/restaurant/ManagerRoutine.h"
+#include <algorithm>
 #include <array>
 #include "core/city/City.h"
 #include "core/city/Property.h"
@@ -105,6 +106,9 @@ void ManagerRoutine::report_previous_day_shortages() {
 }
 
 void ManagerRoutine::do_shopping() {
+  if (!restaurant_.wants_open()) {
+    return;
+  }
   const auto& settings = restaurant_.manager_settings();
   const auto& manager = restaurant_.manager();
   if (!manager) {
@@ -222,9 +226,7 @@ void ManagerRoutine::do_shopping() {
       if (rand_percentage_chance(manager->character().experience())) {
         int discount = rand_max_n(manager->character().motivation() / 2);
         price_per_kg = Money{price_per_kg.cents * (100 - discount) / 100};
-        if (discount > best_discount) {
-          best_discount = discount;
-        }
+        best_discount = std::max(discount, best_discount);
       }
 
       Money total_cost{price_per_kg.cents * buy_kg};
@@ -244,8 +246,6 @@ void ManagerRoutine::do_shopping() {
     }
 
     if (category_qty > 0) {
-      // Original: "Your manager goes shopping for %s and buys %s for $%d
-      // with %d% discount"
       game_state_.status().post(StatusMsg{
           .payload = compat::format(
               "Your manager goes shopping for {} and buys {} at {} for {} "
