@@ -29,5 +29,6 @@ public:
 
 private:
   bool has_info_ = false;
+  bool file_attempted_ = false;
   save::SaveMetadata info_;
 };

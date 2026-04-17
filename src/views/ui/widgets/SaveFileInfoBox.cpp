@@ -21,6 +21,7 @@ constexpr int LABEL_COLOR = 1;
 void SaveFileInfoBox::set_file(const std::string& filename) {
   info_ = save::SaveMetadata{};
   has_info_ = false;
+  file_attempted_ = true;
 
   auto maybe_meta = save::SaveGameManager::read_save_metadata(filename);
   if (!maybe_meta) {
@@ -33,6 +34,7 @@ void SaveFileInfoBox::set_file(const std::string& filename) {
 
 void SaveFileInfoBox::clear() {
   has_info_ = false;
+  file_attempted_ = false;
   info_ = save::SaveMetadata{};
 }
 
@@ -46,8 +48,10 @@ void SaveFileInfoBox::draw(Surface& screen, ViewPoint p, bool is_selected) {
   ViewPoint text_pos{6, 6};
 
   if (!has_info_) {
-    context_.font->render_line_onto(block, "Select a save file", text_pos,
-                                    FontFace::SUPERSMA, LABEL_COLOR);
+    const char* msg =
+        file_attempted_ ? "Invalid save game" : "Select a save file";
+    context_.font->render_line_onto(block, msg, text_pos, FontFace::SUPERSMA,
+                                    LABEL_COLOR);
     screen.blit_raw(block, p);
     return;
   }
