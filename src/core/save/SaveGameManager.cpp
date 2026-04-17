@@ -6,12 +6,19 @@
 
 #include "core/save/SaveGameManager.h"
 
+#include <bit>
 #include <ctime>
 #include <filesystem>
 #include <fstream>
+#include <limits>
 #include <vector>
 
-#include <zstd.h>
+#include <cstring>
+
+#include <zlib.h>
+// zlib.h defines FAR as a macro for legacy DOS far-pointer compat, which
+// conflicts with our ZoomLevel::FAR
+#undef FAR
 
 #include "core/character/Player.h"
 #include "core/city/City.h"
@@ -31,6 +38,55 @@
 namespace save {
 
 namespace fs = std::filesystem;
+
+constexpr uint64_t MAX_SAVE_SIZE = 256ULL * 1024 * 1024; // 256 MB sanity cap
+
+struct SaveHeader {
+  char magic[6];    // "PLSAVE"
+  uint16_t version; // little-endian; currently 1
+  uint64_t size;    // uncompressed payload size, little-endian
+};
+static_assert(sizeof(SaveHeader) == 16);
+
+constexpr uint16_t SAVE_HEADER_VERSION = 1;
+
+namespace {
+
+// Reverses all 8 bytes: byte 0 <-> byte 7, byte 1 <-> byte 6, etc.
+// Used for little-endian <-> big-endian conversion on big-endian hosts.
+uint64_t bswap64(uint64_t v) noexcept {
+  return ((v & 0xFF00000000000000ULL) >> 56) |
+         ((v & 0x00FF000000000000ULL) >> 40) |
+         ((v & 0x0000FF0000000000ULL) >> 24) |
+         ((v & 0x000000FF00000000ULL) >> 8) |
+         ((v & 0x00000000FF000000ULL) << 8) |
+         ((v & 0x0000000000FF0000ULL) << 24) |
+         ((v & 0x000000000000FF00ULL) << 40) |
+         ((v & 0x00000000000000FFULL) << 56);
+}
+
+uint64_t to_le64(uint64_t v) noexcept {
+  if constexpr (std::endian::native == std::endian::little) {
+    return v;
+  }
+  return bswap64(v);
+}
+
+uint64_t from_le64(uint64_t v) noexcept {
+  if constexpr (std::endian::native == std::endian::little) {
+    return v;
+  }
+  return bswap64(v);
+}
+
+uint16_t to_le16(uint16_t v) noexcept {
+  if constexpr (std::endian::native == std::endian::little) {
+    return v;
+  }
+  return static_cast<uint16_t>((v >> 8) | (v << 8));
+}
+
+} // namespace
 
 std::string SaveGameManager::saves_directory_;
 
@@ -63,18 +119,31 @@ bool SaveGameManager::save(const GameState& state, const GameContext& context,
     Logger::info("Saving game to {}", filename);
 
     json j = state_to_json(state, context);
-    std::string json_str = j.dump(2);
+    std::string json_str = j.dump(-1);
 
-    size_t bound = ZSTD_compressBound(json_str.size());
-    std::vector<char> compressed(bound);
-    size_t compressed_size =
-        ZSTD_compress(compressed.data(), bound, json_str.data(),
-                      json_str.size(), ZSTD_CLEVEL_DEFAULT);
-    if (ZSTD_isError(compressed_size)) {
-      Logger::warn("Compression failed: {}",
-                   ZSTD_getErrorName(compressed_size));
+    if (json_str.size() > MAX_SAVE_SIZE ||
+        json_str.size() > std::numeric_limits<uLong>::max()) {
+      Logger::warn("Save data too large ({} bytes)", json_str.size());
       return false;
     }
+
+    uLongf bound = compressBound(static_cast<uLong>(json_str.size()));
+    std::vector<Bytef> compressed(sizeof(SaveHeader) + bound);
+    uLongf compressed_size = bound;
+    int zret =
+        compress2(compressed.data() + sizeof(SaveHeader), &compressed_size,
+                  reinterpret_cast<const Bytef*>(json_str.data()),
+                  static_cast<uLong>(json_str.size()), Z_DEFAULT_COMPRESSION);
+    if (zret != Z_OK) {
+      Logger::warn("Compression failed: {}", zret);
+      return false;
+    }
+
+    SaveHeader hdr;
+    std::memcpy(hdr.magic, "PLSAVE", 6);
+    hdr.version = to_le16(SAVE_HEADER_VERSION);
+    hdr.size = to_le64(static_cast<uint64_t>(json_str.size()));
+    std::memcpy(compressed.data(), &hdr, sizeof(hdr));
 
     std::string full_path = get_full_path(filename);
     std::ofstream file(full_path, std::ios::binary);
@@ -83,8 +152,9 @@ bool SaveGameManager::save(const GameState& state, const GameContext& context,
       return false;
     }
 
-    file.write(compressed.data(),
-               static_cast<std::streamsize>(compressed_size));
+    file.write(
+        reinterpret_cast<const char*>(compressed.data()),
+        static_cast<std::streamsize>(sizeof(SaveHeader) + compressed_size));
     file.close();
 
     Logger::info("Save completed successfully");
@@ -105,23 +175,54 @@ SaveGameManager::read_save_json(const std::string& filename) {
       return std::nullopt;
     }
 
-    std::vector<char> compressed((std::istreambuf_iterator<char>(file)),
-                                 std::istreambuf_iterator<char>());
+    file.seekg(0, std::ios::end);
+    auto file_size = file.tellg();
+    file.seekg(0, std::ios::beg);
+    if (!file.good() || file_size <= 0) {
+      Logger::warn("Save file is empty or unreadable: {}", filename);
+      return std::nullopt;
+    }
 
-    unsigned long long decompressed_size =
-        ZSTD_getFrameContentSize(compressed.data(), compressed.size());
-    if (decompressed_size == ZSTD_CONTENTSIZE_ERROR ||
-        decompressed_size == ZSTD_CONTENTSIZE_UNKNOWN) {
-      Logger::warn("Cannot determine decompressed size for: {}", filename);
+    std::vector<unsigned char> compressed(static_cast<size_t>(file_size));
+    if (!file.read(reinterpret_cast<char*>(compressed.data()), file_size)) {
+      Logger::warn("Failed to read save file: {}", filename);
+      return std::nullopt;
+    }
+
+    if (compressed.size() < sizeof(SaveHeader)) {
+      Logger::warn("Save file too small (no header): {}", filename);
+      return std::nullopt;
+    }
+
+    SaveHeader hdr;
+    std::memcpy(&hdr, compressed.data(), sizeof(hdr));
+    if (std::memcmp(hdr.magic, "PLSAVE", 6) != 0) {
+      Logger::warn("Save file has invalid magic - incompatible format: {}",
+                   filename);
+      return std::nullopt;
+    }
+
+    uint64_t decompressed_size = from_le64(hdr.size);
+
+    if (decompressed_size == 0 || decompressed_size > MAX_SAVE_SIZE) {
+      Logger::warn("Save file has invalid decompressed size ({}): {}",
+                   decompressed_size, filename);
       return std::nullopt;
     }
 
     std::string json_str(static_cast<size_t>(decompressed_size), '\0');
-    size_t result = ZSTD_decompress(json_str.data(), decompressed_size,
-                                    compressed.data(), compressed.size());
-    if (ZSTD_isError(result)) {
-      Logger::warn("Decompression failed for {}: {}", filename,
-                   ZSTD_getErrorName(result));
+    auto dest_len = static_cast<uLongf>(decompressed_size);
+    int zret =
+        uncompress(reinterpret_cast<Bytef*>(json_str.data()), &dest_len,
+                   compressed.data() + sizeof(SaveHeader),
+                   static_cast<uLong>(compressed.size() - sizeof(SaveHeader)));
+    if (zret != Z_OK) {
+      Logger::warn("Decompression failed for {}: {}", filename, zret);
+      return std::nullopt;
+    }
+    if (dest_len != static_cast<uLongf>(decompressed_size)) {
+      Logger::warn("Decompressed size mismatch for {}: expected {}, got {}",
+                   filename, decompressed_size, dest_len);
       return std::nullopt;
     }
 
@@ -220,6 +321,8 @@ int SaveGameManager::get_save_version(const std::string& filename) {
   return maybe_j->value("version", -1);
 }
 
+namespace {
+
 json time_to_json(const GameTime& time) {
   return {
       {"blocks_since_start", time.time_blocks()},
@@ -235,8 +338,10 @@ GameTime json_to_time(const json& j) {
   return time;
 }
 
+} // namespace
+
 json SaveGameManager::state_to_json(const GameState& state,
-                                    const GameContext& context) {
+                                    const GameContext& /*context*/) {
   json j;
 
   // Save format version

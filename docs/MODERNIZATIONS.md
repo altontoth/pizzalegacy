@@ -38,9 +38,9 @@ in effect.
 
 ### Confirmation popup keyboard interaction
 
-You can respond to confirmation popups with "Y" or "Enter" to confirm and "N"
-to decline. Did this specifically to make it easier to quit the game during
-debugging since introducing the confirmation popup there.
+* You can respond to confirmation popups with "Y" or "Enter" to confirm and "N"
+  to decline. Did this specifically to make it easier to quit the game during
+  debugging since introducing the confirmation popup there.
 
 ### Ingredient ordering speed
 
@@ -131,3 +131,8 @@ In the original when you make a two month investment, you get interested payed
 at the end of month one, then again at the end of month two and then you get
 your principal back on the end of month three. That's weird, with bug fixes
 active you get the interest plus the principal back at the end of month two.
+
+### Newspaper event to ingredient mapping
+
+The original had various bugs in the newspaper event system, e.g. when telling
+you pineapple was super out it would affect raspberries instead.

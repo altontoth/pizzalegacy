@@ -25,8 +25,9 @@ https://codeberg.org/cowomaly/pizzalegacy/src/branch/main/README.md
 
 THIRD-PARTY SOFTWARE
 --------------------
-This build includes third-party libraries (SDL2, libpng, libADLMIDI, zlib,
-Zstd). Their individual licenses are included in the LICENSES\ directory.
+This build includes third-party libraries (SDL2, libpng, libADLMIDI, zlib).
+Their individual licenses are included in the LICENSES\ directory.
+A summary of all third-party components can be found in `THIRD_PARTIES.txt`.
 
 
 LICENSE

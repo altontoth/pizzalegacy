@@ -25,9 +25,7 @@ $WantedDlls = @(
     "ADLMIDI.dll",
     "libpng16.dll",
     "SDL2.dll",
-    "zlib1.dll",
-    "zstd.dll",
-    "libzstd.dll"
+    "zlib1.dll"
 )
 
 # Check executable exists
@@ -59,6 +57,13 @@ $ReadmeSrc = Join-Path $BuildDir "dist\README-Windows.txt"
 if (Test-Path $ReadmeSrc) {
     Copy-Item $ReadmeSrc (Join-Path $OutDir "README.txt")
     Write-Host "Copied: README.txt"
+}
+
+# Copy third-party credits
+$ThirdPartiesSrc = Join-Path $BuildDir "dist\THIRD_PARTIES.txt"
+if (Test-Path $ThirdPartiesSrc) {
+    Copy-Item $ThirdPartiesSrc (Join-Path $OutDir "THIRD_PARTIES.txt")
+    Write-Host "Copied: THIRD_PARTIES.txt"
 }
 
 # Copy licenses

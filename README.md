@@ -144,7 +144,7 @@ game. See docs/MODERNIZATIONS.md for a full list of intentional differences.
   GCC 12 works with the `libfmt-dev` library as a fallback for `std::format`. GCC 11 and below are not supported.
 - SDL2 (>= 2.0.16)
 - libpng (for PNG screenshots)
-- libzstd (save file compression)
+- zlib (save file compression)
 - [libADLMIDI](https://github.com/Wohlstand/libADLMIDI) for music support
   (optional); you can install it on your system or download the sources and put them in
   `third_party/libadlmidi/` and it wil be picked up during the build

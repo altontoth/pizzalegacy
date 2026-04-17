@@ -56,12 +56,14 @@ https://codeberg.org/cowomaly/pizzalegacy/src/branch/main/README.md
 
 THIRD-PARTY SOFTWARE
 --------------------
-This build includes third-party libraries (SDL2, libpng, libADLMIDI, zlib).
+This build includes third-party libraries (SDL2, libpng, libADLMIDI).
 Their individual licenses are included inside the app bundle at:
 
     Pizza Legacy.app/Contents/Resources/LICENSES/
 
 Right-click the app and choose "Show Package Contents" to browse it.
+
+A summary of all third-party components can be found in `THIRD_PARTIES.txt`.
 
 LICENSE
 -------

@@ -37,7 +37,7 @@ mkdir -p "$FRAMEWORKS"
 # Build extra -s search path args from pkg-config so dylibbundler can resolve
 # @rpath references
 DYLIBBUNDLER_SEARCH=()
-for lib in libadlmidi libzstd sdl2 libpng; do
+for lib in libadlmidi sdl2 libpng; do
     dir=$(pkg-config --variable=libdir "$lib" 2>/dev/null || true)
     if [[ -n "$dir" ]]; then
         DYLIBBUNDLER_SEARCH+=(-s "$dir")
@@ -59,6 +59,9 @@ mkdir -p "${DIST_DIR}"
 cp -r "$APP" "$DIST_DIR/"
 if [[ -f "$BUILD_DIR/dist/README-macOS.txt" ]]; then
     cp "$BUILD_DIR/dist/README-macOS.txt" "$DIST_DIR/README.txt"
+fi
+if [[ -f "$BUILD_DIR/dist/THIRD_PARTIES.txt" ]]; then
+    cp "$BUILD_DIR/dist/THIRD_PARTIES.txt" "$DIST_DIR/THIRD_PARTIES.txt"
 fi
 
 # Package

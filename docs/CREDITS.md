@@ -31,15 +31,16 @@ Usage: PNG support for screenshots
     Copyright: Copyright (c) 1995-2026 The PNG Reference Entities
     License:   libpng License 2.0 (see LICENSES/libpng.txt)
 
-### Zstd
+### zlib
 Usage:     Compression for JSON save files
 
-    Copyright: Copyright (c) Meta Platforms, Inc. and affiliates
-    License:   BSD-3-Clause (see LICENSES/BSD-3-Clause-Meta.txt)
+    Copyright: Copyright (C) 1995-2026 Jean-loup Gailly and Mark Adler
+    License:   zlib License (see LICENSES/zlib.txt)
 
 ## Bundled libraries
 
-Source code for these libraries is included in the `third_party/` directory.
+Source code for these libraries is included in the `third_party/` directory of
+the [source tree](https://codeberg.org/cowomaly/pizzalegacy/).
 
 ### nlohmann/json
 
@@ -58,10 +59,10 @@ Usage: Decompression of Amiga IMP!-compressed assets
 ### SavePNG
 Usage: SDL\_Surface to PNG wrapper for screenshots
 
-    Copyright: Copyright (c) 2014-2024 Various Authors
-    License:   zlib License (see LICENSES/zlib.txt)
+    Copyright: Not listed
+    License:   zlib License (see LICENSES/zlib-zlib.txt)
 
-### utfcpp (UTF-8 with C++)
+### UTF8-CPP
 
 Usage: Handling of UTF-8 encoded strings and conversions
 

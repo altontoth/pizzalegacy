@@ -28,6 +28,12 @@ configure_file(
     ${CMAKE_BINARY_DIR}/dist/README-Linux.txt
     @ONLY
 )
+# Copy the credits/third-party listing into the build dist dir
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/docs/CREDITS.md
+    ${CMAKE_BINARY_DIR}/dist/THIRD_PARTIES.txt
+    COPYONLY
+)
 
 # ---------------------------------------------------------
 #  User selectable options
@@ -171,24 +177,10 @@ else()
 endif()
 
 # ---------------------------------------------------------
-#  zstd - save file compression
+#  zlib - save file compression
 # -----------------------------------------------------
-if(WIN32)
-    find_package(zstd CONFIG REQUIRED)
-    set(ZSTD_TARGET zstd::libzstd)
-    message(STATUS "libzstd: found (CMake config)")
-else()
-    if(NOT PkgConfig_FOUND)
-        find_package(PkgConfig REQUIRED)
-    endif()
-    pkg_check_modules(ZSTD REQUIRED libzstd)
-    add_library(zstd_pkgconfig INTERFACE IMPORTED)
-    target_link_libraries(zstd_pkgconfig INTERFACE ${ZSTD_LIBRARIES})
-    target_include_directories(zstd_pkgconfig INTERFACE ${ZSTD_INCLUDE_DIRS})
-    target_link_directories(zstd_pkgconfig INTERFACE ${ZSTD_LIBRARY_DIRS})
-    set(ZSTD_TARGET zstd_pkgconfig)
-    message(STATUS "libzstd: found (pkg-config)")
-endif()
+find_package(ZLIB REQUIRED)
+message(STATUS "zlib: found")
 
 # ---------------------------------------------------------
 # Case sensitivy options
@@ -310,7 +302,13 @@ endif()
 # We expose include dirs so that dependent targets can #include headers directly.
 target_include_directories(game_plegacy PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-target_link_libraries(game_plegacy PUBLIC ${ZSTD_TARGET})
+if(APPLE)
+    # ZLIB::ZLIB adds the macOS SDK path as a plain -I, which breaks the
+    # -isystem ordering required by LLVM libc++ 20. Strip the include dirs;
+    # zlib.h is already reachable via the existing -isystem path.
+    set_target_properties(ZLIB::ZLIB PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "")
+endif()
+target_link_libraries(game_plegacy PRIVATE ZLIB::ZLIB)
 
 # ---------------------------------------------------------
 #  Main executable "plegacy"
@@ -383,39 +381,6 @@ if(PLEGACY_ENABLE_MUSIC)
 endif()
 
 target_compile_options(plegacy PRIVATE ${SDL2_CFLAGS} ${PNG_CFLAGS})
-
-# ---------------------------------------------------------
-#  Install layout (used by CPack to create distributables)
-# ---------------------------------------------------------
-
-include(GNUInstallDirs)
-
-# Install the executable (or .app bundle on macOS)
-install(TARGETS plegacy
-    BUNDLE DESTINATION .
-    RUNTIME DESTINATION .
-)
-
-# If using SDL as a DLL on Windows, copy it next to the exe
-if(WIN32)
-    # This works when SDL2 is provided by the official CMake config
-    get_target_property(SDL2_DLL SDL2::SDL2 IMPORTED_LOCATION_RELEASE)
-    if(SDL2_DLL)
-        install(FILES "${SDL2_DLL}" DESTINATION .)
-    endif()
-endif()
-
-# Install game data (adjust if your data dir differs)
-if(EXISTS "${CMAKE_SOURCE_DIR}/data")
-    install(DIRECTORY "${CMAKE_SOURCE_DIR}/data" DESTINATION .)
-endif()
-
-# Docs / license if present
-foreach(_file README.md README.txt COPYING LICENSE)
-    if(EXISTS "${CMAKE_SOURCE_DIR}/${_file}")
-        install(FILES "${CMAKE_SOURCE_DIR}/${_file}" DESTINATION .)
-    endif()
-endforeach()
 
 # ---------------------------------------------------------
 #  Developer convenience targets: "format" and "tags"

@@ -58,6 +58,7 @@ cp "assets/plegacy.desktop" "$APPDIR/usr/share/applications/plegacy.desktop"
 cp LICENSES/* "$APPDIR/usr/share/licenses/plegacy/"
 cp "LICENSES/GPL-3.0-or-later.txt" "$APPDIR/usr/share/licenses/plegacy/LICENSE.txt"
 cp "$BUILD_DIR/dist/README-Linux.txt" "$APPDIR/usr/share/doc/plegacy/README.txt"
+cp "$BUILD_DIR/dist/THIRD_PARTIES.txt" "$APPDIR/usr/share/doc/plegacy/THIRD_PARTIES.txt"
 
 ICON_SRC="assets/plegacy_256.png"
 ICON_DEST="$APPDIR/usr/share/icons/hicolor/256x256/apps/plegacy.png"
