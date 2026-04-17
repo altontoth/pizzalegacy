@@ -377,6 +377,11 @@ void CityFactory::parse_contacts(std::ifstream& is, uint8_t number_of_realtors,
                                  uint8_t number_of_insurance,
                                  uint8_t number_of_authorities,
                                  uint8_t number_of_others) {
+  const std::array<uint8_t, NUMBER_OF_ACTOR_TYPES> counts = {
+      number_of_realtors,    number_of_banks,  number_of_insurance,
+      number_of_authorities, number_of_others,
+  };
+
   for (int i = 0; i < NUMBER_OF_ACTOR_TYPES; ++i) {
     actor_contacts_[i].resize(MAX_ACTOR_PER_TYPE);
     actor_count_[i] = 0;
@@ -385,16 +390,15 @@ void CityFactory::parse_contacts(std::ifstream& is, uint8_t number_of_realtors,
   for (int i = 0; i < NUMBER_OF_ACTOR_TYPES; ++i) {
     for (int j = 0; j < MAX_ACTOR_PER_TYPE; ++j) {
       if (actor_heads_[i].size() <= static_cast<std::size_t>(j)) {
-        actor_heads_[i].resize(j + 1); // Resize to fit at least up to index j
+        actor_heads_[i].resize(j + 1);
       }
 
       auto name = text::read_iso8859_1_string(is, 24);
-      if (!name.empty()) {
+      if (j < counts[i] && !name.empty()) {
         actor_contacts_[i][j] = std::move(name);
         actor_count_[i]++;
         actor_heads_[i][j] =
             static_cast<int>(heads_[(i * MAX_ACTOR_PER_TYPE) + j] + 1);
-        uint32_t number = phone_numbers_[i][j];
       }
     }
   }
@@ -523,13 +527,17 @@ void CityFactory::build_city_object(City& city, int id) {
         police_id = actor_id;
       }
       else if (actor_type == ActorType::BANK) {
-        bank_settings_map.emplace(actor_id, bank_settings_[bank_index]);
-        bank_index++;
+        if (bank_index < static_cast<int>(bank_settings_.size())) {
+          bank_settings_map.emplace(actor_id, bank_settings_[bank_index]);
+          bank_index++;
+        }
       }
       else if (actor_type == ActorType::INSURANCE) {
-        insurance_settings_map.emplace(actor_id,
-                                       insurance_settings_[insurance_index]);
-        insurance_index++;
+        if (insurance_index < static_cast<int>(insurance_settings_.size())) {
+          insurance_settings_map.emplace(actor_id,
+                                         insurance_settings_[insurance_index]);
+          insurance_index++;
+        }
       }
       else if (actor_type == ActorType::MAFIA ||
                actor_type == ActorType::ARMS_DEALER) {
