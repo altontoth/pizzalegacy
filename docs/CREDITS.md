@@ -35,7 +35,7 @@ Usage: PNG support for screenshots
 Usage:     Compression for JSON save files
 
     Copyright: Copyright (C) 1995-2026 Jean-loup Gailly and Mark Adler
-    License:   zlib License (see LICENSES/zlib.txt)
+    License:   zlib License (see LICENSES/zlib-zlib.txt)
 
 ## Bundled libraries
 
