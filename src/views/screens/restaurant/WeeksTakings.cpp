@@ -24,9 +24,9 @@ constexpr int header_secondary_color = 11;
 
 WeeksTakings::WeeksTakings(GameContext& context, GameState& state,
                            core::RestaurantId restaurant_id,
-                           bool end_of_week_mode)
+                           bool end_of_week_mode, std::function<void()> on_done)
     : MainPanelView(context, state), restaurant_id_(restaurant_id),
-      end_of_week_mode_(end_of_week_mode) {
+      end_of_week_mode_(end_of_week_mode), on_done_(std::move(on_done)) {
   restaurant_ = state_.restaurant(restaurant_id_);
   create_buttons();
 }
@@ -452,7 +452,7 @@ void WeeksTakings::render_expenses_page(const RenderContext& ctx,
 
 void WeeksTakings::dismiss() {
   if (end_of_week_mode_) {
-    state_.show_staff_invoice_popup(restaurant_id_);
+    state_.show_staff_invoice_popup(restaurant_id_, on_done_);
   }
   state_.ui().pop();
 }

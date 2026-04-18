@@ -277,7 +277,7 @@ bool MafiaConversation::advance_line_choice(MafiaLine choice) {
       using core::item::Item;
       constexpr Item weapons[] = {Item::FlameThrower, Item::Chemicals,
                                   Item::Bazooka, Item::Bomb};
-      auto cities = state_.visited_cities();
+      auto cities = state_.visited_cities(*state_.active_player());
       if (cities.empty()) {
         cities.push_back(state_.active_city());
       }

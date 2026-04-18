@@ -616,7 +616,7 @@ void GlobalStats::render_loans(const RenderContext& ctx) {
                                   FontFace::PIZ_NUMB, 240);
 
   const Player* player = state_.active_player();
-  auto cities = state_.visited_cities();
+  auto cities = state_.visited_cities(*player);
 
   constexpr int col_city = 4;
   constexpr int col_amount = 218;
@@ -768,7 +768,7 @@ void GlobalStats::render_property(const RenderContext& ctx) {
 
   auto* player = state_.active_player();
   auto player_id = player->id();
-  auto cities = state_.visited_cities();
+  auto cities = state_.visited_cities(*player);
 
   struct PropEntry {
     Property* prop;

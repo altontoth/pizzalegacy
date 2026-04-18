@@ -39,6 +39,8 @@ constexpr int award_count = 6;
 constexpr int sprite_width = 41 * 2;
 constexpr int sprite_height = 51 * 2;
 
+constexpr int cv_events_per_page = 6;
+
 // Screen layout (measured from original)
 constexpr int grid_columns = 3;
 constexpr int step_x = 43;
@@ -386,10 +388,9 @@ void PlayerProfile::handle_arrow(PageAction action) {
   if (mode_ == PlayerProfileMode::CurriculumVitae) {
     const auto* player = state_.player(id_);
     auto entries = state_.message_manager().get_cv_entries_for(player->id());
-    constexpr int events_per_page = 12;
-    int total_pages =
-        std::max(1, (static_cast<int>(entries.size()) + events_per_page - 1) /
-                        events_per_page);
+    int total_pages = std::max(
+        1, (static_cast<int>(entries.size()) + cv_events_per_page - 1) /
+               cv_events_per_page);
 
     if (action == PageAction::Next) {
       if (cv_page_ < total_pages - 1) {
@@ -564,31 +565,31 @@ Surface PlayerProfile::create_curriculum_vitae(const Player* player, int page) {
   font->render_text_onto(cv, name, {192, 48}, FontFace::PIZ_NUMB, text_color,
                          AlignX::CenterPoint);
 
-  constexpr int events_per_page = 12;
-  constexpr int date_x = 46;
+  constexpr int date_x = 72;
   constexpr int text_x = 160;
   int y = 80;
-  constexpr int row_height = 20;
+  constexpr int row_height = 40;
 
   auto entries = state_.message_manager().get_cv_entries_for(player->id());
-  int start = page * events_per_page;
-  int end = std::min(start + events_per_page, static_cast<int>(entries.size()));
+  int start = page * cv_events_per_page;
+  int end =
+      std::min(start + cv_events_per_page, static_cast<int>(entries.size()));
 
   for (int i = start; i < end; ++i) {
     const auto& entry = entries[i];
     font->render_line_onto(cv, entry.date.cv_date_string(), {date_x, y},
                            FontFace::PIZ_NUMB, text_color);
-    font->render_line_onto(
+    font->render_text_onto(
         cv, state_.message_manager().get_cv_text(entry.message_id), {text_x, y},
         FontFace::PIZ_NUMB, text_color);
     y += row_height;
   }
 
-  int total_pages = static_cast<int>((entries.size() + events_per_page - 1) /
-                                     events_per_page);
+  int total_pages = static_cast<int>((entries.size() + cv_events_per_page - 1) /
+                                     cv_events_per_page);
   total_pages = std::max(total_pages, 1);
   font->render_line_onto(
-      cv, compat::format("Page {} of {}", page + 1, total_pages), {192, 330},
+      cv, compat::format(" - {}/{} -", page + 1, total_pages), {192, 330},
       FontFace::PIZ_NUMB, text_color, AlignX::CenterPoint);
 
   return cv;

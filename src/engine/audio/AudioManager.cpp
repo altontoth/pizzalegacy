@@ -129,8 +129,6 @@ void AudioManager::load_m_container(const std::string& m_file_path) {
       }
 
       music_data_[next_music_slot_] = std::move(asset.data);
-      Logger::debug("Loaded music slot {} from {}", next_music_slot_,
-                    m_file_path);
       next_music_slot_++;
 #endif
     }
@@ -155,13 +153,8 @@ void AudioManager::load_m_container(const std::string& m_file_path) {
         if (sound.samples.size() > skip_samples) {
           sound.start_offset = skip_samples;
           sound.playback_position = skip_samples;
-          Logger::debug("Set start_offset={} for CHOPPER sound", skip_samples);
         }
       }
-
-      Logger::debug("Loaded sound slot {} from {} ({} samples)",
-                    next_sound_slot_, m_file_path,
-                    sounds_.back()->samples.size());
       next_sound_slot_++;
     }
   }
@@ -234,7 +227,6 @@ void AudioManager::play_music(MusicId id, bool loop) {
     music_state_ = MusicState::STOPPED;
   }
   else {
-    Logger::debug("Playing music slot {} (loop={})", slot, loop);
     music_loop_ = loop;
     music_state_ = MusicState::PLAYING;
   }

@@ -4,6 +4,14 @@ Pizza Legacy v@PROJECT_VERSION@ - Linux Release
 Pizza Legacy is an open-source reimplementation of the 1994 DOS game
 Pizza Connection/Pizza Tycoon.
 
+RUNNING
+------------
+
+Make the AppImage executable and run it:
+
+    chmod +x PizzaLegacy_v@PROJECT_VERSION@_linux-x86_64.AppImage
+    ./PizzaLegacy_v@PROJECT_VERSION@_linux-x86_64.AppImage
+
 
 REQUIREMENTS
 ------------

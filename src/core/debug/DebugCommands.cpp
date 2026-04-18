@@ -37,6 +37,7 @@ void register_debug_commands(DebugConsole& console, GameState& state,
   registry.register_command(debug::commands::make_police_commands());
   registry.register_command(debug::commands::make_mayor_commands());
   registry.register_command(debug::commands::make_staff_commands());
+  registry.register_command(debug::commands::make_armsdealer_commands());
 
   // Register top-level convenience commands
   registry.register_command(debug::commands::make_dump_command());

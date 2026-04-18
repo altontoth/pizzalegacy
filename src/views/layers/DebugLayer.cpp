@@ -5,6 +5,7 @@
  */
 
 #include "views/layers/DebugLayer.h"
+#include <algorithm>
 #include "engine/input/InputManager.h"
 #include "gfx/Draw.h"
 #include "resources/FontManager.h"
@@ -22,9 +23,11 @@ void DebugLayer::render(const RenderContext& ctx) {
   ctx.surface->palette({0});
   ctx.surface->fill(0);
   auto items = context_.interaction->items();
-  int i = 0;
   const auto& hot = context_.interaction->hot_item_name();
-  for (const auto& item : items) {
+  const int end =
+      std::min(item_offset_ + PAGE_SIZE, static_cast<int>(items.size()));
+  for (int i = item_offset_; i < end; ++i) {
+    const auto& item = items[static_cast<std::size_t>(i)];
     int color = 71;
     if (item.name == hot) {
       color = 55;
@@ -36,21 +39,37 @@ void DebugLayer::render(const RenderContext& ctx) {
     context_.font->render_text_onto(*ctx.surface, item.name,
                                     int_pos + PxOffset{0, 8}, FontFace::MINI,
                                     color);
-    i++;
   }
 }
 
 void DebugLayer::tick() {}
 
 bool DebugLayer::on_text(const input::TextEvent& ev) { return false; }
+
 bool DebugLayer::on_action(const input::ActionEvent& ev) {
-  if (ev.action == input::Action::ToggleDebug && ev.state.pressed) {
+  if (!ev.state.pressed) {
+    return false;
+  }
+  if (ev.action == input::Action::ToggleDebug) {
     if (is_active()) {
       hide();
     }
     else {
       show();
+      item_offset_ = 0;
     }
+    return true;
+  }
+  if (!is_active()) {
+    return false;
+  }
+  if (ev.action == input::Action::PageDown) {
+    const int total = static_cast<int>(context_.interaction->items().size());
+    item_offset_ = std::min(item_offset_ + PAGE_SIZE, std::max(0, total - 1));
+    return true;
+  }
+  if (ev.action == input::Action::PageUp) {
+    item_offset_ = std::max(0, item_offset_ - PAGE_SIZE);
     return true;
   }
   return false;

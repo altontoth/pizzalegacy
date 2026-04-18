@@ -12,9 +12,11 @@
 #include "core/character/Player.h"
 #include "core/character/SocialStatus.h"
 #include "core/city/City.h"
+#include "core/item/Item.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/state/GameState.h"
 #include "core/state/UIState.h"
+#include "core/util/Constants.h"
 #include "engine/FormatCompat.h"
 
 using namespace debug::command;
@@ -572,6 +574,53 @@ CommandDef make_police_commands() {
       .add_subcommand(make_police_arrest())
       .add_subcommand(make_police_visit())
       .add_subcommand(make_police_status());
+}
+
+CommandDef make_armsdealer_commands() {
+  return CommandDef{
+      .name = "armsdealer",
+      .description = "Arms dealer commands",
+      .help_text = "Inspect weapon market prices across all cities",
+      .category = "actor",
+  }
+      .add_subcommand(CommandDef{
+          .name = "market",
+          .description = "Print weapon buy/sell prices for every city",
+          .help_text = R"(Usage: armsdealer market
+
+Prints the purchase and sell price of every weapon for all 10 cities.
+Cities that have not yet been visited are initialized on the fly.
+
+Example:
+  armsdealer market
+)",
+          .handler = [](const CommandContext& ctx) -> CommandResult {
+            auto result = CommandResult::success();
+            for (int i = 0; i < NUMBER_OF_CITIES; ++i) {
+              core::CityId city_id{i};
+              ctx.state.ensure_city_loaded(city_id);
+              City* city = ctx.state.city(city_id);
+              if (!city) {
+                continue;
+              }
+              result.add_message(
+                  compat::format("--- {} (city {}) ---", city->name(), i));
+              auto& market = city->weapon_market();
+              for (core::item::Item item : core::item::weapon_list) {
+                // Only print weapons
+                if (static_cast<int>(item) <
+                    static_cast<int>(core::item::Item::FlameThrower)) {
+                  continue;
+                }
+                result.add_message(compat::format(
+                    "  {:16} buy={:w}  sell={:w}", core::item::to_string(item),
+                    market.purchase_price(item), market.sell_price(item)));
+              }
+            }
+            return result;
+          },
+          .category = "actor",
+      });
 }
 
 } // namespace debug::commands

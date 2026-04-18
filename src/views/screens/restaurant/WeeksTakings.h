@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <functional>
 #include "core/common/Ids.h"
 #include "core/restaurant/Restaurant.h"
 #include "views/base/MainPanelView.h"
@@ -15,7 +16,8 @@ class Restaurant;
 class WeeksTakings : public MainPanelView {
 public:
   WeeksTakings(GameContext& context, GameState& state,
-               core::RestaurantId restaurant_id, bool end_of_week_mode);
+               core::RestaurantId restaurant_id, bool end_of_week_mode,
+               std::function<void()> on_done = {});
   void tick() override;
   void render(const RenderContext& ctx) override;
 
@@ -44,4 +46,5 @@ private:
   Restaurant* restaurant_{nullptr};
   int current_page_{0};
   bool end_of_week_mode_{false};
+  std::function<void()> on_done_;
 };

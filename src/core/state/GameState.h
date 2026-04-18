@@ -113,10 +113,14 @@ public:
   void deduct_staff_wages_for_restaurant(core::RestaurantId restaurant_id);
 
   // Show the staff invoice popup for a restaurant (creates via PopupManager)
-  void show_staff_invoice_popup(core::RestaurantId restaurant_id);
+  void show_staff_invoice_popup(core::RestaurantId restaurant_id,
+                                std::function<void()> after);
 
   // Show the monthly costs invoice popup (loans + rent) via PopupManager
   void show_monthly_invoice_popup(core::PlayerId player);
+
+  // Show weekly city profit invoice for all non-active cities (Saturday only)
+  void show_weekly_city_invoice_popup(core::PlayerId player_id);
 
   int global_interest_rate() const { return global_interest_rate_; }
   void global_interest_rate(int rate) { global_interest_rate_ = rate; }
@@ -127,7 +131,8 @@ public:
   std::optional<int> last_clicked_property_index() const;
   City* active_city() const;
   City* city(core::CityId city_id) const;
-  std::vector<City*> visited_cities() const; // Returns all non-null cities
+  std::vector<City*> initialized_cities() const;
+  std::vector<City*> visited_cities(const Player& player) const;
   bool is_city_loaded(core::CityId city_id) const;
   std::optional<core::DistrictId> active_district_id() const;
   void active_city(core::CityId city_id);

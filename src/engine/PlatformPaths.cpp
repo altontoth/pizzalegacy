@@ -13,7 +13,7 @@ namespace platform_paths {
 
 namespace {
 std::string base_dir_;
-} // namespace
+} // anonymous namespace
 
 void init() {
   char* pref = SDL_GetPrefPath("nl.pizzalegacy", "Pizza Legacy");
@@ -36,6 +36,6 @@ std::string saves_dir() { return base_dir_ + "saves/"; }
 
 std::string screenshots_dir() { return base_dir_ + "screenshots/"; }
 
-std::string pizzas_dir() { return base_dir_ + "pizzas/"; }
+std::string recipes_dir() { return base_dir_ + "recipes/"; }
 
 } // namespace platform_paths

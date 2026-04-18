@@ -400,6 +400,8 @@ json restaurant_to_json(const Restaurant& restaurant) {
   j["inspection_days_remaining"] = restaurant.inspection_days_remaining();
   j["first_inspection_pending"] = restaurant.first_inspection_pending();
 
+  j["last_weekly_profit"] = restaurant.last_weekly_profit().cents;
+
   return j;
 }
 
@@ -630,6 +632,11 @@ std::unique_ptr<Restaurant> json_to_restaurant(const json& j,
   if (j.contains("first_inspection_pending")) {
     restaurant->first_inspection_pending(
         j["first_inspection_pending"].get<bool>());
+  }
+
+  if (j.contains("last_weekly_profit")) {
+    restaurant->last_weekly_profit(
+        Money{j["last_weekly_profit"].get<int64_t>()});
   }
 
   return restaurant;

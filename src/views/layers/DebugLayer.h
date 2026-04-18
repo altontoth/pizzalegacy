@@ -25,6 +25,8 @@ public:
   bool on_action(const input::ActionEvent& ev) override;
 
 private:
+  static constexpr int PAGE_SIZE = 20;
   std::optional<std::string> hit_item_id_;
+  int item_offset_ = 0;
   input::ListenerToken listener_;
 };

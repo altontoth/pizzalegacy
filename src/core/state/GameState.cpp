@@ -151,7 +151,8 @@ void GameState::deduct_staff_wages_for_restaurant(
   spend_cash(Account::Staff, total_wages, restaurant_id);
 }
 
-void GameState::show_staff_invoice_popup(core::RestaurantId restaurant_id) {
+void GameState::show_staff_invoice_popup(core::RestaurantId restaurant_id,
+                                         std::function<void()> after) {
   auto* rest = restaurant(restaurant_id);
   if (!rest || !context_) {
     return;
@@ -159,8 +160,11 @@ void GameState::show_staff_invoice_popup(core::RestaurantId restaurant_id) {
 
   views::ui::finance::InvoiceConfig cfg;
   cfg.subtitle = "for " + rest->name();
-  cfg.on_dismiss = [this, restaurant_id] {
+  cfg.on_dismiss = [this, restaurant_id, after = std::move(after)] {
     deduct_staff_wages_for_restaurant(restaurant_id);
+    if (after) {
+      after();
+    }
   };
   const auto empty_line =
       views::ui::finance::InvoiceLine{.label = "", .value = std::nullopt};
@@ -272,16 +276,101 @@ void GameState::show_monthly_invoice_popup(core::PlayerId player_id) {
   context_->popup->create<InvoicePopup>(std::move(cfg));
 }
 
+void GameState::show_weekly_city_invoice_popup(core::PlayerId player_id) {
+  auto* player = this->player(player_id);
+  if (!player || !context_) {
+    return;
+  }
+
+  struct CityEntry {
+    std::string name;
+    Money profit;
+    core::CityId id;
+    bool is_active;
+  };
+
+  auto restaurants = restaurants_for(player_id);
+  std::vector<CityEntry> entries;
+  for (auto* c : visited_cities(*player)) {
+    core::CityId city_id = c->id();
+    bool is_active = (city_id == active_city_);
+
+    Money city_profit;
+    if (!is_active) {
+      for (auto* rest : restaurants) {
+        if (rest && rest->property().city().id() == city_id) {
+          city_profit = city_profit + rest->last_weekly_profit();
+        }
+      }
+    }
+
+    entries.push_back({c->name(), city_profit, city_id, is_active});
+  }
+
+  views::ui::finance::InvoiceConfig cfg;
+  cfg.subtitle = "for " + player->name();
+  const auto empty_line =
+      views::ui::finance::InvoiceLine{.label = "", .value = std::nullopt};
+
+  cfg.lines.push_back({"week's profit", std::nullopt});
+  cfg.lines.push_back(empty_line);
+
+  Money grand_total;
+  for (const auto& entry : entries) {
+    cfg.lines.push_back({entry.name, entry.profit});
+    if (!entry.is_active) {
+      grand_total = grand_total + entry.profit;
+    }
+  }
+  cfg.lines.push_back(empty_line);
+  cfg.lines.push_back({"", grand_total});
+
+  cfg.on_dismiss = [this, player, entries = entries]() {
+    const auto& date = time_.current_date();
+    for (const auto& entry : entries) {
+      if (entry.is_active || entry.profit.cents == 0) {
+        continue;
+      }
+      if (entry.profit.cents > 0) {
+        player->financials().transfer(date, Account::Sales, Account::Cash,
+                                      entry.profit,
+                                      AccountingScope::Operational);
+      }
+      else {
+        player->financials().transfer(date, Account::Cash, Account::Sales,
+                                      -entry.profit,
+                                      AccountingScope::Operational);
+      }
+    }
+    if (status_display_) {
+      status_display_->mark_dirty();
+    }
+  };
+
+  context_->popup->origin({74, 40});
+  context_->popup->create<InvoicePopup>(std::move(cfg));
+}
+
 City* GameState::city(core::CityId city_id) const {
   assert(city_id.value >= 0 && city_id.value < NUMBER_OF_CITIES);
   return cities_[city_id.value].get();
 }
 
-std::vector<City*> GameState::visited_cities() const {
+std::vector<City*> GameState::initialized_cities() const {
   std::vector<City*> result;
   for (const auto& city_ptr : cities_) {
     if (city_ptr) {
       result.push_back(city_ptr.get());
+    }
+  }
+  return result;
+}
+
+std::vector<City*> GameState::visited_cities(const Player& player) const {
+  std::vector<City*> result;
+  for (const auto& city_id : player.visited_city_ids()) {
+    if (auto* c = city(city_id)) {
+      result.push_back(c);
     }
   }
   return result;
@@ -305,6 +394,7 @@ void GameState::active_city(core::CityId city_id) {
   if (cities_[city_id.value] == nullptr) {
     cities_[city_id.value] = CityFactory::create_city(city_id);
   }
+  city_view_view_state_[active_player_.value].city_id = city_id;
 }
 
 void GameState::ensure_city_loaded(core::CityId city_id) {
@@ -589,6 +679,10 @@ void GameState::process_next_restaurant() {
     }
 
     auto* restaurant = state.restaurants[state.current_index];
+    if (restaurant->property().city().id() != active_city()->id()) {
+      state.current_index++;
+      continue;
+    }
 
     restaurant->end_of_day(*this);
     restaurant->property().calculate_demographics(restaurant);
@@ -1149,6 +1243,14 @@ void GameState::finish_end_of_turn() {
   auto previous_player_id = active_player_;
   next_player();
 
+  // Switch to the next player's city (if false it's a computer player)
+  if (auto next_city = city_view_view_state_[active_player_.value].city_id) {
+    if (*next_city != active_city_) {
+      active_city_ = *next_city;
+      ui().push<CityViewState>(*next_city);
+    }
+  }
+
   // If we wrapped around to player 0, all players have finished their turns.
   // Run end-of-day and weekly/monthly checks on the current (ending) date
   // before advancing to the next day.
@@ -1171,25 +1273,35 @@ void GameState::finish_end_of_turn() {
   // Weekly/monthly reports pushed on top, shown before PlayerTurnCard.
   // Checks run on the current (ending) date, which is still set here.
   if (state.is_human) {
-    // Weekly reports on Saturday (pushed after monthly, shown before monthly)
+    // Weekly reports on Saturday
     if (time_.current_date().is_end_of_week()) {
-      // Show for ALL restaurants (not just open ones) - staff gets paid
-      // regardless Open restaurants: WeeksTakings shown first, creates invoice
-      // popup on dismiss Closed restaurants: invoice popup shown directly
+      // WeeksTakings -> staff invoice -> profit invoice.
+      // profit_cb is moved out on the first iteration; subsequent iterations
+      // get an empty function automatically.
+      std::function<void()> profit_cb = [this, previous_player_id] {
+        show_weekly_city_invoice_popup(previous_player_id);
+      };
+
       for (auto it = state.restaurants.rbegin(); it != state.restaurants.rend();
            ++it) {
-        if (!*it) {
+        if (!*it || (*it)->property().city().id() != active_city()->id()) {
           continue;
         }
 
+        std::function<void()> cb = std::move(profit_cb);
+
         if ((*it)->wants_open() && !(*it)->is_force_closed()) {
-          // WeeksTakings will create the invoice popup when dismissed
-          ui().push<WeeksTakingsState>((*it)->id(), true);
+          ui().push<WeeksTakingsState>(
+              WeeksTakingsState{(*it)->id(), true, std::move(cb)});
         }
         else {
-          // No WeeksTakings for closed restaurants, show invoice directly
-          show_staff_invoice_popup((*it)->id());
+          show_staff_invoice_popup((*it)->id(), std::move(cb));
         }
+      }
+
+      // Fallback: no restaurants at all, show profit invoice directly.
+      if (profit_cb) {
+        profit_cb();
       }
     }
     // Monthly costs invoice on last day of month (loan repayment + rent)
@@ -1251,8 +1363,25 @@ void GameState::end_of_day() {
     }
   }
 
-  // End of week processing on Saturday (tbd if that's right, probably not)
-  // The original uses day_of_week == 6 which is Saturday
+  // Snapshot the rolling 7-day profit for every active-city restaurant every
+  // day. Restaurants in other cities are frozen, so their snapshot
+  // stays at whatever it was when the player last visited.
+  for (auto& player : players_) {
+    if (!player) {
+      continue;
+    }
+    for (auto* rest : restaurants_for(player->id())) {
+      if (!rest || rest->property().city().id() != active_city_) {
+        continue;
+      }
+      Money weekly_total;
+      for (const auto& day : rest->stats().current_week(time_.current_date())) {
+        weekly_total = weekly_total + day.net_profit;
+      }
+      rest->last_weekly_profit(weekly_total);
+    }
+  }
+
   if (time_.current_date().is_end_of_week()) {
     for (auto& city : cities_) {
       if (city) {
@@ -1330,7 +1459,7 @@ void GameState::check_market_share_milestones(const City& city) {
     }
     float pct = pcts[p];
     // Original game bug: checks 5% but displays "10% market share" message
-    int first_threshold = options().fix_legacy_bugs ? 10 : 5;
+    float first_threshold = options().fix_legacy_bugs ? 10.0f : 5.0f;
     if (pct >= 50) {
       message_manager_.schedule_message(
           LeventId::Achieved50PctMarketShareInCity, pid, time_.current_date());
@@ -1393,6 +1522,9 @@ void GameState::check_restaurant_milestones(const Player& player) {
 }
 
 void GameState::on_city_entered(core::CityId city_id, const Player& player) {
+  if (auto* p = this->player(player.id())) {
+    p->mark_city_visited(city_id);
+  }
   using core::events::LeventId;
   auto arrival = static_cast<LeventId>(
       static_cast<int>(LeventId::ArrivalInParis) + city_id.value);
@@ -1474,7 +1606,8 @@ void GameState::check_mafia_events() {
   if (player->social_status().underworld_score < 500) {
     auto restaurants = restaurants_for(player->id());
     for (auto* restaurant : restaurants) {
-      if (!restaurant->wants_open()) {
+      if (!restaurant->wants_open() ||
+          restaurant->property().city().id() != active_city()->id()) {
         continue;
       }
       auto timer = restaurant->protection_timer();
@@ -1579,6 +1712,14 @@ void GameState::finalize_initialization(GameContext& context) {
       // AI players always start with a restaurant (Free or QuickStart),
       // gated by up to 8 courage% attempts matching the original algorithm.
       create_ai_starting_restaurant(*players_[i], *active_city());
+    }
+  }
+
+  // All players start in the same city.
+  for (int i = 0; i < NUMBER_OF_PLAYERS; ++i) {
+    city_view_view_state_[i].city_id = cfg.city_id;
+    if (players_[i]) {
+      players_[i]->mark_city_visited(cfg.city_id);
     }
   }
 

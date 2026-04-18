@@ -12,12 +12,12 @@ using core::item::item_count; // compile-time constant
 
 namespace {
 
-// Pre-compute the “factor” table once at load time
+// Pre-compute the factor table once at load time
 constexpr std::array<int, item_count> base_factor = [] {
   std::array<int, item_count> f{};
   for (std::size_t i = 0; i < item_count; ++i) {
-    f[i] = (i < 4) ? (i + 1) * 0x190  // “joke articles”
-                   : (i - 3) * 0x708; // “weapons”
+    f[i] = (i < 4) ? (static_cast<int>(i) + 1) * 400   // joke articles
+                   : (static_cast<int>(i) - 3) * 1800; // weapons
   }
   return f;
 }();
@@ -44,15 +44,15 @@ Money WeaponMarket::sell_price(Item id) const noexcept {
   // 0 to 9:
   int rnd = engine::random::watcom_rand15() % 10;
   // 90 to 99% of buy price:
-  return Money{buy * (90 + rnd) / 100}; // 90–99 % of buy price
+  return Money{buy * (90 + rnd) / 100}; // 90-99 % of buy price
 }
 
-// initialize this city’s slots at game start
+// initialize this city's slots at game start
 void WeaponMarket::init() {
   for (auto& s : slots_) {
     s.trend = engine::random::rand_percentage_chance(50)
                   ? PriceSlot::PriceTrend::UPWARDS
                   : PriceSlot::PriceTrend::DOWNWARDS;
-    s.value = (engine::random::watcom_rand15() % 0x50) + 0x28;
+    s.value = (engine::random::watcom_rand15() % 80) + 40;
   }
 }

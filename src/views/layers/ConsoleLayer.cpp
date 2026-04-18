@@ -9,6 +9,7 @@
 #include <algorithm>
 #include "engine/DisplayConstants.h"
 #include "engine/input/InputManager.h"
+#include "engine/ui/InteractionEvent.h"
 #include "gfx/Draw.h"
 #include "resources/FontManager.h"
 #include "views/base/ViewDefs.h"
@@ -169,6 +170,7 @@ bool ConsoleLayer::on_action(const input::ActionEvent& ev) {
       show();
       text_session_.emplace(context_.input->start_text_input(*this));
     }
+    scroll_ = 0;
     mark_dirty();
     return true;
 
@@ -287,4 +289,18 @@ bool ConsoleLayer::has_older_content() const {
 
 bool ConsoleLayer::blocks() const { return is_active(); }
 
-void ConsoleLayer::tick() {}
+void ConsoleLayer::tick() {
+  if (!is_active()) {
+    return;
+  }
+  interactions_.begin_frame();
+  ViewRect console_rect{0, 0, DisplayConstants::SCREEN_WIDTH, console_height_};
+  interactions_.create_frame_item(
+      console_rect, "console_scroll", [this](views::ui::InteractionEvent ie) {
+        if (ie.type != views::ui::InteractionEvent::Type::Scroll) {
+          return;
+        }
+        scroll_line(-ie.scroll_delta);
+        mark_dirty();
+      });
+}

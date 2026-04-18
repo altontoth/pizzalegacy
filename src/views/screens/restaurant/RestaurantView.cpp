@@ -84,9 +84,10 @@ RestaurantView::RestaurantView(GameContext& context, GameState& state,
         break;
       }
     }
-    if (!kitchen_view_) {
+    if (!kitchen_view_ && restaurant_->wants_open()) {
       restaurant_->wants_open(false);
       restaurant_->add_reputation_damage(-16, 16);
+      closed_for_placement_ = true;
       post_waiting_customers_msg = true;
     }
   }
@@ -1876,7 +1877,7 @@ void RestaurantView::check_placement_complete_and_navigate_back() {
     state_.ui().replace_top<RestaurantViewState>(RestaurantViewState{
         .id = restaurant_->id(),
         .mode = RestaurantViewMode::PLAYER_DEFAULT,
-        .reopen_restaurant = true,
+        .reopen_restaurant = closed_for_placement_,
     });
     state_.ui().push<CategoryOverviewState>(
         CategoryOverviewState{.type = *return_to_supplier_type_});

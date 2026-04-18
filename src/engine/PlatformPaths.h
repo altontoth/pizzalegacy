@@ -18,6 +18,6 @@ const std::string& base_dir();
 std::string config_file_path();
 std::string saves_dir();
 std::string screenshots_dir();
-std::string pizzas_dir();
+std::string recipes_dir();
 
 } // namespace platform_paths

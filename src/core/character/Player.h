@@ -7,6 +7,7 @@
 #pragma once
 
 #include <map>
+#include <unordered_set>
 #include <vector>
 #include "core/character/AiMenuSlot.h"
 #include "core/character/Awards.h"
@@ -120,6 +121,13 @@ public:
     weapon_dealing_profit_ += amount;
   }
 
+  void mark_city_visited(core::CityId city_id) {
+    visited_city_ids_.insert(city_id);
+  }
+  const std::unordered_set<core::CityId>& visited_city_ids() const {
+    return visited_city_ids_;
+  }
+
   struct MonthlyLoanCosts {
     Money repayment;
     Money interest;
@@ -165,4 +173,5 @@ private:
   MafiaPlayerState mafia_state_;
   SocialStatus social_status_;
   Money weapon_dealing_profit_{0};
+  std::unordered_set<core::CityId> visited_city_ids_;
 };

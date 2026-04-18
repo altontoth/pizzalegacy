@@ -409,6 +409,8 @@ public:
 
   int service_time_minutes() const { return service_time_minutes_; }
   int fulfillment_rate() const { return fulfillment_rate_; }
+  Money last_weekly_profit() const { return last_weekly_profit_; }
+  void last_weekly_profit(Money m) { last_weekly_profit_ = m; }
   ManagerSettings& manager_settings() { return manager_settings_; };
   const ManagerSettings& manager_settings() const { return manager_settings_; };
 
@@ -501,4 +503,6 @@ private:
   int ai_tier_{0};
   int ai_capacity_target_{0};
   int ai_profit_days_{0};
+
+  Money last_weekly_profit_;
 };

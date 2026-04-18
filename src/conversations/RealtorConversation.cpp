@@ -39,7 +39,6 @@ RealtorConversation::RealtorConversation(
 
 /* This advances only the lines that don't require user choices */
 bool RealtorConversation::advance() {
-  std::cout << "advance: " << magic_enum::enum_name(current_line_) << "\n";
   switch (current_line_) {
   case RealtorLine::REALTORS_MAY_I_HELP_YOU:
   case RealtorLine::SORRY_NOT_FOR_SALE:
@@ -77,8 +76,6 @@ bool RealtorConversation::advance() {
 }
 
 bool RealtorConversation::advance_line_choice(RealtorLine choice) {
-  std::cout << "advance_line_choice: " << magic_enum::enum_name(current_line_)
-            << " => " << magic_enum::enum_name(choice) << "\n";
   auto* property = active_property();
   auto* player = state_.active_player();
   bool owned_by_player =
@@ -246,8 +243,6 @@ bool RealtorConversation::advance_line_choice(RealtorLine choice) {
 }
 
 bool RealtorConversation::advance_proposal(bool agree) {
-  std::cout << "advance_proposal: " << magic_enum::enum_name(current_line_)
-            << ": " << (agree ? 1 : 0) << "\n";
   switch (current_line_) {
   case RealtorLine::YOU_WANT_TO_RENT_THESE_ROOMS_MONTHLY_RENT_IS:
     if (agree) {
@@ -395,7 +390,6 @@ Emotion RealtorConversation::emotion() const {
 
 std::vector<ConversationLine<RealtorLine>> RealtorConversation::lines() const {
   const auto property = active_property();
-  // std::cout << "lines: " << magic_enum::enum_name(current_line_) << "\n";
   switch (current_line_) {
   case RealtorLine::REALTORS_MAY_I_HELP_YOU: {
     std::string custom_line =

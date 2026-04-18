@@ -153,6 +153,10 @@ private:
     case Action::CancelInput:
     case Action::Backspace:
     case Action::EraseLine:
+    case Action::PageUp:
+    case Action::PageDown:
+    case Action::MoveUp:
+    case Action::MoveDown:
       return TextRoute::ToSinkExlusive;
     default:
       return TextRoute::Block;

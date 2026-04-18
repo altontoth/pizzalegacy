@@ -137,7 +137,8 @@ private:
   void update_restaurant_noise();
 
   const Surface& k0_;
-  bool kitchen_view_ = 0;
+  bool kitchen_view_ = false;
+  bool closed_for_placement_ = false;
   int background_width_ = 0;
   int background_height_ = 0;
   int furniture_offset_x_ = 0; // for kitchen

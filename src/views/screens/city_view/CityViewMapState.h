@@ -6,12 +6,15 @@
 
 #pragma once
 
+#include <optional>
+#include "core/common/Ids.h"
 #include "core/util/Constants.h"
 #include "engine/geom/Spaces.h"
 #include "views/screens/city_view/CityViewCommon.h"
 #include "views/screens/city_view/ZoomConfig.h"
 
 struct CityViewMapState {
+  std::optional<core::CityId> city_id;
   WorldPoint scroll = WorldPoint{-1, -1};
   ZoomLevel zoom = ZoomLevel::FAR;
   CityViewTabType active_tab = CityViewTabType::MAP;

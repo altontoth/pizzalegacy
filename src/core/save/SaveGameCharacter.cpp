@@ -126,6 +126,12 @@ json player_to_json(const Player& player) {
   }
   j["investments"] = inv_array;
 
+  json visited_cities_array = json::array();
+  for (const auto& city_id : player.visited_city_ids()) {
+    visited_cities_array.push_back(city_id.value);
+  }
+  j["visited_city_ids"] = visited_cities_array;
+
   j["inventory"] = inventory_to_json(player.inventory());
 
   j["social_score"] = player.social_status().social_score;
@@ -227,6 +233,12 @@ json_to_player(const json& j, GameContext& context,
   }
   if (j.contains("mafia_state")) {
     player->mafia_state() = json_to_mafia_state(j["mafia_state"]);
+  }
+
+  if (j.contains("visited_city_ids")) {
+    for (const auto& val : j["visited_city_ids"]) {
+      player->mark_city_visited(core::CityId{val.get<int>()});
+    }
   }
 
   return player;

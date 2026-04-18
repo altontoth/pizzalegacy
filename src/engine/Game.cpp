@@ -849,7 +849,7 @@ Renderable* Game::change_state(GameState& gs, LoopState& /*loop*/) {
           },
           [&](const WeeksTakingsState& wts) {
             current_view_ = std::make_unique<WeeksTakings>(
-                context, gs, wts.id, wts.end_of_week_mode);
+                context, gs, wts.id, wts.end_of_week_mode, wts.on_done);
           },
           [&](const StatsRestaurantsState& srs) {
             current_view_ =

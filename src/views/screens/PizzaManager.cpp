@@ -34,6 +34,7 @@
 #include "views/ui/popups/TextInputPopup.h"
 #include "views/ui/widgets/StatBar.h"
 
+#include <algorithm>
 #include <cassert>
 #include <memory>
 #include <optional>
@@ -279,7 +280,7 @@ bool PizzaManager::on_action(const input::ActionEvent& ev) {
     else {
       // Normal: Add to recipe list from game/ directory
       context_.popup->create<NumberInputPopup>(
-          "Load user recipe (game/)?", "", 0, 0, 99, 1,
+          "Load which recipe?", "", 0, 0, 99, 1,
           [this](int number) { load_user_recipe(number); });
     }
     return true;
@@ -312,14 +313,14 @@ bool PizzaManager::on_action(const input::ActionEvent& ev) {
     auto bob_size_fn =
         make_ingredient_bob_size_fn<Bob, core::food::Topping>(zutaten_bob_);
     context_.popup->create<NumberInputPopup>(
-        "Save recipe as?", "", 0, 0, 99, 1, [this, bob_size_fn](int number) {
+        "Save recipe as...", "", 0, 0, 99, 1, [this, bob_size_fn](int number) {
           const auto& self = *this; // non-const function, but self is const-ref
           const core::food::Pizza* pizza = self.current_pizza();
           if (!pizza) {
             Logger::warn("No current pizza!");
             return;
           }
-          std::filesystem::path path(platform_paths::pizzas_dir() + "r" +
+          std::filesystem::path path(platform_paths::recipes_dir() + "r" +
                                      std::to_string(number) +
                                      (platform::is_amiga() ? "" : ".pc"));
           std::filesystem::create_directories(path.parent_path());
@@ -1430,7 +1431,7 @@ const Pizza* PizzaManager::current_pizza() const {
 }
 
 void PizzaManager::load_user_recipe(int number) {
-  std::string filename = platform_paths::pizzas_dir() + "r" +
+  std::string filename = platform_paths::recipes_dir() + "r" +
                          std::to_string(number) +
                          (platform::is_amiga() ? "" : ".pc");
 
@@ -1465,8 +1466,18 @@ void PizzaManager::load_user_recipe(int number) {
   auto* player = state_.active_player();
   auto& recipes = player->recipes();
 
+  const std::string& new_name = pizza->name();
+  bool already_exists = std::any_of(recipes.user.begin(), recipes.user.end(),
+                                    [&](const core::food::Recipe& r) {
+                                      return r.display_name() == new_name;
+                                    });
+  if (already_exists) {
+    context_.popup->create<AlertPopup>("This recipe is already in your list!");
+    return;
+  }
+
   // Always treat loaded recipes as user recipes
-  auto id = recipes.create_user(pizza->name(), std::move(*pizza));
+  auto id = recipes.create_user(new_name, std::move(*pizza));
   Logger::info("Loaded user recipe from {} into user slot {}", filename,
                id.value);
 
@@ -1584,7 +1595,7 @@ void PizzaManager::load_recipe_for_debug(const std::string& filename) {
 }
 
 void PizzaManager::load_user_recipe_for_debug(int number) {
-  std::string filename = platform_paths::pizzas_dir() + "r" +
+  std::string filename = platform_paths::recipes_dir() + "r" +
                          std::to_string(number) +
                          (platform::is_amiga() ? "" : ".pc");
   load_recipe_for_debug(filename);

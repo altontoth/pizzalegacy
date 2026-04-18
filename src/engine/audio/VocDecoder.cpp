@@ -105,9 +105,6 @@ VocAudioData VocDecoder::decode(const std::vector<uint8_t>& voc_data,
       size_t audio_size = block_size - 2;
       raw_audio.insert(raw_audio.end(), voc_data.begin() + pos + 2,
                        voc_data.begin() + pos + 2 + audio_size);
-
-      Logger::debug("VOC sound block: rate={} Hz, samples={}", sample_rate,
-                    audio_size);
     }
 
     pos += block_size;
@@ -130,9 +127,6 @@ VocAudioData VocDecoder::decode(const std::vector<uint8_t>& voc_data,
   if (sample_rate != target_sample_rate) {
     result.samples =
         resample_linear(stereo_samples, sample_rate, target_sample_rate);
-    Logger::debug("Resampled VOC from {} Hz to {} Hz ({} -> {} samples)",
-                  sample_rate, target_sample_rate, stereo_samples.size() / 2,
-                  result.samples.size() / 2);
   }
   else {
     result.samples = std::move(stereo_samples);

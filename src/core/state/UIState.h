@@ -72,6 +72,7 @@ struct RestaurantStatsState {
 struct WeeksTakingsState {
   core::RestaurantId id;
   bool end_of_week_mode{false};
+  std::function<void()> on_done;
 };
 struct AnimatedStatsState {
   core::RestaurantId id;
