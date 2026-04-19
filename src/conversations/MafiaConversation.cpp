@@ -17,13 +17,12 @@
 #include "core/city/City.h"
 #include "core/city/District.h"
 #include "core/city/Property.h"
+#include "core/common/Ids.h"
 #include "core/item/Item.h"
-#include "core/restaurant/PlacedFurniture.h"
 #include "core/restaurant/Restaurant.h"
-#include "core/restaurant/RestaurantLayout.h"
+#include "core/util/Constants.h"
 #include "engine/Fatal.h"
 #include "engine/FormatCompat.h"
-#include "engine/Math.h"
 #include "engine/Random.h"
 #include "factories/FurnitureFactory.h"
 
@@ -266,22 +265,29 @@ bool MafiaConversation::advance_line_choice(MafiaLine choice) {
     tip_price_ = rand_between(2, 7) * 250;
     tip_opener_text_.clear();
     tip_result_text_.clear();
-    int tip_type = rand_max_n(3);
-    if (tip_type == 0) {
+    enum class MafiaTips {
+      SupportPhoneNumber,
+      WeaponsPrices,
+      ArmsDealerPhoneNumber,
+      Count,
+    };
+    auto tip_type =
+        static_cast<MafiaTips>(rand_max_n(static_cast<int>(MafiaTips::Count)));
+    switch (tip_type) {
+    case MafiaTips::SupportPhoneNumber: {
       int base = static_cast<int>(MafiaLine::I_KNOW_A_REALLY_HOT_PHONE_NUMBER);
       auto opener = static_cast<MafiaLine>(base + (rand_max_n(4) * 2));
       tip_reveal_ = static_cast<MafiaLine>(static_cast<int>(opener) + 1);
       current_line(opener);
+      break;
     }
-    else if (tip_type == 1) {
+    case MafiaTips::WeaponsPrices: {
       using core::item::Item;
       constexpr Item weapons[] = {Item::FlameThrower, Item::Chemicals,
                                   Item::Bazooka, Item::Bomb};
-      auto cities = state_.visited_cities(*state_.active_player());
-      if (cities.empty()) {
-        cities.push_back(state_.active_city());
-      }
-      auto* tip_city = cities[rand_max_n(static_cast<int>(cities.size()))];
+      auto tip_city_id = core::CityId{rand_max_n(NUMBER_OF_CITIES)};
+      state_.ensure_city_loaded(tip_city_id);
+      auto* tip_city = state_.city(tip_city_id);
       int w1 = rand_max_n(4);
       int w2 = (w1 + 1 + rand_max_n(3)) % 4;
       auto& market = tip_city->weapon_market();
@@ -294,8 +300,9 @@ bool MafiaConversation::advance_line_choice(MafiaLine choice) {
           core::item::to_string(weapons[w2]), price2.whole());
       tip_reveal_ = MafiaLine::WEAPONS_PRICES_ARE;
       current_line(MafiaLine::I_HAVE_LATEST_WEAPON_PRICES);
+      break;
     }
-    else {
+    case MafiaTips::ArmsDealerPhoneNumber: {
       // Arms dealer phone number tip
       auto* city = state_.active_city();
       auto dealers = city->all_arms_dealers();
@@ -311,10 +318,15 @@ bool MafiaConversation::advance_line_choice(MafiaLine choice) {
         // This should never happen
         current_line(MafiaLine::AT_THE_MOMENT_WE_DONT_HAVE_INFO_FOR_SALE);
       }
+      break;
+    }
+    case MafiaTips::Count: {
+      fatal("MafiaTips Count should never be picked as an option.");
+      break;
+    }
     }
     break;
   }
-
   default:
     std::cerr << "MafiaConversation::advance_line_choice() unhandled choice "
               << magic_enum::enum_name(choice) << "\n";
