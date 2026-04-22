@@ -42,7 +42,7 @@ Money WeaponMarket::sell_price(Item id) const noexcept {
   Money buy = purchase_price(id);
 
   // 0 to 9:
-  int rnd = engine::random::watcom_rand15() % 10;
+  int rnd = engine::random::ansi_rand15() % 10;
   // 90 to 99% of buy price:
   return Money{buy * (90 + rnd) / 100}; // 90-99 % of buy price
 }
@@ -53,6 +53,6 @@ void WeaponMarket::init() {
     s.trend = engine::random::rand_percentage_chance(50)
                   ? PriceSlot::PriceTrend::UPWARDS
                   : PriceSlot::PriceTrend::DOWNWARDS;
-    s.value = (engine::random::watcom_rand15() % 80) + 40;
+    s.value = (engine::random::ansi_rand15() % 80) + 40;
   }
 }

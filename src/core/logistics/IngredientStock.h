@@ -85,6 +85,10 @@ struct IngredientStock {
     // quantity is already in grams, just divide by daily usage
     return quantity / daily_usage_grams;
   }
+  void clear() {
+    quantity = 0;
+    weighted_avg_quality = 0;
+  }
 };
 
 } // namespace core::restaurant

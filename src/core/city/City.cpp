@@ -41,7 +41,7 @@ std::string City::name() const { return name_; }
 void City::init_supplier_stock_levels() {
   for (auto& supplier : suppliers_) {
     for (auto ing_type :
-         core::food::CategoryRegistry::range(supplier->type())) {
+         core::food::CategoryRegistry::range(supplier->category())) {
       if (supplier->price_level_for_ingredient(ing_type) != 0) {
         int random_stock =
             engine::random::rand_max_n(5000) + 8000; // 8000-13000 kg
@@ -57,12 +57,12 @@ void City::replenish_supplier_stock_levels() {
   auto todays_category =
       static_cast<IngredientCategory>(engine::random::rand_max_n(4));
   for (auto& supplier : suppliers_) {
-    if (supplier->type() != todays_category) {
+    if (supplier->category() != todays_category) {
       continue;
     }
     // If chosen we check if less than 10K and if so increasy by 4K to 12 K
     for (auto ing_type :
-         core::food::CategoryRegistry::range(supplier->type())) {
+         core::food::CategoryRegistry::range(supplier->category())) {
       if (supplier->price_level_for_ingredient(ing_type) == 0) {
         continue;
       }
@@ -300,7 +300,7 @@ const District& City::district(core::DistrictId district_id) const {
   return *districts_.at(district_id.value);
 }
 
-void City::end_of_day(bool is_active) {
+void City::end_of_day() {
   for (auto& district : districts_) {
     district->end_of_day();
   }
@@ -553,9 +553,15 @@ void City::reset_weekly_vendor_spending() {
   }
 }
 
-core::city::CentralDepot& City::central_depot(int player_id) {
-  assert(player_id >= 0 && player_id < NUMBER_OF_PLAYERS);
-  return central_depots_[player_id];
+core::city::CentralDepot& City::central_depot(core::PlayerId player_id) {
+  assert(player_id.value >= 0 && player_id.value < NUMBER_OF_PLAYERS);
+  return central_depots_[player_id.value];
+}
+
+const core::city::CentralDepot&
+City::central_depot(core::PlayerId player_id) const {
+  assert(player_id.value >= 0 && player_id.value < NUMBER_OF_PLAYERS);
+  return central_depots_[player_id.value];
 }
 
 // Arms dealer visibility tracking implementation

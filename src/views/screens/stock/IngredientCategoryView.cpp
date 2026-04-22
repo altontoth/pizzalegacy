@@ -81,7 +81,7 @@ void IngredientCategoryView::draw_page_screen(const RenderContext& ctx) {
 
 void IngredientCategoryView::draw_depot_overview(const RenderContext& ctx) {
   auto& depot =
-      state_.active_city()->central_depot(state_.active_player()->id().value);
+      state_.active_city()->central_depot(state_.active_player()->id());
   const auto& stocks = depot.all_stocks();
 
   // Calculate total kilograms and value
@@ -132,8 +132,8 @@ void IngredientCategoryView::draw_ingredient_list(const RenderContext& ctx) {
   // inventory
   core::city::CentralDepot* depot_ptr = nullptr;
   if (is_depot) {
-    depot_ptr = &state_.active_city()->central_depot(
-        state_.active_player()->id().value);
+    depot_ptr =
+        &state_.active_city()->central_depot(state_.active_player()->id());
   }
   const auto& inventory = restaurant->inventory();
 
@@ -421,7 +421,7 @@ void IngredientCategoryView::draw_priorities(const RenderContext& ctx) {
 
   // Sync priority list with current restaurants
   auto& depot =
-      state_.active_city()->central_depot(state_.active_player()->id().value);
+      state_.active_city()->central_depot(state_.active_player()->id());
   auto player_restaurants =
       state_.restaurants_for(state_.active_player()->id());
 
@@ -462,7 +462,7 @@ void IngredientCategoryView::draw_priorities(const RenderContext& ctx) {
           }
           else if (ie.type == views::ui::InteractionEvent::Type::Click) {
             auto& d = state_.active_city()->central_depot(
-                state_.active_player()->id().value);
+                state_.active_player()->id());
             d.promote_to_top(captured_id);
             pressed_priority_row_ = -1;
             mark_dirty();

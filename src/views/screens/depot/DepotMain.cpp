@@ -14,6 +14,8 @@
 #include "engine/geom/Spaces.h"
 #include "gfx/Blit.h"
 #include "resources/FontManager.h"
+#include "views/ui/PopupManager.h"
+#include "views/ui/popups/AlertPopup.h"
 
 using namespace views::screens::depot;
 
@@ -25,7 +27,16 @@ DepotMain::DepotMain(GameContext& context, GameState& state, DepotMainState dms)
       {.state = &state_, .rest = state_.active_restaurant(), .label = "STOCK"});
 }
 
-void DepotMain::tick() {}
+void DepotMain::tick() {
+  if (auto stolen_cat = state_.active_city()
+                            ->central_depot(state_.active_player()->id())
+                            .take_stock_stolen()) {
+    context_.popup->create<AlertPopup>(
+        compat::format("Your central depot has been broken into! Your entire "
+                       "stock of {} has been stolen!",
+                       to_string(*stolen_cat)));
+  }
+}
 
 void DepotMain::render(const RenderContext& ctx) {
   interactions_.begin_frame();
@@ -40,7 +51,7 @@ void DepotMain::render(const RenderContext& ctx) {
 
   // Calculate depot info from central depot
   auto& depot =
-      state_.active_city()->central_depot(state_.active_player()->id().value);
+      state_.active_city()->central_depot(state_.active_player()->id());
   const auto& stocks = depot.all_stocks();
 
   int total_kg = 0;

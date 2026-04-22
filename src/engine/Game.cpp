@@ -29,6 +29,7 @@
 #include "engine/FpsManager.h"
 #include "engine/Logger.h"
 #include "engine/PlatformPaths.h"
+#include "engine/Random.h"
 #include "engine/Renderer.h"
 #include "engine/SDL_include.h"
 #include "engine/Version.h"
@@ -529,8 +530,8 @@ bool Game::init(int display_height, ConfigManager& config_manager) {
   assert(display_height_ == DisplayConstants::LOGICAL_HEIGHT ||
          display_height_ == DisplayConstants::CRT_DISPLAY_HEIGHT);
 
-  // Initialize the random seed:
-  srand((int)time(nullptr));
+  // Seed the LCG from wall-clock time so each run differs.
+  engine::random::seed(static_cast<uint32_t>(time(nullptr)));
 
   // Set ConfigManager for VgaLoader and PaletteBank so they can determine
   // graphics format

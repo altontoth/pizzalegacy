@@ -6,10 +6,10 @@
 
 #include "core/save/SaveGameCity.h"
 
+#include "core/city/CentralDepot.h"
 #include "core/city/City.h"
 #include "core/city/MayorOffice.h"
 #include "core/city/Property.h"
-#include "core/food/Ingredient.h"
 #include "core/food/IngredientCategory.h"
 #include "core/newspaper/NewspaperEventSystem.h"
 #include "core/newspaper/NewspaperState.h"
@@ -388,6 +388,76 @@ void json_to_mayor_office(const json& j, MayorOffice& mo) {
   }
 }
 
+static json depot_to_json(const core::city::CentralDepot& depot) {
+  json j;
+  j["capacity"] = depot.capacity();
+
+  json stocks_array = json::array();
+  const auto& all = depot.all_stocks();
+  for (int i = 0; i < max_ingredient_count; ++i) {
+    const auto& stock = all[i];
+    if (stock.quantity > 0) {
+      json s;
+      s["i"] = i;
+      s["qty"] = stock.quantity;
+      s["quality"] = stock.weighted_avg_quality;
+      s["cost"] = stock.weighted_avg_cost.cents;
+      s["last_price"] = stock.last_price.cents;
+      stocks_array.push_back(s);
+    }
+  }
+  j["stocks"] = stocks_array;
+
+  json prio_array = json::array();
+  for (auto id : depot.delivery_priorities()) {
+    prio_array.push_back(id.value);
+  }
+  j["delivery_priorities"] = prio_array;
+
+  if (auto stolen = depot.stock_stolen()) {
+    j["stock_stolen"] = static_cast<int>(*stolen);
+  }
+  return j;
+}
+
+static void json_to_depot(const json& j, core::city::CentralDepot& depot) {
+  if (j.contains("capacity")) {
+    int saved = j["capacity"].get<int>();
+    int delta = saved - depot.capacity();
+    if (delta > 0) {
+      depot.add_capacity(delta);
+    }
+    else if (delta < 0) {
+      depot.remove_capacity(-delta);
+    }
+  }
+  if (j.contains("stocks")) {
+    depot.all_stocks().fill({});
+    for (const auto& s : j["stocks"]) {
+      int i = s["i"].get<int>();
+      if (i < 0 || i >= max_ingredient_count) {
+        continue;
+      }
+      auto type = static_cast<core::food::IngredientType>(i);
+      depot.add_ingredient(type, s.value("qty", 0), s.value("quality", 0),
+                           Money{s.value("cost", int64_t{0})});
+      depot.get_stock(type).last_price =
+          Money{s.value("last_price", int64_t{0})};
+    }
+  }
+  if (j.contains("delivery_priorities")) {
+    std::vector<core::RestaurantId> prios;
+    for (const auto& v : j["delivery_priorities"]) {
+      prios.push_back(core::RestaurantId{v.get<int>()});
+    }
+    depot.delivery_priorities(std::move(prios));
+  }
+  if (j.contains("stock_stolen") && !j["stock_stolen"].is_null()) {
+    depot.stock_stolen(
+        static_cast<IngredientCategory>(j["stock_stolen"].get<int>()));
+  }
+}
+
 json city_to_json(const City& city) {
   json j;
   j["id"] = city.id().value;
@@ -471,6 +541,14 @@ json city_to_json(const City& city) {
 
   // Save mayor office state
   j["mayor_office"] = mayor_office_to_json(city.mayor_office());
+
+  // Save per-player central depots
+  json depots_array = json::array();
+  for (int player_idx = 0; player_idx < NUMBER_OF_PLAYERS; ++player_idx) {
+    depots_array.push_back(
+        depot_to_json(city.central_depot(core::PlayerId{player_idx})));
+  }
+  j["central_depots"] = depots_array;
 
   // Save scheduled newspaper events
   const auto& event_sys = city.newspaper_event_system();
@@ -618,6 +696,18 @@ void json_to_city(const json& j, City& city) {
   // Restore mayor office state
   if (j.contains("mayor_office")) {
     json_to_mayor_office(j["mayor_office"], city.mayor_office());
+  }
+
+  // Restore per-player central depots
+  if (j.contains("central_depots")) {
+    int player_idx = 0;
+    for (const auto& depot_j : j["central_depots"]) {
+      if (player_idx >= NUMBER_OF_PLAYERS) {
+        break;
+      }
+      json_to_depot(depot_j, city.central_depot(core::PlayerId{player_idx}));
+      ++player_idx;
+    }
   }
 
   // Restore scheduled newspaper events

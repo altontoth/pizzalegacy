@@ -20,8 +20,8 @@ class View : public Renderable {
 public:
   View(GameContext& context, GameState& state);
   virtual ~View() = default;
-  virtual void tick() override = 0;
-  virtual void render(const RenderContext& ctx) override = 0;
+  void tick() override = 0;
+  void render(const RenderContext& ctx) override = 0;
   void mark_dirty() override;
   bool is_dirty() const override;
   void clean() override;

@@ -92,7 +92,7 @@ public:
   std::string tile_description(int index) const;
   const std::vector<std::unique_ptr<District>>& districts() const;
   const District& district(core::DistrictId district_id) const;
-  void end_of_day(bool is_active);
+  void end_of_day();
   void end_of_month();
   static constexpr int index_to_x(int index) {
     return index % MAP_TILES_PER_ROW;
@@ -308,7 +308,8 @@ public:
   void initialize_known_arms_dealers(core::PlayerId player_id);
   std::vector<const Actor*> all_arms_dealers() const;
 
-  core::city::CentralDepot& central_depot(int player_id);
+  core::city::CentralDepot& central_depot(core::PlayerId player_id);
+  const core::city::CentralDepot& central_depot(core::PlayerId player_id) const;
   MayorOffice& mayor_office() { return mayor_office_; }
   const MayorOffice& mayor_office() const { return mayor_office_; }
 

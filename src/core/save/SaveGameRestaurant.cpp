@@ -11,6 +11,7 @@
 #include "core/character/Staff.h"
 #include "core/city/City.h"
 #include "core/city/Property.h"
+#include "core/finance/Money.h"
 #include "core/logistics/IngredientStock.h"
 #include "core/restaurant/FloorPattern.h"
 #include "core/restaurant/Menu.h"
@@ -139,6 +140,8 @@ json floor_pattern_to_json(const FloorPattern& pattern) {
   j["tile_indices"] = pattern.tile_indices;
   j["popularity"] = pattern.popularity;
   j["popularity_factor"] = pattern.popularity_factor;
+  j["quality"] = pattern.quality;
+  j["price_per_tile"] = pattern.price_per_tile.cents;
   return j;
 }
 
@@ -156,6 +159,8 @@ FloorPattern json_to_floor_pattern(const json& j) {
   }
 
   pattern.popularity_factor = j["popularity_factor"].get<int>();
+  pattern.quality = j.value("quality", 0);
+  pattern.price_per_tile = Money{j.value("price_per_tile", int64_t{0})};
   return pattern;
 }
 

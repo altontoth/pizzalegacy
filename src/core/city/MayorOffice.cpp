@@ -13,12 +13,12 @@ void MayorOffice::register_accounts(BankAccountRegistry& registry) {
   registry.register_account(private_bank_account_);
 }
 
-void MayorOffice::end_of_day(const GameDate& date,
-                             BankAccountRegistry& registry) {
-  // The long/private account is regenerated on the 1st of every month.
-  // The short/public account is only rotated when a quarterly award is
-  // scheduled (see schedule_quarterly_award).
-  if (date.day() == 1) {
+void MayorOffice::start_of_day(const GameDate& date,
+                               BankAccountRegistry& registry) {
+  // Rotate the private account once per month, lazily on first city visit.
+  GameDate this_month = date.month_start();
+  if (last_rotation_date_ != this_month) {
+    last_rotation_date_ = this_month;
     registry.close_account(private_bank_account_);
     private_bank_account_ = engine::random::rand_max_n(99'999'999);
     registry.register_account(private_bank_account_);

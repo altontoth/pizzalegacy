@@ -32,6 +32,12 @@ template <typename T> struct IngredientArray {
   [[nodiscard]] constexpr std::size_t size() const { return values.size(); }
   void fill(const T& v) { values.fill(v); }
 
+  void fill_range(IngredientType first, IngredientType last, const T& v) {
+    for (auto i = static_cast<int>(first); i <= static_cast<int>(last); ++i) {
+      values[i] = v;
+    }
+  }
+
   IngredientArray& operator+=(const IngredientArray& other) {
     for (std::size_t i = 0; i < values.size(); ++i) {
       values[i] += other.values[i];

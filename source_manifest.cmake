@@ -9,6 +9,7 @@ set(GAME_PLEGACY_SOURCES
     src/core/character/Training.cpp
     src/core/city/Car.cpp
     src/core/city/CarManager.cpp
+    src/core/city/CentralDepot.cpp
     src/core/city/City.cpp
     src/core/city/ControlMap.cpp
     src/core/city/District.cpp
@@ -79,6 +80,7 @@ set(GAME_PLEGACY_SOURCES
     src/core/util/Tools.cpp
     src/conversations/ArmsDealerConversation.cpp
     src/conversations/BankConversation.cpp
+    src/conversations/InsuranceConversation.cpp
     src/conversations/MafiaConversation.cpp
     src/conversations/MayorConversation.cpp
     src/conversations/PoliceConversation.cpp
@@ -273,6 +275,7 @@ set(PLEGACY_HEADERS
     src/core/character/AiMenuSlot.h
     src/core/character/Awards.h
     src/core/character/Character.h
+    src/core/character/InsurancePlayerState.h
     src/core/character/MafiaPlayerState.h
     src/core/character/Player.h
     src/core/character/SocialStatus.h

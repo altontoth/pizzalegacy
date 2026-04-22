@@ -737,7 +737,7 @@ void GlobalStats::render_insurance(const RenderContext& ctx) {
                                   FontFace::RUBY);
 
   context_.font->render_text_onto(*ctx.surface, "category          company",
-                                  {96, 32}, FontFace::PIZ_NUMB, 13);
+                                  {96, 100}, FontFace::PIZ_NUMB, 13);
 
   context_.font->render_text_onto(*ctx.surface, "charge", {296, 92},
                                   FontFace::PIZ_NUMB, 13);
@@ -748,13 +748,27 @@ void GlobalStats::render_insurance(const RenderContext& ctx) {
   constexpr int row_height = 40;
   const std::array<std::string, 5> categories = {"burglary", "warehouse",
                                                  "fire", "liability", "life"};
+  auto* player = state_.active_player();
+  const auto& policies = player->insurance_state().policies;
   for (int i = 0; i < 5; i++) {
     int y = row_y0 + (i * row_height);
     context_.font->render_text_onto(*ctx.surface, categories[i] + ":", {28, y},
                                     FontFace::PIZ_NUMB, 240);
-    // Hardcoded dashes because we don't have insurance yet:
-    context_.font->render_text_onto(*ctx.surface, "---------------", {120, y},
-                                    FontFace::PIZ_NUMB, 13);
+    const auto& policy = policies[i];
+    if (policy.is_active()) {
+      context_.font->render_text_onto(*ctx.surface, policy.company_name,
+                                      {120, y}, FontFace::PIZ_NUMB, 13);
+      context_.font->render_text_onto(
+          *ctx.surface, compat::format("{}", policy.monthly_premium), {296, y},
+          FontFace::PIZ_NUMB, 240);
+      context_.font->render_text_onto(*ctx.surface,
+                                      compat::format("{}", policy.max_coverage),
+                                      {296, y + 18}, FontFace::PIZ_NUMB, 240);
+    }
+    else {
+      context_.font->render_text_onto(*ctx.surface, "---------------", {120, y},
+                                      FontFace::PIZ_NUMB, 13);
+    }
   }
 }
 

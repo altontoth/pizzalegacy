@@ -156,9 +156,7 @@ Examples:
 
         // Theft: no dialog
         if (type_str == "theft") {
-          StaffEvents::apply_event_effect(StaffEventData::Type::Theft, *staff,
-                                          *restaurant, ctx.state);
-          return CommandResult::success({"Theft event triggered"});
+          return CommandResult::error({"Can't trigger theft"});
         }
 
         // Map type string to StaffEventData::Type and set event flags.

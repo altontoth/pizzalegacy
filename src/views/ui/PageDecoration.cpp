@@ -7,7 +7,7 @@
 #include "views/ui/PageDecoration.h"
 
 #include <array>
-#include <cstdlib>
+#include "engine/Random.h"
 #include "gfx/ColorIndex.h"
 #include "gfx/Draw.h"
 #include "views/base/ViewDefs.h"
@@ -41,13 +41,15 @@ void render_corner_decorations(Surface& surface,
 
   // Bottom corners: 30% chance of alternate variant
   // even though I'm pretty sure the sprites are identical
-  auto bl_id = (std::rand() % 100 < 30) ? B::PAGE_LEFT_BOTTOM
-                                        : B::PAGE_LEFT_BOTTOM_AGAIN;
+  auto bl_id = engine::random::rand_percentage_chance(30)
+                   ? B::PAGE_LEFT_BOTTOM
+                   : B::PAGE_LEFT_BOTTOM_AGAIN;
   auto bl = blitmap.rect(bl_id);
   blitmap.render_icon(bl_id, surface, {b.x, b.y + b.h - bl.h});
 
-  auto br_id = (std::rand() % 100 < 30) ? B::PAGE_RIGHT_BOTTOM
-                                        : B::PAGE_RIGHT_BOTTOM_AGAIN;
+  auto br_id = engine::random::rand_percentage_chance(30)
+                   ? B::PAGE_RIGHT_BOTTOM
+                   : B::PAGE_RIGHT_BOTTOM_AGAIN;
   auto br = blitmap.rect(br_id);
   blitmap.render_icon(br_id, surface, {b.x + b.w - br.w, b.y + b.h - br.h});
 
@@ -116,7 +118,7 @@ void render_cork_background(Surface& surface, const Surface& permap) {
     int x = 0;
     while (x < PANEL_WIDTH) {
       // Default to random selection between cork 1 and 2
-      ViewRect* area = &cork_rects[1 + (std::rand() % 2)];
+      ViewRect* area = &cork_rects[1 + engine::random::rand_max_n(2)];
 
       // Top row always uses 0
       if (y == 0) {
@@ -141,7 +143,8 @@ void render_push_pin(Surface& surface, const Bob& pins, ViewPoint pos,
   std::vector<uint8_t> right_pins = {27, 29, 31, 33};
 
   std::vector<uint8_t>& selected_pins = flipped ? right_pins : left_pins;
-  uint8_t pin_id = selected_pins[std::rand() % selected_pins.size()];
+  uint8_t pin_id = selected_pins[engine::random::rand_max_n(
+      static_cast<int>(selected_pins.size()))];
 
   auto pin_surface = pins.frame(pin_id);
   surface.blit_masked(pin_surface, pos);

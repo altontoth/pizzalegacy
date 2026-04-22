@@ -98,6 +98,8 @@ void FloorPatternFactory::parse_and_index(std::span<const uint8_t> bytes) {
       }
     }
     fp.popularity_factor = scale;
+    fp.quality = sup->quality();
+    fp.price_per_tile = sup->price_per_tile();
 
     by_supplier_[sid].push_back(fp);
   }

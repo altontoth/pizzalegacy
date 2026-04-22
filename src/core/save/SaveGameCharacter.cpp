@@ -6,6 +6,7 @@
 
 #include "core/save/SaveGameCharacter.h"
 #include <ctime>
+#include "core/character/InsurancePlayerState.h"
 #include "core/character/Player.h"
 #include "core/state/GameState.h"
 #include "core/util/GameContext.h"
@@ -64,6 +65,48 @@ core::character::Character json_to_character(const json& j) {
   }
 
   return character;
+}
+
+static json insurance_state_to_json(const InsurancePlayerState& state) {
+  json j;
+  json policies_array = json::array();
+  for (const auto& policy : state.policies) {
+    json p;
+    p["actor_id"] = policy.actor_id;
+    p["company_name"] = policy.company_name;
+    p["monthly_premium"] = policy.monthly_premium.cents;
+    p["max_coverage"] = policy.max_coverage.cents;
+    policies_array.push_back(p);
+  }
+  j["policies"] = policies_array;
+  if (state.pending_claim) {
+    j["pending_claim"] = static_cast<int>(*state.pending_claim);
+  }
+  return j;
+}
+
+static InsurancePlayerState json_to_insurance_state(const json& j) {
+  InsurancePlayerState state;
+  if (j.contains("policies")) {
+    int i = 0;
+    for (const auto& p : j["policies"]) {
+      if (i >= static_cast<int>(state.policies.size())) {
+        break;
+      }
+      state.policies[i].actor_id = p.value("actor_id", -1);
+      state.policies[i].company_name = p.value("company_name", "");
+      state.policies[i].monthly_premium =
+          Money{p.value("monthly_premium", int64_t{0})};
+      state.policies[i].max_coverage =
+          Money{p.value("max_coverage", int64_t{0})};
+      ++i;
+    }
+  }
+  if (j.contains("pending_claim") && !j["pending_claim"].is_null()) {
+    state.pending_claim =
+        static_cast<InsuranceType>(j["pending_claim"].get<int>());
+  }
+  return state;
 }
 
 json player_to_json(const Player& player) {
@@ -138,6 +181,7 @@ json player_to_json(const Player& player) {
   j["underworld_score"] = player.social_status().underworld_score;
 
   j["mafia_state"] = mafia_state_to_json(player.mafia_state());
+  j["insurance_state"] = insurance_state_to_json(player.insurance_state());
 
   return j;
 }
@@ -233,6 +277,9 @@ json_to_player(const json& j, GameContext& context,
   }
   if (j.contains("mafia_state")) {
     player->mafia_state() = json_to_mafia_state(j["mafia_state"]);
+  }
+  if (j.contains("insurance_state")) {
+    player->insurance_state() = json_to_insurance_state(j["insurance_state"]);
   }
 
   if (j.contains("visited_city_ids")) {

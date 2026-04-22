@@ -34,6 +34,7 @@
 #include "core/time/GameTime.h"
 #include "core/util/GameContext.h"
 #include "engine/Logger.h"
+#include "engine/Random.h"
 
 namespace save {
 
@@ -347,6 +348,9 @@ json SaveGameManager::state_to_json(const GameState& state,
   // Save format version
   j["version"] = SAVE_FORMAT_VERSION;
 
+  // Save RNG state so a loaded game resumes with the same random sequence
+  j["rng_state"] = engine::random::get_state();
+
   // Save timestamp (ctime includes a trailing newline, so we need to trim it)
   std::time_t now = std::time(nullptr);
   std::string timestamp = std::ctime(&now);
@@ -491,6 +495,12 @@ void SaveGameManager::json_to_state(const json& j, GameState& state,
                                     GameContext& context) {
   // Clear all existing restaurants and reset property states before loading
   state.clear_restaurants_for_load();
+
+  // Restore RNG state so the loaded game continues with the same random
+  // sequence
+  if (j.contains("rng_state")) {
+    engine::random::set_state(j["rng_state"].get<uint32_t>());
+  }
 
   // Load game time
   if (j.contains("time")) {

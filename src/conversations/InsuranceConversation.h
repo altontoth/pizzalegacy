@@ -6,18 +6,19 @@
 
 #pragma once
 
-#include <iostream>
-#include <string>
 #include <vector>
 
 #include "conversations/BaseConversation.h"
 #include "conversations/InsuranceLine.h"
-#include "core/finance/Loan.h"
+#include "core/character/Actor.h"
+#include "core/character/InsurancePlayerState.h"
+#include "core/finance/Money.h"
 #include "core/state/GameState.h"
 
 class InsuranceConversation : public BaseConversation<InsuranceLine> {
 public:
-  InsuranceConversation(GameState&, const Actor*, const InsuranceSettings& bs);
+  InsuranceConversation(GameState&, const Actor*, const InsuranceSettings& is,
+                        ActorId actor_id);
   Emotion emotion() const override;
   std::vector<ConversationLine<InsuranceLine>> lines() const override;
   bool advance() override;
@@ -26,10 +27,16 @@ public:
   bool has_ended() const override;
 
 private:
-  Loan propose_loan() const;
-  int round_to_nearest(int value, int rounding_unit) const;
   static InsuranceLine compute_start_line(const GameState& state, const Actor*);
-  Loan proposed_loan_{};
-  Loan* repaying_loan_{nullptr};
-  const InsuranceSettings& bank_settings_;
+  int risk_score() const;
+  bool execute_payout(bool may_increase_premium);
+  InsuranceLine type_specific_excuse() const;
+  InsuranceLine type_specific_counter_arg() const;
+  InsuranceLine type_specific_rebuttal() const;
+
+  const InsuranceSettings& insurance_settings_;
+  ActorId actor_id_;
+  InsuranceType selected_type_{InsuranceType::THEFT};
+  Money pending_premium_{0};
+  Money pending_max_coverage_{0};
 };

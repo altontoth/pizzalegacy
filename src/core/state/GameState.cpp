@@ -395,6 +395,7 @@ void GameState::active_city(core::CityId city_id) {
     cities_[city_id.value] = CityFactory::create_city(city_id);
   }
   city_view_view_state_[active_player_.value].city_id = city_id;
+  run_city_start_of_day(*cities_[city_id.value]);
 }
 
 void GameState::ensure_city_loaded(core::CityId city_id) {
@@ -1186,7 +1187,7 @@ void GameState::deliver_depot_stock(core::PlayerId player_id) {
     return;
   }
 
-  auto& depot = city.central_depot(player_id.value);
+  auto& depot = city.central_depot(player_id);
   depot.sync_delivery_priorities(city_rest_ids);
 
   for (auto rest_id : depot.delivery_priorities()) {
@@ -1233,6 +1234,20 @@ void GameState::deliver_depot_stock(core::PlayerId player_id) {
 void GameState::finish_end_of_turn() {
   auto& state = *end_of_turn_state_;
 
+  // Snapshot rolling 7-day profit for this player's restaurants now, while
+  // still in their city and after Restaurant::end_of_day() has already run
+  // (so today's stats are included). active_city_ shifts after next_player().
+  for (auto* rest : state.restaurants) {
+    if (!rest || rest->property().city().id() != active_city_) {
+      continue;
+    }
+    Money weekly_total;
+    for (const auto& day : rest->stats().current_week(time_.current_date())) {
+      weekly_total = weekly_total + day.net_profit;
+    }
+    rest->last_weekly_profit(weekly_total);
+  }
+
   // Freeze status display header for human players
   // This prevents AI players' money from being shown during turn cycling
   if (status_display_ && active_player()->is_human_controlled()) {
@@ -1249,6 +1264,15 @@ void GameState::finish_end_of_turn() {
       active_city_ = *next_city;
       ui().push<CityViewState>(*next_city);
     }
+  }
+
+  // Ensure start-of-day logic runs for the incoming player's city. This covers
+  // the same-city case where no new CityView is constructed (so the
+  // active_city() setter never fires). The once-per-day guard in
+  // run_city_start_of_day() prevents double-firing on days where the player
+  // entered via EuroMap first.
+  if (auto* city = active_city()) {
+    run_city_start_of_day(*city);
   }
 
   // If we wrapped around to player 0, all players have finished their turns.
@@ -1346,39 +1370,24 @@ void GameState::end_of_day() {
   // This is called only after all players have finished their turns.
   // This handles the actual day transition and day-level operations.
 
-  // Process end of day for all cities
-  for (auto& city : cities_) {
-    if (city) {
-      city->end_of_day(active_city_ == city->id());
-      // Run newspaper event system for each loaded city
-      city->newspaper_event_system().daily_update(*this, *city);
+  // Clear per-city start-of-day guards so we can track if we've run it for that
+  // city on that day already
+  city_start_of_day_ran_.fill(false);
 
-      // Mayor account rotation and scheduling.
-      city->mayor_office().end_of_day(time_.current_date(), bank_accounts_);
-      auto award_events = city->mayor_office().process_daily_scheduling(
-          time_.current_date(), human_player_count(), bank_accounts_);
-      for (auto& ev : award_events) {
-        deferred_mayor_awards_.push_back(ev);
-      }
+  // Tick each distinct city that has at least one player. Non-player cities
+  // stay frozen. Each city ticks exactly once regardless of how many players
+  // share it. We derive this from city_view_view_state_ rather than
+  // active_city_, which by this point has already been switched to the next
+  // player's starting city.
+  std::array<bool, NUMBER_OF_CITIES> cities_to_tick{};
+  for (int i = 0; i < NUMBER_OF_PLAYERS; ++i) {
+    if (players_[i] && city_view_view_state_[i].city_id) {
+      cities_to_tick[city_view_view_state_[i].city_id->value] = true;
     }
   }
-
-  // Snapshot the rolling 7-day profit for every active-city restaurant every
-  // day. Restaurants in other cities are frozen, so their snapshot
-  // stays at whatever it was when the player last visited.
-  for (auto& player : players_) {
-    if (!player) {
-      continue;
-    }
-    for (auto* rest : restaurants_for(player->id())) {
-      if (!rest || rest->property().city().id() != active_city_) {
-        continue;
-      }
-      Money weekly_total;
-      for (const auto& day : rest->stats().current_week(time_.current_date())) {
-        weekly_total = weekly_total + day.net_profit;
-      }
-      rest->last_weekly_profit(weekly_total);
+  for (int i = 0; i < NUMBER_OF_CITIES; ++i) {
+    if (cities_to_tick[i] && cities_[i]) {
+      cities_[i]->end_of_day();
     }
   }
 
@@ -1445,8 +1454,50 @@ void GameState::end_of_day() {
     check_market_share_milestones(*city);
   }
 
+  // Depot theft: 1% chance (10% x 10%) per player per day for the active
+  // city's depot. Matches the original which only checks the current city.
+  // Only players with a depot (capacity > 0) are eligible.
+  if (auto* city = active_city()) {
+    using engine::random::rand_max_n;
+    using engine::random::rand_percentage_chance;
+    for (auto& player : players_) {
+      if (!player) {
+        continue;
+      }
+      auto& depot = city->central_depot(player->id());
+      if (depot.capacity() <= 0) {
+        continue;
+      }
+      // Two independent 10% rolls = 1% combined chance
+      bool first_roll = rand_percentage_chance(10);
+      bool second_roll = rand_percentage_chance(10);
+      if (!first_roll || !second_roll) {
+        continue;
+      }
+      auto category = static_cast<IngredientCategory>(rand_max_n(4));
+      depot.steal_stock(category);
+      player->make_insurance_claim(InsuranceType::WAREHOUSE);
+    }
+  }
+
   // Clear actor refused calls (realtors cool down overnight)
   clear_all_refused_calls();
+}
+
+void GameState::run_city_start_of_day(City& city) {
+  int idx = city.id().value;
+  if (city_start_of_day_ran_[idx]) {
+    return;
+  }
+  city_start_of_day_ran_[idx] = true;
+
+  city.newspaper_event_system().daily_update(*this, city);
+  city.mayor_office().start_of_day(time_.current_date(), bank_accounts_);
+  auto awards = city.mayor_office().process_daily_scheduling(
+      time_.current_date(), human_player_count(), bank_accounts_);
+  for (auto& ev : awards) {
+    deferred_mayor_awards_.push_back(ev);
+  }
 }
 
 void GameState::check_market_share_milestones(const City& city) {
@@ -1833,7 +1884,7 @@ bool GameState::buy_depot(Property& property, Player& buyer) {
   // Add depot capacity to player's central depot in this city
   auto& city = property.city();
   int capacity = property.size().w * property.size().h * 100;
-  city.central_depot(buyer.id().value).add_capacity(capacity);
+  city.central_depot(buyer.id()).add_capacity(capacity);
 
   return true;
 }
@@ -1851,7 +1902,7 @@ bool GameState::rent_depot(Property& property, Player& player, bool free) {
   // Add depot capacity to player's central depot in this city
   auto& city = property.city();
   int capacity = property.size().w * property.size().h;
-  city.central_depot(player.id().value).add_capacity(capacity);
+  city.central_depot(player.id()).add_capacity(capacity);
 
   return true;
 }
@@ -1941,7 +1992,7 @@ bool GameState::sell_property(Property& property, Player& seller,
   if (property.type() == PropertyType::DEPOT) {
     auto& city = property.city();
     int capacity = property.size().w * property.size().h * 100;
-    city.central_depot(seller.id().value).remove_capacity(capacity);
+    city.central_depot(seller.id()).remove_capacity(capacity);
   }
 
   if (property.has_restaurant()) {
@@ -1967,7 +2018,7 @@ bool GameState::end_property_lease(Property& property, Player& player) {
   if (property.type() == PropertyType::DEPOT) {
     auto& city = property.city();
     int capacity = property.size().w * property.size().h * 100;
-    city.central_depot(player.id().value).remove_capacity(capacity);
+    city.central_depot(player.id()).remove_capacity(capacity);
   }
 
   if (property.has_restaurant()) {

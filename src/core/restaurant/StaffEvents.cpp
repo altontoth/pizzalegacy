@@ -7,6 +7,7 @@
 #include "core/restaurant/StaffEvents.h"
 #include "core/character/Player.h"
 #include "core/character/Staff.h"
+#include "core/city/Property.h"
 #include "core/finance/Ledger.h"
 #include "core/finance/PlayerFinancials.h"
 #include "core/food/IngredientType.h"
@@ -98,6 +99,7 @@ void StaffEvents::apply_event_effect(StaffEventData::Type type, Staff& staff,
       player->financials().spend_cash(game_state.time().current_date(),
                                       Account::Others, theft_amount,
                                       restaurant.id());
+      player->make_insurance_claim(InsuranceType::THEFT);
     }
     staff.stole_money(true);
     staff.adjust_motivation(-30);
@@ -150,6 +152,8 @@ void StaffEvents::apply_event_effect(StaffEventData::Type type, Staff& staff,
           ash_furn, layout->next_furniture_id(), removed->origin(),
           core::FurnitureId{UNLINKED_FURNITURE}, 0);
       layout->place_kitchen_furniture(std::move(ash));
+      auto* player = game_state.active_player();
+      player->make_insurance_claim(InsuranceType::FIRE);
     }
     break;
   }

@@ -7,7 +7,6 @@
 #include "views/screens/AnimatedStats.h"
 
 #include <algorithm>
-#include <cstdlib>
 #include "core/Demographics.h"
 #include "core/restaurant/Furniture.h"
 #include "core/restaurant/Restaurant.h"
@@ -15,6 +14,7 @@
 #include "core/state/GameState.h"
 #include "core/util/LegacyConstants.h"
 #include "engine/FormatCompat.h"
+#include "engine/Random.h"
 #include "gfx/Blit.h"
 #include "gfx/Draw.h"
 #include "resources/BlitmapIcons.h"
@@ -784,7 +784,7 @@ void AnimatedStats::render_turnover(const RenderContext& ctx) {
 
     // Expenses coins (right side)
     if (expenses_value > i) {
-      int jitter_x = rand() % 6;
+      int jitter_x = engine::random::rand_max_n(6);
       int coin_x = expenses_coin_base_x + jitter_x;
 
       int sprite_index = (i == 0) ? 21 : 22;

@@ -11,9 +11,11 @@
 #include "engine/Math.h"
 #include "engine/Size.h"
 #include "engine/geom/Spaces.h"
+#include "factories/FloorPatternFactory.h"
 #include "factories/FurnitureFactory.h"
 #include "resources/util/FileUtils.h"
 
+#include <algorithm>
 #include <fstream>
 #include <iostream>
 
@@ -55,6 +57,20 @@ RestaurantLayoutFactory::create_layout(const std::string& filename) {
 
   for (size_t i = 0; i < 6; i++) {
     fp.popularity[i] = static_cast<int>(popularity_raw[i]);
+  }
+  const auto sid = static_cast<SupplierID>(floor_vendor);
+  const auto& patterns = FloorPatternFactory::create(sid);
+  auto it = std::ranges::find_if(patterns, [&fp](const FloorPattern& p) {
+    return p.tile_indices == fp.tile_indices;
+  });
+  if (it != patterns.end()) {
+    fp.popularity_factor = it->popularity_factor;
+    fp.quality = it->quality;
+    fp.price_per_tile = it->price_per_tile;
+  }
+  else {
+    Logger::warn("RLF: could not find vendor in kachinfo for vendor {}",
+                 floor_vendor);
   }
   rl->floor_pattern(fp);
 

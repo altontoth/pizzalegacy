@@ -36,7 +36,7 @@ DepotExportScreen::DepotExportScreen(GameContext& context, GameState& state,
   state_.ensure_city_loaded(target_city_id);
   target_city_ = state_.city(target_city_id);
 
-  auto player_id = state_.active_player()->id().value;
+  auto player_id = state_.active_player()->id();
   auto& source_depot = source_city_->central_depot(player_id);
   auto& target_depot = target_city_->central_depot(player_id);
 
@@ -189,7 +189,7 @@ void DepotExportScreen::draw_ingredient_list(const RenderContext& ctx) {
 
   // Footer: sum of transferred goods value
   const int footer_y = 320;
-  auto player_id = state_.active_player()->id().value;
+  auto player_id = state_.active_player()->id();
   auto& source_depot = source_city_->central_depot(player_id);
 
   Money total_value{0};
@@ -243,7 +243,7 @@ void DepotExportScreen::execute_export() {
     return;
   }
 
-  auto player_id = state_.active_player()->id().value;
+  auto player_id = state_.active_player()->id();
   auto& source_depot = source_city_->central_depot(player_id);
   auto& target_depot = target_city_->central_depot(player_id);
 

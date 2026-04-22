@@ -11,14 +11,14 @@
 #include "core/food/Ingredient.h"
 #include "core/food/IngredientCategory.h"
 
-FoodSupplier::FoodSupplier(IngredientCategory type, uint8_t supplier_id,
+FoodSupplier::FoodSupplier(IngredientCategory category, uint8_t supplier_id,
                            uint8_t quality, std::string name, uint8_t head_id,
                            int min_contract, const uint8_t* price_level,
                            int price_level_count)
-    : type_(type), supplier_id_(supplier_id), quality_(quality),
+    : category_(category), supplier_id_(supplier_id), quality_(quality),
       name_(std::move(name)), head_id_(head_id),
       min_contract_amount_(Money{static_cast<int64_t>(min_contract * 100)}) {
-  auto meta = core::food::CategoryRegistry::get(type_);
+  auto meta = core::food::CategoryRegistry::get(category_);
   actor_type_ = meta.supplier_type;
   // Copy price levels into owned array
   price_levels_.fill(0);
@@ -32,7 +32,7 @@ Money FoodSupplier::minimum_contract_amount() const {
 }
 
 int FoodSupplier::number_of_products() const {
-  switch (type_) {
+  switch (category_) {
   case IngredientCategory::VEGETABLES:
     return VEGETABLE_COUNT;
   case IngredientCategory::MEAT:
@@ -55,42 +55,16 @@ const std::string& FoodSupplier::name() const { return name_; }
 uint8_t FoodSupplier::price_level_for_ingredient(
     core::food::IngredientType ingredient_type) const {
   using namespace core::food;
+  auto range = ingredient_range_for_category(category_);
   auto ingredient_id = static_cast<int>(ingredient_type);
+  auto first_id = static_cast<int>(range.first);
+  auto last_id = static_cast<int>(range.last);
 
-  // Map ingredient ID to price_level array index based on supplier type
-  int array_index = -1;
-
-  switch (type_) {
-  case IngredientCategory::VEGETABLES:
-    if (ingredient_id >= static_cast<int>(IngredientType::TOMATOES) &&
-        ingredient_id <= static_cast<int>(IngredientType::W_MUSHROOMS)) {
-      array_index = ingredient_id - static_cast<int>(IngredientType::TOMATOES);
-    }
-    break;
-  case IngredientCategory::MEAT:
-    if (ingredient_id >= static_cast<int>(IngredientType::SALAMI) &&
-        ingredient_id <= static_cast<int>(IngredientType::MUSSELS)) {
-      array_index = ingredient_id - static_cast<int>(IngredientType::SALAMI);
-    }
-    break;
-  case IngredientCategory::FRUIT:
-    if (ingredient_id >= static_cast<int>(IngredientType::APPLES) &&
-        ingredient_id <= static_cast<int>(IngredientType::GOOSEBERRIES)) {
-      array_index = ingredient_id - static_cast<int>(IngredientType::APPLES);
-    }
-    break;
-  case IngredientCategory::CHEESE:
-    if (ingredient_id >= static_cast<int>(IngredientType::EGG) &&
-        ingredient_id <= static_cast<int>(IngredientType::OREGANO)) {
-      array_index = ingredient_id - static_cast<int>(IngredientType::EGG);
-    }
-    break;
-  default:
+  if (ingredient_id < first_id || ingredient_id > last_id) {
     return 0;
   }
-
-  if (array_index >= 0 && array_index < number_of_products() &&
-      array_index < 22) {
+  int array_index = ingredient_id - first_id;
+  if (array_index < number_of_products() && array_index < 22) {
     return price_levels_[array_index];
   }
   return 0;
@@ -143,15 +117,13 @@ uint8_t FoodSupplier::chance_of_no_delivery() const {
   return std::clamp(0x19 - (quality_ >> 2), 0, 100);
 }
 
-IngredientCategory FoodSupplier::type() const { return type_; }
-
 int FoodSupplier::category_index(
     core::food::IngredientType ingredient_type) const {
   using namespace core::food;
   auto ingredient_id = static_cast<int>(ingredient_type);
 
   // Map ingredient ID to array index based on supplier type
-  switch (type_) {
+  switch (category_) {
   case IngredientCategory::VEGETABLES:
     if (ingredient_id >= static_cast<int>(IngredientType::TOMATOES) &&
         ingredient_id <= static_cast<int>(IngredientType::W_MUSHROOMS)) {

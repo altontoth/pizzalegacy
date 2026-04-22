@@ -7,9 +7,11 @@
 #pragma once
 
 #include <algorithm>
+#include <array>
 #include <cstdint>
 #include <string_view>
 #include <type_traits>
+#include "core/food/IngredientCategoryType.h"
 
 // Original game has 4 x 24 ingredient slots
 // and even though we don't use them all this is nice and (time) efficient,
@@ -95,12 +97,17 @@ struct IngredientRange {
   IngredientType last; // inclusive
 };
 
-constexpr IngredientRange ingredient_ranges[] = {
+constexpr std::array<IngredientRange, 4> ingredient_ranges = {{
     {.first = IngredientType::TOMATOES, .last = IngredientType::W_MUSHROOMS},
-    {.first = IngredientType::SALAMI, .last = IngredientType::HAM},
-    {.first = IngredientType::APPLES, .last = IngredientType::PINEAPPLE},
+    {.first = IngredientType::SALAMI, .last = IngredientType::MUSSELS},
+    {.first = IngredientType::APPLES, .last = IngredientType::GOOSEBERRIES},
     {.first = IngredientType::EGG, .last = IngredientType::OREGANO},
-};
+}};
+
+constexpr IngredientRange
+ingredient_range_for_category(IngredientCategory category) {
+  return ingredient_ranges[static_cast<int>(category)];
+}
 
 constexpr bool is_valid_ingredient_id(uint8_t id) {
   using UT = std::underlying_type_t<IngredientType>;

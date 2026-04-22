@@ -21,12 +21,12 @@ class PoliceConversation : public BaseConversation<PoliceLine> {
 public:
   PoliceConversation(GameState&, const Actor*,
                      std::optional<ArrestReason> ar = std::nullopt);
-  virtual Emotion emotion() const override;
-  virtual std::vector<ConversationLine<PoliceLine>> lines() const override;
-  virtual bool advance() override;
-  virtual bool advance_line_choice(PoliceLine) override;
-  virtual bool advance_proposal(bool) override;
-  virtual bool has_ended() const override;
+  Emotion emotion() const override;
+  std::vector<ConversationLine<PoliceLine>> lines() const override;
+  bool advance() override;
+  bool advance_line_choice(PoliceLine) override;
+  bool advance_proposal(bool) override;
+  bool has_ended() const override;
 
 private:
   static PoliceLine compute_start_line(const GameState& state, const Actor*,

@@ -63,7 +63,7 @@ IngredientOrderScreen::IngredientOrderScreen(GameContext& context,
   // inventory
   core::city::CentralDepot* depot_ptr = nullptr;
   if (is_depot) {
-    depot_ptr = &city->central_depot(state_.active_player()->id().value);
+    depot_ptr = &city->central_depot(state_.active_player()->id());
   }
   const auto& inventory = restaurant->inventory();
 
@@ -364,7 +364,7 @@ void IngredientOrderScreen::place_order() {
   if (is_sell) {
     // Selling: remove from depot and credit the player
     auto& depot =
-        state_.active_city()->central_depot(state_.active_player()->id().value);
+        state_.active_city()->central_depot(state_.active_player()->id());
     for (const auto& batch : ingredients_) {
       if (batch.count > 0) {
         depot.consume_ingredient(batch.ingredient_type, batch.count * 1000);
@@ -390,8 +390,8 @@ void IngredientOrderScreen::place_order() {
 
     if (mode_ == IngredientScreenMode::CENTRAL_DEPOT) {
       // Add to central depot (not tied to a restaurant's monthly accounting)
-      auto& depot = state_.active_city()->central_depot(
-          state_.active_player()->id().value);
+      auto& depot =
+          state_.active_city()->central_depot(state_.active_player()->id());
       for (const auto& batch : ingredients_) {
         if (batch.count > 0) {
           auto ingredient_type = batch.ingredient_type;
@@ -503,8 +503,8 @@ void IngredientOrderScreen::handle_button_press(size_t ingredient_index,
   if (is_left_button) {
     if (is_sell) {
       // Check quality: depot stock quality must be >= supplier quality
-      auto& depot = state_.active_city()->central_depot(
-          state_.active_player()->id().value);
+      auto& depot =
+          state_.active_city()->central_depot(state_.active_player()->id());
       auto* stock =
           depot.get_ingredient_stock(static_cast<int>(batch.ingredient_type));
       if (stock && supplier_ &&

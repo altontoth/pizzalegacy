@@ -5,25 +5,35 @@
  */
 
 #include "engine/Random.h"
-#include <cstdlib>
+
+#include <cstdint>
 
 namespace engine::random {
 
-// Trying to match the random behavior from the original:
+namespace {
+uint32_t rng_state = 1;
+} // anonymous namespace
+
+// 32-bit linear congruential generator
+// Returns bits 30..16, because apparently the upper 15 bits is where an LCG's
+// randomness quality is highest. Range 0..32767.
+uint16_t ansi_rand15() {
+  rng_state = rng_state * 1103515245u + 12345u;
+  return static_cast<uint16_t>((rng_state >> 16) & 0x7FFF);
+}
+
+void seed(uint32_t s) { rng_state = s; }
+uint32_t get_state() { return rng_state; }
+void set_state(uint32_t s) { rng_state = s; }
+
 int rand_max_n(int max) {
-  int r = watcom_rand15(); // 0..32767
+  int r = ansi_rand15(); // 0..32767
   long long product = static_cast<long long>(r) * max;
-  // product is up to 32767 * param
-  // shr 15 is floor division by 32768:
+  // shr 15 is floor division by 32768
   return static_cast<int>(product >> 15);
 }
 
-int rand_between(int min, int max) {
-  auto rand = rand_max_n(max - min);
-  return rand + min;
-}
-
-int watcom_rand15() { return std::rand() & 0x7FFF; }
+int rand_between(int min, int max) { return rand_max_n(max - min) + min; }
 
 bool rand_percentage_chance(int percentage) {
   if (percentage <= 0) {
@@ -32,8 +42,7 @@ bool rand_percentage_chance(int percentage) {
   if (percentage >= 100) {
     return true;
   }
-  // param is between 1..99
-  int r = watcom_rand15();
+  int r = ansi_rand15();
   int r_scaled = (r * 100) >> 15; // uniform in [0..99]
   return r_scaled < percentage;
 }

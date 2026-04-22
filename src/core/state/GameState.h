@@ -341,6 +341,7 @@ public:
 private:
   bool is_past_player_end_of_day() const;
   void check_market_share_milestones(const City& city);
+  void run_city_start_of_day(City& city);
   void process_next_restaurant();
   void show_next_deferred_staff_event();
   void show_next_deferred_inspection();
@@ -429,6 +430,8 @@ private:
   // Track whether the current player turn card is for an AI that should
   // auto-end
   bool pending_ai_auto_end_turn_{false};
+  // cleared at start of each calendar day, set when run_city_start_of_day fires
+  std::array<bool, NUMBER_OF_CITIES> city_start_of_day_ran_{};
   // Not quite week number, we start at 1 at start of the game (1st of March)
   // then reset it every year.
   int business_week_nr{1};

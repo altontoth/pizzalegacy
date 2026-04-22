@@ -12,6 +12,7 @@
 #include "core/character/AiMenuSlot.h"
 #include "core/character/Awards.h"
 #include "core/character/Character.h"
+#include "core/character/InsurancePlayerState.h"
 #include "core/character/MafiaPlayerState.h"
 #include "core/character/SocialStatus.h"
 #include "core/common/Ids.h"
@@ -114,6 +115,13 @@ public:
 
   MafiaPlayerState& mafia_state() { return mafia_state_; }
   const MafiaPlayerState& mafia_state() const { return mafia_state_; }
+  InsurancePlayerState& insurance_state() { return insurance_state_; }
+  const InsurancePlayerState& insurance_state() const {
+    return insurance_state_;
+  }
+  void make_insurance_claim(InsuranceType type) {
+    insurance_state_.pending_claim = type;
+  }
   SocialStatus& social_status() { return social_status_; }
   const SocialStatus& social_status() const { return social_status_; }
   Money weapon_dealing_profit() const { return weapon_dealing_profit_; }
@@ -171,6 +179,7 @@ private:
 
   std::array<std::optional<AdvertisingCampaign>, 4> campaigns_;
   MafiaPlayerState mafia_state_;
+  InsurancePlayerState insurance_state_;
   SocialStatus social_status_;
   Money weapon_dealing_profit_{0};
   std::unordered_set<core::CityId> visited_city_ids_;

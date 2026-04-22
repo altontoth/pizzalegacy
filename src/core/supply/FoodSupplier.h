@@ -11,7 +11,8 @@
 #include "core/character/Actor.h"
 #include "core/common/Ids.h"
 #include "core/finance/Money.h"
-#include "core/food/Ingredient.h"
+#include "core/food/IngredientCategoryType.h"
+#include "core/food/IngredientType.h"
 #include "core/supply/SupplierRelationship.h"
 
 constexpr int VEGETABLE_COUNT = 22;
@@ -21,9 +22,10 @@ constexpr int CHEESE_COUNT = 13;
 
 class FoodSupplier {
 public:
-  FoodSupplier(IngredientCategory type, uint8_t supplier_id, uint8_t quality,
-               std::string name, uint8_t head_id, int min_contract,
-               const uint8_t* price_level, int price_level_count);
+  FoodSupplier(IngredientCategory category, uint8_t supplier_id,
+               uint8_t quality, std::string name, uint8_t head_id,
+               int min_contract, const uint8_t* price_level,
+               int price_level_count);
   Money minimum_contract_amount() const;
   int number_of_products() const;
   ActorType actor_type() const;
@@ -32,7 +34,6 @@ public:
   const std::string& name() const;
   uint8_t head_id() const;
   uint8_t chance_of_no_delivery() const;
-  IngredientCategory type() const;
 
   SupplierRelationship& relationship(core::PlayerId player_id);
   const SupplierRelationship& relationship(core::PlayerId player_id) const;
@@ -51,11 +52,11 @@ public:
   void set_stock(core::food::IngredientType ingredient_type, int quantity);
 
   // Get the ingredient category this supplier handles (alias for type())
-  IngredientCategory category() const { return type_; }
+  IngredientCategory category() const { return category_; }
 
 private:
   int category_index(core::food::IngredientType ingredient_type) const;
-  IngredientCategory type_;
+  IngredientCategory category_;
   uint8_t supplier_id_;
   uint8_t quality_;
   std::string name_;

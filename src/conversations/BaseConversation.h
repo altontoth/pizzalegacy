@@ -35,8 +35,10 @@ enum class Emotion {
 };
 
 // Generic ostream operator for enum class
-template <typename Enum, typename = std::enable_if_t<std::is_enum_v<Enum>>>
-std::ostream& operator<<(std::ostream& os, const Enum& e) {
+template <typename Enum>
+std::ostream& operator<<(std::ostream& os, const Enum& e)
+  requires(std::is_enum_v<Enum>)
+{
   os << static_cast<std::underlying_type_t<Enum>>(e);
   return os;
 }
@@ -89,7 +91,7 @@ public:
   // Advance given a choice
   virtual bool advance_line_choice(LineEnum choice) = 0;
   // Advance for boolean choice
-  virtual bool advance_proposal(bool agree) { return false; }
+  virtual bool advance_proposal(bool /*agree*/) { return false; }
   // Get lines for current state_
   virtual std::vector<ConversationLine<LineEnum>> lines() const = 0;
 
@@ -179,7 +181,7 @@ protected:
   }
 
   [[nodiscard]] ConversationLine<LineEnum>
-  make_proposal(LineEnum line_id, std::string text = "") const {
+  make_proposal(LineEnum line_id, const std::string& text = "") const {
     return make_line(line_id,
                      {.is_proposal = true, .custom_text = std::move(text)});
   }
@@ -191,25 +193,27 @@ protected:
   }
 
   [[nodiscard]] ConversationLine<LineEnum>
-  make_text_line(LineEnum line_id, std::string text) const {
+  make_text_line(LineEnum line_id, const std::string& text) const {
     return make_line(line_id, {.is_proposal = true,
                                .custom_text = std::move(text),
                                .prepend_text = true});
   }
 
   [[nodiscard]] ConversationLine<LineEnum>
-  make_terminal_line(LineEnum line_id, std::string custom_text = "") const {
+  make_terminal_line(LineEnum line_id,
+                     const std::string& custom_text = "") const {
     return make_line(
         line_id, {.is_terminal = true, .custom_text = std::move(custom_text)});
   }
 
   [[nodiscard]] ConversationLine<LineEnum>
   make_concat_proposal(LineEnum first_line, const std::string& middle_text,
-                       LineEnum second_line) const {
+                       LineEnum second_line,
+                       const std::string& end_text = "") const {
     // We only need second and third because those will be added to the first by
     // make_line
     std::string second_text = lines_.at(static_cast<int>(second_line));
-    std::string full_text = middle_text + second_text;
+    std::string full_text = middle_text + second_text + end_text;
     return make_line(first_line, {.is_option = false,
                                   .is_proposal = true,
                                   .easy_accept = false,

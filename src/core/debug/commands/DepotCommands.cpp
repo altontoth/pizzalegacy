@@ -142,7 +142,7 @@ Examples:
               compat::format("Failed to load city {}", city_id.value));
         }
 
-        auto& depot = city->central_depot(player_id.value);
+        auto& depot = city->central_depot(player_id);
         int depot_count = count_player_depots(*city, player_id);
 
         std::vector<std::string> lines;
@@ -253,7 +253,7 @@ Examples:
               compat::format("Failed to load city {}", city_id.value));
         }
 
-        auto& depot = city->central_depot(player_id.value);
+        auto& depot = city->central_depot(player_id);
         auto ingredient_type =
             static_cast<core::food::IngredientType>(ingredient_id);
         depot.add_ingredient(ingredient_type, quantity, quality, Money{100});
@@ -335,7 +335,7 @@ Examples:
               compat::format("Failed to load city {}", city_id.value));
         }
 
-        auto& depot = city->central_depot(player_id.value);
+        auto& depot = city->central_depot(player_id);
 
         // Fill all 90 ingredient types
         for (int i = 0; i < 90; i++) {
@@ -347,6 +347,47 @@ Examples:
             compat::format("Filled all 90 ingredients with {}g at quality {} "
                            "for player {}'s depot in {}",
                            quantity, quality, player_id.value, city->name()));
+      },
+      .category = "depot"};
+}
+
+static CommandDef make_depot_stock_steal() {
+  return CommandDef{
+      .name = "steal",
+      .description = "Steal a random  ingredient stock category",
+      .help_text =
+          R"(Usage: depot stock steal [city_id] [player_id]
+
+Triggers theft of ingredients from a depot.
+
+Examples:
+  depot stock steal             # Steal from active city/player depot
+  depot stock steal @ 0         # Active city, player 0
+)",
+      .args = city_player_args(),
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        auto city_id = ctx.city_id(0);
+        auto player_id = ctx.player_id(1);
+        auto* player = ctx.state.player(player_id);
+
+        ctx.state.ensure_city_loaded(city_id);
+        auto* city = ctx.state.city(city_id);
+        if (!city) {
+          return CommandResult::error(
+              compat::format("Failed to load city {}", city_id.value));
+        }
+
+        auto& depot = city->central_depot(player_id);
+
+        auto category =
+            static_cast<IngredientCategory>(engine::random::rand_max_n(4));
+        depot.steal_stock(category);
+        player->make_insurance_claim(InsuranceType::WAREHOUSE);
+
+        return CommandResult::success().add_message(compat::format(
+            "Triggered theft for an ingredient stock from player {}'s "
+            "depot in {}",
+            player_id.value, city->name()));
       },
       .category = "depot"};
 }
@@ -376,7 +417,7 @@ Examples:
               compat::format("Failed to load city {}", city_id.value));
         }
 
-        auto& depot = city->central_depot(player_id.value);
+        auto& depot = city->central_depot(player_id);
 
         // Clear all stocks
         for (int i = 0; i < 90; i++) {
@@ -404,7 +445,8 @@ static CommandDef make_depot_stock() {
   }
       .add_subcommand(make_depot_stock_add())
       .add_subcommand(make_depot_stock_fill())
-      .add_subcommand(make_depot_stock_clear());
+      .add_subcommand(make_depot_stock_clear())
+      .add_subcommand(make_depot_stock_steal());
 }
 
 CommandDef make_depot_commands() {

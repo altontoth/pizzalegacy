@@ -337,8 +337,8 @@ void game_data_path(const std::string& file_path) {
 
 // int rand_max_n(int max) { return max > 0 ? std::rand() % max : 0; }
 int rand_max_n(int max) {
-  int r = engine::random::watcom_rand15(); // 0..32767
-                                           // same shift logic:
+  int r = engine::random::ansi_rand15(); // 0..32767
+                                         // same shift logic:
   long long product = static_cast<long long>(r) * max;
   // product is up to 32767 * param
   // shr 15 is floor division by 32768:
@@ -350,7 +350,7 @@ int rand_between(int min, int max) {
   return rand + min;
 }
 
-int watcom_rand15() { return std::rand() & 0x7FFF; }
+int ansi_rand15() { return engine::random::ansi_rand15(); }
 
 bool rand_percentage_chance(int percentage) {
   if (percentage <= 0) {
@@ -360,7 +360,7 @@ bool rand_percentage_chance(int percentage) {
     return 1;
   }
   // param is between 1..99
-  int r = watcom_rand15();        // 0..32767
+  int r = ansi_rand15();          // 0..32767
   int r_scaled = (r * 100) >> 15; // uniform in [0..99]
   if (r_scaled < percentage) {
     return 1;

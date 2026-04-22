@@ -8,10 +8,10 @@
 
 #include <algorithm>
 #include <cassert>
-#include <random>
 
 #include "core/character/Character.h"
 #include "core/state/GameState.h"
+#include "engine/Random.h"
 #include "factories/CharacterFactory.h"
 #include "resources/util/Platform.h"
 #include "views/screens/menus/MenuTheme.h"
@@ -138,9 +138,7 @@ void CharacterSelection::generate_player_items() {
         "Pizza Parlor", "Ripley's",    "Rick's Diner", "SoftRock Pizza"};
 
     // Shuffle the names
-    std::random_device rd;
-    std::mt19937 g(rd());
-    std::shuffle(company_names.begin(), company_names.end(), g);
+    engine::random::shuffle(company_names.begin(), company_names.end());
 
     // Select the first 8 names
     active_player_names.assign(company_names.begin(),

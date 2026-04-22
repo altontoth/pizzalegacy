@@ -6,6 +6,7 @@
 
 #include "views/screens/purchasing/CategoryOverviewScreen.h"
 
+#include "core/finance/Money.h"
 #include "core/restaurant/Furniture.h"
 #include "core/restaurant/PlacedFurniture.h"
 #include "core/restaurant/Restaurant.h"
@@ -149,6 +150,10 @@ void CategoryOverviewScreen::draw_flooring_page(const RenderContext& ctx) {
   auto* restaurant = state_.active_restaurant();
   const auto& rl = restaurant->layout();
   auto fp = rl->floor_pattern();
+  auto rest_size = restaurant->size();
+  const int rest_width = rest_size.w;
+  const int rest_height = rest_size.h;
+  const int tile_count = rest_width * rest_height;
 
   // Show current flooring:
   int x_pos = 36;
@@ -168,21 +173,21 @@ void CategoryOverviewScreen::draw_flooring_page(const RenderContext& ctx) {
 
   x_pos = 180;
   y_pos = 80;
-  // Value
-  context_.font->render_text_onto(*ctx.surface, "$0", ViewPoint{x_pos, y_pos},
-                                  FontFace::PIZ_NUMB, 8, AlignX::Left);
+  // Value: total cost of installed floor
+  const auto total_value = fp.price_per_tile * tile_count;
+  context_.font->render_text_onto(
+      *ctx.surface, compat::format("{:w}", total_value),
+      ViewPoint{x_pos, y_pos}, FontFace::PIZ_NUMB, 8, AlignX::Left);
   y_pos += 20;
-  // Quality
-  context_.font->render_text_onto(*ctx.surface, "38", ViewPoint{x_pos, y_pos},
-                                  FontFace::PIZ_NUMB, 8, AlignX::Left);
+  // Quality from supplier
+  context_.font->render_text_onto(*ctx.surface, std::to_string(fp.quality),
+                                  ViewPoint{x_pos, y_pos}, FontFace::PIZ_NUMB,
+                                  8, AlignX::Left);
   y_pos += 20;
   // Number of tiles
-  auto rest_size = restaurant->size();
-  int rest_width = rest_size.w;
-  int rest_height = rest_size.h;
-  std::string tile_count = compat::format(
-      "{} * {} = {}", rest_width, rest_height, rest_width * rest_height);
-  context_.font->render_text_onto(*ctx.surface, tile_count,
+  std::string tile_count_str =
+      compat::format("{} * {} = {}", rest_width, rest_height, tile_count);
+  context_.font->render_text_onto(*ctx.surface, tile_count_str,
                                   ViewPoint{x_pos, y_pos}, FontFace::PIZ_NUMB,
                                   8, AlignX::Left);
   y_pos += 20;

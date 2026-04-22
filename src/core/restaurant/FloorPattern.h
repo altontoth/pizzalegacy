@@ -11,6 +11,7 @@
 #include <ostream>
 
 #include "core/Demographics.h"
+#include "core/finance/Money.h"
 
 class FloorPattern {
 public:
@@ -19,15 +20,14 @@ public:
   std::array<uint8_t, 4> tile_indices;
   std::array<int, static_cast<std::size_t>(ConsumerType::Count)> popularity;
   uint8_t popularity_factor;
+  uint8_t quality = 0;
+  Money price_per_tile;
 
-  int value() const { return 0; };
-  int quality() const { return 38; };
   int popularity_for(ConsumerType type) const {
     return popularity[static_cast<std::size_t>(type)] * popularity_factor / 4;
   };
 };
 
-// Overload operator<< so we can do: std::cout << someFloorPattern << std::endl;
 inline std::ostream& operator<<(std::ostream& os, const FloorPattern& fp) {
   os << "FloorPattern {";
   os << " vendor_id=" << static_cast<int>(fp.vendor_id);
@@ -50,7 +50,8 @@ inline std::ostream& operator<<(std::ostream& os, const FloorPattern& fp) {
   }
   os << "]";
 
-  os << ", value=" << fp.value() << ", quality=" << fp.quality() << " }";
+  os << ", price_per_tile=" << fp.price_per_tile.cents
+     << ", quality=" << static_cast<int>(fp.quality) << " }";
 
   return os;
 }

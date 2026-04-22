@@ -20,12 +20,12 @@ class Property;
 class RealtorConversation : public BaseConversation<RealtorLine> {
 public:
   RealtorConversation(GameState&, const Actor*, const RealtorSettings& rs);
-  virtual Emotion emotion() const override;
-  virtual std::vector<ConversationLine<RealtorLine>> lines() const override;
-  virtual bool advance() override;
-  virtual bool advance_line_choice(RealtorLine) override;
-  virtual bool advance_proposal(bool) override;
-  virtual bool has_ended() const override;
+  Emotion emotion() const override;
+  std::vector<ConversationLine<RealtorLine>> lines() const override;
+  bool advance() override;
+  bool advance_line_choice(RealtorLine) override;
+  bool advance_proposal(bool) override;
+  bool has_ended() const override;
 
 private:
   int round_to_nearest(int value, int rounding_unit) const;

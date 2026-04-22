@@ -42,7 +42,7 @@ struct MayorAwardEvent {
 class MayorOffice {
 public:
   void register_accounts(BankAccountRegistry& registry);
-  void end_of_day(const GameDate& date, BankAccountRegistry& registry);
+  void start_of_day(const GameDate& date, BankAccountRegistry& registry);
 
   int public_bank_account() const { return public_bank_account_; }
   int private_bank_account() const { return private_bank_account_; }
@@ -142,4 +142,9 @@ private:
 
   // Day-of-month when the player can meet the mayor for a donation.
   int appointment_day_{0};
+
+  // Month-start date of the last private account rotation. nullopt = never
+  // rotated. Rotation happens lazily on first city visit each month, even if
+  // the city was unvisited on the 1st.
+  std::optional<GameDate> last_rotation_date_;
 };

@@ -15,12 +15,12 @@
 class ArmsDealerConversation : public BaseConversation<ArmsDealerLine> {
 public:
   ArmsDealerConversation(GameState&, const Actor*);
-  virtual Emotion emotion() const override;
-  virtual std::vector<ConversationLine<ArmsDealerLine>> lines() const override;
-  virtual bool advance() override;
-  virtual bool advance_line_choice(ArmsDealerLine) override;
-  virtual bool advance_proposal(bool) override;
-  virtual bool has_ended() const override;
+  Emotion emotion() const override;
+  std::vector<ConversationLine<ArmsDealerLine>> lines() const override;
+  bool advance() override;
+  bool advance_line_choice(ArmsDealerLine) override;
+  bool advance_proposal(bool) override;
+  bool has_ended() const override;
 
 private:
   enum class PurchaseResult {
