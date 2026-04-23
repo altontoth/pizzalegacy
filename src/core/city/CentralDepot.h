@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <optional>
 #include <vector>
 #include "core/common/Ids.h"
 #include "core/food/IngredientArray.h"
