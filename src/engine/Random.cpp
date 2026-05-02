@@ -42,9 +42,7 @@ bool rand_percentage_chance(int percentage) {
   if (percentage >= 100) {
     return true;
   }
-  int r = ansi_rand15();
-  int r_scaled = (r * 100) >> 15; // uniform in [0..99]
-  return r_scaled < percentage;
+  return rand_max_n(100) < percentage;
 }
 
 bool coin_flip() { return rand_percentage_chance(50); }

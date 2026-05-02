@@ -34,6 +34,12 @@ struct ToppingCtx {
   core::food::Topping* topping;
 };
 
+struct CompetitionCtx {
+  std::string pizza_name;
+  int speed_level{1};
+  std::string current_ingredient;
+};
+
 enum class PropertyDisplayStage {
   DEFAULT,
   PROPERTY_INFO,
@@ -58,9 +64,11 @@ public:
   void show_competitor_restaurant(const CityCtx& c, const Restaurant& rest);
   void show_pizza(const PizzaCtx& p);
   void show_topping(const ToppingCtx& t);
+  void show_competition(const CompetitionCtx& c);
 
 private:
   // Builders
+  static StatusDisplayRecipe build_competition(const CompetitionCtx&);
   static StatusDisplayRecipe build_city_default(const CityCtx&);
   static StatusDisplayRecipe build_city_property_info(const CityCtx&,
                                                       int index);

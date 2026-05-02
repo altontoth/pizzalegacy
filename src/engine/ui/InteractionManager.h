@@ -169,7 +169,7 @@ private:
   create_item(ViewRect r, std::string_view id_str, Callback cb, LayerID layer,
               InteractionManager::TooltipCb tt = {},
               InteractionLayer layer_type = InteractionLayer::Normal) {
-    ItemID id = std::hash<std::string_view>{}(id_str);
+    ItemID id = static_cast<ItemID>(std::hash<std::string_view>{}(id_str));
 #ifdef DEBUG
     for (const auto& item : items_) {
       if (item.id == id) {

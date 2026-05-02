@@ -18,7 +18,7 @@ public:
   PizzaJudges(GameContext& context, GameState& state,
               const std::array<int, NUMBER_OF_JUDGES>& scores,
               std::function<void()> on_complete,
-              bool is_canonical_comparison = false);
+              JudgingMode judging_mode = JudgingMode::Own);
   void tick() override;
   void render(const RenderContext& ctx) override;
 

@@ -58,6 +58,9 @@ void StatusController::show_pizza(const PizzaCtx& p) {
 void StatusController::show_topping(const ToppingCtx& t) {
   emit_baseline(build_topping(t));
 }
+void StatusController::show_competition(const CompetitionCtx& c) {
+  emit_baseline(build_competition(c));
+}
 
 void StatusController::emit_baseline(StatusDisplayRecipe r) {
   // Copy the recipe into the lambda. Each call overwrites the baseline.
@@ -66,6 +69,23 @@ void StatusController::emit_baseline(StatusDisplayRecipe r) {
 
 void StatusController::emit_status_msg(StatusMsg msg) {
   hub_.post_direct(std::move(msg));
+}
+
+StatusDisplayRecipe
+StatusController::build_competition(const CompetitionCtx& c) {
+  StatusDisplayRecipe r;
+  if (c.current_ingredient.empty()) {
+    r.add_header("GET READY...", StatusAlignment::Left);
+  }
+  else {
+    r.add_header("PIZZA COMPETITION", StatusAlignment::Left);
+    r.add_single("ORIGINAL RECIPE:");
+    r.add_single(c.pizza_name);
+    r.add_two_column("LEVEL:", std::to_string(c.speed_level));
+    r.add_single("CURRENT INGREDIENT:");
+    r.add_single(c.current_ingredient);
+  }
+  return r;
 }
 
 StatusDisplayRecipe StatusController::build_city_default(const CityCtx& c) {

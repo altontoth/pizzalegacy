@@ -7,15 +7,17 @@
 #include "views/screens/restaurant/RestaurantView.h"
 
 #include <algorithm>
+#include <cassert>
 #include <cmath>
 
 #include "core/Demographics.h"
+#include "core/character/Character.h"
 #include "core/city/District.h"
 #include "core/city/Property.h"
-#include "core/events/LeventId.h"
 #include "core/finance/Ledger.h"
 #include "core/restaurant/Furniture.h"
 #include "core/restaurant/RestaurantTypes.h"
+#include "core/state/CompetitionSession.h"
 #include "core/state/GameState.h"
 #include "core/status/StatusHub.h"
 #include "core/util/LegacyConstants.h"
@@ -27,7 +29,9 @@
 #include "engine/geom/Spaces.h"
 #include "engine/ui/ICursorManager.h"
 #include "engine/ui/InteractionEvent.h"
+#include "factories/PizzaFactory.h"
 #include "gfx/Blit.h"
+#include "resources/BobSizeFn.h"
 #include "views/base/BobRenderer.h"
 #include "views/base/ViewDefs.h"
 #include "views/screens/restaurant/RestaurantStats.h"
@@ -36,6 +40,7 @@
 #include "views/ui/popups/ConfirmPopup.h"
 #include "views/ui/popups/GuestTalkPopup.h"
 #include "views/ui/popups/JukeboxPopup.h"
+#include "views/ui/popups/NumberInputPopup.h"
 #include "views/ui/popups/TvPopup.h"
 
 using namespace views::base;
@@ -263,9 +268,17 @@ bool RestaurantView::on_action(const input::ActionEvent& ev) {
 
 void RestaurantView::set_up_buttons() {
   if (view_mode_ == RestaurantViewMode::OPPONENT_VIEW) {
-    input_panel_->add_button(Icon::CHEFS_HAT, ButtonType::Horizontal,
-                             ButtonPosition::TopLeft, "Challenge",
-                             []() { /* noop */ });
+    auto opp_pid_opt = restaurant_->property().owner_or_tenant();
+    if (!opp_pid_opt) {
+      input_panel_->add_button(Icon::CHEFS_HAT, ButtonType::Horizontal,
+                               ButtonPosition::TopLeft, "Challenge", [] {});
+    }
+    else {
+      core::PlayerId opp_pid = *opp_pid_opt;
+      input_panel_->add_button(
+          Icon::CHEFS_HAT, ButtonType::Horizontal, ButtonPosition::TopLeft,
+          "Challenge", [this, opp_pid] { challenge_check_and_start(opp_pid); });
+    }
 
     input_panel_->add_button(Icon::BOMB, ButtonType::Horizontal,
                              ButtonPosition::MiddleLeft, "Sabotage", [this]() {
@@ -383,7 +396,7 @@ void RestaurantView::set_up_buttons() {
   input_panel_->add_button(
       Icon::PARCHMENT, ButtonType::Square, ButtonPosition::MiddleRight,
       "Recipe list", [this]() {
-        state_.ui().push<PizzaManagerState>(PizzaManagerMode::Recipes);
+        state_.ui().push<PizzaDesignState>(PizzaDesignMode::Recipes);
       });
 
   input_panel_->add_button(
@@ -2051,4 +2064,100 @@ void RestaurantView::render_sabotage(const RenderContext& ctx) {
 
     y_position += 20;
   }
+}
+
+void RestaurantView::challenge_check_and_start(core::PlayerId opp_pid) {
+  auto* opp_player = state_.player(opp_pid);
+  if (opp_player && !opp_player->is_human_controlled() &&
+      opp_player->competition_willingness() != 0) {
+    context_.popup->create<AlertPopup>(
+        "No thanks! I don't want to participate!");
+    return;
+  }
+  auto* human = state_.active_player();
+  if (!human || human->cash_balance() < 500_usd) {
+    return;
+  }
+  auto cash_dollars = static_cast<int>(human->cash_balance().whole());
+  auto max_bet = std::min(10000, (cash_dollars / 500) * 500);
+  assert(max_bet >= 500);
+  CompetitionFlow flow{
+      .human_pid = human->id(),
+      .opp_pid = opp_pid,
+      .max_bet = max_bet,
+  };
+  challenge_ask_confirm(flow);
+}
+
+void RestaurantView::challenge_ask_confirm(CompetitionFlow flow) {
+  auto* opp = state_.player(flow.opp_pid);
+  const RawRenderable* portrait = opp ? &opp->character() : nullptr;
+  context_.popup->origin({28, 38});
+  context_.popup->create<ConfirmPopup>(
+      "So you want to challenge me to a pizza competition?",
+      [this, flow](bool agree) {
+        if (agree) {
+          challenge_ask_bet(flow);
+        }
+      },
+      portrait);
+}
+
+void RestaurantView::challenge_ask_bet(CompetitionFlow flow) {
+  context_.popup->create<NumberInputPopup>(
+      "How much do you stake?", "$", 500, 500, flow.max_bet, 500,
+      [this, flow](int bet_dollars) mutable {
+        flow.bet_dollars = bet_dollars;
+        challenge_ask_speed(flow);
+      });
+}
+
+void RestaurantView::challenge_ask_speed(CompetitionFlow flow) {
+  context_.popup->create<NumberInputPopup>(
+      "Speed:", "", 3, 1, 5, 1, [this, flow](int speed_level) mutable {
+        flow.speed_level = speed_level;
+        challenge_start(flow);
+      });
+}
+
+void RestaurantView::challenge_start(CompetitionFlow flow) {
+  int comp_count = state_.competition_count();
+  // early game: lower IDs (starting at 20) then increasing with comp_count
+  int pizza_index = std::min(static_cast<int>(comp_count), 40) +
+                    engine::random::rand_max_n(10) + 20;
+
+  auto& zutaten_bob = context_.bob->get("bob/zutaten.bob");
+  auto get_bob_size =
+      make_ingredient_bob_size_fn<Bob, core::food::Topping>(zutaten_bob);
+  auto canonical = PizzaFactory::create_pizza(pizza_index, get_bob_size,
+                                              state_.customer_taste_profiles());
+  if (!canonical) {
+    Logger::warn("Challenge: failed to load pizza {}", pizza_index);
+    return;
+  }
+
+  Money bet{static_cast<int64_t>(flow.bet_dollars) * 100};
+  auto session = std::make_shared<CompetitionSession>();
+  session->pizza_index = pizza_index;
+  session->speed_level = flow.speed_level;
+  session->delay_ticks = 100 - flow.speed_level * 15;
+  session->is_challenge = true;
+  session->canonical_pizza =
+      std::make_shared<core::food::Pizza>(std::move(*canonical));
+  session->human_slot = static_cast<int>(session->participants.size());
+  session->challenger_slot = flow.human_pid.value;
+  session->participants.push_back(CompetitionParticipant{
+      .player_id = flow.human_pid,
+      .is_human = true,
+      .bet = bet,
+  });
+  session->participants.push_back(CompetitionParticipant{
+      .player_id = flow.opp_pid,
+      .is_human = false,
+      .bet = bet,
+  });
+
+  state_.ui().push<PizzaDesignState>(PizzaDesignMode::CompetitorChallenge,
+                                     std::nullopt, nullptr, std::nullopt,
+                                     session);
 }

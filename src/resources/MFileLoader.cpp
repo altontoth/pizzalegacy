@@ -88,7 +88,5 @@ std::vector<AudioAsset> MFileLoader::load(const std::string& filename) {
 
     assets.push_back(std::move(asset));
   }
-
-  Logger::debug("Loaded {} audio assets from {}", assets.size(), filename);
   return assets;
 }

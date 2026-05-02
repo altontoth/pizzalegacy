@@ -60,6 +60,20 @@ private:
   void calculate_background_dimensions();
   void set_up_buttons();
   void update_buttons_for_furniture_state();
+
+  struct CompetitionFlow {
+    core::PlayerId human_pid;
+    core::PlayerId opp_pid;
+    int max_bet{0};
+    int bet_dollars{0};
+    int speed_level{1};
+  };
+
+  void challenge_check_and_start(core::PlayerId opp_pid);
+  void challenge_ask_confirm(CompetitionFlow flow);
+  void challenge_ask_bet(CompetitionFlow flow);
+  void challenge_ask_speed(CompetitionFlow flow);
+  void challenge_start(CompetitionFlow flow);
   void handle_throw_away();
   void handle_move_elsewhere();
   void handle_sell_furniture();

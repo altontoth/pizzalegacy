@@ -4,10 +4,13 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "views/screens/PizzaManager.h"
+#include "views/screens/PizzaDesign.h"
+
 #include "core/Demographics.h"
 #include "core/GameTypes.h"
 #include "core/city/Property.h"
+#include "core/events/LeventId.h"
+#include "core/finance/Ledger.h"
 #include "core/finance/MoneyParse.h"
 #include "core/food/RecipeCodec.h"
 #include "core/state/GameState.h"
@@ -17,6 +20,7 @@
 #include "engine/audio/AudioManager.h"
 #include "engine/geom/Spaces.h"
 #include "engine/input/InputManager.h"
+#include "engine/ui/Alignment.h"
 #include "engine/ui/ICursorManager.h"
 #include "factories/PizzaFactory.h"
 #include "gfx/Blit.h"
@@ -40,6 +44,8 @@
 #include <optional>
 
 static constexpr int CHOP_FLIP_PERIOD_MS = 55;
+static constexpr uint64_t GET_READY_WAIT_MS = 2000;
+static constexpr uint64_t RESULTS_ROW_INTERVAL_MS = 1200;
 static constexpr int NUMBER_OF_CHOP_MS = 600;
 static constexpr int CHOPPER_HEIGHT = 86;
 static constexpr int CHOPPER_WIDTH = 86;
@@ -100,12 +106,12 @@ gfx::PaletteOverride make_bar_ui_ramp_override(uint8_t src_pal_id) {
       .dst_indices = r, .src_indices = r, .src_palette_id = src_pal_id};
 }
 struct IngredientInfo {
-  PizzaManager::IngredientDropdown category;
+  PizzaDesign::IngredientDropdown category;
   IngredientType id;
   std::string_view name;
 };
 using enum IngredientType;
-using enum PizzaManager::IngredientDropdown;
+using enum PizzaDesign::IngredientDropdown;
 constexpr IngredientInfo ingredients[] = {
     {.category = VEGETABLES, .id = TOMATOES, .name = "TOMATOES"},
     {.category = VEGETABLES, .id = OLIVES, .name = "OLIVES"},
@@ -174,10 +180,10 @@ constexpr IngredientInfo ingredients[] = {
 };
 } // namespace
 
-PizzaManager::PizzaManager(GameContext& context, GameState& state,
-                           PizzaManagerState pms)
+PizzaDesign::PizzaDesign(GameContext& context, GameState& state,
+                         PizzaDesignState pms)
     : MainPanelView(context, state), mode_(pms.initial_mode),
-      design_mode_{pms.initial_mode == PizzaManagerMode::Design},
+      design_mode_{pms.initial_mode == PizzaDesignMode::Design},
       zutaten_bob_(context_.bob->get("bob/zutaten.bob")),
       blade_horizontal_{[this] {
         ViewRect src_rect{CHOPPER_OFFSET_X, CHOPPER_OFFSET_Y, CHOPPER_WIDTH,
@@ -208,6 +214,8 @@ PizzaManager::PizzaManager(GameContext& context, GameState& state,
       }()},
       active_key_{pms.active_key.value_or(new_row_tag)},
       bake_(pms.bake ? std::make_optional(std::move(*pms.bake)) : std::nullopt),
+      competing_player_id_(pms.competing_player_id),
+      on_done_(std::move(pms.on_done)),
       listener_(context.input->register_listener(*this)),
       status_(state_.status()) {
 
@@ -220,11 +228,32 @@ PizzaManager::PizzaManager(GameContext& context, GameState& state,
   create_input_panel();
 
   // Check if we're returning from judging
-  if (mode_ == PizzaManagerMode::OwnPizzaJudging ||
-      mode_ == PizzaManagerMode::CanonicalPizzaJudging ||
-      mode_ == PizzaManagerMode::CompetitionJudging) {
-    // Handle post-judging immediately
+  if (mode_ == PizzaDesignMode::OwnPizzaJudging ||
+      mode_ == PizzaDesignMode::CanonicalPizzaJudging ||
+      mode_ == PizzaDesignMode::CompetitionJudging) {
+    if (pms.competition_session) {
+      competition_ = std::move(*pms.competition_session);
+    }
     handle_post_judging();
+  }
+  else if (mode_ == PizzaDesignMode::MonthlyChallenge ||
+           mode_ == PizzaDesignMode::CompetitorChallenge) {
+    if (pms.competition_session) {
+      begin_competition(pms.competition_session);
+    }
+    else {
+      Logger::warn("Competition mode entered without a session!");
+      state_.ui().pop();
+    }
+  }
+  else if (mode_ == PizzaDesignMode::AnnualCompetitionDesign) {
+    if (pms.competition_session) {
+      begin_annual_competition(pms.competition_session);
+    }
+    else {
+      Logger::warn("AnnualCompetitionDesign entered without a session!");
+      state_.ui().pop();
+    }
   }
   else {
     status_.show_restaurant({.state = &state_,
@@ -233,18 +262,78 @@ PizzaManager::PizzaManager(GameContext& context, GameState& state,
   }
 }
 
-PizzaManager::~PizzaManager() { context_.cursor->clear_custom_cursor(); }
+PizzaDesign::~PizzaDesign() {
+  context_.cursor->clear_custom_cursor();
+  if (context_.audio->is_playing()) {
+    context_.audio->stop_music();
+  }
+}
 
-void PizzaManager::tick() {
+void PizzaDesign::tick() {
   if (dropdowns_.tick()) {
     mark_dirty();
+  }
+
+  if (mode_ == PizzaDesignMode::CompetitionReveal && competition_) {
+    auto& c = *competition_;
+    if (!c.reveal_done) {
+      int topping_count =
+          static_cast<int>(c.canonical_pizza->toppings().size());
+      if (c.reveal_idx < topping_count) {
+        int current_max = reveal_speed_boost_ ? 1 : c.delay_ticks;
+        reveal_delay_remaining_ticks_ =
+            std::min(reveal_delay_remaining_ticks_, current_max);
+        if (reveal_delay_remaining_ticks_ > 0) {
+          --reveal_delay_remaining_ticks_;
+        }
+        else {
+          reveal_delay_remaining_ticks_ = current_max;
+          c.reveal_idx++;
+          update_competition_status();
+          mark_dirty();
+        }
+      }
+      else {
+        c.reveal_done = true;
+        c.get_ready = true;
+        c.get_ready_start_ms = context_.clock.now_ms;
+        update_competition_status();
+        mark_dirty();
+      }
+    }
+    else if (c.get_ready) {
+      if (context_.clock.elapsed_since(c.get_ready_start_ms,
+                                       GET_READY_WAIT_MS)) {
+        c.get_ready = false;
+        on_reveal_complete();
+      }
+    }
+    return;
+  }
+
+  if (mode_ == PizzaDesignMode::CompetitionDesign) {
+    competition_design_ticks_++;
+  }
+
+  if (mode_ == PizzaDesignMode::CompetitionResults && competition_) {
+    auto& c = *competition_;
+    int total = static_cast<int>(c.participants.size());
+    if (c.results_rows_shown <= total) {
+      if (context_.clock.elapsed_since(c.results_last_row_ms,
+                                       RESULTS_ROW_INTERVAL_MS)) {
+        c.results_rows_shown++;
+        c.results_last_row_ms = context_.clock.now_ms;
+        mark_dirty();
+      }
+    }
+    return;
   }
 
   if (!chopping_) {
     return;
   }
 
-  // End condition, total duration reached (optionally only when horizontal)
+  // End condition, total duration reached (only when horizontal)
   if (context_.clock.elapsed_since(chop_start_ms_, NUMBER_OF_CHOP_MS) &&
       chop_horizontal_) {
     chopping_ = false;
@@ -264,14 +353,14 @@ void PizzaManager::tick() {
   }
 }
 
-bool PizzaManager::on_action(const input::ActionEvent& ev) {
+bool PizzaDesign::on_action(const input::ActionEvent& ev) {
   if (!ev.state.pressed) {
     return false;
   }
 
   // F1: Load user recipe from game/ directory
   if (ev.action == input::Action::LoadRecipe) {
-    if (mode_ == PizzaManagerMode::Design) {
+    if (mode_ == PizzaDesignMode::Design) {
       // Debug mode: Load user recipe for testing
       context_.popup->create<NumberInputPopup>(
           "Load recipe?", "", 0, 0, 99, 1,
@@ -288,7 +377,7 @@ bool PizzaManager::on_action(const input::ActionEvent& ev) {
 
   // F3: Load canonical/competition recipe from r/ directory
   if (ev.action == input::Action::LoadCanonicalRecipe) {
-    if (mode_ == PizzaManagerMode::Design) {
+    if (mode_ == PizzaDesignMode::Design) {
       // Debug mode: Load canonical pizza for testing scoring
       context_.popup->create<NumberInputPopup>(
           "Load canonical pizza?", "", 0, 0, 99, 1,
@@ -304,7 +393,7 @@ bool PizzaManager::on_action(const input::ActionEvent& ev) {
   }
 
   // Block all other actions in Design mode
-  if (mode_ == PizzaManagerMode::Design) {
+  if (mode_ == PizzaDesignMode::Design) {
     return false;
   }
 
@@ -345,86 +434,54 @@ bool PizzaManager::on_action(const input::ActionEvent& ev) {
   return true;
 }
 
-void PizzaManager::render(const RenderContext& ctx) {
+void PizzaDesign::render(const RenderContext& ctx) {
   interactions_.begin_frame();
   switch (mode_) {
-  case PizzaManagerMode::View:
+  case PizzaDesignMode::View:
     draw_pizza(ctx);
     break;
-  case PizzaManagerMode::Design: {
+  case PizzaDesignMode::AnnualCompetitionDesign:
+  case PizzaDesignMode::CompetitionDesign:
+  case PizzaDesignMode::Design:
     draw_pizza(ctx);
-    // And render them:
+    setup_pizza_design_interactions(ctx);
+    break;
+  case PizzaDesignMode::Ingredients:
+    draw_ingredients(ctx);
+    break;
+  case PizzaDesignMode::Info:
+    draw_pizza_info(ctx);
+    break;
+  case PizzaDesignMode::Recipes:
+    draw_recipes(ctx);
+    break;
+  case PizzaDesignMode::CompetitionReveal: {
+    draw_competition_reveal(ctx);
     views::ui::InteractionContext ictx{interactions_, [this] { mark_dirty(); }};
     interactions_.create_frame_item(
         ViewRect{0, 0, views::base::MAIN_PANEL_WIDTH,
                  views::base::MAIN_PANEL_HEIGHT},
-        "pizza fallback", [this](views::ui::InteractionEvent ui) {
+        "reveal speed boost", [this](views::ui::InteractionEvent ui) {
           using Type = views::ui::InteractionEvent::Type;
-          if (ui.type == Type::Enter) {
-            if (active_topping_) {
-              context_.cursor->custom_cursor(renderer_.image(*active_topping_));
-            }
-            return;
+          if (ui.type == Type::ButtonDown &&
+              ui.button == views::ui::MouseButton::Left) {
+            reveal_speed_boost_ = true;
           }
-          if (ui.type == Type::Leave) {
-            if (active_topping_) {
-              // Leave also fires when the cursor moves onto the chopper or the
-              // dropdown items, so we only clear when actually leaving the
-              // panel.
-              constexpr ViewRect panel{0, 0, views::base::MAIN_PANEL_WIDTH,
-                                       views::base::MAIN_PANEL_HEIGHT};
-              if (!panel.contains(ui.local)) {
-                context_.cursor->clear_custom_cursor();
-              }
-            }
-            return;
-          }
-          if (ui.type != Type::Click) {
-            return;
-          }
-          if (ui.button == views::ui::MouseButton::Left) {
-            handle_left_mouse_click(ui.local);
-          }
-          else if (ui.button == views::ui::MouseButton::Right) {
-            handle_right_mouse_click(ui.local);
+          else if (ui.type == Type::ButtonUp || ui.type == Type::Cancelled ||
+                   ui.type == Type::Leave) {
+            reveal_speed_boost_ = false;
           }
         });
-    // Chopper (registered before dropdowns so dropdowns take priority)
-    interactions_.create_frame_item(
-        ViewRect{5, 250, CHOPPER_WIDTH, CHOPPER_HEIGHT}, "chopper",
-        [this](views::ui::InteractionEvent ie) {
-          if (ie.type == views::ui::InteractionEvent::Type::Click &&
-              ie.button == views::ui::MouseButton::Left) {
-            // If no active topping, try to reactivate previous topping
-            if (!active_topping_ && previous_topping_) {
-              active_topping_ = std::move(previous_topping_);
-              previous_topping_.reset();
-              context_.cursor->custom_cursor(renderer_.image(*active_topping_));
-              update_status_ingredient();
-              mark_dirty();
-            }
-            start_chop();
-          }
-        });
-
-    dropdowns_.add_interactions(ictx);
-    dropdowns_.render(*ctx.surface, context_.font);
     break;
   }
-  case PizzaManagerMode::Ingredients:
-    draw_ingredients(ctx);
-    break;
-  case PizzaManagerMode::Info:
-    draw_pizza_info(ctx);
-    break;
-  case PizzaManagerMode::Recipes:
-    draw_recipes(ctx);
+  case PizzaDesignMode::CompetitionResults:
+    draw_competition_results(ctx);
     break;
   default:
     Logger::debug("Unhandled pizza mode");
     break;
   }
-  if (mode_ == PizzaManagerMode::Info) {
+  if (mode_ == PizzaDesignMode::Info) {
     // Not sure how the original did it but the color indexes for the statbars
     // in index 18 are not correct, so we have to steal the colors from 13.
     auto ovr = make_bar_ui_ramp_override(/*src_pal_id=*/13);
@@ -436,7 +493,7 @@ void PizzaManager::render(const RenderContext& ctx) {
   }
 }
 
-void PizzaManager::start_chop() {
+void PizzaDesign::start_chop() {
   if (!active_topping_ || chopping_ || !active_topping_->chop()) {
     return;
   }
@@ -451,7 +508,64 @@ void PizzaManager::start_chop() {
   mark_dirty();
 }
 
-void PizzaManager::draw_ingredients(const RenderContext& ctx) const {
+void PizzaDesign::setup_pizza_design_interactions(const RenderContext& ctx) {
+  views::ui::InteractionContext ictx{interactions_, [this] { mark_dirty(); }};
+  interactions_.create_frame_item(
+      ViewRect{0, 0, views::base::MAIN_PANEL_WIDTH,
+               views::base::MAIN_PANEL_HEIGHT},
+      "pizza fallback", [this](views::ui::InteractionEvent ui) {
+        using Type = views::ui::InteractionEvent::Type;
+        if (ui.type == Type::Enter) {
+          if (active_topping_) {
+            context_.cursor->custom_cursor(renderer_.image(*active_topping_));
+          }
+          return;
+        }
+        if (ui.type == Type::Leave) {
+          if (active_topping_) {
+            // Leave also fires when the cursor moves onto the chopper or the
+            // dropdown items, so we only clear when actually leaving the panel.
+            constexpr ViewRect panel{0, 0, views::base::MAIN_PANEL_WIDTH,
+                                     views::base::MAIN_PANEL_HEIGHT};
+            if (!panel.contains(ui.local)) {
+              context_.cursor->clear_custom_cursor();
+            }
+          }
+          return;
+        }
+        if (ui.type != Type::Click) {
+          return;
+        }
+        if (ui.button == views::ui::MouseButton::Left) {
+          handle_left_mouse_click(ui.local);
+        }
+        else if (ui.button == views::ui::MouseButton::Right) {
+          handle_right_mouse_click(ui.local);
+        }
+      });
+  // Chopper (registered before dropdowns so dropdowns take priority)
+  interactions_.create_frame_item(
+      ViewRect{5, 250, CHOPPER_WIDTH, CHOPPER_HEIGHT}, "chopper",
+      [this](views::ui::InteractionEvent ie) {
+        if (ie.type == views::ui::InteractionEvent::Type::Click &&
+            ie.button == views::ui::MouseButton::Left) {
+          // If no active topping, try to reactivate previous topping
+          if (!active_topping_ && previous_topping_) {
+            active_topping_ = std::move(previous_topping_);
+            previous_topping_.reset();
+            context_.cursor->custom_cursor(renderer_.image(*active_topping_));
+            update_status_ingredient();
+            mark_dirty();
+          }
+          start_chop();
+        }
+      });
+
+  dropdowns_.add_interactions(ictx);
+  dropdowns_.render(*ctx.surface, context_.font);
+}
+
+void PizzaDesign::draw_ingredients(const RenderContext& ctx) const {
   gfx::blit::blit_raw_with_palette(*ctx.surface,
                                    context_.vga->get("gfx/back4"));
 
@@ -500,7 +614,7 @@ void PizzaManager::draw_ingredients(const RenderContext& ctx) const {
       ViewPoint{130, 306}, FontFace::CSTANDAR, text_color);
 }
 
-void PizzaManager::draw_pizza_info(const RenderContext& ctx) const {
+void PizzaDesign::draw_pizza_info(const RenderContext& ctx) const {
   gfx::blit::blit_raw_with_palette(*ctx.surface,
                                    context_.vga->get("gfx/back4"));
 
@@ -554,7 +668,7 @@ void PizzaManager::draw_pizza_info(const RenderContext& ctx) const {
       int weight_grams = topping->weight();
       const auto* stock = inv.get_ingredient_stock(type);
       Money price_per_1000g;
-      if (stock && stock->quantity > 0 && stock->weighted_avg_cost.cents > 0) {
+      if (stock && stock->quantity > 0 && stock->weighted_avg_cost > 0_usd) {
         price_per_1000g = stock->weighted_avg_cost;
       }
       else {
@@ -630,12 +744,12 @@ void PizzaManager::draw_pizza_info(const RenderContext& ctx) const {
   int all_x_offset = -140;  // "all" column (further left)
   text_color = 6;
 
-  // Row 1: costs - ALWAYS show ingredient cost, even if not on menu
+  // costs
   context_.font->render_text_onto(*ctx.surface, "costs",
                                   ViewPoint{label_x, label_y},
                                   FontFace::PIZ_NUMB, text_color);
 
-  // Show calculated cost in "here" column (always visible)
+  // Show calculated cost in "here" column
   context_.font->render_text_onto(
       *ctx.surface, compat::format("{:n}", pizza_cost),
       ViewPoint{label_x + here_x_offset, label_y}, FontFace::PIZ_NUMB,
@@ -649,7 +763,7 @@ void PizzaManager::draw_pizza_info(const RenderContext& ctx) const {
   }
   label_y += 21;
 
-  // Row 2: price - only show if on menu
+  // price - only show if on menu
   context_.font->render_text_onto(*ctx.surface, "price",
                                   ViewPoint{label_x, label_y},
                                   FontFace::PIZ_NUMB, text_color);
@@ -669,7 +783,7 @@ void PizzaManager::draw_pizza_info(const RenderContext& ctx) const {
   }
   label_y += 21;
 
-  // Row 3: sales (count, not money) - only show if on menu
+  // sales (count)
   context_.font->render_text_onto(*ctx.surface, "sales",
                                   ViewPoint{label_x, label_y},
                                   FontFace::PIZ_NUMB, text_color);
@@ -689,7 +803,7 @@ void PizzaManager::draw_pizza_info(const RenderContext& ctx) const {
   }
   label_y += 21;
 
-  // Row 4: profit - only show if on menu
+  // profit
   context_.font->render_text_onto(*ctx.surface, "profit",
                                   ViewPoint{label_x, label_y},
                                   FontFace::PIZ_NUMB, text_color);
@@ -714,7 +828,7 @@ void PizzaManager::draw_pizza_info(const RenderContext& ctx) const {
   constexpr int max_rows_per_column = 3;
   int y_start = 232;
   int x_start = 14;
-  // Move this much sidewas for the second column
+  // Move this much sideways for the second column
   constexpr int column_offset = 172;
   constexpr int row_offset = 30;
   Popularity p = pizza->popularity();
@@ -725,7 +839,6 @@ void PizzaManager::draw_pizza_info(const RenderContext& ctx) const {
     auto d = static_cast<ConsumerType>(i);
     auto bar = statbar.create_stat_bar(to_string(d), static_cast<int>(p[d]));
     ctx.surface->blit_masked(bar, ViewPoint{x_start, y_start + y_offset});
-    // ctx.surface->palette({7});
     y_offset += row_offset;
     if (i + 1 == max_rows_per_column) {
       x_start += column_offset;
@@ -734,7 +847,7 @@ void PizzaManager::draw_pizza_info(const RenderContext& ctx) const {
   }
 }
 
-void PizzaManager::draw_pizza(const RenderContext& ctx) const {
+void PizzaDesign::draw_pizza(const RenderContext& ctx) const {
   gfx::blit::blit_raw_with_palette(*ctx.surface,
                                    context_.vga->get("gfx/back1"));
   ctx.surface->blit_masked(chop_horizontal_ ? blade_horizontal_
@@ -743,7 +856,8 @@ void PizzaManager::draw_pizza(const RenderContext& ctx) const {
 
   const Pizza* pizza = current_pizza();
   if (!pizza) {
-    Logger::warn("No current pizza!");
+    // This can happen during end of competition, not an issue
+    Logger::debug("No current pizza!");
     return;
   }
 
@@ -752,8 +866,10 @@ void PizzaManager::draw_pizza(const RenderContext& ctx) const {
   }
 }
 
-bool PizzaManager::handle_left_mouse_click(ViewPoint vp) {
-  if (mode_ != PizzaManagerMode::Design) {
+bool PizzaDesign::handle_left_mouse_click(ViewPoint vp) {
+  if (mode_ != PizzaDesignMode::Design &&
+      mode_ != PizzaDesignMode::CompetitionDesign &&
+      mode_ != PizzaDesignMode::AnnualCompetitionDesign) {
     return false;
   }
   Pizza* pizza = current_pizza();
@@ -789,8 +905,10 @@ bool PizzaManager::handle_left_mouse_click(ViewPoint vp) {
   return false;
 }
 
-bool PizzaManager::handle_right_mouse_click(ViewPoint /* p */) {
-  if (mode_ != PizzaManagerMode::Design) {
+bool PizzaDesign::handle_right_mouse_click(ViewPoint /* p */) {
+  if (mode_ != PizzaDesignMode::Design &&
+      mode_ != PizzaDesignMode::CompetitionDesign &&
+      mode_ != PizzaDesignMode::AnnualCompetitionDesign) {
     return false;
   }
   Pizza* pizza = current_pizza();
@@ -813,14 +931,14 @@ bool PizzaManager::handle_right_mouse_click(ViewPoint /* p */) {
   return false;
 }
 
-bool PizzaManager::is_inside_pizza(ViewPoint p) {
+bool PizzaDesign::is_inside_pizza(ViewPoint p) {
   // Check based on the radius of the pizza:
   return ((PIZZA_CENTER_X - p.x) * (PIZZA_CENTER_X - p.x) +
           (PIZZA_CENTER_Y - p.y) * (PIZZA_CENTER_Y - p.y)) <=
          PIZZA_RADIUS * PIZZA_RADIUS;
 }
 
-void PizzaManager::create_dropdowns() {
+void PizzaDesign::create_dropdowns() {
   constexpr int dd_btn_width = 60;
   constexpr int dd_btn_height = 60;
   constexpr int dd_btn_offset_x = 40;
@@ -840,9 +958,7 @@ void PizzaManager::create_dropdowns() {
   const int base = static_cast<int>(DROPDOWN_FIRST);
   for (int i = base; i <= static_cast<int>(DROPDOWN_LAST); ++i) {
     const int idx = i - base;
-    IngredientDropdown dd = static_cast<IngredientDropdown>(idx);
-    Logger::debug("Creating dropdown at x y {}, {}",
-                  dd_btn_offset_x + (dd_btn_spacing_x * idx), dd_btn_offset_y);
+    auto dd = static_cast<IngredientDropdown>(idx);
     ViewRect location{dd_btn_offset_x + (dd_btn_spacing_x * idx),
                       dd_btn_offset_y, dd_btn_width, dd_btn_height};
     dropdowns_.add_dropdown(dd, location, origins_[idx], [this] {
@@ -863,10 +979,6 @@ void PizzaManager::create_dropdowns() {
       }
       active_topping_ = std::make_unique<Topping>(ingredient);
       update_status_ingredient();
-      Logger::debug("Setting active_topping_ to {}",
-                    static_cast<int>(ingredient));
-      Logger::debug("You clicked {}",
-                    active_topping_->ingredient()->name().c_str());
       context_.cursor->custom_cursor(renderer_.image(*active_topping_));
     });
   };
@@ -875,7 +987,7 @@ void PizzaManager::create_dropdowns() {
   }
 }
 
-void PizzaManager::change_mode(PizzaManagerMode mode) {
+void PizzaDesign::change_mode(PizzaDesignMode mode) {
   if (engine::random::rand_percentage_chance(20)) {
     state_.advance_time_blocks(1);
   }
@@ -884,7 +996,7 @@ void PizzaManager::change_mode(PizzaManagerMode mode) {
   mark_dirty();
 }
 
-void PizzaManager::create_input_panel() {
+void PizzaDesign::create_input_panel() {
   // Make sure we start with a clean slate
   input_panel_->delete_buttons();
   // Then the three buttons (view/ingredients/info) that all
@@ -898,10 +1010,10 @@ void PizzaManager::create_input_panel() {
                                // views. When not in design mode, show View
                                // (read-only).
                                if (design_mode_) {
-                                 change_mode(PizzaManagerMode::Design);
+                                 change_mode(PizzaDesignMode::Design);
                                }
                                else {
-                                 change_mode(PizzaManagerMode::View);
+                                 change_mode(PizzaDesignMode::View);
                                }
                              });
 
@@ -909,12 +1021,12 @@ void PizzaManager::create_input_panel() {
     input_panel_->add_button(
         Icon::STOCK, ButtonType::Square, ButtonPosition::TopCenter,
         "Ingredients",
-        [this] { change_mode(mode_ = PizzaManagerMode::Ingredients); });
+        [this] { change_mode(mode_ = PizzaDesignMode::Ingredients); });
 
     // pizza info
     input_panel_->add_button(Icon::EXAMINE, ButtonType::Square,
                              ButtonPosition::TopRight, "Pizza info",
-                             [this] { change_mode(PizzaManagerMode::Info); });
+                             [this] { change_mode(PizzaDesignMode::Info); });
   };
 
   // Selection cycling (skips <NEW>), and keeps page_ in sync with the new
@@ -986,7 +1098,7 @@ void PizzaManager::create_input_panel() {
     input_panel_->add_button(
         Icon::ARROW_UP, ButtonType::Square, ButtonPosition::MiddleLeft,
         "Turn page", [this, cycle_selection] {
-          if (mode_ == PizzaManagerMode::Recipes) {
+          if (mode_ == PizzaDesignMode::Recipes) {
             int total =
                 state_.active_player()->recipes().size() + 1; // +1 for <NEW>
             int max_page = (total - 1) / recipes_per_page_;
@@ -1004,7 +1116,7 @@ void PizzaManager::create_input_panel() {
     input_panel_->add_button(Icon::ARROW_DOWN, ButtonType::Square,
                              ButtonPosition::BottomLeft, "Turn page",
                              [this, cycle_selection] {
-                               if (mode_ == PizzaManagerMode::Recipes) {
+                               if (mode_ == PizzaDesignMode::Recipes) {
                                  if (page_ > 0) {
                                    page_--;
                                    mark_dirty();
@@ -1016,9 +1128,9 @@ void PizzaManager::create_input_panel() {
                              });
 
     // recipes
-    input_panel_->add_button(
-        Icon::PARCHMENT, ButtonType::Square, ButtonPosition::MiddleCenter,
-        "Recipe list", [this] { change_mode(PizzaManagerMode::Recipes); });
+    input_panel_->add_button(Icon::PARCHMENT, ButtonType::Square,
+                             ButtonPosition::MiddleCenter, "Recipe list",
+                             [this] { change_mode(PizzaDesignMode::Recipes); });
 
     // transfer
     input_panel_->add_button(
@@ -1061,14 +1173,14 @@ void PizzaManager::create_input_panel() {
   };
 
   switch (mode_) {
-  case PizzaManagerMode::Recipes:
+  case PizzaDesignMode::Recipes:
     top_three_buttons();
     recipes_buttons();
     break;
-  case PizzaManagerMode::Ingredients:
-  case PizzaManagerMode::Design:
-  case PizzaManagerMode::View:
-  case PizzaManagerMode::Info:
+  case PizzaDesignMode::Ingredients:
+  case PizzaDesignMode::Design:
+  case PizzaDesignMode::View:
+  case PizzaDesignMode::Info:
     top_three_buttons();
     if (design_mode_) {
       // OK
@@ -1080,44 +1192,72 @@ void PizzaManager::create_input_panel() {
       recipes_buttons();
     }
     break;
-  case PizzaManagerMode::CompetitorChallenge:
-  case PizzaManagerMode::MonthlyChallenge:
-  case PizzaManagerMode::OwnPizzaJudging:
-  case PizzaManagerMode::CanonicalPizzaJudging:
-  case PizzaManagerMode::CompetitionJudging:
+  case PizzaDesignMode::CompetitorChallenge:
+  case PizzaDesignMode::MonthlyChallenge:
+  case PizzaDesignMode::OwnPizzaJudging:
+  case PizzaDesignMode::CanonicalPizzaJudging:
+  case PizzaDesignMode::CompetitionJudging:
+  case PizzaDesignMode::CompetitionReveal:
+  case PizzaDesignMode::CompetitionResults:
+  case PizzaDesignMode::AnnualCompetitionDesign:
+    // just the back button
+    break;
+  case PizzaDesignMode::CompetitionDesign:
+    input_panel_->add_button(Icon::THUMBS_UP, ButtonType::Horizontal,
+                             ButtonPosition::BottomLeft, "Done",
+                             [this] { on_competition_design_finished(); });
     break;
   }
 
   // Back
-  input_panel_->add_button(Icon::ARROW_BACK, ButtonType::Square,
-                           ButtonPosition::BottomRight, "Back", [this] {
-                             if (bake_) {
-                               if (state_.options().qol_improvements &&
-                                   !bake_->working.toppings().empty()) {
-                                 context_.popup->create<ConfirmPopup>(
-                                     "Discard pizza?", [this](bool agree) {
-                                       if (agree) {
-                                         cancel_bake();
-                                       }
-                                     });
-                               }
-                               else {
-                                 cancel_bake();
-                               }
-                             }
-                             else {
-                               if (design_mode_) {
-                                 state_.advance_time_blocks(5);
-                               }
-                               else {
-                                 state_.advance_time_blocks(1);
-                               }
-                               state_.ui().pop();
-                             }
-                           });
+  input_panel_->add_button(
+      Icon::ARROW_BACK, ButtonType::Square, ButtonPosition::BottomRight, "Back",
+      [this] {
+        if (mode_ == PizzaDesignMode::AnnualCompetitionDesign) {
+          on_design_finished();
+          return;
+        }
+        if (mode_ == PizzaDesignMode::CompetitionReveal ||
+            mode_ == PizzaDesignMode::CompetitionDesign ||
+            mode_ == PizzaDesignMode::CompetitionResults) {
+          competition_.reset();
+          bake_.reset();
+          state_.ui().pop();
+          if (pending_competition_message_) {
+            state_.deliver_message(*pending_competition_message_);
+          }
+          if (on_done_) {
+            on_done_();
+          }
+          return;
+        }
+        if (bake_) {
+          if (state_.options().qol_improvements &&
+              !bake_->working.toppings().empty()) {
+            context_.popup->create<ConfirmPopup>("Discard pizza?",
+                                                 [this](bool agree) {
+                                                   if (agree) {
+                                                     cancel_bake();
+                                                   }
+                                                 });
+          }
+          else {
+            cancel_bake();
+          }
+        }
+        else {
+          if (design_mode_) {
+            state_.advance_time_blocks(5);
+          }
+          else {
+            state_.advance_time_blocks(1);
+          }
+          state_.ui().pop();
+        }
+      });
 }
 
-void PizzaManager::draw_recipes(const RenderContext& ctx) {
+void PizzaDesign::draw_recipes(const RenderContext& ctx) {
   gfx::blit::blit_raw_with_palette(*ctx.surface,
                                    context_.vga->get("gfx/back4"));
 
@@ -1180,10 +1320,6 @@ void PizzaManager::draw_recipes(const RenderContext& ctx) {
             }
             mark_dirty();
           }
-          if (ie.type == views::ui::InteractionEvent::Type::DoubleClick &&
-              ie.button == views::ui::MouseButton::Left) {
-            Logger::warn("Double click!");
-          }
         });
 
     const bool selected = is_selected(row, active_key_);
@@ -1203,7 +1339,7 @@ void PizzaManager::draw_recipes(const RenderContext& ctx) {
   }
 }
 
-void PizzaManager::on_bake_pressed() {
+void PizzaDesign::on_bake_pressed() {
   auto* player = state_.active_player();
   auto rows = build_recipe_list_rows(player->recipes(),
                                      state_.restaurants_for(player->id()));
@@ -1249,7 +1385,7 @@ void PizzaManager::on_bake_pressed() {
   begin_bake(std::move(s));
 }
 
-void PizzaManager::begin_bake(core::food::BakeSession s) {
+void PizzaDesign::begin_bake(core::food::BakeSession s) {
   bake_ = std::move(s);
   design_mode_ = true;
   bake_->working.update_stats(state_.customer_taste_profiles());
@@ -1258,15 +1394,15 @@ void PizzaManager::begin_bake(core::food::BakeSession s) {
       .wip_pizza = &bake_->working,
       .recipe = nullptr,
   });
-  change_mode(PizzaManagerMode::Design);
+  change_mode(PizzaDesignMode::Design);
 }
 
-void PizzaManager::on_design_finished() {
+void PizzaDesign::on_design_finished() {
   state_.advance_time_blocks(5);
   design_mode_ = false;
   if (!bake_) {
     Logger::warn("I don't have a bake?!");
-    change_mode(PizzaManagerMode::View);
+    change_mode(PizzaDesignMode::View);
     return;
   }
 
@@ -1315,28 +1451,33 @@ void PizzaManager::on_design_finished() {
     return;
   }
   }
-  change_mode(PizzaManagerMode::Recipes);
+  change_mode(PizzaDesignMode::Recipes);
 }
 
-void PizzaManager::finish_new_user(std::string name) {
+void PizzaDesign::finish_new_user(std::string name) {
   bake_->working.name(name);
-  auto id = state_.active_player()->recipes().create_user(
-      std::move(name), std::move(bake_->working));
+  auto* cp = competing_player();
+  auto id =
+      cp->recipes().create_user(std::move(name), std::move(bake_->working));
   change_active_key(id);
-  Logger::warn("Active recipe is now %d", id.value);
 
-  // Now go to recipe list
-  change_mode(PizzaManagerMode::Recipes);
+  if (competition_) {
+    // Annual competition: hand results to GameState and exit.
+    state_.ui().pop();
+    state_.finalize_annual_pizza_competition(std::move(*competition_));
+    return;
+  }
+
+  change_mode(PizzaDesignMode::Recipes);
   bake_.reset();
 }
 
-void PizzaManager::finish_recreate_existing() {
+void PizzaDesign::finish_recreate_existing() {
   auto& recipes = state_.active_player()->recipes();
   auto rid = *bake_->existing_id;
 
   // Check if this is a canonical or user recipe
   if (bake_->canonical_id) {
-    // Recreating a canonical recipe - use create_from_canonical
     recipes.create_from_canonical(*bake_->canonical_id,
                                   std::move(bake_->working));
     change_active_key(*bake_->canonical_id);
@@ -1357,39 +1498,40 @@ void PizzaManager::finish_recreate_existing() {
   post_bake();
 }
 
-void PizzaManager::post_bake() {
-  // Move bake session to shared_ptr for the callback
+void PizzaDesign::post_bake() {
   auto bake_ptr = std::make_shared<core::food::BakeSession>(std::move(*bake_));
   auto active_key = active_key_;
-  bool is_canonical = bake_ptr->canonical_id.has_value();
+  JudgingMode jmode = bake_ptr->canonical_id.has_value()
+                          ? JudgingMode::Canonical
+                          : JudgingMode::Own;
 
-  // Push PizzaJudges state with scores and callback
-  // The callback will pop judges and replace PizzaManagerState to trigger
-  // post-judging
+  // Carry the annual competition session through the judge screen so that the
+  // PizzaDesign afterwards has access
+  auto annual_session =
+      competition_
+          ? std::make_shared<CompetitionSession>(std::move(*competition_))
+          : nullptr;
+  competition_.reset();
+
   state_.ui().push<PizzaJudgesState>(
       bake_ptr->working.scores(),
-      [&state = state_, bake_ptr, active_key] {
-        // Pop the PizzaJudges view
+      [&state = state_, bake_ptr, active_key, annual_session] {
         state.ui().pop();
-
-        // Replace the PizzaManagerState with updated state to trigger
-        // post-judging
-        state.ui().replace_top<PizzaManagerState>(
-            PizzaManagerMode::OwnPizzaJudging, std::nullopt, bake_ptr,
-            active_key);
+        state.ui().replace_top<PizzaDesignState>(
+            PizzaDesignMode::OwnPizzaJudging, std::nullopt, bake_ptr,
+            active_key, annual_session);
       },
-      is_canonical);
+      jmode);
 }
 
-void PizzaManager::cancel_bake() {
+void PizzaDesign::cancel_bake() {
   active_topping_.reset();
   context_.cursor->clear_custom_cursor();
-  change_mode(PizzaManagerMode::Recipes);
+  change_mode(PizzaDesignMode::Recipes);
   bake_.reset();
 }
 
-// Helper: current pizza to render, if any
-Pizza* PizzaManager::current_pizza() {
+Pizza* PizzaDesign::current_pizza() {
   if (bake_) {
     return &bake_->working;
   }
@@ -1398,7 +1540,7 @@ Pizza* PizzaManager::current_pizza() {
   return nullptr;
 }
 
-const Pizza* PizzaManager::current_pizza() const {
+const Pizza* PizzaDesign::current_pizza() const {
   if (bake_) {
     return &bake_->working;
   }
@@ -1426,24 +1568,24 @@ const Pizza* PizzaManager::current_pizza() const {
     }
   }
 
-  // NewRowTag: either no pizza yet, or render an empty base/template
+  // NewRowTag: either no pizza yet, or render an empty pizza
   return nullptr;
 }
 
-void PizzaManager::load_user_recipe(int number) {
+void PizzaDesign::load_user_recipe(int number) {
   std::string filename = platform_paths::recipes_dir() + "r" +
                          std::to_string(number) +
                          (platform::is_amiga() ? "" : ".pc");
 
   // Check if file exists first
   if (!fileutils::fexists(filename)) {
-    context_.popup->create<ConfirmPopup>(
-        "File '" + filename + "' not|found! Try again?",
-        [this, number](bool retry) {
-          if (retry) {
-            load_user_recipe(number); // Retry with same number
-          }
-        });
+    context_.popup->create<ConfirmPopup>("Pizza r'" + std::to_string(number) +
+                                             "' not found! Try again?",
+                                         [this, number](bool retry) {
+                                           if (retry) {
+                                             load_user_recipe(number);
+                                           }
+                                         });
     return;
   }
 
@@ -1459,7 +1601,7 @@ void PizzaManager::load_user_recipe(int number) {
 
   // Figure out what recipe slot is active
   if (!active_key_) {
-    Logger::warn("No active recipe slot selected in PizzaManager");
+    Logger::warn("No active recipe slot selected in PizzaDesign");
     return;
   }
 
@@ -1484,7 +1626,7 @@ void PizzaManager::load_user_recipe(int number) {
   mark_dirty();
 }
 
-void PizzaManager::load_canonical_recipe(int number) {
+void PizzaDesign::load_canonical_recipe(int number) {
   // Create the pizza from disk (from r/ directory)
   std::string filename =
       "r/r" + std::to_string(number) + (platform::is_amiga() ? "" : ".pc");
@@ -1513,7 +1655,7 @@ void PizzaManager::load_canonical_recipe(int number) {
 
   // Figure out what recipe slot is active
   if (!active_key_) {
-    Logger::warn("No active recipe slot selected in PizzaManager");
+    Logger::warn("No active recipe slot selected in PizzaDesign");
     return;
   }
 
@@ -1537,7 +1679,7 @@ void PizzaManager::load_canonical_recipe(int number) {
   mark_dirty();
 }
 
-void PizzaManager::load_recipe_for_debug(const std::string& filename) {
+void PizzaDesign::load_recipe_for_debug(const std::string& filename) {
   if (!bake_) {
     Logger::warn("Not in bake mode, cannot load recipe for debug");
     return;
@@ -1568,7 +1710,6 @@ void PizzaManager::load_recipe_for_debug(const std::string& filename) {
 
   // Clear all existing toppings from working pizza
   while (auto topping = bake_->working.remove_latest_topping()) {
-    // Keep removing until empty
   }
 
   // Collect toppings in a temporary vector to preserve order
@@ -1594,20 +1735,20 @@ void PizzaManager::load_recipe_for_debug(const std::string& filename) {
   mark_dirty();
 }
 
-void PizzaManager::load_user_recipe_for_debug(int number) {
+void PizzaDesign::load_user_recipe_for_debug(int number) {
   std::string filename = platform_paths::recipes_dir() + "r" +
                          std::to_string(number) +
                          (platform::is_amiga() ? "" : ".pc");
   load_recipe_for_debug(filename);
 }
 
-void PizzaManager::load_canonical_for_debug(int number) {
+void PizzaDesign::load_canonical_for_debug(int number) {
   std::string filename =
       "r/r" + std::to_string(number) + (platform::is_amiga() ? "" : ".pc");
   load_recipe_for_debug(filename);
 }
 
-void PizzaManager::change_active_key(RecipeKey active_key) {
+void PizzaDesign::change_active_key(RecipeKey active_key) {
   active_key_ = active_key;
   const auto& self = *this; // non-const function, but self is const-ref
   const auto& recipes = state_.active_player()->recipes();
@@ -1628,23 +1769,85 @@ void PizzaManager::change_active_key(RecipeKey active_key) {
   }
 }
 
-void PizzaManager::update_status_ingredient() {
+void PizzaDesign::update_status_ingredient() {
   status_.show_topping(
       ToppingCtx{.state = &state_, .topping = active_topping_.get()});
 }
 
-void PizzaManager::handle_post_judging() {
+void PizzaDesign::handle_post_judging() {
   state_.advance_time_blocks(3);
+
+  if (mode_ == PizzaDesignMode::CompetitionJudging) {
+    if (!competition_) {
+      Logger::warn("CompetitionJudging but no competition session!");
+      state_.ui().pop();
+      return;
+    }
+    if (bake_) {
+      int match_score = bake_->working.imitation();
+      auto& c = *competition_;
+      if (c.human_slot >= 0 &&
+          c.human_slot < static_cast<int>(c.participants.size())) {
+        c.participants[c.human_slot].match_score = match_score;
+        c.participants[c.human_slot].time_ticks =
+            static_cast<int>(c.human_design_ticks) / 30;
+        int speed_bonus = match_score * (c.speed_level * 20) / 100;
+        int final_score =
+            std::clamp(match_score + speed_bonus -
+                           (c.participants[c.human_slot].time_ticks / 3),
+                       0, 200);
+        c.participants[c.human_slot].final_score = final_score;
+      }
+      bake_.reset();
+    }
+
+    // If more human players remain in the session, chain to the next one
+    // instead of finalizing. AI scores are simulated only after the last human.
+    auto& c = *competition_;
+    int next_slot = c.human_slot + 1;
+    if (next_slot < static_cast<int>(c.participants.size()) &&
+        c.participants[next_slot].is_human) {
+      c.human_slot = next_slot;
+      core::PlayerId next_pid = c.participants[next_slot].player_id;
+      auto session = std::make_shared<CompetitionSession>(std::move(c));
+      competition_.reset();
+      state_.ui().replace_top<PizzaDesignState>(PizzaDesignState{
+          .initial_mode = PizzaDesignMode::MonthlyChallenge,
+          .competition_session = std::move(session),
+          .competing_player_id = next_pid,
+      });
+      return;
+    }
+
+    finalize_competition_results();
+    return;
+  }
+
   if (!bake_) {
     Logger::warn("No bake session after judging!");
-    change_mode(PizzaManagerMode::Recipes);
+    change_mode(PizzaDesignMode::Recipes);
     return;
   }
 
   // Handle post-judging flow based on bake kind
   if (bake_->kind == BakeKind::NewUser) {
+    // For annual competition: record score before naming
+    if (competition_) {
+      const auto& scores = bake_->working.scores();
+      int total = 0;
+      for (int s : scores) {
+        total += s;
+      }
+      auto& c = *competition_;
+      if (c.human_slot >= 0 &&
+          c.human_slot < static_cast<int>(c.participants.size())) {
+        c.participants[c.human_slot].match_score = total;
+        c.participants[c.human_slot].final_score = total;
+      }
+    }
+
     // Show Info screen first, then ask for name
-    change_mode(PizzaManagerMode::Info);
+    change_mode(PizzaDesignMode::Info);
 
     constexpr int max_len = 18;
     context_.popup->create<TextInputPopup>(
@@ -1653,7 +1856,348 @@ void PizzaManager::handle_post_judging() {
   }
   else {
     // For other cases, just go to Recipes
-    change_mode(PizzaManagerMode::Recipes);
+    change_mode(PizzaDesignMode::Recipes);
     bake_.reset();
+  }
+}
+
+Player* PizzaDesign::competing_player() const {
+  if (competing_player_id_) {
+    return state_.player(*competing_player_id_);
+  }
+  return state_.active_player();
+}
+
+void PizzaDesign::begin_competition(std::shared_ptr<CompetitionSession> s) {
+  if (!context_.audio->is_playing()) {
+    context_.audio->play_music(audio::MusicId::BREAK_IN_MUSIC_3);
+  }
+  competition_ = std::move(*s);
+  reveal_delay_remaining_ticks_ = competition_->delay_ticks;
+
+  GameDate today = state_.time().current_date();
+  for (auto& p : competition_->participants) {
+    auto* participant = state_.player(p.player_id);
+    if (participant) {
+      participant->financials().spend_cash(today, Account::Others, p.bet);
+    }
+  }
+
+  update_competition_status();
+  change_mode(PizzaDesignMode::CompetitionReveal);
+}
+
+void PizzaDesign::begin_annual_competition(
+    std::shared_ptr<CompetitionSession> s) {
+  competition_ = std::move(*s);
+  bake_ = core::food::BakeSession{};
+  bake_->kind = BakeKind::NewUser;
+  bake_->working = Pizza("annual competition pizza");
+  bake_->working.update_stats(state_.customer_taste_profiles());
+  design_mode_ = true;
+  status_.show_pizza(PizzaCtx{
+      .state = &state_,
+      .wip_pizza = &bake_->working,
+      .recipe = nullptr,
+  });
+  change_mode(PizzaDesignMode::AnnualCompetitionDesign);
+
+  auto* player = competing_player();
+  std::string first_name = player->character().first_name();
+  context_.popup->create<AlertPopup>(
+      compat::format("Right, {}! Let's see what you can do!", first_name),
+      [this] { competition_design_ticks_ = 0; });
+}
+
+void PizzaDesign::update_competition_status() {
+  if (!competition_) {
+    return;
+  }
+  auto& c = *competition_;
+  std::string ingredient_name;
+  if (!c.reveal_done) {
+    int idx = c.reveal_idx - 1;
+    if (idx >= 0 &&
+        idx < static_cast<int>(c.canonical_pizza->toppings().size())) {
+      ingredient_name =
+          c.canonical_pizza->toppings()[idx]->ingredient()->name();
+    }
+  }
+  status_.show_competition(CompetitionCtx{
+      .pizza_name = c.canonical_pizza->name(),
+      .speed_level = c.speed_level,
+      .current_ingredient = ingredient_name,
+  });
+}
+
+void PizzaDesign::on_reveal_complete() {
+  if (!competition_) {
+    return;
+  }
+
+  // Set up empty bake session and switch to design mode BEFORE showing the
+  // popup so the background already shows an empty pizza canvas.
+  bake_ = core::food::BakeSession{};
+  bake_->kind = BakeKind::NewUser;
+  bake_->working = Pizza("competition pizza");
+  bake_->working.update_stats(state_.customer_taste_profiles());
+  design_mode_ = true;
+  status_.show_pizza(PizzaCtx{
+      .state = &state_,
+      .wip_pizza = &bake_->working,
+      .recipe = nullptr,
+  });
+  change_mode(PizzaDesignMode::CompetitionDesign);
+
+  auto* player = competing_player();
+  std::string first_name = player->character().first_name();
+  context_.popup->create<AlertPopup>(
+      compat::format("Right, {}! Let's see what you can do!", first_name),
+      [this] { competition_design_ticks_ = 0; });
+}
+
+void PizzaDesign::on_competition_design_finished() {
+  if (!competition_ || !bake_) {
+    return;
+  }
+  state_.advance_time_blocks(5);
+  bake_->working.set_scores_from_canonical(*competition_->canonical_pizza);
+  auto imitation_scores = bake_->working.scores();
+  bake_->working.finalize(state_.customer_taste_profiles(),
+                          "competition pizza");
+
+  auto bake_ptr = std::make_shared<core::food::BakeSession>(std::move(*bake_));
+  bake_.reset();
+  competition_->human_design_ticks = competition_design_ticks_;
+  auto comp_ptr =
+      std::make_shared<CompetitionSession>(std::move(*competition_));
+  competition_.reset();
+  auto done = std::move(on_done_);
+
+  state_.ui().push<PizzaJudgesState>(
+      imitation_scores,
+      [&state = state_, bake_ptr, comp_ptr, done = std::move(done)]() mutable {
+        state.ui().pop();
+        state.ui().replace_top<PizzaDesignState>(PizzaDesignState{
+            .initial_mode = PizzaDesignMode::CompetitionJudging,
+            .bake = bake_ptr,
+            .competition_session = comp_ptr,
+            .on_done = std::move(done),
+        });
+      },
+      JudgingMode::Competition);
+}
+
+void PizzaDesign::finalize_competition_results() {
+  if (!competition_) {
+    return;
+  }
+  auto& c = *competition_;
+
+  // Simulate AI participants
+  for (auto& p : c.participants) {
+    if (p.is_human) {
+      continue;
+    }
+    const auto* ai = state_.player(p.player_id);
+    if (!ai) {
+      continue;
+    }
+    const auto& ch = ai->character();
+    auto dex = ch.dexterity();
+    auto cook = ch.cooking();
+    auto comp_count = state_.competition_count();
+    auto raw_time = 50 - engine::random::rand_max_n((dex / 2) + 1);
+    auto time_ticks = raw_time + (raw_time * comp_count * 5 / 100);
+    auto difficulty = c.pizza_index - 10 + (c.speed_level * 5);
+    int q = 100 - difficulty + engine::random::rand_max_n(14) +
+            (static_cast<int>(cook) / 5);
+    int match_score = std::clamp(q, 0, 99);
+    int speed_bonus = match_score * (c.speed_level * 20) / 100;
+    int final_score =
+        std::clamp(match_score + speed_bonus - (time_ticks / 3), 0, 200);
+    p.match_score = match_score;
+    p.time_ticks = time_ticks;
+    p.final_score = final_score;
+  }
+
+  // Determine winner
+  int best = -1;
+  c.winner_slot = -1;
+  c.all_tied = true;
+  for (int i = 0; i < static_cast<int>(c.participants.size()); ++i) {
+    int score = c.participants[i].final_score;
+    if (score > best) {
+      best = score;
+      c.winner_slot = i;
+    }
+    if (i > 0 &&
+        c.participants[i].final_score != c.participants[i - 1].final_score) {
+      c.all_tied = false;
+    }
+  }
+  if (c.participants.size() < 2) {
+    c.all_tied = false;
+  }
+
+  // Distribute prize money and update counters
+  // All bets were already deducted upfront in begin_competition().
+  GameDate today = state_.time().current_date();
+  if (c.winner_slot >= 0 && !c.all_tied) {
+    auto& winner = c.participants[c.winner_slot];
+    auto* winner_player = state_.player(winner.player_id);
+
+    // Winner receives the full pot (all bets, including their own).
+    Money total_bets;
+    for (auto& p : c.participants) {
+      total_bets += p.bet;
+    }
+
+    if (winner_player) {
+      winner_player->financials().transfer(today, Account::Sales, Account::Cash,
+                                           total_bets,
+                                           AccountingScope::Operational);
+      winner_player->add_score(40);
+    }
+
+    // Win counter
+    if (winner_player) {
+      winner_player->increment_competition_win_count();
+      uint8_t wins = winner_player->competition_win_count();
+
+      // Events for human winner: deferred until the results screen is
+      // dismissed, don't want to spoil the results :)
+      if (winner.is_human) {
+        if (wins == 1) {
+          pending_competition_message_ =
+              core::events::LeventId::FirstPriceInPizzaCompetition;
+        }
+        else if (wins == 10) {
+          pending_competition_message_ =
+              core::events::LeventId::Won10PizzaCompetitions;
+        }
+      }
+    }
+
+    // Challenge mode: an AI that loses gets a cool down before wanting to be
+    // challenged again
+    if (c.is_challenge && c.human_slot >= 0 && c.winner_slot == c.human_slot) {
+      for (auto& p : c.participants) {
+        auto* ai = state_.player(p.player_id);
+        if (ai && !ai->is_human_controlled()) {
+          uint8_t courage = ai->character().courage();
+          uint8_t penalty =
+              static_cast<uint8_t>(engine::random::rand_max_n(100 - courage));
+          ai->set_competition_willingness(penalty);
+        }
+      }
+    }
+  }
+  else {
+    // Draw: refund all bets
+    for (auto& p : c.participants) {
+      auto* participant = state_.player(p.player_id);
+      if (participant) {
+        participant->financials().transfer(today, Account::Others,
+                                           Account::Cash, p.bet,
+                                           AccountingScope::Operational);
+      }
+    }
+  }
+
+  state_.increment_competition_count();
+
+  c.results_rows_shown = 0;
+  c.results_last_row_ms = context_.clock.now_ms;
+  if (auto* rest = state_.active_restaurant()) {
+    status_.show_restaurant(
+        {.state = &state_, .rest = rest, .label = "COMPETITION"});
+  }
+  change_mode(PizzaDesignMode::CompetitionResults);
+}
+
+void PizzaDesign::draw_competition_reveal(const RenderContext& ctx) const {
+  gfx::blit::blit_raw_with_palette(*ctx.surface,
+                                   context_.vga->get("gfx/back1"));
+  ctx.surface->blit_masked(chop_horizontal_ ? blade_horizontal_
+                                            : blade_vertical_,
+                           ViewPoint{CHOPPER_OFFSET_X, CHOPPER_OFFSET_Y});
+
+  if (!competition_) {
+    return;
+  }
+  const auto& toppings = competition_->canonical_pizza->toppings();
+  int to_draw =
+      std::min(competition_->reveal_idx, static_cast<int>(toppings.size()));
+  for (int i = 0; i < to_draw; ++i) {
+    renderer_.render(*toppings[i], *ctx.surface, camera_);
+  }
+}
+
+void PizzaDesign::draw_competition_results(const RenderContext& ctx) {
+  gfx::blit::blit_raw_with_palette(*ctx.surface,
+                                   context_.vga->get("gfx/back4"));
+  if (!competition_) {
+    return;
+  }
+  auto& c = *competition_;
+
+  constexpr int text_color = 6;
+  context_.font->render_text_onto(
+      *ctx.surface, "PIZZA COMPETITION", ViewPoint{-20, 42}, FontFace::ASTANDAR,
+      TextStyle{.color = text_color, .align = AlignX::Center});
+
+  constexpr int col_name = 46;
+  constexpr int col_time = 234;
+  constexpr int col_match = 286;
+  constexpr int col_final = 322;
+  constexpr int row_height = 18;
+  int y = 80;
+
+  int rows_to_draw =
+      std::min(c.results_rows_shown, static_cast<int>(c.participants.size()));
+
+  for (int i = 0; i < rows_to_draw; ++i) {
+    const auto& p = c.participants[i];
+    auto* player_obj = state_.player(p.player_id);
+    std::string name = player_obj ? player_obj->name() : "?";
+    int m = p.time_ticks / 60;
+    int s = p.time_ticks % 60;
+    std::string time_str = compat::format("{}:{:02}", m, s);
+    std::string match_str = compat::format("{} %", p.match_score);
+    std::string final_str = std::to_string(p.final_score);
+
+    context_.font->render_text_onto(
+        *ctx.surface, name, ViewPoint{col_name, y}, FontFace::PIZ_NUMB,
+        TextStyle{.color = text_color, .character_spacing = 1});
+    context_.font->render_text_onto(*ctx.surface, time_str,
+                                    ViewPoint{col_time, y}, FontFace::PIZ_NUMB,
+                                    text_color, AlignX::RightEdge);
+    context_.font->render_text_onto(*ctx.surface, match_str,
+                                    ViewPoint{col_match, y}, FontFace::PIZ_NUMB,
+                                    text_color, AlignX::RightEdge);
+    context_.font->render_text_onto(*ctx.surface, final_str,
+                                    ViewPoint{col_final, y}, FontFace::PIZ_NUMB,
+                                    text_color, AlignX::RightEdge);
+    y += row_height;
+  }
+
+  // Once all participant rows are visible we show the winner/draw:
+  if (c.results_rows_shown > static_cast<int>(c.participants.size())) {
+    std::string winner_text;
+    if (c.winner_slot < 0 || c.all_tied) {
+      winner_text = "-- draw --";
+    }
+    else {
+      auto* winner_player =
+          state_.player(c.participants[c.winner_slot].player_id);
+      std::string wname =
+          winner_player ? winner_player->name() : "unknown player";
+      winner_text = wname + " wins";
+    }
+    y = 285;
+    context_.font->render_text_onto(*ctx.surface, winner_text,
+                                    ViewPoint{col_name, y}, FontFace::ASTANDAR,
+                                    text_color);
   }
 }

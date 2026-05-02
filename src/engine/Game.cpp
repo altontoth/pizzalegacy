@@ -58,8 +58,8 @@
 #include "views/screens/MafiaMissionView.h"
 #include "views/screens/MarketResearch.h"
 #include "views/screens/Newspaper.h"
+#include "views/screens/PizzaDesign.h"
 #include "views/screens/PizzaJudges.h"
-#include "views/screens/PizzaManager.h"
 #include "views/screens/PlayerProfile.h"
 #include "views/screens/PlayerTurnCard.h"
 #include "views/screens/StaffView.h"
@@ -299,8 +299,6 @@ void Game::run() {
   }
   create_some_players(state);
 
-  SDL_Renderer* sdl_renderer = sdl_.renderer;
-
   // Main game loop prep
   DebugConsole debug_console;
   register_debug_commands(debug_console, state, context);
@@ -413,8 +411,11 @@ void Game::run() {
 
     // Check if fade requested and not already fading
     if (state.fade_requested() && !renderer.is_fading()) {
-      // Mark that UI has changed (consume the flag before starting fade)
-      loop_state.fade_on_next_transition = state.ui().ui_changed();
+      // Include pending_fade_midpoint: a UI push is about to happen at the
+      // midpoint (while black), so we must expect a transition even if the
+      // UI stack hasn't changed yet.
+      loop_state.fade_on_next_transition =
+          state.ui().ui_changed() || state.pending_fade_midpoint();
       state.clear_fade_request();
       renderer.start_fade_out(state.fade_duration_frames());
     }
@@ -432,6 +433,11 @@ void Game::run() {
     if (fade_out_finished_and_pending || normal_ui_transition) {
       interaction_manager_->clear();
       tooltip_manager_->clear();
+
+      if (fade_out_finished_and_pending) {
+        // Fire midpoint callback while black so we can do the date advance then
+        state.on_fade_midpoint();
+      }
 
       // Get new view and check if it wants to preserve background
       auto* new_view = change_state(state, loop_state);
@@ -697,8 +703,7 @@ Renderable* Game::change_state(GameState& gs, LoopState& /*loop*/) {
           },
           [&](const PizzaJudgesState& pj) {
             current_view_ = std::make_unique<PizzaJudges>(
-                context, gs, pj.scores, pj.on_complete,
-                pj.is_canonical_comparison);
+                context, gs, pj.scores, pj.on_complete, pj.judging_mode);
           },
           [&](const CategoryOverviewState& os) {
             current_view_ =
@@ -860,8 +865,8 @@ Renderable* Game::change_state(GameState& gs, LoopState& /*loop*/) {
             current_view_ =
                 std::make_unique<AnimatedStats>(context, gs, ass.id);
           },
-          [&](const PizzaManagerState& pms) {
-            current_view_ = std::make_unique<PizzaManager>(context, gs, pms);
+          [&](const PizzaDesignState& pms) {
+            current_view_ = std::make_unique<PizzaDesign>(context, gs, pms);
           },
           [&](const PlayerTurnCardState& ptcs) {
             current_view_ = std::make_unique<PlayerTurnCard>(context, gs, ptcs);

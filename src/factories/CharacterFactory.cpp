@@ -175,10 +175,6 @@ static void populate_character_data(core::character::CharacterData* c,
   c->serving = cf.serving;
   c->management = cf.management;
   c->motivation = cf.motivation;
-
-  Logger::debug("{} {} has piz/day {} pregnancy: {} and field 28: {}",
-                cf.first_name, cf.last_name, cf.pizzas_per_day,
-                cf.pregnancy_possible, cf.field_28);
 }
 
 core::character::CharacterData*

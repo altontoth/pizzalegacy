@@ -16,7 +16,10 @@
 #include "core/newspaper/ArticleDatabase.h"
 #include "core/restaurant/FurnitureBatch.h"
 #include "core/restaurant/Restaurant.h"
+#include "core/state/AnnualCompetitionFlow.h"
+#include "core/state/CompetitionSession.h"
 #include "core/state/GameOptions.h"
+#include "core/state/TurnPipeline.h"
 #include "core/state/UIStateStack.h"
 #include "core/status/StatusHub.h"
 #include "core/time/GameTime.h"
@@ -61,6 +64,13 @@ public:
   [[nodiscard]] int fade_duration_frames() const;
   void clear_fade_request();
 
+  // Called by the engine when the screen is fully black (just before fading
+  // back again)
+  void on_fade_midpoint();
+  [[nodiscard]] bool pending_fade_midpoint() const {
+    return pending_fade_midpoint_;
+  }
+
   // Resolution change request (consumed by engine)
   void request_resolution_change(ScreenResolution res);
   [[nodiscard]] std::optional<ScreenResolution>
@@ -98,7 +108,7 @@ public:
   }
 
   // Recalculate demographic scores for all pizzas across all players.
-  // Call after mutating customer_taste_profiles (weekly drift, events).
+  // Call after mutating customer_taste_profiles.
   void recalculate_all_pizza_demographics();
 
   // Transfer money from sender to a registered bank account.
@@ -116,11 +126,21 @@ public:
   void show_staff_invoice_popup(core::RestaurantId restaurant_id,
                                 std::function<void()> after);
 
-  // Show the monthly costs invoice popup (loans + rent) via PopupManager
-  void show_monthly_invoice_popup(core::PlayerId player);
+  // Show the monthly costs invoice popup (loans + rent) via PopupManager.
+  // on_done is called after the popup is dismissed (optional).
+  void show_monthly_invoice_popup(core::PlayerId player,
+                                  std::function<void()> on_done = {});
+  void run_monthly_competition();
+  void run_annual_pizza_competition();
+  void finalize_annual_pizza_competition(CompetitionSession session);
 
-  // Show weekly city profit invoice for all non-active cities (Saturday only)
-  void show_weekly_city_invoice_popup(core::PlayerId player_id);
+  // Show weekly city profit invoice for all non-active cities (Saturday only).
+  // on_done is called after the popup is dismissed (optional).
+  void show_weekly_city_invoice_popup(core::PlayerId player_id,
+                                      std::function<void()> on_done = {});
+
+  // Advance the turn boundary pipeline to the next step.
+  void advance_pipeline();
 
   int global_interest_rate() const { return global_interest_rate_; }
   void global_interest_rate(int rate) { global_interest_rate_ = rate; }
@@ -184,7 +204,6 @@ public:
   void set_time(const GameTime& t) { time_ = t; } // For save/load
   void advance_game_time();
   void end_of_turn(); // per player
-  void end_of_day();
   void request_end_of_turn();
   void skip_to_next_player(); // jail/holiday release: non-interactive
   void update(uint32_t elapsed_ms);
@@ -199,13 +218,13 @@ public:
   void prevent_auto_end_of_turn(bool prevent) {
     prevent_auto_end_of_turn_ = prevent;
     if (!prevent_auto_end_of_turn_) {
-      // Flush any staff event dialogs that were held back if we're not in the
-      // city/restaurant view at 10am. They fire before the end of the turn so
-      // the player sees them before the day closes out.
+      // Show any staff event dialogs for today (or earlier if they ended the
+      // day before 10am then)
       if (!showing_deferred_staff_event_ && !deferred_staff_events_.empty() &&
           time_.is_past_time(10, 0)) {
         show_next_deferred_staff_event();
-        return; // end-of-turn will be checked after the dialog chain finishes
+        // end of turn will be checked after the dialog chain finishes
+        return;
       }
       if (is_player_day_over()) {
         request_end_of_turn();
@@ -218,8 +237,8 @@ public:
 
   // Advance time by n blocks (10 min each) - used for explicit time costs
   // (furniture placement, phone calls, etc.). Stops early if end-of-day
-  // is reached. Returns true if end-of-day was reached.
-  bool advance_time_blocks(int n);
+  // is reached.
+  void advance_time_blocks(int n);
 
   int difficulty_level() const { return difficulty_level_; };
 
@@ -253,8 +272,8 @@ public:
     return message_manager_;
   }
 
-  // Unified message delivery: schedule (CV entry) + score + push view + mark
-  // shown. Safe to call for already-scheduled messages (schedule is a no-op).
+  // Idempotent message delivery: schedule CV entry + score + push view + mark
+  // shown
   void deliver_message(core::events::LeventId msg_id,
                        std::function<void()> on_dismiss = nullptr);
   core::newspaper::ArticleDatabase& article_database() {
@@ -280,7 +299,7 @@ public:
   void game_mode(GameMode);
   int human_player_count() const;
 
-  // Call when a restaurant is opened for the first time (from view layer).
+  // Call when a restaurant is opened for the first time
   // Checks and schedules restaurant count / city milestone events.
   void check_restaurant_milestones(const Player& player);
 
@@ -337,6 +356,10 @@ public:
   void restore_deferred_mayor_award(const MayorAwardEvent& ev) {
     deferred_mayor_awards_.push_back(ev);
   }
+  int competition_count() const { return competition_count_; }
+  void increment_competition_count() {
+    competition_count_ = std::min(competition_count_ + 1, 255);
+  }
 
 private:
   bool is_past_player_end_of_day() const;
@@ -348,6 +371,27 @@ private:
   void finish_end_of_turn();
   void deliver_depot_stock(core::PlayerId player_id);
 
+  // finish_end_of_turn helpers
+  void snapshot_weekly_profits();
+  void
+  push_weekly_restaurant_reports(const std::vector<Restaurant*>& restaurants,
+                                 core::PlayerId previous_player_id,
+                                 std::function<void()> on_done = {});
+
+  // Turn boundary pipeline
+  void build_turn_pipeline(bool wrapped, core::PlayerId prev_player_id,
+                           const std::vector<Restaurant*>& prev_restaurants,
+                           bool prev_is_human);
+  void execute_pipeline_step(TurnPipelineStep step);
+
+  // end_of_day helpers
+  void end_of_day();
+  void tick_active_cities();
+  void end_of_week_processing();
+  void end_of_year_processing();
+  void end_of_month_processing();
+  void process_depot_theft();
+
   // State for multi-step end-of-turn processing
   struct EndOfTurnState {
     std::vector<Restaurant*> restaurants;
@@ -356,6 +400,12 @@ private:
     int delay_frames = 0; // Frames to wait before processing next restaurant
   };
   std::optional<EndOfTurnState> end_of_turn_state_;
+
+  // Turn boundary pipeline: built once per day boundary in
+  // build_turn_pipeline(), drained one step at a time via advance_pipeline().
+  std::deque<TurnPipelineStep> turn_pipeline_;
+  std::optional<TurnPipelineContext> pipeline_ctx_;
+  std::optional<TurnPipelineStep> pipeline_active_step_;
 
   std::vector<DeferredStaffEvent> deferred_staff_events_;
   bool showing_deferred_staff_event_{false};
@@ -367,8 +417,16 @@ private:
   // active player's next turn.
   std::vector<MayorAwardEvent> deferred_mayor_awards_;
 
+  AnnualCompetitionFlow annual_comp_;
+
   void load_initial_pizzas(GameContext& context, core::PlayerId player_id);
   Restaurant* create_ai_starting_restaurant(Player& player, City& city);
+  void
+  run_monthly_competition_chain(std::vector<core::PlayerId> remaining,
+                                std::shared_ptr<CompetitionSession> session);
+  void launch_monthly_competition(std::shared_ptr<CompetitionSession> session);
+  void advance_annual_competition();
+  [[nodiscard]] bool annual_comp_ready_to_advance() const;
 
   GameTime time_;
   core::PlayerId active_player_{0};
@@ -380,7 +438,6 @@ private:
   std::array<std::unique_ptr<City>, NUMBER_OF_CITIES> cities_;
   std::array<std::unique_ptr<Player>, NUMBER_OF_PLAYERS> players_;
   std::deque<std::unique_ptr<Restaurant>> restaurants_;
-  // List of states and their arguments, so we can go back to any previous state
   UIStateStack ui_;
   int window_width_{0};
   int window_height_{0};
@@ -401,29 +458,17 @@ private:
   core::RestaurantId next_restaurant_id_{0};
   std::vector<FurnitureBatch> furniture_placement_;
   StatusHub status_hub_{time_};
-  std::unique_ptr<StatusDisplay> status_display_; // Global status panel (lazy)
-
-  // Resolution change request
+  std::unique_ptr<StatusDisplay> status_display_;
   std::optional<ScreenResolution> pending_resolution_;
-
-  // Fade transition request
   bool fade_requested_{false};
   int fade_duration_frames_{default_fade_length};
-
-  // Article database (shared across all cities)
+  bool pending_fade_midpoint_{false};
   core::newspaper::ArticleDatabase article_database_;
-
-  // Fullscreen message system
   core::events::FullscreenMessageManager message_manager_;
-
   BankAccountRegistry bank_accounts_;
-
   core::food::CustomerTasteProfiles customer_taste_profiles_{
       core::food::default_customer_taste_profiles()};
-
-  // Actor call management (actors refusing calls after being annoyed)
   std::unordered_set<int> actors_refusing_calls_;
-
   // Context pointer for creating popups from GameState
   GameContext* context_{nullptr};
 
@@ -437,4 +482,5 @@ private:
   int business_week_nr{1};
   // Global interest rate to influence loans and investments
   int global_interest_rate_{8};
+  int competition_count_{0};
 };

@@ -11,9 +11,9 @@
 JudgeAnimator::JudgeAnimator(GameContext& context) : context_(context) {}
 
 void JudgeAnimator::start(const std::array<int, NUMBER_OF_JUDGES>& scores,
-                          bool is_canonical_comparison) {
+                          JudgingMode mode) {
   scores_ = scores;
-  is_canonical_comparison_ = is_canonical_comparison;
+  judging_mode_ = mode;
   animating_ = true;
   current_box_index_ = 0;
 
@@ -65,9 +65,13 @@ void JudgeAnimator::render(const RenderContext& ctx) {
   gfx::blit::blit_raw_with_palette(*ctx.surface, context_.vga->get("gfx/jury"));
 
   const int status_color = 26;
-  const std::string message = is_canonical_comparison_
-                                  ? "comparing with standard recipe..."
-                                  : "evaluating your recipe...";
+  std::string message = "evaluating your recipe...";
+  if (judging_mode_ == JudgingMode::Canonical) {
+    message = "comparing with standard recipe...";
+  }
+  else if (judging_mode_ == JudgingMode::Competition) {
+    message = "--- COMPETITION ---";
+  }
   context_.font->render_text_onto(*ctx.surface, message, ViewPoint{60, 30},
                                   FontFace::PIZ_NUMB, status_color);
 

@@ -12,9 +12,9 @@
 PizzaJudges::PizzaJudges(GameContext& context, GameState& state,
                          const std::array<int, NUMBER_OF_JUDGES>& scores,
                          std::function<void()> on_complete,
-                         bool is_canonical_comparison)
+                         JudgingMode judging_mode)
     : View(context, state), animator_(context), on_complete_(on_complete) {
-  animator_.start(scores, is_canonical_comparison);
+  animator_.start(scores, judging_mode);
 }
 
 void PizzaJudges::register_interactions() {

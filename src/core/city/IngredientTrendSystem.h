@@ -116,7 +116,7 @@ private:
   }
 
   bool reached_target(int i) const {
-    int8_t target = targets_[i];
+    int8_t target = static_cast<int8_t>(targets_[i]);
     return std::abs(current_[i] - target) < std::abs(target / 10) + 1;
   }
 
@@ -124,7 +124,7 @@ private:
   void tick_approaching(int i) {
     switch (duration_[i]) {
     case TrendDuration::Linear: {
-      int8_t target = targets_[i];
+      int8_t target = static_cast<int8_t>(targets_[i]);
       if (target < 0) {
         current_[i] -= 4;
       }

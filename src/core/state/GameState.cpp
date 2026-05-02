@@ -39,11 +39,11 @@
 #include "views/ui/PopupManager.h"
 #include "views/ui/finance/FinanceComponents.h"
 #include "views/ui/popups/AlertPopup.h"
+#include "views/ui/popups/ConfirmPopup.h"
 #include "views/ui/popups/InvoicePopup.h"
+#include "views/ui/popups/NumberInputPopup.h"
 #include "views/ui/popups/OptionsPopup.h"
 
-// Constructor and destructor defined here to allow unique_ptr<StatusDisplay>
-// with forward declaration
 GameState::GameState() = default;
 GameState::~GameState() = default;
 
@@ -64,10 +64,6 @@ std::ostream& operator<<(std::ostream& os, const GameState& state) {
       os << "  city[" << i << "]: " << *state.cities_[i];
     }
   }
-
-  os << "UIStates (";
-  // os << ui_;
-  os << "UIStates )" << "\n";
 
   return os;
 }
@@ -214,7 +210,8 @@ void GameState::show_staff_invoice_popup(core::RestaurantId restaurant_id,
   context_->popup->create<InvoicePopup>(std::move(cfg));
 }
 
-void GameState::show_monthly_invoice_popup(core::PlayerId player_id) {
+void GameState::show_monthly_invoice_popup(core::PlayerId player_id,
+                                           std::function<void()> on_done) {
   auto* player = this->player(player_id);
   if (!player || !context_) {
     return;
@@ -258,7 +255,8 @@ void GameState::show_monthly_invoice_popup(core::PlayerId player_id) {
   cfg.lines.push_back(empty_line);
   cfg.lines.push_back({"TOTAL:", total});
 
-  cfg.on_dismiss = [this, player, rents = std::move(rents)]() {
+  cfg.on_dismiss = [this, player, rents = std::move(rents),
+                    on_done = std::move(on_done)]() {
     const auto& date = time_.current_date();
     player->apply_monthly_loan_payments(date);
     player->apply_monthly_investment_payouts(date, options().fix_legacy_bugs);
@@ -270,13 +268,17 @@ void GameState::show_monthly_invoice_popup(core::PlayerId player_id) {
     if (status_display_) {
       status_display_->mark_dirty();
     }
+    if (on_done) {
+      on_done();
+    }
   };
 
   context_->popup->origin({74, 40});
   context_->popup->create<InvoicePopup>(std::move(cfg));
 }
 
-void GameState::show_weekly_city_invoice_popup(core::PlayerId player_id) {
+void GameState::show_weekly_city_invoice_popup(core::PlayerId player_id,
+                                               std::function<void()> on_done) {
   auto* player = this->player(player_id);
   if (!player || !context_) {
     return;
@@ -325,7 +327,8 @@ void GameState::show_weekly_city_invoice_popup(core::PlayerId player_id) {
   cfg.lines.push_back(empty_line);
   cfg.lines.push_back({"", grand_total});
 
-  cfg.on_dismiss = [this, player, entries = entries]() {
+  cfg.on_dismiss = [this, player, entries = entries,
+                    on_done = std::move(on_done)]() {
     const auto& date = time_.current_date();
     for (const auto& entry : entries) {
       if (entry.is_active || entry.profit.cents == 0) {
@@ -344,6 +347,9 @@ void GameState::show_weekly_city_invoice_popup(core::PlayerId player_id) {
     }
     if (status_display_) {
       status_display_->mark_dirty();
+    }
+    if (on_done) {
+      on_done();
     }
   };
 
@@ -560,18 +566,15 @@ bool GameState::is_player_day_over() const {
   return is_past_player_end_of_day();
 }
 
-bool GameState::advance_time_blocks(int n) {
+void GameState::advance_time_blocks(int n) {
   for (int i = 0; i < n; ++i) {
     advance_game_time();
 
     if (is_player_day_over()) {
-      // Reached player end-of-day - stop advancing but don't auto-trigger
-      // end_of_turn. This matches original behavior where terminal
-      // conversations can continue past end-of-day.
-      return true;
+      // stop advancing at day end
+      return;
     }
   }
-  return false;
 }
 
 const GameTime& GameState::time() const { return time_; }
@@ -621,6 +624,10 @@ void GameState::update(uint32_t elapsed_ms) {
     }
   }
 
+  if (annual_comp_ready_to_advance()) {
+    advance_annual_competition();
+  }
+
   if (should_end_of_turn_) {
     end_of_turn();
     should_end_of_turn_ = false;
@@ -648,7 +655,7 @@ void GameState::end_of_turn() {
   }
 
   // Process player end of day accounting (includes advertising costs,
-  // campaign updates, financial warnings, AI expansion)
+  // campaign updates, warnings, AI expansion)
   current_player->end_of_day(*this);
 
   auto player_restaurants = restaurants_for(current_player->id());
@@ -658,7 +665,6 @@ void GameState::end_of_turn() {
       .is_human = interactive,
   };
 
-  // Start processing the first restaurant
   process_next_restaurant();
 }
 
@@ -1231,12 +1237,8 @@ void GameState::deliver_depot_stock(core::PlayerId player_id) {
   }
 }
 
-void GameState::finish_end_of_turn() {
+void GameState::snapshot_weekly_profits() {
   auto& state = *end_of_turn_state_;
-
-  // Snapshot rolling 7-day profit for this player's restaurants now, while
-  // still in their city and after Restaurant::end_of_day() has already run
-  // (so today's stats are included). active_city_ shifts after next_player().
   for (auto* rest : state.restaurants) {
     if (!rest || rest->property().city().id() != active_city_) {
       continue;
@@ -1247,18 +1249,45 @@ void GameState::finish_end_of_turn() {
     }
     rest->last_weekly_profit(weekly_total);
   }
+}
 
-  // Freeze status display header for human players
-  // This prevents AI players' money from being shown during turn cycling
+void GameState::push_weekly_restaurant_reports(
+    const std::vector<Restaurant*>& restaurants,
+    core::PlayerId previous_player_id, std::function<void()> on_done) {
+  std::function<void()> profit_cb = [this, previous_player_id,
+                                     on_done = std::move(on_done)] {
+    show_weekly_city_invoice_popup(previous_player_id, on_done);
+  };
+  for (auto it = restaurants.rbegin(); it != restaurants.rend(); ++it) {
+    if (!*it || (*it)->property().city().id() != active_city()->id()) {
+      continue;
+    }
+    std::function<void()> cb = std::move(profit_cb);
+    if ((*it)->wants_open() && !(*it)->is_force_closed()) {
+      ui().push<WeeksTakingsState>(
+          WeeksTakingsState{(*it)->id(), true, std::move(cb)});
+    }
+    else {
+      show_staff_invoice_popup((*it)->id(), std::move(cb));
+    }
+  }
+  if (profit_cb) {
+    profit_cb();
+  }
+}
+
+void GameState::finish_end_of_turn() {
+  auto& state = *end_of_turn_state_;
+
+  snapshot_weekly_profits();
+
   if (status_display_ && active_player()->is_human_controlled()) {
-    status_display_->freeze();
+    status_display_->capture_state();
   }
 
-  // Move to next player and check if we wrapped around
   auto previous_player_id = active_player_;
   next_player();
 
-  // Switch to the next player's city (if false it's a computer player)
   if (auto next_city = city_view_view_state_[active_player_.value].city_id) {
     if (*next_city != active_city_) {
       active_city_ = *next_city;
@@ -1266,119 +1295,212 @@ void GameState::finish_end_of_turn() {
     }
   }
 
-  // Ensure start-of-day logic runs for the incoming player's city. This covers
-  // the same-city case where no new CityView is constructed (so the
-  // active_city() setter never fires). The once-per-day guard in
-  // run_city_start_of_day() prevents double-firing on days where the player
-  // entered via EuroMap first.
-  if (auto* city = active_city()) {
-    run_city_start_of_day(*city);
-  }
+  bool wrapped = (previous_player_id.value > 0 && active_player_.value == 0);
 
-  // If we wrapped around to player 0, all players have finished their turns.
-  // Run end-of-day and weekly/monthly checks on the current (ending) date
-  // before advancing to the next day.
-  bool wrapped_to_player_zero =
-      (previous_player_id.value > 0 && active_player_.value == 0);
-  if (wrapped_to_player_zero) {
-    request_fade_transition(20);
-    end_of_day();
-  }
-
-  // PlayerTurnCard needs the upcoming day's date, but we haven't advanced yet
-  // (reports still need the current date). Compute it without mutating state.
-  GameDate next_date = wrapped_to_player_zero ? time_.current_date().add_days(1)
-                                              : time_.current_date();
-
-  // Push PlayerTurnCard first so it sits below reports on the stack (shown
-  // last)
-  ui().push<PlayerTurnCardState>(active_player_, next_date);
-
-  // Weekly/monthly reports pushed on top, shown before PlayerTurnCard.
-  // Checks run on the current (ending) date, which is still set here.
-  if (state.is_human) {
-    // Weekly reports on Saturday
-    if (time_.current_date().is_end_of_week()) {
-      // WeeksTakings -> staff invoice -> profit invoice.
-      // profit_cb is moved out on the first iteration; subsequent iterations
-      // get an empty function automatically.
-      std::function<void()> profit_cb = [this, previous_player_id] {
-        show_weekly_city_invoice_popup(previous_player_id);
-      };
-
-      for (auto it = state.restaurants.rbegin(); it != state.restaurants.rend();
-           ++it) {
-        if (!*it || (*it)->property().city().id() != active_city()->id()) {
-          continue;
-        }
-
-        std::function<void()> cb = std::move(profit_cb);
-
-        if ((*it)->wants_open() && !(*it)->is_force_closed()) {
-          ui().push<WeeksTakingsState>(
-              WeeksTakingsState{(*it)->id(), true, std::move(cb)});
-        }
-        else {
-          show_staff_invoice_popup((*it)->id(), std::move(cb));
-        }
-      }
-
-      // Fallback: no restaurants at all, show profit invoice directly.
-      if (profit_cb) {
-        profit_cb();
-      }
-    }
-    // Monthly costs invoice on last day of month (loan repayment + rent)
-    if (time_.current_date().is_end_of_month()) {
-      show_monthly_invoice_popup(previous_player_id);
-    }
-  }
-
-  // Now advance time to the next player's start time
-  auto start_time = players_[active_player_.value]->start_of_day_time();
-  if (wrapped_to_player_zero) {
-    time_.time_on_next_day(start_time.hour, start_time.minute);
-  }
-  else {
-    time_.set_time_of_day(start_time.hour, start_time.minute);
-  }
-
-  // Clear end-of-turn state before starting next player's day
+  build_turn_pipeline(wrapped, previous_player_id, state.restaurants,
+                      state.is_human);
   end_of_turn_state_.reset();
-
-  deliver_depot_stock(active_player_);
-
-  auto next_player_restaurants = restaurants_for(active_player_);
-  for (auto* restaurant : next_player_restaurants) {
-    if (restaurant) {
-      restaurant->start_of_day(*this);
-    }
-  }
-
-  // Mark if this is an AI player that should auto-end after card is shown
-  pending_ai_auto_end_turn_ =
-      !players_[active_player_.value]->is_human_controlled();
-  // Only unsuppress for human players; AI turns stay suppressed so the
-  // baseline never leaks competitor info into the StatusDisplay.
-  if (!pending_ai_auto_end_turn_) {
-    status_hub_.suppress(false);
-  }
-  resume_time_advancement();
+  advance_pipeline();
 }
 
-void GameState::end_of_day() {
-  // This is called only after all players have finished their turns.
-  // This handles the actual day transition and day-level operations.
+void GameState::advance_pipeline() {
+  if (turn_pipeline_.empty()) {
+    pipeline_active_step_.reset();
+    return;
+  }
+  auto step = turn_pipeline_.front();
+  turn_pipeline_.pop_front();
+  pipeline_active_step_ = step;
+  Logger::debug("TurnPipeline: step {} ({} remaining)",
+                magic_enum::enum_name(step), turn_pipeline_.size());
+  execute_pipeline_step(step);
+}
 
-  // Clear per-city start-of-day guards so we can track if we've run it for that
-  // city on that day already
-  city_start_of_day_ran_.fill(false);
+void GameState::build_turn_pipeline(
+    bool wrapped, core::PlayerId prev_player_id,
+    const std::vector<Restaurant*>& prev_restaurants, bool prev_is_human) {
+  auto* new_player = players_[active_player_.value].get();
+  auto start_time = new_player ? new_player->start_of_day_time()
+                               : core::time::TimeOfDay{9, 0};
 
-  // Tick each distinct city that has at least one player. Non-player cities
-  // stay frozen. Each city ticks exactly once regardless of how many players
-  // share it. We derive this from city_view_view_state_ rather than
-  // active_city_, which by this point has already been switched to the next
-  // player's starting city.
+  std::vector<core::RestaurantId> rest_ids;
+  for (auto* r : prev_restaurants) {
+    if (r) {
+      rest_ids.push_back(r->id());
+    }
+  }
+
+  bool is_end_of_week = time_.current_date().is_end_of_week();
+  bool is_end_of_month = time_.current_date().is_end_of_month();
+  bool is_end_of_year = time_.current_date().is_end_of_year();
+
+  pipeline_ctx_ = TurnPipelineContext{
+      .previous = {prev_player_id, std::move(rest_ids)},
+      .next = {start_time},
+      .is_wrapped = wrapped,
+      .is_end_of_week = is_end_of_week,
+      .is_end_of_month = is_end_of_month,
+      .is_end_of_year = is_end_of_year,
+  };
+
+  turn_pipeline_.clear();
+
+  using Step = TurnPipelineStep;
+  if (wrapped) {
+    turn_pipeline_.push_back(Step::TickCities);
+    if (is_end_of_week) {
+      turn_pipeline_.push_back(Step::EndOfWeekProcessing);
+    }
+    if (is_end_of_year) {
+      turn_pipeline_.push_back(Step::EndOfYearProcessing);
+    }
+    if (is_end_of_month) {
+      turn_pipeline_.push_back(Step::EndOfMonthProcessing);
+    }
+    if (is_end_of_year) {
+      turn_pipeline_.push_back(Step::AnnualCompetition);
+    }
+    if (is_end_of_month) {
+      turn_pipeline_.push_back(Step::MonthlyCompetition);
+    }
+    turn_pipeline_.push_back(Step::FadeTransition);
+    turn_pipeline_.push_back(Step::AdvanceDate);
+  }
+  else {
+    turn_pipeline_.push_back(Step::SetTimeOfDay);
+  }
+
+  turn_pipeline_.push_back(Step::PreparePlayerTurn);
+  turn_pipeline_.push_back(Step::ResumeTime);
+  turn_pipeline_.push_back(Step::CityStartOfDay);
+  turn_pipeline_.push_back(Step::PlayerTurnCard);
+
+  if (wrapped && prev_is_human) {
+    if (is_end_of_week) {
+      turn_pipeline_.push_back(Step::WeeklyReports);
+    }
+    if (is_end_of_month) {
+      turn_pipeline_.push_back(Step::MonthlyInvoice);
+    }
+  }
+
+  Logger::debug(
+      "TurnPipeline: built {} steps (wrapped={} week={} month={} year={})",
+      turn_pipeline_.size(), wrapped, is_end_of_week, is_end_of_month,
+      is_end_of_year);
+}
+
+void GameState::execute_pipeline_step(TurnPipelineStep step) {
+  using Step = TurnPipelineStep;
+  assert(pipeline_ctx_.has_value());
+  const auto& ctx = *pipeline_ctx_;
+
+  switch (step) {
+  case Step::TickCities:
+    end_of_day();
+    advance_pipeline();
+    break;
+
+  case Step::EndOfWeekProcessing:
+    end_of_week_processing();
+    advance_pipeline();
+    break;
+
+  case Step::EndOfYearProcessing:
+    end_of_year_processing();
+    advance_pipeline();
+    break;
+
+  case Step::EndOfMonthProcessing:
+    end_of_month_processing();
+    advance_pipeline();
+    break;
+
+  case Step::AnnualCompetition:
+    run_annual_pizza_competition();
+    break;
+
+  case Step::MonthlyCompetition:
+    run_monthly_competition();
+    break;
+
+  case Step::FadeTransition:
+    pending_fade_midpoint_ = true;
+    request_fade_transition(ctx.fade_frames);
+    break;
+
+  case Step::AdvanceDate:
+    time_.time_on_next_day(ctx.next.start_time.hour,
+                           ctx.next.start_time.minute);
+    // Capture again so the snapshot shows the new date rather than the one
+    // captured in finish_end_of_turn().
+    if (status_display_) {
+      status_display_->capture_state();
+    }
+    advance_pipeline();
+    break;
+
+  case Step::SetTimeOfDay:
+    time_.set_time_of_day(ctx.next.start_time.hour, ctx.next.start_time.minute);
+    advance_pipeline();
+    break;
+
+  case Step::PreparePlayerTurn:
+    deliver_depot_stock(active_player_);
+    for (auto* restaurant : restaurants_for(active_player_)) {
+      if (restaurant) {
+        restaurant->start_of_day(*this);
+      }
+    }
+    pending_ai_auto_end_turn_ =
+        !players_[active_player_.value]->is_human_controlled();
+    if (!pending_ai_auto_end_turn_) {
+      status_hub_.suppress(false);
+    }
+    advance_pipeline();
+    break;
+
+  case Step::ResumeTime:
+    resume_time_advancement();
+    advance_pipeline();
+    break;
+
+  case Step::CityStartOfDay:
+    if (auto* city = active_city()) {
+      run_city_start_of_day(*city);
+    }
+    advance_pipeline();
+    break;
+
+  case Step::PlayerTurnCard:
+    ui().push<PlayerTurnCardState>(active_player_, time_.current_date());
+    advance_pipeline();
+    break;
+
+  case Step::WeeklyReports: {
+    std::vector<Restaurant*> restaurants;
+    for (auto rid : ctx.previous.restaurant_ids) {
+      if (auto* r = restaurant(rid)) {
+        restaurants.push_back(r);
+      }
+    }
+    push_weekly_restaurant_reports(restaurants, ctx.previous.id);
+    advance_pipeline();
+    break;
+  }
+
+  case Step::MonthlyInvoice:
+    show_monthly_invoice_popup(ctx.previous.id);
+    advance_pipeline();
+    break;
+  }
+}
+
+void GameState::tick_active_cities() {
+  // Tick each city that has at least one player. Non-player cities stay frozen.
+  // Each city ticks exactly once regardless of how many players share it. We
+  // use city_view_view_state_ rather than active_city_ because it has already
+  // been switched to the next player's starting city.
   std::array<bool, NUMBER_OF_CITIES> cities_to_tick{};
   for (int i = 0; i < NUMBER_OF_PLAYERS; ++i) {
     if (players_[i] && city_view_view_state_[i].city_id) {
@@ -1390,54 +1512,90 @@ void GameState::end_of_day() {
       cities_[i]->end_of_day();
     }
   }
+}
 
-  if (time_.current_date().is_end_of_week()) {
-    for (auto& city : cities_) {
-      if (city) {
-        city->reset_weekly_vendor_spending();
-      }
-    }
-
-    // Pay weekly staff salaries and show weekly reports on Saturday
-    for (auto& player : players_) {
-      if (player) {
-        player->end_of_week(*this);
-      }
-    }
-
-    // Weekly taste drift: 30% chance to re-randomize one demographic
-    if (engine::random::rand_percentage_chance(30)) {
-      auto demo = static_cast<ConsumerType>(engine::random::rand_max_n(6));
-      auto& tp = customer_taste_profiles_[demo];
-      tp.fat = engine::random::rand_max_n(10);
-      tp.sweet = engine::random::rand_max_n(10);
-      tp.salty = engine::random::rand_max_n(10);
-      tp.hot = engine::random::rand_max_n(10);
-      tp.spicy = engine::random::rand_max_n(10);
-      recalculate_all_pizza_demographics();
-    }
-
-    business_week_nr++;
-  }
-
-  // Monthly property availability cycling on last day of month
-  if (time_.current_date().is_end_of_month()) {
-    for (auto& city : cities_) {
-      if (city) {
-        city->end_of_month();
-      }
+void GameState::end_of_week_processing() {
+  for (auto& city : cities_) {
+    if (city) {
+      city->reset_weekly_vendor_spending();
     }
   }
 
-  if (time_.current_date().is_end_of_year()) {
-    business_week_nr = 1;
-    for (auto& player : players_) {
-      if (player) {
-        auto& ch = player->character();
-        ch.age(static_cast<uint8_t>(std::min(255, (int)ch.age() + 1)));
-      }
+  // Pay weekly staff salaries
+  for (auto& player : players_) {
+    if (player) {
+      player->end_of_week(*this);
     }
   }
+
+  // 30% chance to re-randomize one demographic's taste profile
+  if (engine::random::rand_percentage_chance(30)) {
+    auto demo = static_cast<ConsumerType>(engine::random::rand_max_n(6));
+    auto& tp = customer_taste_profiles_[demo];
+    tp.fat = engine::random::rand_max_n(10);
+    tp.sweet = engine::random::rand_max_n(10);
+    tp.salty = engine::random::rand_max_n(10);
+    tp.hot = engine::random::rand_max_n(10);
+    tp.spicy = engine::random::rand_max_n(10);
+    recalculate_all_pizza_demographics();
+  }
+
+  business_week_nr++;
+}
+
+void GameState::end_of_year_processing() {
+  for (auto& player : players_) {
+    if (player) {
+      auto& ch = player->character();
+      ch.age(static_cast<uint8_t>(std::min(255, (int)ch.age() + 1)));
+    }
+  }
+  business_week_nr = 1;
+}
+
+void GameState::end_of_month_processing() {
+  for (auto& city : cities_) {
+    if (city) {
+      city->end_of_month();
+    }
+  }
+}
+
+void GameState::process_depot_theft() {
+  // 1% chance (10% x 10%) per player per day for the active city's depot.
+  auto* city = active_city();
+  if (!city) {
+    return;
+  }
+  using engine::random::rand_max_n;
+  using engine::random::rand_percentage_chance;
+  for (auto& player : players_) {
+    if (!player) {
+      continue;
+    }
+    auto& depot = city->central_depot(player->id());
+    if (depot.capacity() <= 0) {
+      continue;
+    }
+    // Two independent 10% rolls = 1% combined chance
+    bool first_roll = rand_percentage_chance(10);
+    bool second_roll = rand_percentage_chance(10);
+    if (!first_roll || !second_roll) {
+      continue;
+    }
+    auto category = static_cast<IngredientCategory>(rand_max_n(4));
+    depot.steal_stock(category);
+    Logger::debug("Stock of category {} stolen.", to_string(category));
+    player->make_insurance_claim(InsuranceType::WAREHOUSE);
+  }
+}
+
+// Called only after all players have finished their turns.
+void GameState::end_of_day() {
+
+  city_start_of_day_ran_.fill(false);
+
+  tick_active_cities();
 
   // Update AI menu slot history for pizza charts
   for (auto& player : players_) {
@@ -1454,34 +1612,15 @@ void GameState::end_of_day() {
     check_market_share_milestones(*city);
   }
 
-  // Depot theft: 1% chance (10% x 10%) per player per day for the active
-  // city's depot. Matches the original which only checks the current city.
-  // Only players with a depot (capacity > 0) are eligible.
-  if (auto* city = active_city()) {
-    using engine::random::rand_max_n;
-    using engine::random::rand_percentage_chance;
-    for (auto& player : players_) {
-      if (!player) {
-        continue;
-      }
-      auto& depot = city->central_depot(player->id());
-      if (depot.capacity() <= 0) {
-        continue;
-      }
-      // Two independent 10% rolls = 1% combined chance
-      bool first_roll = rand_percentage_chance(10);
-      bool second_roll = rand_percentage_chance(10);
-      if (!first_roll || !second_roll) {
-        continue;
-      }
-      auto category = static_cast<IngredientCategory>(rand_max_n(4));
-      depot.steal_stock(category);
-      player->make_insurance_claim(InsuranceType::WAREHOUSE);
-    }
-  }
+  process_depot_theft();
 
   // Clear actor refused calls (realtors cool down overnight)
   clear_all_refused_calls();
+
+  for (auto& player : players_) {
+    if (player && !player->is_human_controlled())
+      player->decay_competition_willingness();
+  }
 }
 
 void GameState::run_city_start_of_day(City& city) {
@@ -2395,9 +2534,9 @@ void GameState::next_player() {
 }
 
 void GameState::on_player_turn_card_finished() {
-  // Only unfreeze for human players - keep frozen for AI to hide their money
+  // Only release for human players - keep captured for AI to hide their money
   if (status_display_ && active_player()->is_human_controlled()) {
-    status_display_->unfreeze();
+    status_display_->release_state();
   }
 
   if (pending_ai_auto_end_turn_) {
@@ -2406,7 +2545,7 @@ void GameState::on_player_turn_card_finished() {
     return;
   }
 
-  // Human player taking control: unsuppress status so they see updates
+  // Human player taking control: unsuppress
   status_hub_.suppress(false);
 
   auto* player = active_player();
@@ -2416,7 +2555,7 @@ void GameState::on_player_turn_card_finished() {
       end_of_turn();
     }
     else {
-      // Release day: no bookkeeping, just advance to next player
+      // Released from prison, just advance to next player
       skip_to_next_player();
     }
     return;
@@ -2448,6 +2587,15 @@ bool GameState::fade_requested() const { return fade_requested_; }
 int GameState::fade_duration_frames() const { return fade_duration_frames_; }
 
 void GameState::clear_fade_request() { fade_requested_ = false; }
+
+void GameState::on_fade_midpoint() {
+  if (!pending_fade_midpoint_) {
+    return;
+  }
+  pending_fade_midpoint_ = false;
+  Logger::debug("TurnPipeline: fade midpoint reached, advancing pipeline");
+  advance_pipeline();
+}
 
 void GameState::request_resolution_change(ScreenResolution res) {
   pending_resolution_ = res;
@@ -2533,4 +2681,350 @@ bool GameState::bank_transfer(int account_number, Money amount,
   }
 
   return true;
+}
+
+void GameState::run_monthly_competition() {
+  std::vector<core::PlayerId> humans;
+  for (int slot = 0; slot < human_player_count(); ++slot) {
+    auto* p = players_[slot].get();
+    humans.push_back(p->id());
+  }
+  run_monthly_competition_chain(std::move(humans),
+                                std::make_shared<CompetitionSession>());
+}
+
+void GameState::run_monthly_competition_chain(
+    std::vector<core::PlayerId> remaining,
+    std::shared_ptr<CompetitionSession> session) {
+  // Remove players from the front until we find the first player than can
+  // afford it
+  while (!remaining.empty()) {
+    auto* p = player(remaining.front());
+    if (p && p->cash_balance() >= 500_usd) {
+      break;
+    }
+    remaining.erase(remaining.begin());
+  }
+
+  if (remaining.empty()) {
+    launch_monthly_competition(std::move(session));
+    return;
+  }
+
+  core::PlayerId pid = remaining.front();
+  remaining.erase(remaining.begin());
+  auto* p = player(pid);
+  std::string player_name = p->character().name();
+
+  context_->popup->create<ConfirmPopup>(
+      compat::format("{}, do you want to take part in the pizza competition?",
+                     player_name),
+      [this, pid, remaining = std::move(remaining),
+       session](bool accepted) mutable {
+        if (!accepted) {
+          run_monthly_competition_chain(std::move(remaining),
+                                        std::move(session));
+          return;
+        }
+
+        auto* p2 = this->player(pid);
+        if (!p2) {
+          run_monthly_competition_chain(std::move(remaining),
+                                        std::move(session));
+          return;
+        }
+        int cash_dollars = static_cast<int>(p2->cash_balance().cents / 100);
+        int max_bet = std::min(10000, (cash_dollars / 500) * 500);
+        if (max_bet < 500) {
+          run_monthly_competition_chain(std::move(remaining),
+                                        std::move(session));
+          return;
+        }
+
+        context_->popup->create<NumberInputPopup>(
+            "How much do you stake?", "$", 500, 500, max_bet, 500,
+            [this, pid, remaining = std::move(remaining),
+             session](int bet_dollars) mutable {
+              Money bet{static_cast<int64_t>(bet_dollars) * 100};
+
+              // The first accepting player also picks the speed.
+              if (!session->canonical_pizza) {
+                context_->popup->create<NumberInputPopup>(
+                    "Speed:", "", 3, 1, 5, 1,
+                    [this, pid, bet, remaining = std::move(remaining),
+                     session](int speed_level) mutable {
+                      auto comp_count = competition_count_;
+                      int pizza_index = std::min(comp_count, 40) +
+                                        engine::random::rand_max_n(10) + 20;
+                      auto& zutaten_bob = context_->bob->get("bob/zutaten.bob");
+                      auto get_bob_size =
+                          make_ingredient_bob_size_fn<Bob, core::food::Topping>(
+                              zutaten_bob);
+                      auto canonical = PizzaFactory::create_pizza(
+                          pizza_index, get_bob_size, customer_taste_profiles_);
+                      if (!canonical) {
+                        Logger::warn(
+                            "run_monthly_competition: failed to load pizza {}",
+                            pizza_index);
+                        run_monthly_competition_chain(std::move(remaining),
+                                                      std::move(session));
+                        return;
+                      }
+                      session->pizza_index = pizza_index;
+                      session->speed_level = speed_level;
+                      session->delay_ticks = 100 - (speed_level * 15);
+                      session->canonical_pizza =
+                          std::make_shared<core::food::Pizza>(
+                              std::move(*canonical));
+                      session->participants.push_back(CompetitionParticipant{
+                          .player_id = pid,
+                          .is_human = true,
+                          .bet = bet,
+                      });
+                      run_monthly_competition_chain(std::move(remaining),
+                                                    std::move(session));
+                    });
+              }
+              else {
+                session->participants.push_back(CompetitionParticipant{
+                    .player_id = pid,
+                    .is_human = true,
+                    .bet = bet,
+                });
+                run_monthly_competition_chain(std::move(remaining),
+                                              std::move(session));
+              }
+            });
+      });
+}
+
+void GameState::launch_monthly_competition(
+    std::shared_ptr<CompetitionSession> session) {
+  // Shouldn't happen
+  if (!session->canonical_pizza) {
+    advance_pipeline();
+    return;
+  }
+
+  // use the bet from the first human participant
+  Money ai_bet =
+      session->participants.empty() ? 500_usd : session->participants[0].bet;
+
+  // Add AI opponents that aren't already in the session.
+  for (int slot = 0; slot < NUMBER_OF_PLAYERS; ++slot) {
+    auto* ai = players_[slot].get();
+    if (!ai || ai->is_human_controlled()) {
+      continue;
+    }
+    session->participants.push_back(CompetitionParticipant{
+        .player_id = ai->id(),
+        .is_human = false,
+        .bet = ai_bet,
+    });
+  }
+
+  if (session->participants.empty()) {
+    advance_pipeline();
+    return;
+  }
+
+  // human_slot points to the first human in the list (index 0, since humans
+  // were pushed before AIs).
+  session->human_slot = 0;
+  core::PlayerId first_pid = session->participants[0].player_id;
+
+  ui().push<PizzaDesignState>(PizzaDesignState{
+      .initial_mode = PizzaDesignMode::MonthlyChallenge,
+      .competition_session = std::move(session),
+      .competing_player_id = first_pid,
+      .on_done = [this] { advance_pipeline(); },
+  });
+}
+
+void GameState::run_annual_pizza_competition() {
+  auto* city = active_city();
+  if (!city) {
+    return;
+  }
+  auto mayor_actors = city->actors(ActorType::MAYOR);
+  if (mayor_actors.empty()) {
+    return;
+  }
+  int mayor_id = mayor_actors[0]->id();
+
+  auto session = std::make_shared<CompetitionSession>();
+
+  // Add all human players first so their design screens run sequentially before
+  // the winner is announced.
+  for (int slot = 0; slot < NUMBER_OF_PLAYERS; ++slot) {
+    auto* hp = players_[slot].get();
+    if (hp && hp->is_human_controlled()) {
+      session->participants.push_back(
+          CompetitionParticipant{.player_id = hp->id(), .is_human = true});
+    }
+  }
+
+  if (session->participants.empty()) {
+    return;
+  }
+
+  // human_slot starts at the first human (index 0).
+  session->human_slot = 0;
+
+  // AI scores are pre-computed from character stats.
+  for (int slot = 0; slot < NUMBER_OF_PLAYERS; ++slot) {
+    auto* ai = players_[slot].get();
+    if (!ai || ai->is_human_controlled()) {
+      continue;
+    }
+    int score = std::clamp(static_cast<int>(ai->character().cooking()) +
+                               engine::random::rand_max_n(20) - 10,
+                           0, 100);
+    session->participants.push_back(CompetitionParticipant{
+        .player_id = ai->id(),
+        .is_human = false,
+        .match_score = score,
+        .final_score = score,
+    });
+  }
+
+  annual_comp_.session = session;
+  annual_comp_.phase = AnnualCompetitionFlow::Phase::Announcing;
+
+  ui_.push<MayorState>(MayorState{
+      .id = mayor_id,
+      .type = MayorConversationType::PizzaOfTheYearCompetition,
+  });
+}
+
+void GameState::finalize_annual_pizza_competition(CompetitionSession session) {
+  if (annual_comp_.phase != AnnualCompetitionFlow::Phase::AwaitingDesign) {
+    return;
+  }
+  annual_comp_.session =
+      std::make_shared<CompetitionSession>(std::move(session));
+  advance_annual_competition();
+}
+
+bool GameState::annual_comp_ready_to_advance() const {
+  using Phase = AnnualCompetitionFlow::Phase;
+  switch (annual_comp_.phase) {
+  case Phase::Announcing:
+  case Phase::ShowingWinner:
+    return !ui_.is_top<MayorState>();
+  default:
+    return false;
+  }
+}
+
+void GameState::advance_annual_competition() {
+  using Phase = AnnualCompetitionFlow::Phase;
+  auto& ac = annual_comp_;
+
+  switch (ac.phase) {
+  case Phase::Announcing: {
+    // Mayor announcement closed, start first human's design screen.
+    core::PlayerId first_pid =
+        ac.session->participants[ac.session->human_slot].player_id;
+    ui_.push<PizzaDesignState>(PizzaDesignState{
+        .initial_mode = PizzaDesignMode::AnnualCompetitionDesign,
+        .competition_session = ac.session,
+        .competing_player_id = first_pid,
+    });
+    ac.phase = Phase::AwaitingDesign;
+    break;
+  }
+
+  case Phase::AwaitingDesign: {
+    // Called from finalize_annual_pizza_competition when a human finishes.
+    int next_slot = ac.session->human_slot + 1;
+    if (next_slot < static_cast<int>(ac.session->participants.size()) &&
+        ac.session->participants[next_slot].is_human) {
+      // More human players, go to the next design screen.
+      ac.session->human_slot = next_slot;
+      core::PlayerId next_pid = ac.session->participants[next_slot].player_id;
+      ui_.push<PizzaDesignState>(PizzaDesignState{
+          .initial_mode = PizzaDesignMode::AnnualCompetitionDesign,
+          .competition_session = ac.session,
+          .competing_player_id = next_pid,
+      });
+      // Stay in AwaitingDesign.
+      break;
+    }
+
+    // All human players done, figure out winner and let Mayor announce
+    auto* city = active_city();
+    if (!city) {
+      ac.phase = Phase::Inactive;
+      break;
+    }
+    auto mayor_actors = city->actors(ActorType::MAYOR);
+    if (mayor_actors.empty()) {
+      ac.phase = Phase::Inactive;
+      break;
+    }
+    int mayor_id = mayor_actors[0]->id();
+
+    int best = -1;
+    int winner_slot = -1;
+    bool all_tied = ac.session->participants.size() >= 2;
+    for (int i = 0; i < static_cast<int>(ac.session->participants.size());
+         ++i) {
+      int s = ac.session->participants[i].final_score;
+      if (s > best) {
+        best = s;
+        winner_slot = i;
+      }
+      if (i > 0 && s != ac.session->participants[i - 1].final_score) {
+        all_tied = false;
+      }
+    }
+
+    Logger::debug("Pizza of the Year scores:");
+    for (int i = 0; i < static_cast<int>(ac.session->participants.size());
+         ++i) {
+      const auto& p = ac.session->participants[i];
+      auto* pl = player(p.player_id);
+      std::string pname = pl ? pl->name() : "?";
+      Logger::debug("  [{}] {} ({}): score={}", i, pname,
+                    p.is_human ? "human" : "AI", p.final_score);
+    }
+    if (winner_slot >= 0 && !all_tied) {
+      const auto& wp = ac.session->participants[winner_slot];
+      auto* wpl = player(wp.player_id);
+      Logger::debug("  => winner: {}", wpl ? wpl->name() : "?");
+    }
+    else {
+      Logger::debug("  => all tied, no winner");
+    }
+
+    std::optional<int> winner_player_id;
+    if (winner_slot >= 0 && !all_tied) {
+      auto& winner_p = ac.session->participants[winner_slot];
+      winner_player_id = winner_p.player_id.value;
+      if (auto* winner = player(winner_p.player_id)) {
+        winner->add_score(40);
+      }
+    }
+
+    ui_.push<MayorState>(MayorState{
+        .id = mayor_id,
+        .type = MayorConversationType::PizzaOfTheYearWinner,
+        .award_winner_player_id = winner_player_id,
+    });
+    ac.phase = Phase::ShowingWinner;
+    break;
+  }
+
+  case Phase::ShowingWinner:
+    // Annual competition finished. Pipeline continues to MonthlyCompetition
+    // (for December)
+    ac.session.reset();
+    ac.phase = Phase::Inactive;
+    advance_pipeline();
+    break;
+
+  default:
+    break;
+  }
 }

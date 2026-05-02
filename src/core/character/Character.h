@@ -125,6 +125,7 @@ public:
   uint8_t id() const { return data_->id; };
   const std::string& first_name() const { return data_->first_name; };
   const std::string& last_name() const { return data_->last_name; };
+  std::string name() const { return first_name() + " " + last_name(); };
   uint8_t age() const { return age_; };
   void age(uint8_t a) { age_ = a; };
   uint8_t popularity() const { return data_->popularity; };

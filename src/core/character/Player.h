@@ -145,6 +145,15 @@ public:
 
   int score() const { return score_; }
   void add_score(int points);
+
+  uint8_t competition_willingness() const { return competition_willingness_; }
+  void set_competition_willingness(uint8_t v) { competition_willingness_ = v; }
+  void decay_competition_willingness() {
+    if (competition_willingness_ > 0)
+      competition_willingness_--;
+  }
+  uint8_t competition_win_count() const { return competition_win_count_; }
+  void increment_competition_win_count() { competition_win_count_++; }
   void holiday(int days) { holiday_days_left_ = days; }
   bool is_on_holiday() const {
     return holiday_days_left_.has_value() && *holiday_days_left_ > 0;
@@ -183,4 +192,6 @@ private:
   SocialStatus social_status_;
   Money weapon_dealing_profit_{0};
   std::unordered_set<core::CityId> visited_city_ids_;
+  uint8_t competition_willingness_{0};
+  uint8_t competition_win_count_{0};
 };

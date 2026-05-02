@@ -214,6 +214,37 @@ static CommandDef make_game_date() {
       .add_subcommand(make_game_date_set());
 }
 
+static CommandDef make_game_competition_monthly() {
+  return CommandDef{.name = "monthly",
+                    .description = "Trigger the monthly pizza competition",
+                    .help_text = R"(Usage: game competition monthly
+
+Immediately triggers the monthly pizza baking competition for the active
+player, bypassing the normal end-of-month schedule. The player must have
+at least $500 cash. The normal participation, betting, and speed dialogs
+will appear.
+
+Example:
+  game competition monthly
+)",
+                    .handler = [](const CommandContext& ctx) -> CommandResult {
+                      ctx.state.run_monthly_competition();
+                      return CommandResult::success().add_message(
+                          "Monthly pizza competition triggered");
+                    },
+                    .category = "game"};
+}
+
+static CommandDef make_game_competition() {
+  return CommandDef{
+      .name = "competition",
+      .description = "Pizza competition commands",
+      .help_text = "Trigger pizza competitions for testing",
+      .category = "game",
+  }
+      .add_subcommand(make_game_competition_monthly());
+}
+
 CommandDef make_game_commands() {
   return CommandDef{
       .name = "game",
@@ -224,7 +255,8 @@ CommandDef make_game_commands() {
       .add_subcommand(make_game_save())
       .add_subcommand(make_game_load())
       .add_subcommand(make_game_exit())
-      .add_subcommand(make_game_date());
+      .add_subcommand(make_game_date())
+      .add_subcommand(make_game_competition());
 }
 
 } // namespace debug::commands

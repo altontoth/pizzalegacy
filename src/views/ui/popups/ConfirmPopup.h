@@ -34,7 +34,7 @@ private:
   PopupButton btn_no_;
   input::ListenerToken input_;
   static constexpr int popup_width_ = 362;
-  static constexpr int popup_height_ = 136;
+  static constexpr int popup_height_ = 146;
   static constexpr int pic_text_left_margin_ = 10;
   static constexpr int pic_text_top_margin_ = 10;
   static constexpr int text_left_margin_ = 4;

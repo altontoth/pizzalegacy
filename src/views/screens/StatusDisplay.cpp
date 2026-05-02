@@ -175,9 +175,8 @@ void StatusDisplay::recipe(StatusDisplayRecipe r) {
   mark_dirty();
 }
 
-void StatusDisplay::freeze() {
+void StatusDisplay::capture_state() {
   frozen_ = true;
-  // Capture current header state
   const GameTime& time = state_.time();
   frozen_date_ = time.to_date_string();
   frozen_time_ = time.to_time_string();
@@ -191,7 +190,7 @@ void StatusDisplay::freeze() {
   mark_dirty();
 }
 
-void StatusDisplay::unfreeze() {
+void StatusDisplay::release_state() {
   frozen_ = false;
   mark_dirty();
 }

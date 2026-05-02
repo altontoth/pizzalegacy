@@ -142,8 +142,8 @@ CommandDef make_nav_commands() {
                   .name = "design",
                   .description = "Pizza design screen",
                   .handler = [](const CommandContext& ctx) -> CommandResult {
-                    ctx.state.ui().push<PizzaManagerState>(
-                        PizzaManagerMode::Design);
+                    ctx.state.ui().push<PizzaDesignState>(
+                        PizzaDesignMode::Design);
                     return CommandResult::success().add_message(
                         "Navigated to pizza designer");
                   },
@@ -154,8 +154,8 @@ CommandDef make_nav_commands() {
                   .description = "Recipe list screen",
                   .handler = [](const CommandContext& ctx) -> CommandResult {
                     ctx.state.bootstrap_minimal_playable_world(ctx.context);
-                    ctx.state.ui().push<PizzaManagerState>(
-                        PizzaManagerMode::Recipes);
+                    ctx.state.ui().push<PizzaDesignState>(
+                        PizzaDesignMode::Recipes);
                     return CommandResult::success().add_message(
                         "Navigated to recipe list");
                   },

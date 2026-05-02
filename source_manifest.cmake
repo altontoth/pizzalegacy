@@ -122,8 +122,8 @@ set(GAME_PLEGACY_SOURCES
     src/views/screens/MafiaMissionView.cpp
     src/views/screens/MarketResearch.cpp
     src/views/screens/Newspaper.cpp
+    src/views/screens/PizzaDesign.cpp
     src/views/screens/PizzaJudges.cpp
-    src/views/screens/PizzaManager.cpp
     src/views/screens/PlayerProfile.cpp
     src/views/screens/PlayerTurnCard.cpp
     src/views/screens/StaffView.cpp
@@ -382,9 +382,13 @@ set(PLEGACY_HEADERS
     src/core/settings/InsuranceSettings.h
     src/core/settings/MafiaSettings.h
     src/core/settings/RealtorSettings.h
+    src/core/state/AnnualCompetitionFlow.h
+    src/core/state/CompetitionGlobalState.h
+    src/core/state/CompetitionSession.h
     src/core/state/GameOptions.h
     src/core/state/GameState.h
     src/core/state/Overloaded.h
+    src/core/state/TurnPipeline.h
     src/core/state/UIState.h
     src/core/state/UIStateStack.h
     src/core/state/ViewerType.h
@@ -542,8 +546,8 @@ set(PLEGACY_HEADERS
     src/views/screens/MafiaMissionView.h
     src/views/screens/MarketResearch.h
     src/views/screens/Newspaper.h
+    src/views/screens/PizzaDesign.h
     src/views/screens/PizzaJudges.h
-    src/views/screens/PizzaManager.h
     src/views/screens/PlayerProfile.h
     src/views/screens/PlayerTurnCard.h
     src/views/screens/StaffView.h

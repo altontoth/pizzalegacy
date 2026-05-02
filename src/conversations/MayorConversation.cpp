@@ -21,7 +21,7 @@ MayorConversation::MayorConversation(GameState& state, const Actor* actor,
                                      std::string restaurant_name)
     : BaseConversation(compute_start_line(state, actor, mt, mo), state,
                        "t/bg.e", actor),
-      mayor_office_(mo), inspection_outcome_(outcome),
+      mayor_office_(mo), conv_type_(mt), inspection_outcome_(outcome),
       award_winner_player_id_(award_winner_player_id),
       restaurant_name_(std::move(restaurant_name)) {
 
@@ -176,15 +176,14 @@ bool MayorConversation::advance() {
     }
     break;
 
-  // TODO: Pizza of the Year (competition announcement, winner TBD)
-  case MayorLine::HELLO_PIZZA_OF_THE_YEAR:
-    current_line(MayorLine::WE_HAVE_A_WINNER_MASTER_CHEF_IS);
-    break;
   case MayorLine::WE_HAVE_A_WINNER_MASTER_CHEF_IS:
-    // TODO: I assume that if you don't participate you don't get any
-    // notifications about the winner?
-    current_line(MayorLine::YOU_WON_PIZZA_OF_THE_YEAR);
+    current_line(MayorLine::POTY_WINNER);
     break;
+  case MayorLine::POTY_WINNER:
+    if (active_player_won()) {
+      current_line(MayorLine::YOU_WON_PIZZA_OF_THE_YEAR);
+    }
+    return false;
 
   case MayorLine::HELLO_BEST_IMITATOR_OF_THE_YEAR:
     current_line(MayorLine::LAST_YEAR_MOST_PIZZA_COMPETITIONS_WON_BY);
@@ -221,6 +220,9 @@ bool MayorConversation::advance_proposal(bool /*agree*/) {
 }
 
 Emotion MayorConversation::emotion() const {
+  if (current_line_ == MayorLine::POTY_WINNER) {
+    return active_player_won() ? Emotion::HAPPY : Emotion::NEUTRAL;
+  }
   switch (current_line_) {
   case MayorLine::CONGRATULATIONS_NEW_STAR:
   case MayorLine::NOT_BAD_FOR_A_START_FIRST_STAR:
@@ -251,6 +253,8 @@ std::vector<ConversationLine<MayorLine>> MayorConversation::lines() const {
   case MayorLine::FOOD_QUALITY_CHECK:
     return {make_line(current_line_,
                       {.custom_text = " " + restaurant_name_ + "."})};
+  case MayorLine::HELLO_PIZZA_OF_THE_YEAR:
+    return {make_terminal_line(current_line_)};
 
   case MayorLine::NOT_BAD_FOR_A_START_FIRST_STAR:
   case MayorLine::CONGRATULATIONS_NEW_STAR:
@@ -261,7 +265,6 @@ std::vector<ConversationLine<MayorLine>> MayorConversation::lines() const {
   case MayorLine::ILL_LOOK_AGAIN_WHEN_I_CAN:
   case MayorLine::VERY_BUSY_MAN_HARDLY_TIME_FOR_PIZZA:
   case MayorLine::HELLO_MOST_BEAUTIFUL_RESTAURANT_IN_TOWN:
-  case MayorLine::HELLO_PIZZA_OF_THE_YEAR:
   case MayorLine::WE_HAVE_A_WINNER_MASTER_CHEF_IS:
   case MayorLine::HELLO_BEST_INVESTOR_IN_TOWN:
   case MayorLine::HELLO_BEST_IMITATOR_OF_THE_YEAR:
@@ -307,6 +310,18 @@ std::vector<ConversationLine<MayorLine>> MayorConversation::lines() const {
   case MayorLine::CONGRATS_THROUGH_WISE_INVESTMENTS_MADE_FINE_NAME:
   case MayorLine::CONGRATULATIONS_TRANS_ATLANTIC_TRADE_AWARD:
     return {make_line(current_line_)};
+
+  case MayorLine::POTY_WINNER: {
+    std::string name;
+    if (award_winner_player_id_.has_value() && *award_winner_player_id_ >= 0) {
+      auto* winner = state_.players()[*award_winner_player_id_];
+      name = winner ? winner->name() : "";
+    }
+    if (active_player_won()) {
+      return {make_line(current_line_, {.custom_text = name})};
+    }
+    return {make_terminal_line(current_line_, name)};
+  }
 
   // Terminal lines (player clicks to dismiss)
   case MayorLine::THANK_YOU_FOR_YOUR_DONATION:
@@ -365,8 +380,9 @@ MayorLine MayorConversation::compute_start_line(const GameState& state,
   case MayorConversationType::MostBeautifulRestaurantAward:
     return MayorLine::HELLO_MOST_BEAUTIFUL_RESTAURANT_IN_TOWN;
   case MayorConversationType::PizzaOfTheYearCompetition:
-  case MayorConversationType::PizzaOfTheYearWinner:
     return MayorLine::HELLO_PIZZA_OF_THE_YEAR;
+  case MayorConversationType::PizzaOfTheYearWinner:
+    return MayorLine::WE_HAVE_A_WINNER_MASTER_CHEF_IS;
   case MayorConversationType::BestInvestorInTownAward:
     return MayorLine::HELLO_BEST_INVESTOR_IN_TOWN;
   case MayorConversationType::GoldenBowTieAward:

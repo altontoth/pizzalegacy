@@ -7,10 +7,12 @@
 #pragma once
 
 #include "core/GameTypes.h"
+#include "core/events/LeventId.h"
 #include "core/food/BakeSession.h"
 #include "core/food/Pizza.h"
 #include "core/food/Recipe.h"
 #include "core/food/Topping.h"
+#include "core/state/CompetitionSession.h"
 #include "core/state/UIState.h"
 #include "engine/geom/Camera.h"
 #include "engine/geom/Spaces.h"
@@ -31,10 +33,10 @@ struct DesignResult {
   core::food::Recipe recipe;        // finalized recipe data
 };
 
-class PizzaManager : public MainPanelView, public input::InputListener {
+class PizzaDesign : public MainPanelView, public input::InputListener {
 public:
-  PizzaManager(GameContext& context, GameState& state, PizzaManagerState pms);
-  ~PizzaManager();
+  PizzaDesign(GameContext& context, GameState& state, PizzaDesignState pms);
+  ~PizzaDesign();
   void tick() override;
   void render(const RenderContext& ctx) override;
   bool on_action(const input::ActionEvent& ev) override;
@@ -52,7 +54,7 @@ private:
   void create_dropdowns();
   void start_chop();
   void create_input_panel();
-  void change_mode(PizzaManagerMode mode);
+  void change_mode(PizzaDesignMode mode);
   bool is_new_selected() const;
   void on_bake_pressed();
   void on_design_finished();
@@ -72,7 +74,19 @@ private:
   void update_status_ingredient();
   void handle_post_judging();
 
-  PizzaManagerMode mode_;
+  // Competition
+  Player* competing_player() const;
+  void begin_competition(std::shared_ptr<CompetitionSession> session);
+  void begin_annual_competition(std::shared_ptr<CompetitionSession> session);
+  void on_reveal_complete();
+  void on_competition_design_finished();
+  void finalize_competition_results();
+  void draw_competition_reveal(const RenderContext& ctx) const;
+  void draw_competition_results(const RenderContext& ctx);
+  void update_competition_status();
+  void setup_pizza_design_interactions(const RenderContext& ctx);
+
+  PizzaDesignMode mode_;
   Camera camera_;
   // This one is so we know what mode to use for the input menu:
   bool design_mode_{false};
@@ -92,6 +106,13 @@ private:
   static constexpr int recipes_per_page_ = 14;
   size_t recipe_count_{0};
   std::optional<core::food::BakeSession> bake_;
+  std::optional<CompetitionSession> competition_;
+  std::optional<core::PlayerId> competing_player_id_;
+  std::function<void()> on_done_;
+  std::optional<core::events::LeventId> pending_competition_message_;
+  uint64_t competition_design_ticks_{0};
+  int reveal_delay_remaining_ticks_{0};
+  bool reveal_speed_boost_{false};
   input::ListenerToken listener_;
   StatusController status_;
 };

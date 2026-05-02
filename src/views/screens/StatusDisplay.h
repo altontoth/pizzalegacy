@@ -16,9 +16,11 @@ public:
   void tick() override;
   void render(const RenderContext& ctx) override;
 
-  // Freeze/unfreeze header display (date, time, money)
-  void freeze();
-  void unfreeze();
+  // Snapshot or release the header display (date, time, money).
+  // capture_state() records current values and locks them; calling it again
+  // refreshes the snapshot while staying locked.
+  void capture_state();
+  void release_state();
 
 private:
   void clear(const RenderContext& ctx);

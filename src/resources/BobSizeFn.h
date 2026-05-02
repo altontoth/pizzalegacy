@@ -17,12 +17,13 @@ using BobSizeFn = std::function<Size(int ingredient_id, int state)>;
 template <class BobT, class ToppingT>
 inline BobSizeFn make_ingredient_bob_size_fn(BobT& zutaten_bob) {
   return [&zutaten_bob](int ingredient_id, int state) -> Size {
-    // Use Topping's bob_state() mapping.
     ToppingT probe{ingredient_id, state, WorldPoint{0, 0}};
-    const int frame_index = probe.bob_state();
-
-    const std::size_t count = zutaten_bob.frame_count();
-
+    const auto& bobs = probe.bobs();
+    const std::size_t bob_state = static_cast<std::size_t>(probe.bob_state());
+    if (bob_state >= bobs.size()) {
+      return Size{0, 0};
+    }
+    const int frame_index = bobs[bob_state];
     return zutaten_bob.size(frame_index);
   };
 }

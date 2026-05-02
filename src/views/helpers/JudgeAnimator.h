@@ -7,6 +7,7 @@
 #pragma once
 
 #include <array>
+#include "core/GameTypes.h"
 #include "core/food/Pizza.h"
 #include "core/util/GameContext.h"
 #include "engine/RenderContext.h"
@@ -17,7 +18,7 @@ public:
 
   // Initialize animation with pizza scores
   void start(const std::array<int, NUMBER_OF_JUDGES>& scores,
-             bool is_canonical_comparison = false);
+             JudgingMode mode = JudgingMode::Own);
   bool tick();
   void render(const RenderContext& ctx);
   bool is_complete() const { return !animating_; }
@@ -32,7 +33,7 @@ private:
   std::array<int, NUMBER_OF_JUDGES> ticks_to_wait_after_finishing_;
   int current_box_index_{0};
   bool animating_{false};
-  bool is_canonical_comparison_{false};
+  JudgingMode judging_mode_{JudgingMode::Own};
 
   static constexpr int table_offset_ = 214;
   static constexpr int score_offset_ = 5;

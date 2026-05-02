@@ -58,7 +58,7 @@ enum class TerminalCategory {
   NONE,
 };
 
-enum class PizzaManagerMode {
+enum class PizzaDesignMode {
   Recipes,
   View,
   Ingredients,
@@ -69,4 +69,14 @@ enum class PizzaManagerMode {
   OwnPizzaJudging,
   CanonicalPizzaJudging,
   CompetitionJudging,
+  CompetitionReveal,
+  CompetitionDesign,
+  CompetitionResults,
+  AnnualCompetitionDesign,
+};
+
+enum class JudgingMode {
+  Own,
+  Canonical,
+  Competition,
 };

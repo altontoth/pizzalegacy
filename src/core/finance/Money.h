@@ -10,9 +10,9 @@
 #include "engine/FormatCompat.h"
 
 struct Money {
-  int64_t cents;
+  int64_t cents{0};
 
-  Money() { cents = 0; }
+  Money() = default;
   constexpr Money(int64_t c) : cents(c) {}
 
   constexpr Money operator+(Money other) const {

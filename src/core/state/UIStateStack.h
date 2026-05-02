@@ -25,11 +25,11 @@ public:
   // pop the top node
   void pop() {
     if (stack_.empty()) {
-      assert("You popped while the stack was empty");
+      static_assert("You popped while the stack was empty");
     }
     stack_.pop_back();
     if (stack_.empty()) {
-      assert("You popped which made the stack empty");
+      static_assert("You popped which made the stack empty");
     }
     changed_ = true;
   }

@@ -104,7 +104,7 @@ public:
   std::vector<std::pair<int, const IngredientStock&>> ingredients() const {
     std::vector<std::pair<int, const IngredientStock&>> result;
     for (size_t i = 0; i < stocks_.size(); i++) {
-      result.emplace_back(i, stocks_[i]);
+      result.emplace_back(static_cast<int>(i), stocks_[i]);
     }
     return result;
   }

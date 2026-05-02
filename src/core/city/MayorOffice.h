@@ -106,7 +106,7 @@ public:
   int award_ceremony_day() const { return ceremony_day_; }
   void award_ceremony_day(int d) { ceremony_day_ = d; }
 
-  // Called from GameState::end_of_day() for each active city.
+  // Called from GameState::run_city_start_of_day().
   // Returns any award events that should fire today.
   // Also decays favor scores and advances the appointment system.
   std::vector<MayorAwardEvent>

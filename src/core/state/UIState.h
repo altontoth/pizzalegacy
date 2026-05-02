@@ -21,6 +21,7 @@
 #include "core/food/Pizza.h"
 #include "core/food/PlayerRecipes.h"
 #include "core/restaurant/RestaurantTypes.h"
+#include "core/state/CompetitionSession.h"
 #include "core/state/ViewerType.h"
 #include "core/supply/IngredientBatch.h"
 #include "core/supply/Supplier.h"
@@ -83,11 +84,17 @@ struct RestaurantViewState {
   std::optional<SupplierType> return_to_supplier_type = std::nullopt;
   bool reopen_restaurant = false;
 };
-struct PizzaManagerState {
-  PizzaManagerMode initial_mode;
+struct PizzaDesignState {
+  PizzaDesignMode initial_mode;
   std::optional<core::PlayerId> opponent = std::nullopt;
   std::shared_ptr<core::food::BakeSession> bake = nullptr;
   std::optional<RecipeKey> active_key = std::nullopt;
+  std::shared_ptr<CompetitionSession> competition_session = nullptr;
+  // Set when a specific player is competing (multi-player competitions).
+  // When absent, falls back to active_player().
+  std::optional<core::PlayerId> competing_player_id = std::nullopt;
+  // Called when the screen is dismissed after a competition (optional).
+  std::function<void()> on_done = nullptr;
 };
 struct EuroMapState {
   MapMode mode;
@@ -105,7 +112,7 @@ struct StatsRestaurantsState {
 struct PizzaJudgesState {
   std::array<int, NUMBER_OF_JUDGES> scores;
   std::function<void()> on_complete;
-  bool is_canonical_comparison{false};
+  JudgingMode judging_mode{JudgingMode::Own};
 };
 struct PurchasingState {
   SupplierType supplier;
@@ -222,7 +229,7 @@ using UIState = std::variant<
     PurchasingDemographicState, ActorTerminalState, BankState, PoliceState,
     MafiaState, MayorState, RestaurantViewState, ViewerState, FloorListState,
     FurnitureListState, CategoryOverviewState, SupplierListState,
-    PizzaManagerState, RestaurantMenuState, RestaurantStatsState,
+    PizzaDesignState, RestaurantMenuState, RestaurantStatsState,
     WeeksTakingsState, AnimatedStatsState, IngredientCategoryViewState,
     StockMainState, DepotMainState, DepotExportState,
     IngredientSupplierListState, IngredientOrderState,

@@ -164,6 +164,7 @@ bool ConsoleLayer::on_action(const input::ActionEvent& ev) {
   case input::Action::ToggleConsole:
     if (is_active()) {
       hide();
+      interactions_.begin_frame(); // clear frame items
       text_session_.reset();
     }
     else {
