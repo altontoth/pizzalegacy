@@ -254,8 +254,11 @@ bool RestaurantView::on_action(const input::ActionEvent& ev) {
     return true;
   }
   case input::Action::ToggleRestaurantView: {
-    toggle_kitchen_view();
-    mark_dirty();
+    if (view_mode_ != RestaurantViewMode::OPPONENT_VIEW &&
+        view_mode_ != RestaurantViewMode::OPPONENT_ATTACK) {
+      toggle_kitchen_view();
+      mark_dirty();
+    }
     return true;
   }
   default: {
@@ -440,6 +443,10 @@ void RestaurantView::register_interactions_viewport() {
           return;
         }
         // Left click handling
+        if (view_mode_ == RestaurantViewMode::OPPONENT_VIEW ||
+            view_mode_ == RestaurantViewMode::OPPONENT_ATTACK) {
+          return;
+        }
         if (on_cursor_ && ghost_furniture_topleft_) {
           // When holding furniture, always try to place at ghost position
           // This takes precedence over other interactions (door, etc.)
@@ -542,9 +549,34 @@ void RestaurantView::handle_mouse_click(WorldPoint map_point) {
       on_cursor_->linked_furniture_id(nearest_table->id());
     }
 
+    const bool placing_table =
+        on_cursor_->furniture()->category() == FurnitureCategory::TABLE;
+    const core::FurnitureId new_table_id = on_cursor_->id();
+    const WorldRect table_cand = cand;
+
     // cand already has the correct top-left position (calculated by
     // candidate_rect) Pass the top-left corner for placement
     place_cursor_item(cand.point());
+
+    // When placing a table, sync chair links: link overlapping chairs and
+    // unlink no longer overlapping chairs
+    if (placing_table) {
+      for (const auto& pf : current_furniture_list()) {
+        if (pf->furniture()->category() != FurnitureCategory::CHAIR) {
+          continue;
+        }
+        const Size chair_size = bob_renderer_for(*pf).size(*pf);
+        const WorldRect chair_rect{pf->origin(), chair_size};
+        const bool overlaps = chair_rect.intersects(table_cand) &&
+                              !table_cand.contains(chair_rect.center());
+        if (overlaps) {
+          pf->linked_furniture_id(new_table_id);
+        }
+        else if (pf->linked_furniture_id() == new_table_id) {
+          pf->unlink_furniture();
+        }
+      }
+    }
   }
   else {
     update_status_display(nullptr);
@@ -831,6 +863,10 @@ void RestaurantView::render_placement_layer(PlacementLayer placement) {
           hit, token_id,
           [this, fid, hit, furn_world](views::ui::InteractionEvent ev) {
             if (ev.type != views::ui::InteractionEvent::Type::Click) {
+              return;
+            }
+            if (view_mode_ == RestaurantViewMode::OPPONENT_VIEW ||
+                view_mode_ == RestaurantViewMode::OPPONENT_ATTACK) {
               return;
             }
             if (ev.button == views::ui::MouseButton::Left) {
@@ -1703,6 +1739,10 @@ void RestaurantView::render_side_and_bottom_walls() {
     interactions_.create_frame_item(
         *door_viewport, token_id, [this](views::ui::InteractionEvent ev) {
           if (ev.type != views::ui::InteractionEvent::Type::Click) {
+            return;
+          }
+          if (view_mode_ == RestaurantViewMode::OPPONENT_VIEW ||
+              view_mode_ == RestaurantViewMode::OPPONENT_ATTACK) {
             return;
           }
           // Don't toggle kitchen view if holding furniture - let catchall place

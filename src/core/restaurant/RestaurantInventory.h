@@ -68,12 +68,23 @@ public:
     return true;
   }
 
-  void apply_daily_degradation(float degradation_rate = 0.95f) {
-    for (auto& stock : stocks_) {
+  std::vector<core::food::IngredientType>
+  apply_daily_degradation(float degradation_rate = 0.95f) {
+    std::vector<core::food::IngredientType> rotten;
+    for (size_t i = 0; i < stocks_.size(); ++i) {
+      if (!core::food::is_valid_ingredient_id(static_cast<uint8_t>(i))) {
+        continue;
+      }
+      auto& stock = stocks_[i];
       if (stock.quantity > 0) {
         stock.apply_degradation(degradation_rate);
+        if (stock.weighted_avg_quality < 5) {
+          rotten.push_back(static_cast<core::food::IngredientType>(i));
+          stock.clear();
+        }
       }
     }
+    return rotten;
   }
 
   Money total_value() const {

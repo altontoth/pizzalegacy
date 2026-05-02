@@ -40,6 +40,7 @@ public:
   void id(core::FurnitureId id);
   std::optional<core::FurnitureId> linked_furniture_id() const;
   void linked_furniture_id(core::FurnitureId id);
+  void unlink_furniture();
   void rotate();
   void rotate(Rotation r);
 

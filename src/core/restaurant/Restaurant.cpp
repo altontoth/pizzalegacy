@@ -14,6 +14,7 @@
 #include "core/city/District.h"
 #include "core/city/Property.h"
 #include "core/food/IngredientCategory.h"
+#include "core/food/IngredientType.h"
 #include "core/restaurant/AIEconomy.h"
 #include "core/restaurant/DemographicTiming.h"
 #include "core/restaurant/ManagerFeedback.h"
@@ -1003,13 +1004,21 @@ void Restaurant::end_of_day(GameState& game_state) {
     }
   }
 
+  for (const auto ingredient_type : inventory_.apply_daily_degradation()) {
+    game_state.status().post(StatusMsg{
+        .payload =
+            compat::format("The supplies of {} were rotten and had to be "
+                           "thrown away.",
+                           core::food::to_string(ingredient_type)),
+        .scope = StatusScope::Restaurant,
+        .delay_blocks = 3,
+    });
+  }
+
   if (!is_open(game_state.time().time_of_day())) {
-    inventory_.apply_daily_degradation();
     stats_.end_of_day(0);
     return;
   }
-
-  inventory_.apply_daily_degradation();
 
   int old_range_tiles = economy_.range_tiles();
   bool range_increased = economy_.update_restaurant_range();
@@ -1018,8 +1027,8 @@ void Restaurant::end_of_day(GameState& game_state) {
                  economy_.range_tiles(), economy_.range_raw());
     game_state.status().post_direct(StatusMsg{
         .payload =
-            compat::format("The range of {} rises from {} to {} tiles.", name_,
-                           old_range_tiles, economy_.range_tiles()),
+            compat::format("The range of restaurant {} rises from {} to {}.",
+                           name_, old_range_tiles, economy_.range_tiles()),
         .scope = StatusScope::Global,
     });
   }

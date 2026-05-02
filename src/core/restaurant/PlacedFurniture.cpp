@@ -39,6 +39,10 @@ void PlacedFurniture::linked_furniture_id(core::FurnitureId id) {
   linked_furniture_id_ = id;
 }
 
+void PlacedFurniture::unlink_furniture() {
+  linked_furniture_id_ = std::nullopt;
+}
+
 int PlacedFurniture::bob_state() const { return bob_state_; }
 
 void PlacedFurniture::bob_state(int bob_state) { bob_state_ = bob_state; }

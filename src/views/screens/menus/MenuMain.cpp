@@ -58,9 +58,15 @@ MenuMain::MenuMain(GameContext& context, GameState& state)
   TextStyle ts{
       .color = 11,
   };
-  add_menu_item(std::make_unique<TextMenuItem>(
-      context, std::string("Pizza Legacy version ") + game_meta::VERSION, [] {},
-      FontFace::MINI, ts));
+  {
+    std::string version_str =
+        std::string("Pizza Legacy version ") + game_meta::VERSION;
+#ifndef NDEBUG
+    version_str += " (DEBUG)";
+#endif
+    add_menu_item(std::make_unique<TextMenuItem>(
+        context, std::move(version_str), [] {}, FontFace::MINI, ts));
+  }
   add_menu_item(std::make_unique<PositionMarkerMenuItem>(context, debug_info.x,
                                                          debug_info.y + 10));
   ts.color = 13;
