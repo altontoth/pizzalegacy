@@ -1009,6 +1009,9 @@ void PizzaDesign::create_input_panel() {
                                // (editing canvas) from Ingredients or Info
                                // views. When not in design mode, show View
                                // (read-only).
+                               if (!std::as_const(*this).current_pizza()) {
+                                 return;
+                               }
                                if (design_mode_) {
                                  change_mode(PizzaDesignMode::Design);
                                }
@@ -1018,15 +1021,23 @@ void PizzaDesign::create_input_panel() {
                              });
 
     // ingredients
-    input_panel_->add_button(
-        Icon::STOCK, ButtonType::Square, ButtonPosition::TopCenter,
-        "Ingredients",
-        [this] { change_mode(mode_ = PizzaDesignMode::Ingredients); });
+    input_panel_->add_button(Icon::STOCK, ButtonType::Square,
+                             ButtonPosition::TopCenter, "Ingredients", [this] {
+                               if (!std::as_const(*this).current_pizza()) {
+                                 return;
+                               }
+                               change_mode(mode_ =
+                                               PizzaDesignMode::Ingredients);
+                             });
 
     // pizza info
     input_panel_->add_button(Icon::EXAMINE, ButtonType::Square,
-                             ButtonPosition::TopRight, "Pizza info",
-                             [this] { change_mode(PizzaDesignMode::Info); });
+                             ButtonPosition::TopRight, "Pizza info", [this] {
+                               if (!std::as_const(*this).current_pizza()) {
+                                 return;
+                               }
+                               change_mode(PizzaDesignMode::Info);
+                             });
   };
 
   // Selection cycling (skips <NEW>), and keeps page_ in sync with the new
