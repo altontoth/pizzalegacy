@@ -284,15 +284,15 @@ void IngredientCategoryView::draw_ingredient_list(const RenderContext& ctx) {
 
       context_.font->render_text_onto(
           *ctx.surface, std::to_string(supplies), ViewPoint{col2_val_x, y},
-          FontFace::CSTANDAR, text_color, AlignX::RightEdge);
+          FontFace::CSTANDAR, this_row_color, AlignX::RightEdge);
 
       context_.font->render_text_onto(
           *ctx.surface, std::to_string(need), ViewPoint{col3_val_x, y},
-          FontFace::CSTANDAR, text_color, AlignX::RightEdge);
+          FontFace::CSTANDAR, this_row_color, AlignX::RightEdge);
 
       context_.font->render_text_onto(
           *ctx.surface, std::to_string(usage), ViewPoint{col4_val_x, y},
-          FontFace::CSTANDAR, text_color, AlignX::RightEdge);
+          FontFace::CSTANDAR, this_row_color, AlignX::RightEdge);
     }
 
     // Only show days if there's stock

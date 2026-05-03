@@ -147,6 +147,7 @@ void IngredientOrderScreen::draw_ingredient_list(const RenderContext& ctx) {
   // Column headers - using same positions as IngredientCategoryView
   const int header_y = 34;
   const uint8_t text_color = 8;
+  const uint8_t text_color_days = 12;
 
   // Column X positions
   // TODO: Change alignment to RightEdge instead of Right
@@ -295,7 +296,7 @@ void IngredientOrderScreen::draw_ingredient_list(const RenderContext& ctx) {
         std::string days_text = std::to_string(days_remaining);
         context_.font->render_text_onto(
             *ctx.surface, days_text, ViewPoint{days_x, y}, FontFace::CSTANDAR,
-            text_color, AlignX::Right);
+            text_color_days, AlignX::Right);
       }
     }
 
