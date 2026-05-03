@@ -733,41 +733,62 @@ void GlobalStats::render_loans(const RenderContext& ctx) {
 void GlobalStats::render_insurance(const RenderContext& ctx) {
   render_background(ctx, false);
 
-  context_.font->render_text_onto(*ctx.surface, "Insurance", {136, 20},
-                                  FontFace::RUBY);
+  constexpr ViewPoint title_pos{136, 50};
+  constexpr ViewPoint header_category_pos{18, 100};
+  constexpr ViewPoint header_company_pos{126, 100};
+  constexpr ViewPoint header_charge_pos{296, 92};
+  constexpr ViewPoint header_cover_pos{296, 110};
 
-  context_.font->render_text_onto(*ctx.surface, "category          company",
-                                  {96, 100}, FontFace::PIZ_NUMB, 13);
-
-  context_.font->render_text_onto(*ctx.surface, "charge", {296, 92},
-                                  FontFace::PIZ_NUMB, 13);
-  context_.font->render_text_onto(*ctx.surface, "cover", {296, 110},
-                                  FontFace::PIZ_NUMB, 13);
+  constexpr int col_category_x = 18;
+  constexpr int col_company_x = 120;
+  constexpr int col_value_x = 296;
 
   constexpr int row_y0 = 132;
   constexpr int row_height = 40;
-  const std::array<std::string, 5> categories = {"burglary", "warehouse",
-                                                 "fire", "liability", "life"};
+  constexpr int cover_y_off = 18;
+
+  constexpr std::array<const char*, 5> categories{"burglary", "warehouse",
+                                                  "fire", "liability", "life"};
+
+  context_.font->render_text_onto(*ctx.surface, "Insurance", title_pos,
+                                  FontFace::RUBY);
+
+  context_.font->render_text_onto(*ctx.surface, "category", header_category_pos,
+                                  FontFace::PIZ_NUMB, 13);
+  context_.font->render_text_onto(*ctx.surface, "company", header_company_pos,
+                                  FontFace::PIZ_NUMB, 13);
+  context_.font->render_text_onto(*ctx.surface, "charge", header_charge_pos,
+                                  FontFace::PIZ_NUMB, 13);
+  context_.font->render_text_onto(*ctx.surface, "cover", header_cover_pos,
+                                  FontFace::PIZ_NUMB, 13);
+
   auto* player = state_.active_player();
   const auto& policies = player->insurance_state().policies;
-  for (int i = 0; i < 5; i++) {
-    int y = row_y0 + (i * row_height);
-    context_.font->render_text_onto(*ctx.surface, categories[i] + ":", {28, y},
-                                    FontFace::PIZ_NUMB, 240);
+  for (int i = 0; i < static_cast<int>(categories.size()); ++i) {
+    const int y = row_y0 + (i * row_height);
+    const ViewPoint category_pos{col_category_x, y};
+    const ViewPoint company_pos{col_company_x, y};
+    const ViewPoint premium_pos{col_value_x, y};
+    const ViewPoint cover_pos{col_value_x, y + cover_y_off};
+    context_.font->render_text_onto(*ctx.surface,
+                                    std::string(categories[i]) + ":",
+                                    category_pos, FontFace::PIZ_NUMB, 240);
+
     const auto& policy = policies[i];
+
     if (policy.is_active()) {
       context_.font->render_text_onto(*ctx.surface, policy.company_name,
-                                      {120, y}, FontFace::PIZ_NUMB, 13);
+                                      company_pos, FontFace::PIZ_NUMB, 13);
       context_.font->render_text_onto(
-          *ctx.surface, compat::format("{}", policy.monthly_premium), {296, y},
-          FontFace::PIZ_NUMB, 240);
+          *ctx.surface, compat::format("{}", policy.monthly_premium),
+          premium_pos, FontFace::PIZ_NUMB, 240);
       context_.font->render_text_onto(*ctx.surface,
                                       compat::format("{}", policy.max_coverage),
-                                      {296, y + 18}, FontFace::PIZ_NUMB, 240);
+                                      cover_pos, FontFace::PIZ_NUMB, 240);
     }
     else {
-      context_.font->render_text_onto(*ctx.surface, "---------------", {120, y},
-                                      FontFace::PIZ_NUMB, 13);
+      context_.font->render_text_onto(*ctx.surface, "---------------",
+                                      company_pos, FontFace::PIZ_NUMB, 13);
     }
   }
 }
