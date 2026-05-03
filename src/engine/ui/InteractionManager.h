@@ -181,6 +181,19 @@ private:
 #endif
     items_.push_front({id, layer, r, std::string{id_str}, std::move(cb),
                        std::move(tt), layer_type});
+    // This prevents a "Leave" from firing when you create an exclusive
+    // layer (e.g. popup) while hovering something, the popup has items that you
+    // can hover over, and that caused the Leave to fire, which would call
+    // mark_dirty on the view, which would re-register interactoin items, which
+    // would put them on top above the exclusive layer. The proper fix for this
+    // is maybe something like a current_hover_ per layer, so we can actually
+    // not process them at all, but this fix gets us the same effect cheaper.
+    // Basically now we just clear the hover without firing the leave event.
+    if (layer_type == InteractionLayer::Exclusive &&
+        r.contains(last_logical_mouse_pos_) && current_hover_ != 0) {
+      current_hover_ = 0;
+      hot_item_name_.clear();
+    }
     return InteractionToken{this, id};
   }
 
