@@ -32,6 +32,7 @@ Usage: PNG support for screenshots
     License:   libpng License 2.0 (see LICENSES/libpng.txt)
 
 ### zlib
+
 Usage:     Compression for JSON save files
 
     Copyright: Copyright (C) 1995-2026 Jean-loup Gailly and Mark Adler
@@ -57,6 +58,7 @@ Usage: Decompression of Amiga IMP!-compressed assets
     License:   Public Domain
 
 ### SavePNG
+
 Usage: SDL\_Surface to PNG wrapper for screenshots
 
     Copyright: Not listed
