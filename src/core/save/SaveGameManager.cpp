@@ -407,13 +407,11 @@ json SaveGameManager::state_to_json(const GameState& state,
   // Save visited cities only
   json cities_array = json::array();
   auto visited = state.initialized_cities();
-  Logger::info("About to save {} visited cities:", visited.size());
   for (City* city : visited) {
     Logger::info("  - City {}", city->id().value);
     cities_array.push_back(city_to_json(*city));
   }
   j["cities"] = cities_array;
-  Logger::info("Saved {} cities to JSON", cities_array.size());
 
   // Save restaurants
   json restaurants_array = json::array();
