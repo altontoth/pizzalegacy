@@ -119,7 +119,10 @@ json supplier_to_json(const FoodSupplier& supplier) {
     rel_j["frustration"] = rel.frustration;
     rel_j["last_delivery_days"] = rel.last_delivery_days;
     rel_j["last_payment_freq"] = rel.last_payment_freq;
-    rel_j["credit_history"] = rel.credit_history;
+    rel_j["delivery_issues_flag"] = rel.delivery_issues_flag;
+    rel_j["outstanding_debt"] = rel.outstanding_debt.cents;
+    rel_j["last_contract_sum"] = rel.last_contract_sum.cents;
+    rel_j["missed_payment_penalty"] = rel.missed_payment_penalty;
     relationships.push_back(rel_j);
   }
   j["relationships"] = relationships;
@@ -167,8 +170,21 @@ void json_to_supplier(const json& j, FoodSupplier& supplier) {
       if (rel_json.contains("last_payment_freq")) {
         rel.last_payment_freq = rel_json["last_payment_freq"].get<uint16_t>();
       }
-      if (rel_json.contains("credit_history")) {
-        rel.credit_history = rel_json["credit_history"].get<uint8_t>();
+      if (rel_json.contains("delivery_issues_flag")) {
+        rel.delivery_issues_flag =
+            rel_json["delivery_issues_flag"].get<uint8_t>();
+      }
+      if (rel_json.contains("outstanding_debt")) {
+        rel.outstanding_debt =
+            Money{rel_json["outstanding_debt"].get<int64_t>()};
+      }
+      if (rel_json.contains("last_contract_sum")) {
+        rel.last_contract_sum =
+            Money{rel_json["last_contract_sum"].get<int64_t>()};
+      }
+      if (rel_json.contains("missed_payment_penalty")) {
+        rel.missed_payment_penalty =
+            rel_json["missed_payment_penalty"].get<uint8_t>();
       }
       idx++;
     }

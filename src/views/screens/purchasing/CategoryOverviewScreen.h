@@ -26,6 +26,7 @@ protected:
   virtual void draw_page_header(const RenderContext& ctx);
   virtual void draw_page_screen(const RenderContext& ctx);
   void set_up_input_panel() override;
+  void navigate_to_restaurant(core::RestaurantId new_id) override;
   Surface create_floor_preview(const FloorPattern&, int, int);
   void draw_icon(const RenderContext& ctx);
   virtual SupplierType supplier_type() const;

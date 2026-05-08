@@ -100,8 +100,18 @@ struct EuroMapState {
   MapMode mode;
   std::optional<IngredientCategory> category = std::nullopt;
 };
+enum class GameOverCause {
+  BankruptLoans,
+  BankruptRent,
+  BankruptDebts,
+  BankruptSuppliers,
+  KilledByMafia,
+  WorldDomination,
+};
+
 struct GameOverState {
   core::PlayerId player_id;
+  GameOverCause cause;
 };
 struct PlayerProfileState {
   core::PlayerId player_id;
@@ -162,6 +172,7 @@ struct PoliceState {
 };
 // Restaurant stock:
 struct StockMainState {};
+struct ContractsViewState {};
 
 enum class IngredientScreenMode {
   RESTAURANT,
@@ -177,6 +188,7 @@ struct IngredientOrderState {
   uint8_t supplier_id;
   IngredientCategory category;
   IngredientScreenMode mode = IngredientScreenMode::RESTAURANT;
+  std::optional<std::vector<IngredientBatch>> saved_ingredients = std::nullopt;
 };
 struct IngredientCategoryViewState {
   IngredientCategory category;
@@ -231,7 +243,7 @@ using UIState = std::variant<
     FurnitureListState, CategoryOverviewState, SupplierListState,
     PizzaDesignState, RestaurantMenuState, RestaurantStatsState,
     WeeksTakingsState, AnimatedStatsState, IngredientCategoryViewState,
-    StockMainState, DepotMainState, DepotExportState,
+    StockMainState, ContractsViewState, DepotMainState, DepotExportState,
     IngredientSupplierListState, IngredientOrderState,
     DepotWeaponInterfaceState, TerminalState, SupplierContractState,
     PlayerTurnCardState, FullscreenStatusState, MafiaMissionViewState,

@@ -16,7 +16,8 @@ class SupplierFactory {
 public:
   static const Supplier* create_supplier(SupplierID);
   static std::vector<const Supplier*> all_suppliers();
-  static std::vector<const Supplier*> all_suppliers_by_type(SupplierType);
+  static std::vector<const Supplier*> all_suppliers_by_type(SupplierType,
+                                                            int current_year);
 
 private:
   static std::unordered_map<SupplierID, std::unique_ptr<const Supplier>> cache_;

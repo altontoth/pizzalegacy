@@ -6,22 +6,21 @@
 
 #pragma once
 
-#include "core/common/Ids.h"
 #include "core/restaurant/Restaurant.h"
-#include "views/base/MainPanelView.h"
+#include "views/base/RestaurantSubView.h"
 
 namespace views::screens::purchasing {
 
-class Demographics : public MainPanelView {
+class Demographics : public RestaurantSubView {
 public:
   Demographics(GameContext& context, GameState& state);
   void tick() override;
   void render(const RenderContext& ctx) override;
+  void navigate_to_restaurant(core::RestaurantId new_id) override;
 
 private:
   void set_up_buttons();
 
-  core::RestaurantId id_;
   Restaurant* restaurant_;
 };
 

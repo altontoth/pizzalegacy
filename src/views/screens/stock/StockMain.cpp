@@ -17,7 +17,8 @@
 using namespace views::screens::stock;
 
 StockMain::StockMain(GameContext& context, GameState& state)
-    : MainPanelView(context, state), status_controller_(state.status()) {
+    : RestaurantSubView(context, state, state.active_restaurant()->id()),
+      status_controller_(state.status()) {
   set_up_input_panel();
   status_controller_.show_restaurant(
       {.state = &state_, .rest = state_.active_restaurant(), .label = "STOCK"});
@@ -66,6 +67,11 @@ void StockMain::render(const RenderContext& ctx) {
   context_.font->render_text_onto(*ctx.surface, value_text,
                                   ViewPoint{-110, 240}, FontFace::PIZ_NUMB,
                                   style);
+}
+
+void StockMain::navigate_to_restaurant(core::RestaurantId new_id) {
+  state_.active_restaurant(new_id);
+  state_.ui().replace_top<StockMainState>();
 }
 
 void StockMain::set_up_input_panel() {

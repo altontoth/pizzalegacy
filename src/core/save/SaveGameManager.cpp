@@ -408,7 +408,6 @@ json SaveGameManager::state_to_json(const GameState& state,
   json cities_array = json::array();
   auto visited = state.initialized_cities();
   for (City* city : visited) {
-    Logger::info("  - City {}", city->id().value);
     cities_array.push_back(city_to_json(*city));
   }
   j["cities"] = cities_array;

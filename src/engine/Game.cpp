@@ -89,6 +89,7 @@
 #include "views/screens/restaurant/RestaurantStats.h"
 #include "views/screens/restaurant/RestaurantView.h"
 #include "views/screens/restaurant/WeeksTakings.h"
+#include "views/screens/stock/Contracts.h"
 #include "views/screens/stock/IngredientCategoryView.h"
 #include "views/screens/stock/IngredientOrderScreen.h"
 #include "views/screens/stock/IngredientSupplierList.h"
@@ -731,13 +732,17 @@ Renderable* Game::change_state(GameState& gs, LoopState& /*loop*/) {
             current_view_ =
                 std::make_unique<views::screens::stock::StockMain>(context, gs);
           },
+          [&](const ContractsViewState& /*cvs*/) {
+            current_view_ = std::make_unique<Contracts>(context, gs);
+          },
           [&](const IngredientSupplierListState& isls) {
             current_view_ = std::make_unique<IngredientSupplierList>(
                 context, gs, isls.category, isls.mode);
           },
           [&](const IngredientOrderState& ios) {
             current_view_ = std::make_unique<IngredientOrderScreen>(
-                context, gs, ios.supplier_id, ios.category, ios.mode);
+                context, gs, ios.supplier_id, ios.category, ios.mode,
+                ios.saved_ingredients);
           },
           [&](const SupplierContractState& scs) {
             // Find the supplier from the city
@@ -754,6 +759,14 @@ Renderable* Game::change_state(GameState& gs, LoopState& /*loop*/) {
             if (supplier) {
               auto conversation = std::make_unique<SupplierConversation>(
                   gs, supplier, scs.order, scs.total);
+              auto* conv_ptr = conversation.get();
+              // On success, pop IngredientOrderScreen too so we don't return
+              // to it after the contract is signed.
+              conversation->on_end_ = [&gs, conv_ptr]() {
+                if (conv_ptr->contract_accepted()) {
+                  gs.ui().pop();
+                }
+              };
               Actor* actor_ptr = conversation->owned_actor();
               current_view_ = std::make_unique<ActorView<SupplierLine>>(
                   context, gs, actor_ptr, std::move(conversation));

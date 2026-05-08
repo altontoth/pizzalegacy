@@ -6,6 +6,8 @@
 
 #include "views/screens/stock/IngredientCategoryView.h"
 
+#include "core/state/UIState.h"
+
 #include "core/city/CentralDepot.h"
 #include "core/city/City.h"
 #include "core/food/IngredientCategory.h"
@@ -383,8 +385,7 @@ void IngredientCategoryView::set_up_input_panel() {
   else {
     input_panel_->add_button(
         Icon::CONTRACTS, ButtonType::Vertical, ButtonPosition::TopRight,
-        "Contracts",
-        []() { Logger::info("[Stock] Contracts not yet implemented"); });
+        "Contracts", [this]() { state_.ui().push<ContractsViewState>(); });
 
     input_panel_->add_button(
         Icon::SHOPPING_CART, ButtonType::Horizontal, ButtonPosition::BottomLeft,
@@ -480,4 +481,9 @@ void IngredientCategoryView::draw_priorities(const RenderContext& ctx) {
         is_pressed ? views::ui::components::ButtonState::Pressed
                    : views::ui::components::ButtonState::Normal);
   }
+}
+
+void IngredientCategoryView::navigate_to_restaurant(core::RestaurantId new_id) {
+  state_.active_restaurant(new_id);
+  state_.ui().replace_top<IngredientCategoryViewState>(category_, mode_);
 }

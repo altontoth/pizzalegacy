@@ -435,10 +435,17 @@ void CityView::handle_mouse_click_zoom_close(WorldPoint p) {
     auto& mission = *mafia.active_mission;
     const auto& time = state_.time();
 
-    bool at_pickup = mission.pickup.tile_index == clicked_index &&
+    bool at_pickup = !mission.pickup_done &&
+                     mission.pickup.tile_index == clicked_index &&
                      mission.pickup.is_active(time);
     bool at_dropoff = mission.dropoff.tile_index == clicked_index &&
                       mission.dropoff.is_active(time);
+
+    Logger::debug(
+        "Mafia mission check: pickup tile={} (done={}) dropoff tile={} "
+        "clicked={} at_pickup={} at_dropoff={}",
+        mission.pickup.tile_index, mission.pickup_done,
+        mission.dropoff.tile_index, clicked_index, at_pickup, at_dropoff);
 
     if (at_pickup || at_dropoff) {
       if (mission.busted) {

@@ -10,7 +10,7 @@
 #include "core/common/Ids.h"
 #include "resources/Blitmap.h"
 #include "resources/Bob.h"
-#include "views/base/MainPanelView.h"
+#include "views/base/RestaurantSubView.h"
 
 class Restaurant;
 
@@ -24,7 +24,7 @@ enum class RestaurantStatsScreen {
   None,
 };
 
-class RestaurantStats : public MainPanelView {
+class RestaurantStats : public RestaurantSubView {
 public:
   RestaurantStats(GameContext& context, GameState& state,
                   core::RestaurantId restaurant_id,
@@ -32,6 +32,8 @@ public:
                   bool automatic_mode = false);
   void tick() override;
   void render(const RenderContext& ctx) override;
+
+  void navigate_to_restaurant(core::RestaurantId new_id) override;
 
 private:
   void create_buttons();
@@ -44,7 +46,6 @@ private:
   void render_binder(const RenderContext& ctx);
   void render_paper(const RenderContext& ctx, ViewRect box);
 
-  core::RestaurantId restaurant_id_;
   Restaurant* restaurant_{nullptr};
   RestaurantStatsScreen current_screen_{RestaurantStatsScreen::Daily_Balance};
   bool automatic_mode_{false};

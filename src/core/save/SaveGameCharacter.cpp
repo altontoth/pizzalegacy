@@ -8,7 +8,9 @@
 #include <ctime>
 #include "core/character/InsurancePlayerState.h"
 #include "core/character/Player.h"
+#include "core/food/IngredientCategoryType.h"
 #include "core/state/GameState.h"
+#include "core/supply/ActiveContract.h"
 #include "core/util/GameContext.h"
 #include "factories/CharacterFactory.h"
 
@@ -128,6 +130,9 @@ json player_to_json(const Player& player) {
     j["holiday_days_left"] = *player.holiday_days_left();
   }
   j["criminal_record"] = player.criminal_record();
+  if (player.status() == PlayerStatus::Eliminated) {
+    j["eliminated"] = true;
+  }
   if (player.jail_days_left().has_value()) {
     j["jail_days_left"] = *player.jail_days_left();
   }
@@ -183,6 +188,31 @@ json player_to_json(const Player& player) {
   j["mafia_state"] = mafia_state_to_json(player.mafia_state());
   j["insurance_state"] = insurance_state_to_json(player.insurance_state());
 
+  // Save active supplier contracts
+  json contracts_array = json::array();
+  for (const auto& c : player.contracts()) {
+    json cj;
+    cj["supplier_id"] = c.supplier_id;
+    cj["category"] = static_cast<int>(c.category);
+    cj["city_id"] = c.city_id.value;
+    cj["restaurant_id"] = c.restaurant_id.value;
+    cj["discount_pct"] = c.discount_pct;
+    cj["remaining_term"] = c.remaining_term;
+    cj["original_term"] = c.original_term;
+    cj["daily_sum"] = c.daily_sum.cents;
+    cj["charge"] = c.charge.cents;
+    cj["cancellation_penalty"] = c.cancellation_penalty.cents;
+    cj["deliver_as_required"] = c.deliver_as_required;
+    json items_array = json::array();
+    for (const auto& item : c.items) {
+      items_array.push_back({{"type", static_cast<int>(item.type)},
+                             {"kg_per_day", item.kg_per_day}});
+    }
+    cj["items"] = items_array;
+    contracts_array.push_back(cj);
+  }
+  j["contracts"] = contracts_array;
+
   return j;
 }
 
@@ -218,6 +248,9 @@ json_to_player(const json& j, GameContext& context,
     for (int i = 0; i < cr; ++i) {
       player->increment_criminal_record();
     }
+  }
+  if (j.contains("eliminated") && j["eliminated"].get<bool>()) {
+    player->eliminate();
   }
   if (j.contains("jail_days_left")) {
     player->jail(j["jail_days_left"].get<int>());
@@ -285,6 +318,35 @@ json_to_player(const json& j, GameContext& context,
   if (j.contains("visited_city_ids")) {
     for (const auto& val : j["visited_city_ids"]) {
       player->mark_city_visited(core::CityId{val.get<int>()});
+    }
+  }
+
+  // Restore active supplier contracts
+  if (j.contains("contracts")) {
+    for (const auto& cj : j["contracts"]) {
+      ActiveContract c;
+      c.supplier_id = cj.value("supplier_id", 0);
+      c.category = static_cast<IngredientCategory>(cj.value("category", 0));
+      c.city_id = core::CityId{cj.value("city_id", -1)};
+      c.restaurant_id = core::RestaurantId{cj.value("restaurant_id", -1)};
+      c.discount_pct = cj.value("discount_pct", 0);
+      c.remaining_term = cj.value("remaining_term", 0);
+      c.original_term = cj.value("original_term", 0);
+      c.daily_sum = Money{cj.value("daily_sum", int64_t{0})};
+      c.charge = Money{cj.value("charge", int64_t{0})};
+      c.cancellation_penalty =
+          Money{cj.value("cancellation_penalty", int64_t{0})};
+      c.deliver_as_required = cj.value("deliver_as_required", false);
+      if (cj.contains("items")) {
+        for (const auto& ij : cj["items"]) {
+          c.items.push_back(
+              {static_cast<core::food::IngredientType>(ij.value("type", 0)),
+               ij.value("kg_per_day", 0)});
+        }
+      }
+      if (c.remaining_term > 0) {
+        player->add_contract(std::move(c));
+      }
     }
   }
 

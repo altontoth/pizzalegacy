@@ -10,7 +10,7 @@
 #include "core/restaurant/Restaurant.h"
 #include "engine/geom/Spaces.h"
 #include "resources/Blitmap.h"
-#include "views/base/MainPanelView.h"
+#include "views/base/RestaurantSubView.h"
 #include "views/base/ViewDefs.h"
 #include "views/ui/SlideAnimator.h"
 
@@ -23,7 +23,7 @@ enum class StaffScreen {
   MANAGER_SETTINGS,
 };
 
-class StaffView : public MainPanelView {
+class StaffView : public RestaurantSubView {
 public:
   static constexpr int PANEL_SPACE_ON_TOP = 16;
   StaffView(GameContext& context, GameState& state);
@@ -32,6 +32,7 @@ public:
   void render(const RenderContext& ctx) override;
 
 private:
+  void navigate_to_restaurant(core::RestaurantId new_id) override;
   void handle_left_mouse_click(ViewPoint p);
   void handle_mouse_hover(ViewPoint p);
   void create_input_panel();

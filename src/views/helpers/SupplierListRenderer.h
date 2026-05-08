@@ -74,7 +74,7 @@ public:
 
       // Create clickable interaction area
       interactions.create_frame_item(
-          ViewRect{pos.x, pos.y, 430, 62}, "supplier_" + supplier->name(),
+          ViewRect{pos.x, pos.y, 330, 62}, "supplier_" + supplier->name(),
           [this, supplier](views::ui::InteractionEvent ie) {
             if (ie.type == views::ui::InteractionEvent::Type::Click &&
                 ie.button == views::ui::MouseButton::Left) {

@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 cmake_minimum_required(VERSION 3.25)
-project(plegacy VERSION 0.0.2 LANGUAGES C CXX)
+project(plegacy VERSION 0.1.0 LANGUAGES C CXX)
 
 # Generate Version.h from the project version
 configure_file(

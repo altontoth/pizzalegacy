@@ -18,7 +18,8 @@ SupplierList::SupplierList(GameContext& context, GameState& state,
   category_titles[SupplierType::EXTRAS] = "Suppliers";
   category_titles[SupplierType::FLOORING] = "Suppliers";
 
-  renderer_.emplace(SupplierFactory::all_suppliers_by_type(supplier_type_),
+  renderer_.emplace(SupplierFactory::all_suppliers_by_type(
+                        supplier_type_, state.time().current_date().year()),
                     // Click callback - navigate to furniture/floor list
                     [this](const Supplier* supplier) {
                       if (supplier_type_ == SupplierType::FLOORING) {

@@ -7,13 +7,12 @@
 #pragma once
 
 #include <functional>
-#include "core/common/Ids.h"
 #include "core/restaurant/Restaurant.h"
-#include "views/base/MainPanelView.h"
+#include "views/base/RestaurantSubView.h"
 
 class Restaurant;
 
-class WeeksTakings : public MainPanelView {
+class WeeksTakings : public RestaurantSubView {
 public:
   WeeksTakings(GameContext& context, GameState& state,
                core::RestaurantId restaurant_id, bool end_of_week_mode,
@@ -33,6 +32,7 @@ private:
     Money total_staff_wages{0};
   };
 
+  void navigate_to_restaurant(core::RestaurantId new_id) override;
   void create_buttons();
   void render_background(const RenderContext& ctx);
   WeeklyTakings aggregate_weekly_takings() const;
@@ -42,7 +42,6 @@ private:
                             const WeeklyTakings& weekly);
   void dismiss();
 
-  core::RestaurantId restaurant_id_;
   Restaurant* restaurant_{nullptr};
   int current_page_{0};
   bool end_of_week_mode_{false};

@@ -32,14 +32,12 @@
 
 #include <algorithm>
 
-constexpr int max_stock_items = 650;
 constexpr float sell_price_ratio = 0.8f;
 
-IngredientOrderScreen::IngredientOrderScreen(GameContext& context,
-                                             GameState& state,
-                                             uint8_t supplier_id,
-                                             IngredientCategory category,
-                                             IngredientScreenMode mode)
+IngredientOrderScreen::IngredientOrderScreen(
+    GameContext& context, GameState& state, uint8_t supplier_id,
+    IngredientCategory category, IngredientScreenMode mode,
+    std::optional<std::vector<IngredientBatch>> saved_ingredients)
     : StockMain(context, state), category_(category), mode_(mode) {
 
   // Find the supplier
@@ -102,6 +100,17 @@ IngredientOrderScreen::IngredientOrderScreen(GameContext& context,
       batch.need = (demand_grams[ing_id] > 0) ? 1 : 0;
 
       ingredients_.push_back(batch);
+    }
+  }
+
+  if (saved_ingredients && context_.config->options().qol_improvements) {
+    for (auto& batch : ingredients_) {
+      for (const auto& saved : *saved_ingredients) {
+        if (saved.ingredient_type == batch.ingredient_type) {
+          batch.count = saved.count;
+          break;
+        }
+      }
     }
   }
 
@@ -480,6 +489,12 @@ void IngredientOrderScreen::set_up_input_panel() {
             return;
           }
 
+          // Persist current counts so they survive the round-trip through
+          // the conversation and can be restored if no contract is made.
+          if (auto* ios = state_.ui().top_as<IngredientOrderState>()) {
+            ios->saved_ingredients = ingredients_;
+          }
+
           state_.ui().push<SupplierContractState>(supplier_->id(), category_,
                                                   ingredients_, total);
         });
@@ -520,7 +535,7 @@ void IngredientOrderScreen::handle_button_press(size_t ingredient_index,
       c = std::min(c + step, batch.current_stock);
     }
     else {
-      c = std::min(c + step, max_stock_items);
+      c = std::min(c + step, max_ingredient_stock_kg);
     }
     left_button_held_ = true;
   }
@@ -576,7 +591,7 @@ void IngredientOrderScreen::update_held_button_repeat() {
     if (increment_direction_) {
       int max_count = (mode_ == IngredientScreenMode::CENTRAL_DEPOT_SELL)
                           ? batch.current_stock
-                          : max_stock_items;
+                          : max_ingredient_stock_kg;
       c = std::min(c + step, max_count);
     }
     else {

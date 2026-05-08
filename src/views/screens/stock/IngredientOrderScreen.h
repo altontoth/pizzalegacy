@@ -13,6 +13,7 @@
 #include "core/supply/IngredientBatch.h"
 #include "views/screens/stock/StockMain.h"
 
+#include <optional>
 #include <vector>
 
 class FoodSupplier;
@@ -22,7 +23,9 @@ public:
   IngredientOrderScreen(
       GameContext& context, GameState& state, uint8_t supplier_id,
       IngredientCategory category,
-      IngredientScreenMode mode = IngredientScreenMode::RESTAURANT);
+      IngredientScreenMode mode = IngredientScreenMode::RESTAURANT,
+      std::optional<std::vector<IngredientBatch>> saved_ingredients =
+          std::nullopt);
   void tick() override;
   void render(const RenderContext& ctx) override;
 

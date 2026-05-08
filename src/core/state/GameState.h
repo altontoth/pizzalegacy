@@ -287,6 +287,7 @@ public:
   void refuse_calls_from(int actor_id);
   bool is_refusing_calls(int actor_id) const;
   void clear_all_refused_calls();
+  void eliminate_player(core::PlayerId id, GameOverCause cause);
   void next_player();
 
   void on_player_turn_card_finished();
@@ -334,6 +335,14 @@ public:
     core::RestaurantId restaurant_id;
   };
 
+  // Manager call-me alerts deferred from EOD to next-day 9 AM.
+  struct DeferredManagerAlert {
+    core::RestaurantId restaurant_id;
+    std::string message;
+  };
+
+  void queue_manager_alert(core::RestaurantId rid, std::string message);
+
   // Save/load access to deferred queues. restore_* push without triggering.
   const std::vector<DeferredStaffEvent>& deferred_staff_events() const {
     return deferred_staff_events_;
@@ -367,6 +376,7 @@ private:
   void run_city_start_of_day(City& city);
   void process_next_restaurant();
   void show_next_deferred_staff_event();
+  void show_next_deferred_manager_alert();
   void show_next_deferred_inspection();
   void finish_end_of_turn();
   void deliver_depot_stock(core::PlayerId player_id);
@@ -386,6 +396,7 @@ private:
 
   // end_of_day helpers
   void end_of_day();
+  void check_world_domination();
   void tick_active_cities();
   void end_of_week_processing();
   void end_of_year_processing();
@@ -409,6 +420,8 @@ private:
 
   std::vector<DeferredStaffEvent> deferred_staff_events_;
   bool showing_deferred_staff_event_{false};
+
+  std::vector<DeferredManagerAlert> deferred_manager_alerts_;
 
   std::vector<DeferredInspectionEvent> deferred_mayor_inspections_;
   bool showing_deferred_inspection_{false};

@@ -85,6 +85,10 @@ CharacterSelection::CharacterSelection(GameContext& context, GameState& state)
         state_.ui().push<EuroMapState>(MapMode::GAME_INIT);
       },
       face, style, sel_style));
+  add_menu_item(std::make_unique<PositionMarkerMenuItem>(context, -28, 240));
+  add_menu_item(std::make_unique<TextMenuItem>(
+      context, "Back", [this] { state_.ui().pop(); }, FontFace::RUBY, style,
+      sel_style));
   // Reposition for third column
   add_menu_item(std::make_unique<PositionMarkerMenuItem>(context, 365, 0));
   // Up arrow for human selection:

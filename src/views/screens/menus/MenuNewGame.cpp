@@ -10,6 +10,7 @@
 #include "core/state/GameState.h"
 #include "resources/util/Platform.h"
 #include "views/screens/menus/MenuTheme.h"
+#include "views/ui/widgets/PositionMarkerMenuItem.h"
 #include "views/ui/widgets/SpacerMenuItem.h"
 #include "views/ui/widgets/TextMenuItem.h"
 
@@ -57,6 +58,11 @@ MenuNewGame::MenuNewGame(GameContext& context, GameState& state)
         },
         face, style, sel_style));
   }
+
+  add_menu_item(std::make_unique<PositionMarkerMenuItem>(context, 270, 244));
+  add_menu_item(std::make_unique<TextMenuItem>(
+      context, "Back", [this] { state_.ui().pop(); }, FontFace::RUBY, style,
+      sel_style));
 }
 
 Surface MenuNewGame::background() const {

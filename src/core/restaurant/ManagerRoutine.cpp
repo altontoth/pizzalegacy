@@ -45,6 +45,14 @@ static constexpr std::array<CategoryRange, 4> CATEGORY_RANGES{{
 ManagerRoutine::ManagerRoutine(Restaurant& restaurant, GameState& game_state)
     : restaurant_(restaurant), game_state_(game_state) {}
 
+void ManagerRoutine::queue_alert(std::string message) {
+  if (alert_queued_) {
+    return;
+  }
+  alert_queued_ = true;
+  game_state_.queue_manager_alert(restaurant_.id(), std::move(message));
+}
+
 void ManagerRoutine::run_daily() {
   auto& manager = restaurant_.manager();
   if (!manager) {
@@ -86,23 +94,25 @@ void ManagerRoutine::run_daily() {
 }
 
 void ManagerRoutine::report_previous_day_shortages() {
-  uint8_t augmenting = restaurant_.manager_augmenting();
-  if (augmenting == 0) {
-    return;
+  using core::character::JobRole;
+
+  auto filled_in_as = restaurant_.manager_filled_in_as();
+  if (filled_in_as != JobRole::NONE) {
+    const char* role = (filled_in_as == JobRole::CHEF) ? "cooks" : "waiters";
+    queue_alert(compat::format("Boss! Yesterday in restaurant {} I had to help "
+                               "out our {} with their work!",
+                               restaurant_.name(), role));
+    restaurant_.set_manager_filled_in_as(JobRole::NONE);
   }
 
-  // TODO Check "call me" setting and show actual popup instead of status
-  // manager
-  const char* role = (augmenting == 1) ? "cooks" : "waiters";
-  game_state_.status().post(StatusMsg{
-      .payload =
-          compat::format("Boss! Yesterday in restaurant {} I had {} shortage.",
-                         restaurant_.name(), role),
-      .severity = StatusSeverity::Info,
-      .scope = StatusScope::Restaurant,
-  });
-
-  restaurant_.set_manager_augmenting(0);
+  auto shortage = restaurant_.manager_staff_shortage();
+  if (shortage != JobRole::NONE) {
+    const char* role = (shortage == JobRole::CHEF) ? "cooks" : "waiters";
+    queue_alert(
+        compat::format("Boss! In restaurant {} we haven't got enough {}!",
+                       restaurant_.name(), role));
+    restaurant_.set_manager_staff_shortage(JobRole::NONE);
+  }
 }
 
 void ManagerRoutine::do_shopping() {
@@ -180,15 +190,9 @@ void ManagerRoutine::do_shopping() {
     }
 
     if (settings.supply_shortage == ManagerReaction::CallMe) {
-      // TODO: In the original this triggers a popup dialog with the
-      // manager's portrait, not a status panel message.
-      game_state_.status().post(StatusMsg{
-          .payload = compat::format(
-              "Boss! In restaurant {} we haven't got enough {} supplies!",
-              restaurant_.name(), range.name),
-          .severity = StatusSeverity::Warning,
-          .scope = StatusScope::Restaurant,
-      });
+      queue_alert(
+          compat::format("Boss! In restaurant {} we haven't got enough {}!",
+                         restaurant_.name(), range.name));
       continue;
     }
 
@@ -365,26 +369,16 @@ void ManagerRoutine::do_turnover_monitoring() {
 
   const char* trend_word = (management > 60) ? "profit" : "turnover";
 
-  // TODO: In the original these are popup dialogs with the manager's
-  // portrait, not status panel messages.
   if (settings.turnover_decrease == ManagerReaction::CallMe &&
       revenue_diff > INCREASE_THRESHOLD) {
-    game_state_.status().post(StatusMsg{
-        .payload = compat::format("Boss! In restaurant {} the {} is going up!",
-                                  restaurant_.name(), trend_word),
-        .severity = StatusSeverity::Info,
-        .scope = StatusScope::Restaurant,
-    });
+    queue_alert(compat::format("Boss! In restaurant no. {} the {} is going up.",
+                               restaurant_.id().value, trend_word));
   }
 
   if (settings.turnover_increase == ManagerReaction::CallMe &&
       revenue_diff < -DECREASE_THRESHOLD) {
-    game_state_.status().post(StatusMsg{
-        .payload =
-            compat::format("Boss! In restaurant {} the {} is going down!",
-                           restaurant_.name(), trend_word),
-        .severity = StatusSeverity::Warning,
-        .scope = StatusScope::Restaurant,
-    });
+    queue_alert(
+        compat::format("Boss! In restaurant no. {} the {} is going down.",
+                       restaurant_.id().value, trend_word));
   }
 }

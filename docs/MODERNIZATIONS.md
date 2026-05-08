@@ -104,6 +104,12 @@ QoL setting on you can also just click the city again.
 With the option on it shows an explanation on the "Increase/decrease number of
 human players" arrow buttons.
 
+## Ingredient order remembered when contract fails
+If you try to take a contract with a food supplier but for some reason are
+unable to (order too small, or you tried to negotiate but failed) then now your
+order is remembered so you can make adjustments to the order and try again
+without having to make the whole selection again.
+
 ## Bug fixes
 
 If the *Fix original bugs* option is on we fix the following issues that I assume are bugs:
@@ -133,6 +139,11 @@ your principal back on the end of month three. That's weird, with bug fixes
 active you get the interest plus the principal back at the end of month two.
 
 ### Newspaper event to ingredient mapping
-
 The original had various bugs in the newspaper event system, e.g. when telling
 you pineapple was super out it would affect raspberries instead.
+
+### Contract penalty halfed despite refusal
+When a skill check failed for complaining about the penalty clause with a
+supplier contract, the original would half it despite saying not seeing a
+reason to do so. Now the penalty is only reduced if the checks actually all
+succeed.

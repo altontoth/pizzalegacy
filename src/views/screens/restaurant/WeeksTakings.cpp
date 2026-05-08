@@ -10,6 +10,7 @@
 #include "core/restaurant/PizzaSalesAggregator.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/state/GameState.h"
+#include "core/state/UIState.h"
 #include "core/util/LegacyConstants.h"
 #include "engine/Logger.h"
 #include "gfx/Draw.h"
@@ -25,7 +26,7 @@ constexpr int header_secondary_color = 11;
 WeeksTakings::WeeksTakings(GameContext& context, GameState& state,
                            core::RestaurantId restaurant_id,
                            bool end_of_week_mode, std::function<void()> on_done)
-    : MainPanelView(context, state), restaurant_id_(restaurant_id),
+    : RestaurantSubView(context, state, restaurant_id),
       end_of_week_mode_(end_of_week_mode), on_done_(std::move(on_done)) {
   restaurant_ = state_.restaurant(restaurant_id_);
   create_buttons();
@@ -448,6 +449,14 @@ void WeeksTakings::render_expenses_page(const RenderContext& ctx,
   context_.font->render_text_onto(
       *ctx.surface, compat::format("{}", grand_total), ViewPoint{366, total_y},
       FontFace::SUPERSMA, text_color, AlignX::RightEdge);
+}
+
+void WeeksTakings::navigate_to_restaurant(core::RestaurantId new_id) {
+  if (end_of_week_mode_) {
+    return;
+  }
+  state_.active_restaurant(new_id);
+  state_.ui().replace_top<WeeksTakingsState>(WeeksTakingsState{.id = new_id});
 }
 
 void WeeksTakings::dismiss() {

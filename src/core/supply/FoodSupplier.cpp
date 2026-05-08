@@ -98,18 +98,15 @@ FoodSupplier::relationship(core::PlayerId player_id) const {
   return relationships_[player_id];
 }
 
-int FoodSupplier::customer_tier(core::PlayerId player_id) const {
+int FoodSupplier::spending_rank(core::PlayerId player_id) const {
   const auto& rel = relationship(player_id);
-  // Customer size category based on historical contract count
-  // Small: 0-3, Medium: 4-9, Large: 10+
-  return 10;
-  if (rel.contract_count >= 10) {
-    return 10;
+  if (min_contract_amount_.cents == 0) {
+    return 0;
   }
-  if (rel.contract_count >= 4) {
-    return 5;
-  }
-  return rel.contract_count;
+  // Ratio of total historical spend to (minimum order * 4), floored.
+  // 0 = first-time, 1-5 = small customer, 6-10 = medium, >10 = VIP.
+  return static_cast<int>(rel.total_spent.cents /
+                          (min_contract_amount_.cents * 4));
 }
 
 uint8_t FoodSupplier::chance_of_no_delivery() const {

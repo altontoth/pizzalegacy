@@ -22,6 +22,12 @@ public:
     changed_ = true;
   }
   void push_screen(ScreenTag::Kind k) { push<ScreenTag>(k); }
+  void pop_to_root() {
+    while (stack_.size() > 1) {
+      stack_.pop_back();
+    }
+    changed_ = true;
+  }
   // pop the top node
   void pop() {
     if (stack_.empty()) {

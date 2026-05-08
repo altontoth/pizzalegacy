@@ -9,7 +9,7 @@
 #include <array>
 #include "core/common/Ids.h"
 #include "resources/Bob.h"
-#include "views/base/MainPanelView.h"
+#include "views/base/RestaurantSubView.h"
 
 class Restaurant;
 
@@ -23,7 +23,7 @@ enum class AnimatedStatsScreen {
   None,
 };
 
-class AnimatedStats : public MainPanelView {
+class AnimatedStats : public RestaurantSubView {
 public:
   AnimatedStats(GameContext& context, GameState& state,
                 core::RestaurantId restaurant_id);
@@ -39,6 +39,7 @@ private:
   void render_turnover(const RenderContext& ctx);
   void render_production(const RenderContext& ctx);
   void reset_animation();
+  void navigate_to_restaurant(core::RestaurantId new_id) override;
 
   // Shared thermometer + arrow rendering helpers (from sub_34991, sub_34A1D)
   void draw_thermometer(const RenderContext& ctx) const;
@@ -49,7 +50,6 @@ private:
   void draw_decorated_background(const RenderContext& ctx,
                                  uint8_t bg_color) const;
 
-  core::RestaurantId restaurant_id_;
   Restaurant* restaurant_{nullptr};
   AnimatedStatsScreen current_screen_{AnimatedStatsScreen::Production};
   AnimatedStatsScreen previous_screen_{AnimatedStatsScreen::None};

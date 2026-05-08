@@ -20,6 +20,7 @@
 #include "core/common/Ids.h"
 #include "core/item/Item.h"
 #include "core/restaurant/Restaurant.h"
+#include "core/state/UIState.h"
 #include "core/util/Constants.h"
 #include "engine/Fatal.h"
 #include "engine/FormatCompat.h"
@@ -101,7 +102,8 @@ MafiaConversation::MafiaConversation(
     // is set before the conversation starts to prevent re-triggering.
     auto player_cash = player->cash_balance();
     auto base_money = std::min(player_cash, 5000_usd);
-    double multiplier = std::min(static_cast<double>(base_money) / 5000.0, 6.0);
+    double multiplier = std::min(
+        static_cast<double>(base_money) / static_cast<double>(5000_usd), 6.0);
     int base = rand_max_n(crime_stats + 60) + 1500 - uw_score;
     int amount = static_cast<int>(base * multiplier);
     amount = amount * (difficulty + 1) / 2;
@@ -775,7 +777,8 @@ bool MafiaConversation::has_ended() const {
       state_.message_manager().schedule_message(
           core::events::LeventId::CoolVinnieAndBigLuigiTakeYouForABath,
           player->id(), state_.time().current_date());
-      state_.ui().push<GameOverState>(player->id());
+      state_.ui().push<GameOverState>(player->id(),
+                                      GameOverCause::KilledByMafia);
     }
     if (star_message_pending_) {
       star_message_pending_ = false;

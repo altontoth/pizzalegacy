@@ -12,6 +12,7 @@
 #include "core/restaurant/Restaurant.h"
 #include "core/restaurant/RestaurantStats.h"
 #include "core/state/GameState.h"
+#include "core/state/UIState.h"
 #include "core/util/LegacyConstants.h"
 #include "engine/geom/Spaces.h"
 #include "engine/ui/InteractionEvent.h"
@@ -61,7 +62,7 @@ static constexpr int MS_WIDE_BUTTON_W = 160;
 static constexpr int MS_GAP_BEFORE_BEHAVIOR = 36;
 
 StaffView::StaffView(GameContext& context, GameState& state)
-    : MainPanelView(context, state),
+    : RestaurantSubView(context, state, state.active_restaurant()->id()),
       blitmap3_(context_.blitmap->get<Blitmap3Icon>()) {
   load_applicant_pool();
   create_input_panel();
@@ -1840,4 +1841,9 @@ Surface StaffView::make_card(core::character::JobRole role, std::size_t idx) {
 
   // Use the CharacterData directly from the applicant pool
   return create_data_card(vec[idx], role);
+}
+
+void StaffView::navigate_to_restaurant(core::RestaurantId new_id) {
+  state_.active_restaurant(new_id);
+  state_.ui().replace_top<ScreenTag>(ScreenTag::Kind::StaffView);
 }

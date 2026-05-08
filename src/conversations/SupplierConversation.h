@@ -8,6 +8,7 @@
 
 #include <array>
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include "conversations/BaseConversation.h"
@@ -34,6 +35,7 @@ public:
   std::optional<ContractTermsDisplay> contract_terms() const override;
 
   Actor* owned_actor() { return owned_actor_.get(); }
+  bool contract_accepted() const { return contract_accepted_; }
 
 private:
   static SupplierLine compute_greeting(const GameState& state,
@@ -42,16 +44,23 @@ private:
   void handle_demand(SupplierLine demand);
   void pick_demand_options();
 
+  enum class JustifyContext { DISCOUNT, PENALTY, FEES };
+  void trigger_justify_demands(JustifyContext);
+  void handle_argument_pick(SupplierLine);
+
   const FoodSupplier* supplier_;
   std::unique_ptr<Actor> owned_actor_;
   std::vector<IngredientBatch> order_;
   Money total_order_value_;
+  bool contract_accepted_{false};
 
   SupplierContract contract_;
-  int customer_tier_{0};
+  int spending_rank_{0};
   int negotiation_skill_{0};
-  int demand_threshold_{2};
+  int demand_limit_{2};
   std::vector<SupplierLine> active_demand_options_;
-  bool special_price_offered_{false};
+  bool ripoff_{false};
+  std::optional<JustifyContext> justify_context_;
+  std::vector<SupplierLine> active_argument_options_;
   std::array<int, 9> session_demand_counts_{};
 };

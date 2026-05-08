@@ -102,6 +102,7 @@ set(GAME_PLEGACY_SOURCES
     src/views/base/PanelView.cpp
     src/views/base/PaneledView.cpp
     src/views/base/RawRenderer.cpp
+    src/views/base/RestaurantSubView.cpp
     src/views/base/View.cpp
     src/views/factories/ActorViewFactory.cpp
     src/views/helpers/JudgeAnimator.cpp
@@ -157,6 +158,7 @@ set(GAME_PLEGACY_SOURCES
     src/views/screens/restaurant/RestaurantView.cpp
     src/views/screens/restaurant/SeatedCharacterRenderer.cpp
     src/views/screens/restaurant/WeeksTakings.cpp
+    src/views/screens/stock/Contracts.cpp
     src/views/screens/stock/IngredientCategoryView.cpp
     src/views/screens/stock/IngredientOrderScreen.cpp
     src/views/screens/stock/IngredientSupplierList.cpp
@@ -383,7 +385,6 @@ set(PLEGACY_HEADERS
     src/core/settings/MafiaSettings.h
     src/core/settings/RealtorSettings.h
     src/core/state/AnnualCompetitionFlow.h
-    src/core/state/CompetitionGlobalState.h
     src/core/state/CompetitionSession.h
     src/core/state/GameOptions.h
     src/core/state/GameState.h
@@ -394,6 +395,7 @@ set(PLEGACY_HEADERS
     src/core/state/ViewerType.h
     src/core/status/StatusDisplayRecipe.h
     src/core/status/StatusHub.h
+    src/core/supply/ActiveContract.h
     src/core/supply/FoodSupplier.h
     src/core/supply/IngredientBatch.h
     src/core/supply/Supplier.h
@@ -517,6 +519,7 @@ set(PLEGACY_HEADERS
     src/views/base/PaneledView.h
     src/views/base/RawRenderable.h
     src/views/base/RawRenderer.h
+    src/views/base/RestaurantSubView.h
     src/views/base/SharedPanel.h
     src/views/base/View.h
     src/views/base/ViewDefs.h
@@ -587,6 +590,7 @@ set(PLEGACY_HEADERS
     src/views/screens/restaurant/RestaurantView.h
     src/views/screens/restaurant/SeatedCharacterRenderer.h
     src/views/screens/restaurant/WeeksTakings.h
+    src/views/screens/stock/Contracts.h
     src/views/screens/stock/IngredientCategoryView.h
     src/views/screens/stock/IngredientOrderScreen.h
     src/views/screens/stock/IngredientSupplierList.h

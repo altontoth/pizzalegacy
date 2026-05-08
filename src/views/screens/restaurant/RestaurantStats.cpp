@@ -11,6 +11,7 @@
 #include "core/finance/Scale.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/state/GameState.h"
+#include "core/state/UIState.h"
 #include "core/util/LegacyConstants.h"
 #include "gfx/Draw.h"
 #include "resources/BlitmapManager.h"
@@ -24,7 +25,7 @@ RestaurantStats::RestaurantStats(GameContext& context, GameState& state,
                                  core::RestaurantId restaurant_id,
                                  std::optional<RestaurantStatsScreen> screen,
                                  bool automatic_mode)
-    : MainPanelView(context, state), restaurant_id_(restaurant_id),
+    : RestaurantSubView(context, state, restaurant_id),
       current_screen_(screen.value_or(RestaurantStatsScreen::Daily_Balance)),
       automatic_mode_(automatic_mode),
       stanbobs_(context_.bob->get("bob/stanbobs.bob")),
@@ -933,4 +934,17 @@ void RestaurantStats::render_sales_curve(const RenderContext& ctx) {
         ViewPoint{x, day_label_y}, FontFace::SUPERSMA, label_color,
         AlignX::Left);
   }
+}
+
+void RestaurantStats::navigate_to_restaurant(core::RestaurantId new_id) {
+  state_.active_restaurant(new_id);
+  std::optional<int> screen_idx;
+  if (current_screen_ != RestaurantStatsScreen::None) {
+    screen_idx = static_cast<int>(current_screen_);
+  }
+  state_.ui().replace_top<RestaurantStatsState>(RestaurantStatsState{
+      .id = new_id,
+      .screen_index = screen_idx,
+      .automatic_mode = automatic_mode_,
+  });
 }

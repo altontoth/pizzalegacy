@@ -7,33 +7,17 @@
 #include "conversations/SupplierConversation.h"
 
 #include <algorithm>
+#include <cassert>
 #include <cstddef>
 #include <magic_enum/magic_enum.hpp>
 
 #include "core/character/Player.h"
 #include "core/city/City.h"
+#include "core/supply/ActiveContract.h"
 #include "core/supply/FoodSupplier.h"
 #include "core/supply/SupplierRelationship.h"
 #include "engine/FormatCompat.h"
 #include "engine/Logger.h"
-
-namespace {
-
-bool is_greeting(SupplierLine line) {
-  switch (line) {
-  case SupplierLine::HELLO_SUGGEST_CONTRACT_TERMS:
-  case SupplierLine::HELLO_GOOD_TO_SEE_YOU_SUGGEST_TERMS:
-  case SupplierLine::OFFER_SPECIAL_PRICE_CANT_SAY_NO:
-  case SupplierLine::LONG_TIME_NO_SEE_OFFER_CONDITIONS:
-  case SupplierLine::LAST_TIME_ORDERED_MORE_MAYBE_DO_BUSINESS:
-  case SupplierLine::WHATS_WRONG_HARDLY_ORDERED_OFFER_CONDITIONS:
-    return true;
-  default:
-    return false;
-  }
-}
-
-} // namespace
 
 SupplierConversation::SupplierConversation(GameState& state,
                                            const FoodSupplier* supplier,
@@ -44,7 +28,6 @@ SupplierConversation::SupplierConversation(GameState& state,
       supplier_(supplier), order_(std::move(order)),
       total_order_value_(total_order_value) {
 
-  // Create a temporary Actor for ActorView rendering
   owned_actor_ =
       std::make_unique<Actor>(supplier->actor_type(), supplier->id());
   owned_actor_->head_id(supplier->head_id());
@@ -52,18 +35,18 @@ SupplierConversation::SupplierConversation(GameState& state,
   actor_ = owned_actor_.get();
 
   auto player_id = state_.active_player()->id();
-  customer_tier_ = supplier_->customer_tier(player_id);
+  spending_rank_ = supplier_->spending_rank(player_id);
   negotiation_skill_ = state_.active_player()->negotiation_skill();
 
-  // Demand threshold based on customer tier
-  if (customer_tier_ >= 10) {
-    demand_threshold_ = 4;
+  // Demand threshold (how often can you refuse an offer) based on customer tier
+  if (spending_rank_ >= 10) {
+    demand_limit_ = 4;
   }
-  else if (customer_tier_ >= 4) {
-    demand_threshold_ = 3;
+  else if (spending_rank_ >= 4) {
+    demand_limit_ = 3;
   }
   else {
-    demand_threshold_ = 2;
+    demand_limit_ = 2;
   }
   // Initialize contract terms
   const auto& rel = supplier_->relationship(player_id);
@@ -75,12 +58,19 @@ SupplierConversation::SupplierConversation(GameState& state,
     contract_.penalty = total_order_value_ * 5;
   }
   else {
-    contract_.discount_score = std::min<int>(rel.relationship_score, 60);
+    // Original formula: ((order / min) + spending_rank) * 4 + past_discount) /
+    // 3, max 60
+    int64_t min_cents = supplier_->minimum_contract_amount().cents;
+    int ratio = (min_cents > 0)
+                    ? static_cast<int>(total_order_value_.cents / min_cents)
+                    : 0;
+    int raw = ((ratio + spending_rank_) * 4) + rel.relationship_score;
+    contract_.discount_score = std::min(raw / 3, 60);
     contract_.penalty = total_order_value_ * 3;
   }
 
-  // Charge: waived for medium+ customers (bh > 3)
-  if (customer_tier_ > 3) {
+  // Charge waived
+  if (spending_rank_ > 3) {
     contract_.charge = Money{0};
   }
   else {
@@ -88,15 +78,19 @@ SupplierConversation::SupplierConversation(GameState& state,
                        total_order_value_ / 30;
   }
 
-  if (is_greeting(current_line_) && customer_tier_ <= 5) {
+  if (current_line_ == SupplierLine::HELLO_SUGGEST_CONTRACT_TERMS) {
     int personality = state_.active_player()->character().personality();
-    int trap_chance = std::max(0, 90 - personality);
-    if (engine::random::rand_percentage_chance(trap_chance) &&
-        engine::random::rand_percentage_chance(trap_chance)) {
-      special_price_offered_ = true;
-      contract_.total_value = contract_.total_value * 2;
+    int ripoff_chance = std::max(0, 90 - personality);
+    if (engine::random::rand_percentage_chance(ripoff_chance)) {
+      if (engine::random::rand_percentage_chance(ripoff_chance)) {
+        ripoff_ = true;
+        contract_.total_value = contract_.total_value * 2;
+      }
     }
   }
+  Logger::debug(
+      "Player spending rank is {}, rip off is {}, demand threshold is {}",
+      spending_rank_, ripoff_, demand_limit_);
 }
 
 SupplierLine
@@ -105,9 +99,9 @@ SupplierConversation::compute_greeting(const GameState& state,
                                        Money total_order_value) {
   auto player_id = state.active_player()->id();
   const auto& rel = supplier->relationship(player_id);
-  auto customer_tier = supplier->customer_tier(player_id);
+  auto spending_rank = supplier->spending_rank(player_id);
 
-  if (rel.credit_history > 0) {
+  if (rel.outstanding_debt.cents > 0) {
     return SupplierLine::SETTLE_DEBTS_BEFORE_NEW_CONTRACT;
   }
 
@@ -115,31 +109,40 @@ SupplierConversation::compute_greeting(const GameState& state,
     return SupplierLine::NEVER_ENTER_CONTRACTS_BELOW_TOTAL;
   }
 
-  if (rel.contract_count == 0) {
-    return SupplierLine::HELLO_SUGGEST_CONTRACT_TERMS;
+  if (rel.last_contract_sum.cents > total_order_value.cents) {
+    return SupplierLine::LAST_TIME_ORDERED_MORE_MAYBE_DO_BUSINESS;
   }
 
-  if (customer_tier >= 10) {
+  // Rank-based greeting selection (original thresholds)
+  if (spending_rank > 10) {
     return SupplierLine::OFFER_SPECIAL_PRICE_CANT_SAY_NO;
   }
-
-  if (customer_tier >= 4) {
+  if (spending_rank >= 6) {
     return SupplierLine::HELLO_GOOD_TO_SEE_YOU_SUGGEST_TERMS;
   }
-
-  if (rel.total_spent > 0_usd && customer_tier <= 1) {
-    return SupplierLine::WHATS_WRONG_HARDLY_ORDERED_OFFER_CONDITIONS;
+  if (spending_rank >= 1) {
+    return SupplierLine::HELLO_SUGGEST_CONTRACT_TERMS;
   }
-
-  return SupplierLine::LONG_TIME_NO_SEE_OFFER_CONDITIONS;
+  return SupplierLine::PLEASED_TO_SUPPLY_HURRY_UP;
 }
 
-bool SupplierConversation::advance() { return true; }
+bool SupplierConversation::advance() {
+  if (current_line_ == SupplierLine::JUSTIFY_YOUR_DEMANDS &&
+      !active_argument_options_.empty()) {
+    current_line(SupplierLine::PICKING_ARGUMENT);
+  }
+  return true;
+}
 
 bool SupplierConversation::advance_line_choice(SupplierLine choice) {
   Logger::debug("SupplierConversation::advance_line_choice: {} => {}",
                 magic_enum::enum_name(current_line_),
                 magic_enum::enum_name(choice));
+
+  if (current_line_ == SupplierLine::PICKING_ARGUMENT) {
+    handle_argument_pick(choice);
+    return true;
+  }
 
   switch (choice) {
   case SupplierLine::DISCOUNT_TOO_SMALL:
@@ -156,7 +159,7 @@ bool SupplierConversation::advance_line_choice(SupplierLine choice) {
   case SupplierLine::SECOND_THOUGHTS: {
     if (engine::random::rand_percentage_chance(30) &&
         contract_.discount_score < 50) {
-      int bonus = (customer_tier_ > 6) ? 8 : 5;
+      int bonus = (spending_rank_ > 6) ? 8 : 5;
       contract_.discount_score =
           std::min<int>(contract_.discount_score + bonus, 60);
       current_line(SupplierLine::INCREASE_DISCOUNT_A_LITTLE);
@@ -178,43 +181,44 @@ bool SupplierConversation::advance_line_choice(SupplierLine choice) {
 bool SupplierConversation::advance_proposal(bool agree) {
   Logger::debug("SupplierConversation::advance_proposal: {}: {}",
                 magic_enum::enum_name(current_line_), agree ? 1 : 0);
-
   if (agree) {
     auto player_id = state_.active_player()->id();
     auto& rel = const_cast<FoodSupplier*>(supplier_)->relationship(player_id);
-    rel.contract_count++;
-    rel.total_spent += total_order_value_;
-    if (rel.frustration > 0) {
-      rel.frustration--;
-    }
-    rel.last_delivery_days = contract_.delivery_days;
 
-    if (total_order_value_ > 0_usd &&
-        !state_.spend_cash(Account::Stock, total_order_value_)) {
-      rel.contract_count--;
-      rel.total_spent -= total_order_value_;
-      current_line(SupplierLine::NEVER_ENTER_CONTRACTS_BELOW_TOTAL);
-      return true;
-    }
-
-    auto* restaurant = state_.active_restaurant();
+    // Build the active contract from negotiated terms
+    ActiveContract contract;
+    contract.supplier_id = supplier_->id();
+    contract.category = supplier_->category();
+    contract.city_id = state_.active_city_id();
+    contract.restaurant_id = state_.active_restaurant()->id();
+    contract.discount_pct = contract_.discount_score;
+    contract.remaining_term = contract_.delivery_days;
+    contract.original_term = contract_.delivery_days;
+    contract.daily_sum = contract_.total_value;
+    contract.charge = contract_.charge;
+    contract.cancellation_penalty = contract_.penalty;
     for (const auto& batch : order_) {
       if (batch.count > 0) {
-        auto ingredient_type = batch.ingredient_type;
-        restaurant->purchase_ingredients(ingredient_type, batch.count,
-                                         batch.quality, batch.price_per_unit);
+        contract.items.push_back({batch.ingredient_type, batch.count});
       }
     }
 
-    auto* city = state_.active_city();
-    city->record_vendor_purchase(state_.active_player()->id(), supplier_->id(),
-                                 total_order_value_);
+    state_.active_player()->add_contract(std::move(contract));
+
+    contract_accepted_ = true;
+    rel.contract_count++;
+    rel.last_delivery_days = contract_.delivery_days;
+    rel.last_contract_sum = total_order_value_;
+    rel.relationship_score = contract_.discount_score;
+    if (rel.frustration > 0) {
+      rel.frustration--;
+    }
 
     current_line(SupplierLine::OK_WILL_DO_OUR_BEST_DELIVER_ON_TIME);
   }
   else {
     // Player wants to negotiate
-    if (customer_tier_ < 1) {
+    if (spending_rank_ < 1) {
       current_line(SupplierLine::MAYBE_DO_BUSINESS_ANOTHER_TIME);
     }
     else {
@@ -249,17 +253,21 @@ void SupplierConversation::handle_demand(SupplierLine demand) {
   switch (demand) {
   case SupplierLine::DISCOUNT_TOO_SMALL:
   case SupplierLine::TOO_EXPENSIVE: {
-    if (customer_tier_ < 1) {
-      contract_.charge = contract_.charge * 2;
-      current_line(SupplierLine::HARDLY_BUY_ANYTHING_YET_DARE_TO_DEMAND);
-      return;
+    {
+      auto player_id = state_.active_player()->id();
+      if (supplier_->relationship(player_id).total_spent <
+          supplier_->minimum_contract_amount() * 2) {
+        contract_.charge = contract_.charge * 2;
+        current_line(SupplierLine::HARDLY_BUY_ANYTHING_YET_DARE_TO_DEMAND);
+        return;
+      }
     }
 
-    // Count total discount demands (both types share a handler)
-    int total_disc = session_demand_counts_[0] + session_demand_counts_[1];
+    // Count total discount demands
+    int demand_count = session_demand_counts_[0] + session_demand_counts_[1];
 
     // Too many discount demands relative to customer size
-    if (total_disc * 2 > customer_tier_) {
+    if (demand_count * 2 > spending_rank_) {
       auto player_id = state_.active_player()->id();
       auto& rel = const_cast<FoodSupplier*>(supplier_)->relationship(player_id);
       rel.frustration = std::min<int>(rel.frustration + 1, 255);
@@ -268,7 +276,7 @@ void SupplierConversation::handle_demand(SupplierLine demand) {
     }
 
     // Hard cap: too many demands or discount already maxed
-    if (total_disc >= demand_threshold_ || contract_.discount_score >= 50) {
+    if (demand_count >= demand_limit_ || contract_.discount_score >= 50) {
       current_line(SupplierLine::NO_REASON_FOR_SPECIAL_CONDITIONS);
       return;
     }
@@ -282,43 +290,41 @@ void SupplierConversation::handle_demand(SupplierLine demand) {
       return;
     }
 
-    // Secondary check
-    if (engine::random::rand_percentage_chance(50)) {
-      int bonus =
-          engine::random::rand_percentage_chance(negotiation_skill_) ? 10 : 5;
-      contract_.discount_score =
-          std::min<int>(contract_.discount_score + bonus, 60);
-      current_line(SupplierLine::OK_GOOD_CUSTOMER_LETS_TALK);
-      return;
-    }
-
-    // Failed: lose some discount
-    contract_.discount_score =
-        static_cast<uint8_t>(std::max<int>(contract_.discount_score - 4, 0));
-    current_line(SupplierLine::DOESNT_IMPRESS_ME);
-    break;
+    trigger_justify_demands(JustifyContext::DISCOUNT);
+    return;
   }
 
   case SupplierLine::PENALTY_CLAUSE_EXCESSIVE: {
-    if (customer_tier_ < 2) {
+    if (spending_rank_ < 2) {
       current_line(SupplierLine::PENALTY_CLAUSE_JUSTIFIED);
       return;
     }
 
+    {
+      auto player_id = state_.active_player()->id();
+      const auto& rel = supplier_->relationship(player_id);
+      if (spending_rank_ < rel.missed_payment_penalty) {
+        current_line(
+            SupplierLine::ARE_YOU_TRYING_TO_BE_FUNNY_YOU_COULDNT_PAY_MY_BILL);
+        return;
+      }
+    }
+
     if (!engine::random::rand_percentage_chance(negotiation_skill_)) {
+      if (!state_.options().fix_legacy_bugs) {
+        contract_.penalty = contract_.penalty / 2;
+      }
+      current_line(SupplierLine::NO_REASON_FOR_SPECIAL_CONDITIONS);
+      return;
+    }
+
+    if (!engine::random::rand_percentage_chance(30)) {
       current_line(SupplierLine::IM_SORRY_CANNOT_ALTER_CONDITIONS);
       return;
     }
 
-    if (engine::random::rand_percentage_chance(30) &&
-        engine::random::rand_percentage_chance(50)) {
-      contract_.penalty = contract_.penalty / 2;
-      current_line(SupplierLine::I_THINK_I_CAN_HELP);
-      return;
-    }
-
-    current_line(SupplierLine::IM_SORRY_CANNOT_ALTER_CONDITIONS);
-    break;
+    trigger_justify_demands(JustifyContext::PENALTY);
+    return;
   }
 
   case SupplierLine::FEES_TOO_HIGH: {
@@ -338,20 +344,14 @@ void SupplierConversation::handle_demand(SupplierLine demand) {
       return;
     }
 
-    if (engine::random::rand_percentage_chance(50)) {
-      contract_.charge = contract_.charge / 2;
-      current_line(SupplierLine::I_THINK_I_CAN_HELP);
-      return;
-    }
-
-    current_line(SupplierLine::NO_REASON_FOR_SPECIAL_CONDITIONS);
-    break;
+    trigger_justify_demands(JustifyContext::FEES);
+    return;
   }
 
   case SupplierLine::TOTAL_IS_WRONG: {
-    if (special_price_offered_) {
+    if (ripoff_) {
       contract_.total_value = contract_.total_value / 2;
-      special_price_offered_ = false;
+      ripoff_ = false;
       current_line(SupplierLine::SORRY_MY_MISTAKE_YOUR_CONDITIONS);
       return;
     }
@@ -363,11 +363,17 @@ void SupplierConversation::handle_demand(SupplierLine demand) {
   case SupplierLine::DELIVERIES_UNRELIABLE: {
     auto player_id = state_.active_player()->id();
     const auto& rel = supplier_->relationship(player_id);
-    if (rel.credit_history == 0) {
+    if (rel.delivery_issues_flag == 0) {
       current_line(SupplierLine::WE_ALWAYS_DELIVERED_ON_TIME);
       return;
     }
-    // Supplier admits problems, gives free discount
+    // From DOS version of Pizza Connection: if player has a payment default on
+    // record, supplier deflects instead of admitting fault and giving a
+    // discount (I think the jump was missing in PT).
+    if (rel.missed_payment_penalty > 0) {
+      current_line(SupplierLine::OTOH_YOU_WERE_BEHIND_ON_PAYMENTS);
+      return;
+    }
     contract_.discount_score = std::min<int>(contract_.discount_score + 5, 60);
     current_line(SupplierLine::ADMIT_SHORTAGES_MORE_DISCOUNT);
     break;
@@ -401,6 +407,64 @@ void SupplierConversation::handle_demand(SupplierLine demand) {
   }
 }
 
+void SupplierConversation::trigger_justify_demands(JustifyContext ctx) {
+  justify_context_ = ctx;
+  // Pool: enum 7-26 = LIEF.E lines 8-27
+  std::array<SupplierLine, 20> pool;
+  for (int i = 0; i < 20; ++i) {
+    pool[i] = static_cast<SupplierLine>(7 + i);
+  }
+  for (size_t i = 0; i < 4; i++) {
+    size_t j = i + engine::random::rand_max_n(pool.size() - i);
+    std::swap(pool[i], pool[j]);
+  }
+  active_argument_options_.assign(pool.begin(), pool.begin() + 4);
+  current_line(SupplierLine::JUSTIFY_YOUR_DEMANDS);
+}
+
+void SupplierConversation::handle_argument_pick(SupplierLine choice) {
+  assert(justify_context_.has_value());
+  active_argument_options_.clear();
+  // LIEF.E line = enum + 1; the original uses this directly as a % chance
+  int chance = static_cast<int>(choice) + 1;
+  bool success = engine::random::rand_percentage_chance(chance);
+
+  switch (*justify_context_) {
+  case JustifyContext::DISCOUNT:
+    if (success) {
+      int bonus =
+          engine::random::rand_percentage_chance(negotiation_skill_) ? 10 : 5;
+      contract_.discount_score =
+          std::min<int>(contract_.discount_score + bonus, 60);
+      current_line(SupplierLine::OK_GOOD_CUSTOMER_LETS_TALK);
+    }
+    else {
+      contract_.discount_score =
+          static_cast<uint8_t>(std::max<int>(contract_.discount_score - 4, 0));
+      current_line(SupplierLine::DOESNT_IMPRESS_ME);
+    }
+    break;
+  case JustifyContext::PENALTY:
+    if (success) {
+      contract_.penalty = contract_.penalty / 2;
+      current_line(SupplierLine::I_THINK_I_CAN_HELP);
+    }
+    else {
+      current_line(SupplierLine::IM_SORRY_CANNOT_ALTER_CONDITIONS);
+    }
+    break;
+  case JustifyContext::FEES:
+    if (success) {
+      contract_.charge = contract_.charge / 2;
+      current_line(SupplierLine::I_THINK_I_CAN_HELP);
+    }
+    else {
+      current_line(SupplierLine::NO_REASON_FOR_SPECIAL_CONDITIONS);
+    }
+    break;
+  }
+}
+
 void SupplierConversation::pick_demand_options() {
   static constexpr std::array all_demands = {
       SupplierLine::DISCOUNT_TOO_SMALL,
@@ -415,7 +479,7 @@ void SupplierConversation::pick_demand_options() {
   };
   auto shuffled = all_demands;
   for (size_t i = 0; i < 4; i++) {
-    size_t j = i + (engine::random::rand_max_n(shuffled.size()));
+    size_t j = i + (engine::random::rand_max_n(shuffled.size() - i));
     std::swap(shuffled[i], shuffled[j]);
   }
   active_demand_options_.assign(shuffled.begin(), shuffled.begin() + 4);
@@ -426,6 +490,7 @@ Emotion SupplierConversation::emotion() const {
   switch (current_line_) {
   case SupplierLine::KEEP_REPEATING_TAKE_ME_FOR_A_RIDE:
   case SupplierLine::DISGRACE_TRY_LIES_ON_SOMEBODY_ELSE:
+  case SupplierLine::HOPE_DO_BUSINESS_NEXT_TIME:
     return Emotion::ANGRY;
   case SupplierLine::OK_WILL_DO_OUR_BEST_DELIVER_ON_TIME:
     return Emotion::HAPPY;
@@ -437,13 +502,12 @@ Emotion SupplierConversation::emotion() const {
 std::vector<ConversationLine<SupplierLine>>
 SupplierConversation::lines() const {
   switch (current_line_) {
+  case SupplierLine::PLEASED_TO_SUPPLY_HURRY_UP:
   case SupplierLine::HELLO_SUGGEST_CONTRACT_TERMS:
   case SupplierLine::HELLO_GOOD_TO_SEE_YOU_SUGGEST_TERMS:
   case SupplierLine::OFFER_SPECIAL_PRICE_CANT_SAY_NO:
-  case SupplierLine::LONG_TIME_NO_SEE_OFFER_CONDITIONS:
   case SupplierLine::LAST_TIME_ORDERED_MORE_MAYBE_DO_BUSINESS:
-  case SupplierLine::WHATS_WRONG_HARDLY_ORDERED_OFFER_CONDITIONS:
-    return {make_proposal(current_line_, true)};
+    return {make_proposal(current_line_, false)};
 
   // Demand menu: show the randomly picked options
   case SupplierLine::DISCOUNT_TOO_SMALL: {
@@ -455,22 +519,33 @@ SupplierConversation::lines() const {
     return result;
   }
 
-  // Rejection/terminal lines
   case SupplierLine::NEVER_ENTER_CONTRACTS_BELOW_TOTAL:
     return {
         make_line(SupplierLine::NEVER_ENTER_CONTRACTS_BELOW_TOTAL,
-                  {.is_proposal = true,
+                  {.is_proposal = false,
                    .easy_accept = false,
+                   .is_terminal = true,
                    .custom_text = compat::format(
                        " {:w}", supplier_->minimum_contract_amount())}),
     };
   case SupplierLine::SETTLE_DEBTS_BEFORE_NEW_CONTRACT:
   case SupplierLine::GOODBYE:
+    return {make_terminal_line(current_line_)};
+  case SupplierLine::JUSTIFY_YOUR_DEMANDS:
     return {make_line(current_line_)};
 
-  // Demand responses: shown as proposals (user can accept updated terms or
-  // reject to negotiate further)
-  case SupplierLine::JUSTIFY_YOUR_DEMANDS:
+  case SupplierLine::PICKING_ARGUMENT: {
+    std::vector<ConversationLine<SupplierLine>> result;
+    result.reserve(active_argument_options_.size());
+    for (auto opt : active_argument_options_) {
+      result.push_back(make_option(opt));
+    }
+    return result;
+  }
+
+  case SupplierLine::NO_REASON_FOR_SPECIAL_CONDITIONS:
+    return {make_proposal(current_line_, true)};
+
   case SupplierLine::YOU_JUST_SAID_THAT:
   case SupplierLine::HARDLY_BUY_ANYTHING_YET_DARE_TO_DEMAND:
   case SupplierLine::OK_GOOD_CUSTOMER_LETS_TALK:
@@ -487,22 +562,19 @@ SupplierConversation::lines() const {
   case SupplierLine::DOESNT_IMPRESS_ME:
   case SupplierLine::I_THINK_I_CAN_HELP:
   case SupplierLine::PENALTY_CLAUSE_JUSTIFIED:
-  case SupplierLine::ARE_YOU_TRYING_TO_BE_FINNY_YOU_COULDNT_PAY_MY_BILL:
+  case SupplierLine::ARE_YOU_TRYING_TO_BE_FUNNY_YOU_COULDNT_PAY_MY_BILL:
   case SupplierLine::IM_SORRY_CANNOT_ALTER_CONDITIONS:
   case SupplierLine::THERE_WERE_NO_FEES_INCLUDED_BUT_IF_YOU_WANT:
   case SupplierLine::ALRIGHT_LET_YOU_OFF_SOME_FEES:
-  case SupplierLine::NO_REASON_FOR_SPECIAL_CONDITIONS:
   case SupplierLine::INCREASE_DISCOUNT_A_LITTLE:
   case SupplierLine::THREE_MONTHS_LONGEST_TERM:
     return {make_proposal(current_line_, true)};
 
-  // Terminal states (click to dismiss)
   case SupplierLine::OK_WILL_DO_OUR_BEST_DELIVER_ON_TIME:
-  case SupplierLine::PLEASED_TO_SUPPLY_HURRY_UP:
   case SupplierLine::HOPE_DO_BUSINESS_NEXT_TIME:
   case SupplierLine::MAYBE_DO_BUSINESS_ANOTHER_TIME:
   case SupplierLine::KEEP_REPEATING_TAKE_ME_FOR_A_RIDE:
-    return {make_line(current_line_)};
+    return {make_terminal_line(current_line_)};
 
   default:
     Logger::warn("SupplierConversation::lines: unhandled {}",
@@ -518,11 +590,6 @@ SupplierConversation::contract_terms() const {
   case SupplierLine::NEVER_ENTER_CONTRACTS_BELOW_TOTAL:
   case SupplierLine::SETTLE_DEBTS_BEFORE_NEW_CONTRACT:
   case SupplierLine::GOODBYE:
-    // case SupplierLine::OK_WILL_DO_OUR_BEST_DELIVER_ON_TIME:
-    // case SupplierLine::PLEASED_TO_SUPPLY_HURRY_UP:
-    // case SupplierLine::HOPE_DO_BUSINESS_NEXT_TIME:
-    // case SupplierLine::MAYBE_DO_BUSINESS_ANOTHER_TIME:
-    // case SupplierLine::KEEP_REPEATING_TAKE_ME_FOR_A_RIDE:
     return std::nullopt;
   default:
     break;
@@ -539,14 +606,7 @@ SupplierConversation::contract_terms() const {
 
 bool SupplierConversation::has_ended() const {
   switch (current_line_) {
-  case SupplierLine::OK_WILL_DO_OUR_BEST_DELIVER_ON_TIME:
-  case SupplierLine::PLEASED_TO_SUPPLY_HURRY_UP:
-  case SupplierLine::GOODBYE:
-  case SupplierLine::HOPE_DO_BUSINESS_NEXT_TIME:
-  case SupplierLine::MAYBE_DO_BUSINESS_ANOTHER_TIME:
   case SupplierLine::KEEP_REPEATING_TAKE_ME_FOR_A_RIDE:
-  case SupplierLine::NEVER_ENTER_CONTRACTS_BELOW_TOTAL:
-  case SupplierLine::SETTLE_DEBTS_BEFORE_NEW_CONTRACT:
     return true;
   default:
     return false;

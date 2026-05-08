@@ -11,10 +11,14 @@
 #include "core/city/District.h"
 #include "core/city/Property.h"
 #include "core/events/LeventId.h"
+#include "core/food/IngredientCategory.h"
 #include "core/restaurant/AIEconomy.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/state/GameState.h"
+#include "core/state/UIState.h"
+#include "core/supply/FoodSupplier.h"
 #include "core/time/TimeOfDay.h"
+#include "engine/FormatCompat.h"
 #include "engine/Logger.h"
 
 #include <algorithm>
@@ -145,6 +149,10 @@ void Player::end_of_day(GameState& game_state) {
     }
   }
 
+  // Process active supplier contracts: deliver ingredients, charge payment,
+  // tick term
+  process_contracts(game_state);
+
   // AI daily evaluation
   if (!is_human_controlled()) {
     // Bankruptcy check on first restaurant
@@ -237,17 +245,30 @@ void Player::end_of_week(GameState& game_state) {
         name_, total_staff_count, total_wages.cents / 100.0);
   }
 
-  // Check for bankruptcy at end of week (TODO, why end of week only?)
+  // Supplier debt bankruptcy: any unpaid supplier balance at end of week
+  for (City* city : game_state.initialized_cities()) {
+    for (const auto& s_ptr : city->suppliers()) {
+      if (s_ptr->relationship(id_).outstanding_debt.cents > 0) {
+        Logger::warn("[Finance] {} - BANKRUPT! Unpaid supplier debt", name_);
+        game_state.deliver_message(
+            core::events::LeventId::NotAbleToPaySuppliers,
+            [this, &game_state]() {
+              game_state.eliminate_player(id_,
+                                          GameOverCause::BankruptSuppliers);
+            });
+        return;
+      }
+    }
+  }
+
+  // Bank/loan debt bankruptcy
   Money balance = cash_balance();
   if (balance.cents < 0) {
     Logger::warn("[Finance] {} - BANKRUPT! Balance: {}", name_, balance);
-
-    StatusMsg msg{
-        .payload = "You were not able to repay your debts. Hard luck! You are "
-                   "now on the streets.",
-        .scope = StatusScope::Global,
-    };
-    game_state.status().post_direct(msg);
+    game_state.deliver_message(
+        core::events::LeventId::NotAbleToPayDebts, [this, &game_state]() {
+          game_state.eliminate_player(id_, GameOverCause::BankruptDebts);
+        });
   }
 }
 
@@ -457,19 +478,22 @@ void Player::increment_criminal_record() { criminal_record_++; }
 void Player::jail(int days) {
   jail_days_left_ = std::min(days, 99);
   jail_time_ = *jail_days_left_;
+  status_ = PlayerStatus::InPrison;
 }
 
-bool Player::is_in_jail() const {
-  return jail_days_left_.has_value() && *jail_days_left_ > 0;
-}
+bool Player::is_in_jail() const { return status_ == PlayerStatus::InPrison; }
 
 std::optional<int> Player::jail_days_left() const { return jail_days_left_; }
 
 void Player::decrement_jail_day() {
+  Logger::debug("Player {} decrement jail time", name());
   if (jail_days_left_) {
     --(*jail_days_left_);
     if (*jail_days_left_ <= 0) {
       jail_days_left_.reset();
+      if (status_ == PlayerStatus::InPrison) {
+        status_ = PlayerStatus::Active;
+      }
     }
   }
 }
@@ -577,4 +601,199 @@ const Awards& Player::awards() const { return awards_; }
 
 void Player::award(AwardCategory category, AwardLevel level) {
   awards_[static_cast<int>(category)] = level;
+}
+
+int Player::contract_count_for_city(core::CityId city_id) const {
+  int count = 0;
+  for (const auto& c : contracts_) {
+    if (c.city_id == city_id) {
+      count++;
+    }
+  }
+  return count;
+}
+
+void Player::add_contract(ActiveContract contract) {
+  contracts_.push_back(std::move(contract));
+}
+
+void Player::remove_contract(size_t index) {
+  if (index < contracts_.size()) {
+    contracts_.erase(contracts_.begin() + static_cast<ptrdiff_t>(index));
+  }
+}
+
+void Player::process_contracts(GameState& game_state) {
+  using namespace core::food;
+  using namespace engine;
+
+  for (int i = static_cast<int>(contracts_.size()) - 1; i >= 0; --i) {
+    auto& c = contracts_[static_cast<size_t>(i)];
+
+    // Find the city and supplier
+    City* city = game_state.city(c.city_id);
+    if (!city) {
+      Logger::warn("Contract city {} not found, removing", c.city_id.value);
+      contracts_.erase(contracts_.begin() + i);
+      continue;
+    }
+
+    ActorType supplier_actor_type = CategoryRegistry::supplier_type(c.category);
+    FoodSupplier* supplier = nullptr;
+    for (const auto* s : city->food_suppliers(supplier_actor_type)) {
+      if (s->id() == c.supplier_id) {
+        supplier = const_cast<FoodSupplier*>(s);
+        break;
+      }
+    }
+    if (!supplier) {
+      Logger::warn("Contract supplier {} not found, removing", c.supplier_id);
+      contracts_.erase(contracts_.begin() + i);
+      continue;
+    }
+
+    // Find the restaurant for the name prefix in messages
+    Restaurant* restaurant = nullptr;
+    for (auto* r : game_state.restaurants_for(id_)) {
+      if (r->id() == c.restaurant_id) {
+        restaurant = r;
+        break;
+      }
+    }
+    if (!restaurant) {
+      Logger::warn("Contract restaurant not found, removing contract");
+      contracts_.erase(contracts_.begin() + i);
+      continue;
+    }
+    const std::string& rest_name = restaurant->name();
+
+    // Expiry check
+    if (c.remaining_term == 0) {
+      game_state.status().post(StatusMsg{
+          .payload = compat::format("{}: The contract with {} has expired.",
+                                    rest_name, supplier->name()),
+          .severity = StatusSeverity::Info,
+      });
+      contracts_.erase(contracts_.begin() + i);
+      continue;
+    }
+
+    // Delivery miss check
+    auto& rel = supplier->relationship(id_);
+    if (random::rand_percentage_chance(supplier->chance_of_no_delivery())) {
+      rel.delivery_issues_flag = 30;
+      game_state.status().post(StatusMsg{
+          .payload = compat::format("{}: {} has not delivered today!",
+                                    rest_name, supplier->name()),
+          .severity = StatusSeverity::Warning,
+      });
+      c.remaining_term--;
+      continue;
+    }
+
+    // Deliver the order
+    int difficulty = game_state.difficulty_level();
+    static constexpr float difficulty_multipliers[] = {0.6f, 0.8f, 1.0f, 1.5f,
+                                                       1.9f};
+    float diff_mult = difficulty_multipliers[std::clamp(difficulty - 1, 0, 4)];
+
+    for (const auto& item : c.items) {
+      Money price = supplier->calculate_price(
+          item.type, city->ingredient_base_price(item.type), diff_mult);
+      restaurant->purchase_ingredients(item.type, item.kg_per_day,
+                                       supplier->quality(), price);
+    }
+
+    // deliver_as_required: top up to 2x daily demand beyond ordered amount
+    Money extra_cost{0};
+    if (c.deliver_as_required) {
+      auto demand =
+          restaurant->calculate_daily_ingredient_demand_grams(recipes_);
+      for (const auto& item : c.items) {
+        int daily_grams = demand[item.type];
+        int current_grams =
+            restaurant->inventory().get_stock(item.type).quantity;
+        int cap_grams = 2 * daily_grams;
+        int headroom_grams = cap_grams - current_grams;
+        if (headroom_grams > 1000) {
+          int extra_kg = headroom_grams / 1000;
+          Money price = supplier->calculate_price(
+              item.type, city->ingredient_base_price(item.type), diff_mult);
+          restaurant->purchase_ingredients(item.type, extra_kg,
+                                           supplier->quality(), price);
+          extra_cost += price * extra_kg;
+        }
+      }
+    }
+
+    // Charge payment: sum, plus charge if they delivered extra
+    Money payment = c.daily_sum * (100 - c.discount_pct) / 100;
+    if (c.deliver_as_required && extra_cost.cents > 0) {
+      payment += c.charge;
+    }
+
+    if (!game_state.spend_cash(Account::Stock, payment)) {
+      rel.outstanding_debt += payment;
+      rel.missed_payment_penalty =
+          static_cast<uint8_t>(std::max(1, supplier->spending_rank(id_)));
+      // Ingredients delivered but not paid: record the expense against
+      // DeliveryDebts so it shows on the balance sheet.
+      financials_.transfer(game_state.time().current_date(),
+                           Account::DeliveryDebts, Account::Stock, payment,
+                           AccountingScope::Operational);
+      game_state.status().post(StatusMsg{
+          .payload = compat::format(
+              "{}: Delivery from {}: because of insolvency the amount will be "
+              "credited to the supplier.",
+              rest_name, supplier->name()),
+          .severity = StatusSeverity::Warning,
+      });
+    }
+    else {
+      game_state.status().post(StatusMsg{
+          .payload = compat::format("{}: Delivery from {} arrived.", rest_name,
+                                    supplier->name()),
+          .severity = StatusSeverity::Info,
+      });
+    }
+
+    rel.total_spent += c.daily_sum;
+    if (rel.delivery_issues_flag > 0) {
+      rel.delivery_issues_flag--;
+    }
+
+    c.remaining_term--;
+  }
+
+  // Daily retry for outstanding supplier debts; also decay
+  // missed_payment_penalty
+  for (City* city : game_state.initialized_cities()) {
+    for (const auto& s_ptr : city->suppliers()) {
+      auto& rel = s_ptr->relationship(id_);
+      if (rel.missed_payment_penalty > 0) {
+        rel.missed_payment_penalty--;
+      }
+      if (rel.outstanding_debt.cents <= 0) {
+        continue;
+      }
+      Money debt = rel.outstanding_debt;
+      if (game_state.spend_cash(Account::DeliveryDebts, debt)) {
+        rel.outstanding_debt = Money{0};
+        game_state.status().post(StatusMsg{
+            .payload =
+                compat::format("Your debts of {} have now been paid.", debt),
+            .severity = StatusSeverity::Info,
+        });
+      }
+      else {
+        game_state.status().post(StatusMsg{
+            .payload = compat::format(
+                "This is {}! You still owe me {}!!! If you do not pay this "
+                "amount by the end of this week, I will sue you!",
+                s_ptr->name(), debt),
+            .severity = StatusSeverity::Warning,
+        });
+      }
+    }
+  }
 }

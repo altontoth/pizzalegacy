@@ -8,13 +8,15 @@
 
 #include "core/city/Property.h"
 #include "core/state/GameState.h"
+#include "core/state/UIState.h"
 #include "resources/BlitmapManager.h"
 #include "views/ui/DemographicRenderer.h"
 
 using namespace views::screens::purchasing;
 
 Demographics::Demographics(GameContext& context, GameState& state)
-    : MainPanelView(context, state), restaurant_(state.active_restaurant()) {
+    : RestaurantSubView(context, state, state.active_restaurant()->id()),
+      restaurant_(state.active_restaurant()) {
   set_up_buttons();
 }
 
@@ -24,6 +26,11 @@ void Demographics::set_up_buttons() {
   input_panel_->add_button(Icon::ARROW_BACK, ButtonType::Square,
                            ButtonPosition::BottomRight, "Back",
                            [this] { state_.ui().pop(); });
+}
+
+void Demographics::navigate_to_restaurant(core::RestaurantId new_id) {
+  state_.active_restaurant(new_id);
+  state_.ui().replace_top<PurchasingDemographicState>(SupplierType::FURNITURE);
 }
 
 void Demographics::render(const RenderContext& ctx) {

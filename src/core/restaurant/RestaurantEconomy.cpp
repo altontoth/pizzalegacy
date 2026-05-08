@@ -5,7 +5,9 @@
  */
 
 #include "core/restaurant/RestaurantEconomy.h"
+
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include "core/Demographics.h"
 #include "core/city/City.h"
@@ -14,7 +16,6 @@
 #include "core/restaurant/Menu.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/state/GameState.h"
-#include "engine/Logger.h"
 
 namespace {
 int calculate_competition_penalty(const Restaurant& competitor,
@@ -68,7 +69,6 @@ void RestaurantEconomy::calculate_competitive_strength(
 
     value = std::max(value, 0);
 
-    // Diminishing returns via square root
     int sqrt_value = static_cast<int>(std::sqrt(value));
 
     // Apply quality rating
@@ -331,12 +331,4 @@ void RestaurantEconomy::calculate_demand_with_competition(
     demand_ratio_calc = (total_popularity_ * 100) / total_competition;
   }
   demand_ratio_ = std::clamp(demand_ratio_calc, 0, 100);
-
-  /*
-  Logger::debug("[Competition] {} - Competitors: {}, Total competition: {}, "
-                "Demand ratio: {}%, Strongest at ({},{})",
-                restaurant.name(), competitor_count_, total_competition,
-                demand_ratio_, strongest_competitor_x_,
-                strongest_competitor_y_);
-                */
 }

@@ -11,6 +11,7 @@
 #include "core/restaurant/PlacedFurniture.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/state/GameState.h"
+#include "core/state/UIState.h"
 #include "core/util/LegacyConstants.h"
 #include "engine/FormatCompat.h"
 #include "engine/geom/Spaces.h"
@@ -672,4 +673,9 @@ void CategoryOverviewScreen::draw_scrollable_text_box(
 
 SupplierType CategoryOverviewScreen::supplier_type() const {
   return supplier_type_;
+}
+
+void CategoryOverviewScreen::navigate_to_restaurant(core::RestaurantId new_id) {
+  state_.active_restaurant(new_id);
+  state_.ui().replace_top<CategoryOverviewState>(supplier_type_);
 }

@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include <string>
+
 class GameState;
 class Restaurant;
 
@@ -25,8 +27,11 @@ private:
   void do_price_adjustment();
   void do_turnover_monitoring();
 
+  void queue_alert(std::string message);
+
   Restaurant& restaurant_;
   GameState& game_state_;
+  bool alert_queued_{false};
 };
 
 } // namespace core::restaurant

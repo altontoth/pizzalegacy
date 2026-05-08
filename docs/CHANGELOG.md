@@ -1,4 +1,4 @@
-0.0.2 (2016-05-XX TBD)
+0.1.0 (2016-05-XX TBD)
 
 * Add missing screens
   * Daily profits

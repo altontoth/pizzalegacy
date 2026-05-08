@@ -988,9 +988,6 @@ void Restaurant::end_of_day(GameState& game_state) {
     core::restaurant::StaffEvents staff_events(this, &game_state);
     staff_events.daily_processing();
     pending_staff_events_ = staff_events.take_pending_dialogs();
-
-    core::restaurant::ManagerRoutine manager_routine(*this, game_state);
-    manager_routine.run_daily();
   }
 
   // Inspection countdown: only ticks while the restaurant is open.
@@ -1047,6 +1044,9 @@ void Restaurant::end_of_day(GameState& game_state) {
   economy_.calculate_demand_with_competition(*this, game_state);
   calculate_daily_pizza_sales_distribution(game_state);
   eod_batch_order_fulfillment(game_state);
+
+  core::restaurant::ManagerRoutine manager_routine(*this, game_state);
+  manager_routine.run_daily();
 }
 
 void Restaurant::eod_batch_order_fulfillment(class GameState& game_state) {
@@ -1084,30 +1084,19 @@ void Restaurant::eod_batch_order_fulfillment(class GameState& game_state) {
       int manager_capacity = manager_->pizzas_per_day();
       if (chef_capacity < total_orders && chef_capacity <= waiter_capacity) {
         chef_capacity += manager_capacity;
-        manager_augmenting_ = 1;
+        manager_filled_in_as_ = core::character::JobRole::CHEF;
       }
       else if (waiter_capacity < total_orders) {
         waiter_capacity += manager_capacity;
-        manager_augmenting_ = 2;
+        manager_filled_in_as_ = core::character::JobRole::WAITER;
       }
     }
     else if (settings.staff_shortage == ManagerReaction::CallMe) {
-      // TODO: CallMe needs to be a popup, not a status message
       if (chef_capacity < total_orders) {
-        game_state.status().post(StatusMsg{
-            .payload = compat::format(
-                "Boss! In restaurant {} we haven't got enough cooks!", name_),
-            .severity = StatusSeverity::Warning,
-            .scope = StatusScope::Restaurant,
-        });
+        manager_staff_shortage_ = core::character::JobRole::CHEF;
       }
       if (waiter_capacity < total_orders) {
-        game_state.status().post(StatusMsg{
-            .payload = compat::format(
-                "Boss! In restaurant {} we haven't got enough waiters!", name_),
-            .severity = StatusSeverity::Warning,
-            .scope = StatusScope::Restaurant,
-        });
+        manager_staff_shortage_ = core::character::JobRole::WAITER;
       }
     }
   }
@@ -1522,8 +1511,10 @@ Restaurant::get_recipe_requirements_grams(const core::food::Recipe& recipe) {
   std::vector<std::pair<core::food::IngredientType, int>> requirements;
   for (int i = 0; i < max_ingredient_count; i++) {
     if (ingredient_grams[i] > 0) {
+      // Original uses units of 10 grams
+      int rounded = ((ingredient_grams[i] + 9) / 10) * 10;
       requirements.emplace_back(static_cast<core::food::IngredientType>(i),
-                                ingredient_grams[i]);
+                                rounded);
     }
   }
 
@@ -1747,11 +1738,11 @@ void Restaurant::calculate_popularity(const Player& player,
   if (service_time_minutes_ > 0 && district.service_quality_factor() > 0) {
     int raw_bonus =
         (18 - service_time_minutes_) * district.service_quality_factor();
-    popularity_.WaitingTime = std::clamp(raw_bonus / 50, -127, 127);
+    popularity_.waiting_time = std::clamp(raw_bonus / 50, -127, 127);
   }
 
   // PizzaPrices: seems disabled in the original
-  popularity_.PizzaPrices = 0;
+  popularity_.pizza_prices = 0;
 
   // RecipesOnMenu: penalize < 3 canonical pizzas, reward exceeding district
   // desired counts for both user and canonical pizzas
@@ -1775,25 +1766,25 @@ void Restaurant::calculate_popularity(const Player& player,
   int canonical_desire = district.minimum_desired_canonical_pizza_count();
   int adjustment = (canonical_pizza_count - canonical_desire) * 2;
   component2_score += adjustment;
-  popularity_.RecipesOnMenu = component2_score;
+  popularity_.recipes_on_menu = component2_score;
 
   // Advertising: total_effectiveness / 2
   int total_ad_effectiveness = player.total_advertising_effectiveness();
-  popularity_.Advertising = total_ad_effectiveness / 2;
+  popularity_.advertising = total_ad_effectiveness / 2;
 
   // StarRating: stars^2 + (stars > 0 ? 4 : 0)
   int star_bonus = star_rating_ * star_rating_;
   if (star_rating_ > 0) {
     star_bonus += 4;
   }
-  popularity_.StarRating = std::min(star_bonus, 127);
+  popularity_.star_rating = std::min(star_bonus, 127);
 
   // Furnishing: also seems disabled in the original
-  popularity_.Furnishing = 0;
+  popularity_.furnishing = 0;
 
   // DemandFulfillment: penalty for unmet demand
   int fulfillment_penalty = -((100 - fulfillment_rate_) / 8);
-  popularity_.DemandFulfillment = fulfillment_penalty;
+  popularity_.demand_fulfillment = fulfillment_penalty;
 
   // UnexpectedEvents: last non-zero penalty from the 4 event slots
   int last_nonzero_penalty = 0;
@@ -1802,7 +1793,7 @@ void Restaurant::calculate_popularity(const Player& player,
       last_nonzero_penalty = event_reputation_penalties_[i];
     }
   }
-  popularity_.UnexpectedEvents = std::clamp(last_nonzero_penalty, -127, 127);
+  popularity_.unexpected_events = std::clamp(last_nonzero_penalty, -127, 127);
 }
 
 int Restaurant::total_popularity() const { return popularity_.total(); }
@@ -1814,7 +1805,7 @@ int Restaurant::sync_reputation_and_total_popularity() {
       last_nonzero = event_reputation_penalties_[i];
     }
   }
-  popularity_.UnexpectedEvents = std::clamp(last_nonzero, -127, 127);
+  popularity_.unexpected_events = std::clamp(last_nonzero, -127, 127);
   return total_popularity();
 }
 
@@ -1829,7 +1820,10 @@ Money Restaurant::purchase_ingredients(core::food::IngredientType type,
                                        int quantity_kg, int quality,
                                        Money price_per_kg) {
   Money total_cost = Money{price_per_kg.cents * quantity_kg};
-  inventory_.add_ingredient(type, quantity_kg * 1000, quality, price_per_kg);
+  int current_grams = inventory_.get_stock(type).quantity;
+  int headroom_kg = (max_ingredient_stock_kg * 1000 - current_grams) / 1000;
+  int capped_kg = std::min(quantity_kg, std::max(headroom_kg, 0));
+  inventory_.add_ingredient(type, capped_kg * 1000, quality, price_per_kg);
 
   int ing_id = static_cast<int>(type);
   for (int cat_idx = 0; cat_idx < 4; ++cat_idx) {

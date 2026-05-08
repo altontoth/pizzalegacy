@@ -6,14 +6,15 @@
 
 #pragma once
 
-#include "views/base/MainPanelView.h"
+#include "views/base/RestaurantSubView.h"
 #include "views/ui/status/StatusController.h"
 
-class PurchasingMain : public MainPanelView {
+class PurchasingMain : public RestaurantSubView {
 public:
   PurchasingMain(GameContext& context, GameState& state);
   void tick() override;
   void render(const RenderContext& ctx) override;
   virtual void set_up_input_panel();
+  void navigate_to_restaurant(core::RestaurantId new_id) override;
   StatusController status_controller_;
 };

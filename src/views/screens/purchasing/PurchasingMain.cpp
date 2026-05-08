@@ -13,7 +13,8 @@
 #include "resources/FontManager.h"
 
 PurchasingMain::PurchasingMain(GameContext& context, GameState& state)
-    : MainPanelView(context, state), status_controller_(state.status()) {
+    : RestaurantSubView(context, state, state.active_restaurant()->id()),
+      status_controller_(state.status()) {
   set_up_input_panel();
   status_controller_.show_restaurant({.state = &state_,
                                       .rest = state_.active_restaurant(),
@@ -36,6 +37,11 @@ void PurchasingMain::render(const RenderContext& ctx) {
                                   ViewPoint{162, 124}, FontFace::PIZ_NUMB, 8);
   context_.font->render_text_onto(*ctx.surface, "Equipment",
                                   ViewPoint{166, 148}, FontFace::PIZ_NUMB, 8);
+}
+
+void PurchasingMain::navigate_to_restaurant(core::RestaurantId new_id) {
+  state_.active_restaurant(new_id);
+  state_.ui().replace_top<PurchasingState>(SupplierType::FURNITURE);
 }
 
 void PurchasingMain::set_up_input_panel() {

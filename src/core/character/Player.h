@@ -22,7 +22,10 @@
 #include "core/food/PlayerRecipes.h"
 #include "core/inventory/Inventory.h"
 #include "core/marketing/AdvertisingCampaign.h"
+#include "core/supply/ActiveContract.h"
 #include "core/time/TimeOfDay.h"
+
+enum class PlayerStatus { Active, InPrison, Eliminated };
 
 class Player {
   friend std::ostream& operator<<(std::ostream& os, const Player& player);
@@ -41,7 +44,12 @@ public:
   uint8_t start_of_day_hour() const { return start_of_day_hour_; }
   void start_of_day_hour(uint8_t h) { start_of_day_hour_ = h; }
   bool is_human_controlled() const;
-  int contract_count_for_city(core::CityId city) const { return 0; }
+  int contract_count_for_city(core::CityId city) const;
+
+  void add_contract(ActiveContract contract);
+  const std::vector<ActiveContract>& contracts() const { return contracts_; }
+  std::vector<ActiveContract>& contracts() { return contracts_; }
+  void remove_contract(size_t index);
   int restaurant_count_for_city(core::CityId city) const { return 1; }
   int recipe_count() const {
     return static_cast<int>(recipes_.recipe_count());
@@ -54,6 +62,9 @@ public:
   bool is_in_jail() const;
   std::optional<int> jail_days_left() const;
   void decrement_jail_day();
+  PlayerStatus status() const { return status_; }
+  void eliminate() { status_ = PlayerStatus::Eliminated; }
+  void restore_active() { status_ = PlayerStatus::Active; }
   void end_of_day(class GameState& game_state);
   void end_of_week(class GameState& game_state);
   void on_food_shop_visit();
@@ -165,6 +176,7 @@ private:
   core::PlayerId id_;
   core::character::Character character_;
   PlayerFinancials financials_;
+  PlayerStatus status_{PlayerStatus::Active};
   int jail_time_{0};
   int criminal_record_{0};
   std::optional<int> jail_days_left_;
@@ -185,6 +197,7 @@ private:
   // 10 pizza slots with production history
   std::array<AiMenuSlot, 10> ai_menu_slots_{};
   void check_ai_expansion(class GameState& game_state);
+  void process_contracts(class GameState& game_state);
 
   std::array<std::optional<AdvertisingCampaign>, 4> campaigns_;
   MafiaPlayerState mafia_state_;
@@ -194,4 +207,5 @@ private:
   std::unordered_set<core::CityId> visited_city_ids_;
   uint8_t competition_willingness_{0};
   uint8_t competition_win_count_{0};
+  std::vector<ActiveContract> contracts_;
 };

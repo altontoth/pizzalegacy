@@ -12,6 +12,7 @@
 #include "core/restaurant/Restaurant.h"
 #include "core/restaurant/RestaurantLayout.h"
 #include "core/state/GameState.h"
+#include "core/state/UIState.h"
 #include "core/util/LegacyConstants.h"
 #include "engine/FormatCompat.h"
 #include "engine/Random.h"
@@ -25,7 +26,7 @@
 
 AnimatedStats::AnimatedStats(GameContext& context, GameState& state,
                              core::RestaurantId restaurant_id)
-    : MainPanelView(context, state), restaurant_id_(restaurant_id),
+    : RestaurantSubView(context, state, restaurant_id),
       lebbo_bob_(context_.bob->get("bob/lebbo.bob")) {
 
   restaurant_ = state_.restaurant(restaurant_id_);
@@ -622,19 +623,34 @@ void AnimatedStats::render_capacity(const RenderContext& ctx) {
                                 capacity_bar_start.y});
   }
 
-  // Draw labels (only when animation is complete)
-  // TODO: This is not quite right yet
+  // Draw labels once both bars have finished animating.
+  // If the bar is wide enough (>= 52 scaled units = 104px in 2x), the label
+  // fits inside the bar; otherwise it appears just after the bar end.
+  // Mirrors the assembly threshold: sub_3578D(value) + 58 >= 0x6E.
   if (anim_phase_ >= 3) {
+    constexpr int LABEL_INSIDE_THRESHOLD = 104; // 52 scaled units * 2x
+    constexpr int LABEL_INSIDE_X_OFFSET = 12;   // 6 original pixels * 2x
+    constexpr int LABEL_OUTSIDE_GAP = 26;       // 13 original pixels * 2x
+    constexpr int LABEL_Y_OFFSET = 14;
+
+    int demand_label_x =
+        (demand_pixels_to_show >= LABEL_INSIDE_THRESHOLD)
+            ? demand_bar_start.x + LABEL_INSIDE_X_OFFSET
+            : demand_bar_start.x + demand_pixels_to_show + LABEL_OUTSIDE_GAP;
     context_.font->render_text_onto(
         *ctx.surface, "demand",
-        ViewPoint{demand_bar_start.x + demand_pixels_to_show + 8,
-                  demand_bar_start.y + 4},
-        FontFace::PIZ_NUMB, 0, AlignX::Left);
+        ViewPoint{demand_label_x, demand_bar_start.y + LABEL_Y_OFFSET},
+        FontFace::PIZ_NUMB, 240, AlignX::Left);
+
+    int capacity_label_x = (capacity_pixels_to_show >= LABEL_INSIDE_THRESHOLD)
+                               ? capacity_bar_start.x + LABEL_INSIDE_X_OFFSET
+                               : capacity_bar_start.x +
+                                     capacity_pixels_to_show +
+                                     LABEL_OUTSIDE_GAP;
     context_.font->render_text_onto(
         *ctx.surface, "capacity",
-        ViewPoint{capacity_bar_start.x + capacity_pixels_to_show + 8,
-                  capacity_bar_start.y + 4},
-        FontFace::PIZ_NUMB, 0, AlignX::Left);
+        ViewPoint{capacity_label_x, capacity_bar_start.y + LABEL_Y_OFFSET},
+        FontFace::PIZ_NUMB, 240, AlignX::Left);
   }
 }
 
@@ -805,7 +821,7 @@ void AnimatedStats::render_turnover(const RenderContext& ctx) {
       AlignX::Left);
 
   context_.font->render_text_onto(
-      *ctx.surface, compat::format("{}", stats.yesterday.fixed_costs),
+      *ctx.surface, compat::format("{}", stats.yesterday.total_expenditure()),
       ViewPoint{expenses_value_x, value_y}, FontFace::ASTANDAR, 12,
       AlignX::Left);
 }
@@ -965,6 +981,11 @@ void AnimatedStats::reset_animation() {
                   pizza_quality_values_[2], pizza_quality_values_[3],
                   restaurant_->pizza_quality_rating());
   }
+}
+
+void AnimatedStats::navigate_to_restaurant(core::RestaurantId new_id) {
+  state_.active_restaurant(new_id);
+  state_.ui().replace_top<AnimatedStatsState>(new_id);
 }
 
 void AnimatedStats::calculate_capacity_stats() {

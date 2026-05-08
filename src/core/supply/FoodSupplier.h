@@ -37,7 +37,7 @@ public:
 
   SupplierRelationship& relationship(core::PlayerId player_id);
   const SupplierRelationship& relationship(core::PlayerId player_id) const;
-  int customer_tier(core::PlayerId player_id) const;
+  int spending_rank(core::PlayerId player_id) const;
 
   // Get price level for a specific ingredient ID
   uint8_t

@@ -10,6 +10,7 @@
 #include "core/init/NewGameConfig.h"
 #include "core/state/GameState.h"
 #include "views/screens/menus/MenuTheme.h"
+#include "views/ui/widgets/PositionMarkerMenuItem.h"
 #include "views/ui/widgets/SpacerMenuItem.h"
 #include "views/ui/widgets/TextMenuItem.h"
 
@@ -44,6 +45,10 @@ DifficultySelection::DifficultySelection(GameContext& context, GameState& state)
     add_menu_item(
         std::make_unique<SpacerMenuItem>(context, space_between_lines));
   }
+  add_menu_item(std::make_unique<PositionMarkerMenuItem>(context, 270, 244));
+  add_menu_item(std::make_unique<TextMenuItem>(
+      context, "Back", [this] { state_.ui().pop(); }, FontFace::RUBY, style,
+      sel_style));
 }
 
 Surface DifficultySelection::background() const {

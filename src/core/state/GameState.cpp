@@ -474,6 +474,12 @@ void GameState::advance_game_time() {
   check_police_events();
   process_pending_messages();
 
+  // Fire manager call-me alerts at 9 AM (restaurant open time).
+  if (!end_of_turn_state_ && !prevent_auto_end_of_turn_ &&
+      !deferred_manager_alerts_.empty() && time_.is_past_time(9, 0)) {
+    show_next_deferred_manager_alert();
+  }
+
   // Fire deferred staff event dialogs at 10 AM the next day. The check runs
   // on every block while time >= 10:00, matching the original's behaviour
   // where the popup fires at the first update_status_and_time call >= 0x3C.
@@ -527,6 +533,15 @@ void GameState::deliver_message(core::events::LeventId msg_id,
     ui_.push<FullscreenStatusState>(std::move(fss));
   }
   message_manager_.mark_as_shown(msg_id, player->id());
+}
+
+void GameState::eliminate_player(core::PlayerId id, GameOverCause cause) {
+  auto* p = player(id);
+  if (!p || p->status() == PlayerStatus::Eliminated) {
+    return;
+  }
+  p->eliminate();
+  ui_.push<GameOverState>(id, cause);
 }
 
 void GameState::process_pending_messages() {
@@ -772,6 +787,33 @@ void GameState::show_next_deferred_staff_event() {
 
   show_staff_event_dialog(deferred.event, restaurant,
                           [this]() { show_next_deferred_staff_event(); });
+}
+
+void GameState::queue_manager_alert(core::RestaurantId rid,
+                                    std::string message) {
+  deferred_manager_alerts_.push_back({rid, std::move(message)});
+}
+
+void GameState::show_next_deferred_manager_alert() {
+  if (deferred_manager_alerts_.empty()) {
+    return;
+  }
+
+  auto alert = deferred_manager_alerts_.front();
+  deferred_manager_alerts_.erase(deferred_manager_alerts_.begin());
+
+  auto* restaurant = this->restaurant(alert.restaurant_id);
+  const RawRenderable* manager_pic = nullptr;
+  if (restaurant) {
+    const auto& mgr = restaurant->manager();
+    if (mgr) {
+      manager_pic = CharacterFactory::create_character(mgr->character().id());
+    }
+  }
+
+  context_->popup->create<AlertPopup>(
+      std::move(alert.message),
+      [this]() { show_next_deferred_manager_alert(); }, manager_pic);
 }
 
 void GameState::trigger_mayor_inspection(core::RestaurantId rid,
@@ -1612,6 +1654,8 @@ void GameState::end_of_day() {
     check_market_share_milestones(*city);
   }
 
+  check_world_domination();
+
   process_depot_theft();
 
   // Clear actor refused calls (realtors cool down overnight)
@@ -1663,6 +1707,31 @@ void GameState::check_market_share_milestones(const City& city) {
           LeventId::Achieved10PctMarketShareInCity, pid, time_.current_date());
     }
   }
+}
+
+void GameState::check_world_domination() {
+  auto* p = active_player();
+  if (!p || !p->is_human_controlled()) {
+    return;
+  }
+  if (p->status() != PlayerStatus::Active) {
+    return;
+  }
+
+  // Must have visited and have data for all 10 cities.
+  auto cities = initialized_cities();
+  if (static_cast<int>(cities.size()) < NUMBER_OF_CITIES) {
+    return;
+  }
+
+  constexpr float win_threshold = 5.0f;
+  for (auto* city : cities) {
+    if (city->control_map().player_percentage(p->id().value) < win_threshold) {
+      return;
+    }
+  }
+
+  eliminate_player(p->id(), GameOverCause::WorldDomination);
 }
 
 void GameState::check_restaurant_milestones(const Player& player) {

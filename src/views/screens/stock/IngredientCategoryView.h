@@ -28,6 +28,7 @@ protected:
   void draw_ingredient_list(const RenderContext& ctx);
   void draw_icon(const RenderContext& ctx);
   void set_up_input_panel() override;
+  void navigate_to_restaurant(core::RestaurantId new_id) override;
 
   IngredientCategory category() const { return category_; }
   SupplierType category_to_supplier_type(IngredientCategory cat) const;

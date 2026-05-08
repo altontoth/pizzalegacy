@@ -82,20 +82,34 @@ Examples:
         }
         int mafia_id = mafia_actors[0]->id();
 
-        core::RestaurantId rid{0};
+        Restaurant* restaurant = nullptr;
         if (!ctx.args.empty()) {
-          rid = core::RestaurantId{static_cast<int>(ctx.int_arg(0))};
+          auto rid = core::RestaurantId{static_cast<int>(ctx.int_arg(0))};
+          restaurant = ctx.state.restaurant(rid);
+          if (!restaurant) {
+            return CommandResult::error(
+                compat::format("Restaurant {} not found", rid.value));
+          }
         }
-        auto* restaurant = ctx.state.restaurant(rid);
+        else {
+          auto* player = ctx.state.active_player();
+          auto owned = ctx.state.restaurants_for(player->id());
+          if (owned.empty()) {
+            return CommandResult::error("Active player has no restaurants");
+          }
+          restaurant = owned[0];
+        }
         if (!restaurant) {
-          return CommandResult::error(
-              compat::format("Restaurant {} not found", rid.value));
+          return CommandResult::error("No restaurant found");
         }
 
+        auto rid = restaurant->id();
+        bool first = !restaurant->protection_timer().has_value();
         ctx.state.ui().push<MafiaState>(
             MafiaState{.id = mafia_id,
                        .mode = MafiaMode::ProtectionRacketOffer,
-                       .restaurant_id = rid});
+                       .restaurant_id = rid,
+                       .first_contact = first});
         return CommandResult::success().add_message(compat::format(
             "Triggered mafia shakedown for restaurant {}", rid.value));
       },

@@ -30,6 +30,7 @@ class Pizza;
 class Property;
 
 constexpr int MAXIMUM_STAFF_PER_CATEGORY = 6;
+constexpr int max_ingredient_stock_kg = 650;
 
 enum class OpenImpossibleReason {
   Success,
@@ -134,23 +135,23 @@ struct PizzaQualityFactors {
 };
 
 struct RestaurantPopularity {
-  int WaitingTime = 0;
-  int PizzaPrices = 0;
-  int RecipesOnMenu = 0;
-  int Advertising = 0;
-  int StarRating = 0;
-  int Furnishing = 0;
-  int DemandFulfillment = 0;
-  int UnexpectedEvents = 0;
+  int waiting_time = 0;
+  int pizza_prices = 0;
+  int recipes_on_menu = 0;
+  int advertising = 0;
+  int star_rating = 0;
+  int furnishing = 0;
+  int demand_fulfillment = 0;
+  int unexpected_events = 0;
 
   std::array<int, 8> as_array() const {
-    return {WaitingTime, PizzaPrices, RecipesOnMenu,     Advertising,
-            StarRating,  Furnishing,  DemandFulfillment, UnexpectedEvents};
+    return {waiting_time, pizza_prices, recipes_on_menu,    advertising,
+            star_rating,  furnishing,   demand_fulfillment, unexpected_events};
   }
 
   int total() const {
-    return WaitingTime + PizzaPrices + RecipesOnMenu + Advertising +
-           StarRating + Furnishing + DemandFulfillment + UnexpectedEvents;
+    return waiting_time + pizza_prices + recipes_on_menu + advertising +
+           star_rating + furnishing + demand_fulfillment + unexpected_events;
   }
 };
 
@@ -277,12 +278,11 @@ public:
 
   int calculate_weighted_average_oven_time() const;
 
-  // Formula: max(chef_time, oven_time) + waiter_time + demographic_eating_time
   int calculate_service_time_minutes(ConsumerType demographic) const;
   // Weighted average across demographics using actual customer mix
   int calculate_service_time_minutes() const;
 
-  // Throughput for a 10-minute block: (10 * seat_count) / service_time
+  // Throughput for a 10-minute block
   int calculate_block_throughput(ConsumerType demographic) const;
   int calculate_block_throughput() const;
 
@@ -376,7 +376,7 @@ public:
   static constexpr int NUM_INGREDIENT_CATEGORIES = 4;
 
   // Manager shopping: preferred supplier ID per ingredient category.
-  // 0xFF = none set (manager picks first available supplier).
+  // If not set manager picks first available supplier.
   std::array<std::optional<int>, NUM_INGREDIENT_CATEGORIES>&
   preferred_suppliers() {
     return preferred_suppliers_;
@@ -386,11 +386,20 @@ public:
     return preferred_suppliers_;
   }
 
-  // Manager staff shortage augmentation: tracks which role the manager
-  // helped with yesterday (0 = none, 1 = cook, 2 = waiter).
-  // TODO: Change to an enum
-  int manager_augmenting() const { return manager_augmenting_; }
-  void set_manager_augmenting(int role) { manager_augmenting_ = role; }
+  core::character::JobRole manager_filled_in_as() const {
+    return manager_filled_in_as_;
+  }
+  void set_manager_filled_in_as(core::character::JobRole role) {
+    manager_filled_in_as_ = role;
+  }
+
+  // Which staff role was short when CallMe is set.
+  core::character::JobRole manager_staff_shortage() const {
+    return manager_staff_shortage_;
+  }
+  void set_manager_staff_shortage(core::character::JobRole role) {
+    manager_staff_shortage_ = role;
+  }
 
   auto& top_ingredients() { return top_ingredients_; }
   const auto& top_ingredients() const { return top_ingredients_; }
@@ -403,7 +412,7 @@ public:
   void calculate_popularity(const class Player& player, const class City& city,
                             const class District& district);
 
-  // Re-reads reputation slots into popularity_.UnexpectedEvents so mid-day
+  // Re-reads reputation slots into popularity_.unexpected_events so mid-day
   // changes (e.g. forced closure) are captured before daily decay.
   int sync_reputation_and_total_popularity();
 
@@ -436,8 +445,6 @@ private:
   core::RestaurantId restaurant_id_{0};
   std::string name_;
   std::unique_ptr<RestaurantLayout> layout_;
-  // Mayor awards stars when pizza_quality > star_rating * 16 + 24,
-  // removes one when pizza_quality < star_rating * 16 + 8.
   int star_rating_{0};
   std::array<std::optional<Staff>, MAXIMUM_STAFF_PER_CATEGORY> cooks_;
   std::array<std::optional<Staff>, MAXIMUM_STAFF_PER_CATEGORY> waiters_;
@@ -452,8 +459,7 @@ private:
   std::optional<int> protection_timer_;
   std::vector<core::restaurant::StaffEventData> pending_staff_events_;
 
-  // Mayor inspection countdown. Ticks down each open day.
-  // When it reaches 0 an inspection is queued.
+  // Mayor inspection countdown
   int inspection_days_remaining_{engine::random::rand_max_n(20) + 12};
   bool first_inspection_pending_{true};
   std::optional<bool> pending_inspection_; // true=first, false=regular
@@ -489,15 +495,14 @@ private:
   // Decremented each start_of_day; at 0 the restaurant is eligible to open.
   int forced_days_remaining_{0};
 
-  // Manager preferred supplier ID per ingredient category (0=veg,1=meat,
-  // 2=fruit, 3=cheese). 0xFF means no preference - use first available.
   std::array<std::optional<int>, NUM_INGREDIENT_CATEGORIES>
       preferred_suppliers_{std::nullopt, std::nullopt, std::nullopt,
                            std::nullopt};
 
-  // Manager augmentation flag: which role the manager helped with today
-  // (0 = none, 1 = cook, 2 = waiter). Read and cleared next morning.
-  int manager_augmenting_{0};
+  core::character::JobRole manager_filled_in_as_{
+      core::character::JobRole::NONE};
+  core::character::JobRole manager_staff_shortage_{
+      core::character::JobRole::NONE};
 
   // 0 = human, 1-4 = AI tier level
   int ai_tier_{0};
