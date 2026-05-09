@@ -309,10 +309,10 @@ void Game::run() {
   Logger::info("Logger initialized");
 
   OverlayManager overlays;
+  overlays.push<TooltipLayer>(context, state, *tooltip_manager_);
+
   auto& popup_mgr = overlays.push<PopupManager>(context);
   context.popup = &popup_mgr;
-
-  overlays.push<TooltipLayer>(context, state, *tooltip_manager_);
   overlays.push<PauseLayer>(context, state);
 
   auto& debug_mgr = overlays.push<DebugLayer>(context, state);
