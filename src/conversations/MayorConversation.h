@@ -47,7 +47,6 @@ private:
   bool active_player_won() const;
 
   MayorOffice& mayor_office_;
-  MayorConversationType conv_type_;
   std::optional<InspectionOutcome> inspection_outcome_;
   std::optional<int> award_winner_player_id_;
   std::string restaurant_name_;

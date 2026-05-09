@@ -356,7 +356,7 @@ StatusController::build_restaurant(const RestaurantCtx& rctx) {
   const int waiting_min = rest->calculate_service_time_minutes();
   const int stay_min =
       static_cast<int>(rest->calculate_service_time_data().avg_seating_time);
-  const int local_share = 0; // TODO: Not yet implemented
+  const int local_share = rest->economy().demand_ratio();
 
   r.add_two_column("POPULARITY", std::to_string(popularity));
   r.add_two_column("COOKS", std::to_string(cooks));

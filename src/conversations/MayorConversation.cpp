@@ -21,7 +21,7 @@ MayorConversation::MayorConversation(GameState& state, const Actor* actor,
                                      std::string restaurant_name)
     : BaseConversation(compute_start_line(state, actor, mt, mo), state,
                        "t/bg.e", actor),
-      mayor_office_(mo), conv_type_(mt), inspection_outcome_(outcome),
+      mayor_office_(mo), inspection_outcome_(outcome),
       award_winner_player_id_(award_winner_player_id),
       restaurant_name_(std::move(restaurant_name)) {
 
@@ -77,6 +77,17 @@ bool MayorConversation::advance() {
   case MayorLine::QUALITY_FALLEN_STAR_REMOVED:
   case MayorLine::QUALITY_NOT_CHANGED:
   case MayorLine::YOU_NEED_TO_WORK_ON_YOUR_QUALITY_NO_STAR:
+    if (inspection_outcome_) {
+      auto* player = state_.active_player();
+      if (player) {
+        if (inspection_outcome_->star_gained) {
+          state_.adjust_social_score(*player, 40);
+        }
+        else if (inspection_outcome_->star_lost) {
+          state_.adjust_social_score(*player, -30);
+        }
+      }
+    }
     current_line(MayorLine::ILL_LOOK_AGAIN_WHEN_I_CAN);
     break;
 

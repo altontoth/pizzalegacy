@@ -10,6 +10,7 @@
 
 #include "core/city/CentralDepot.h"
 #include "core/city/City.h"
+#include "core/finance/Money.h"
 #include "core/food/IngredientCategory.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/state/GameState.h"
@@ -238,6 +239,8 @@ void IngredientCategoryView::draw_ingredient_list(const RenderContext& ctx) {
   int y = topleft.y + 20;
   const int line_height = 12;
 
+  Money depot_total_value{};
+
   for (int ing_id = start_id; ing_id < end_id; ing_id++) {
     auto* ingredient = IngredientFactory::create_ingredient(ing_id);
     if (!ingredient) {
@@ -248,6 +251,10 @@ void IngredientCategoryView::draw_ingredient_list(const RenderContext& ctx) {
     const auto* stock =
         is_depot ? depot_ptr->get_ingredient_stock(ing_id)
                  : inventory.get_ingredient_stock(ingredient->type());
+
+    if (is_depot && stock) {
+      depot_total_value = depot_total_value + stock->total_value();
+    }
     int quality = stock ? stock->weighted_avg_quality : 0;
     int supplies = stock ? stock->quantity / 1000 : 0;
 
@@ -308,13 +315,12 @@ void IngredientCategoryView::draw_ingredient_list(const RenderContext& ctx) {
   }
 
   if (is_depot) {
-    int total_sum = 0; // TODO: calculate sum value
     context_.font->render_text_onto(*ctx.surface, "sum value",
                                     ViewPoint{96, 320}, FontFace::CSTANDAR,
-                                    text_color, AlignX::Right);
-    context_.font->render_text_onto(*ctx.surface, std::to_string(total_sum),
-                                    ViewPoint{232, 320}, FontFace::CSTANDAR,
-                                    text_color, AlignX::Right);
+                                    text_color, AlignX::Left);
+    context_.font->render_text_onto(
+        *ctx.surface, compat::format("{}", depot_total_value),
+        ViewPoint{312, 320}, FontFace::CSTANDAR, text_color, AlignX::RightEdge);
   }
 }
 

@@ -717,7 +717,6 @@ void AnimatedStats::render_popularity(const RenderContext& ctx) {
     else if (i == anim_sub_progress_) {
       // Currently animating this demographic
       current_fill_y = BAR_FILL_START - anim_progress_;
-      // Clamp to target TODO
       current_fill_y = std::max(current_fill_y, target_y_values[i]);
     }
     // else: not yet animated, stays at BAR_FILL_START (no fill)

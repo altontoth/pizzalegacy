@@ -1089,7 +1089,6 @@ void Game::create_some_players(GameState& state) {
         core::PlayerId{i},
         core::character::Character(CharacterFactory::create_character(i)));
     players[i]->name(std::string("Player " + std::to_string(i)));
-    // players[i]->increase_money(10000); TODO
   }
   state.players(std::move(players));
 }

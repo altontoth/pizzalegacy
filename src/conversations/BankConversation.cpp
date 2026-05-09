@@ -25,6 +25,7 @@ BankConversation::BankConversation(GameState& state, const Actor* actor,
 /* This advances only the lines that don't require user choices */
 bool BankConversation::advance() {
   switch (current_line_) {
+  case BankLine::ACCOUNT_OVERDRAWN:
   case BankLine::HELLO_MAY_I_HELP_YOU:
   case BankLine::SORRY_ALREADY_HAVE_LOAN:
   case BankLine::GOOD_LUCK_WITH_INVESTMENTS:
@@ -332,8 +333,6 @@ std::vector<ConversationLine<BankLine>> BankConversation::lines() const {
     };
     break;
   case BankLine::HELLO_MAY_I_HELP_YOU:
-    // TODO: When user is overdrawn show 'Your account is overdrawn. May we
-    // suggest..." line instead.
     return {
         make_text_line(BankLine::HELLO_MAY_I_HELP_YOU, actor_->name() + ". "),
     };
@@ -435,6 +434,10 @@ int BankConversation::round_to_nearest(int value, int rounding_unit) const {
 
 BankLine BankConversation::compute_start_line(const GameState& state,
                                               const Actor*) {
+  auto* player = state.active_player();
+  if (player && player->cash_balance().cents < 0) {
+    return BankLine::ACCOUNT_OVERDRAWN;
+  }
   return BankLine::HELLO_MAY_I_HELP_YOU;
 }
 

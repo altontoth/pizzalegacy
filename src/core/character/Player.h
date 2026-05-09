@@ -68,6 +68,7 @@ public:
   void end_of_day(class GameState& game_state);
   void end_of_week(class GameState& game_state);
   void on_food_shop_visit();
+  void on_city_travel();
   void add_loan(core::CityId city_id, Loan loan, GameDate date);
   std::vector<Loan>& loans_in_city(core::CityId city_id);
   const std::vector<Loan>& loans_in_city(core::CityId city_id) const;

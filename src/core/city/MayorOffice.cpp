@@ -82,9 +82,7 @@ MayorOffice::process_daily_scheduling(const GameDate& date, int player_count,
     return events;
   }
 
-  // December 31: Pizza of the Year (always a ceremony)
-  // TODO: Pizza of the Year involves player-interactive pizza design.
-  // The winner is not yet determined here; GameState must resolve it.
+  // Pizza of the Year
   if (month == 12 && day == 31) {
     events.push_back({.type = MayorAwardType::PizzaOfTheYear,
                       .winner_player_id = std::nullopt,

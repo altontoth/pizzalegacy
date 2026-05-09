@@ -9,6 +9,7 @@
 #include <cmath>
 #include <cstdlib>
 
+#include "core/character/Player.h"
 #include "core/city/City.h"
 #include "core/city/Property.h"
 #include "core/common/Ids.h"
@@ -401,6 +402,11 @@ void EuroMap::attempt_flight() {
   if (!state_.spend_cash(Account::Others, amount)) {
     return;
   }
+
+  if (auto* player = state_.active_player()) {
+    player->on_city_travel();
+  }
+
   state_.ui().push<CityViewState>(
       core::CityId{static_cast<int>(last_clicked_city_)});
 }

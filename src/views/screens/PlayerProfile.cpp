@@ -10,6 +10,8 @@
 #include "core/character/Character.h"
 #include "core/character/Player.h"
 #include "core/character/SocialStatus.h"
+#include "core/city/Property.h"
+#include "core/finance/Money.h"
 #include "core/state/GameState.h"
 #include "core/status/StatusHub.h"
 #include "core/util/Constants.h"
@@ -504,29 +506,29 @@ Surface PlayerProfile::create_company(const Player* player) {
   constexpr int text_color = 240;
   auto* font = context_.font;
 
-  // "Restaurant chain" centered at top
+  // Restaurant chain
   font->render_text_onto(page, "Restaurant chain", {192, 24},
                          FontFace::PIZ_NUMB, text_color, AlignX::CenterPoint);
 
-  // Company name (player name)
+  // Company name
   font->render_text_onto(page, player->name(), {192, 48}, FontFace::PIZ_NUMB,
                          text_color, AlignX::CenterPoint);
 
-  // "Owner: FirstName LastName"
+  // Owner: name
   const auto& character = player->character();
   std::string owner_line = compat::format(
       "Owner: {} {}", character.first_name(), character.last_name());
   font->render_line_onto(page, owner_line, {62, 68}, FontFace::PIZ_NUMB,
                          text_color);
 
-  // "Weekly profit" header
+  // Weekly profit
   font->render_line_onto(page, "Weekly profit", {120, 108}, FontFace::PIZ_NUMB,
                          text_color);
 
   // Separator line
   page.fill_rect({56, 100, 282, 1}, text_color);
 
-  // 10 city rows
+  // city rows
   int y = 132;
   constexpr int row_height = 18;
   for (int i = 0; i < NUMBER_OF_CITIES; ++i) {
@@ -536,10 +538,15 @@ Surface PlayerProfile::create_company(const Player* player) {
                            text_color);
 
     if (state_.is_city_loaded(city_id)) {
-      // TODO: replace with actual weekly profit once we actually have the
-      // concept of profit from abroad
-      font->render_line_onto(page, "0", {336, y}, FontFace::PIZ_NUMB,
-                             text_color, AlignX::RightEdge);
+      Money city_profit{};
+      for (auto* rest : state_.restaurants_for(player->id())) {
+        if (rest && rest->property().city().id() == city_id) {
+          city_profit = city_profit + rest->last_weekly_profit();
+        }
+      }
+      font->render_line_onto(page, compat::format("{:i}", city_profit),
+                             {336, y}, FontFace::PIZ_NUMB, text_color,
+                             AlignX::RightEdge);
     }
     else {
       font->render_line_onto(page, "---------------", {188, y},

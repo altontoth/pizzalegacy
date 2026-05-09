@@ -180,7 +180,6 @@ void Player::end_of_day(GameState& game_state) {
 
   // First time going into debt warning
   if (balance.cents < 0) {
-    // TODO: Use the right index
     game_state.message_manager().schedule_message(
         core::events::LeventId::FinancialDifficultiesFirstTime, id_,
         game_state.time().current_date());
@@ -465,6 +464,16 @@ void Player::apply_monthly_loan_payments(const GameDate& date) {
 void Player::on_food_shop_visit() {
   for (int i = 0; i < 2; ++i) {
     if (engine::random::rand_percentage_chance(character_.age())) {
+      character_.energy(
+          static_cast<uint8_t>(std::max(0, (int)character_.energy() - 1)));
+    }
+  }
+}
+
+void Player::on_city_travel() {
+  int health = character_.health();
+  for (int i = 0; i < 6; ++i) {
+    if (engine::random::rand_percentage_chance(100 - health)) {
       character_.energy(
           static_cast<uint8_t>(std::max(0, (int)character_.energy() - 1)));
     }

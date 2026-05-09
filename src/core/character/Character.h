@@ -128,14 +128,14 @@ public:
   std::string name() const { return first_name() + " " + last_name(); };
   uint8_t age() const { return age_; };
   void age(uint8_t a) { age_ = a; };
-  uint8_t popularity() const { return data_->popularity; };
+  uint8_t popularity() const { return popularity_; };
   uint8_t health() const { return health_; };
   uint8_t energy() const { return energy_; };
   uint8_t intelligence() const { return data_->intelligence; };
   uint8_t charisma() const { return data_->charisma; };
   uint8_t dexterity() const { return data_->dexterity; };
-  uint8_t personality() const { return data_->personality; };
-  uint8_t courage() const { return data_->courage; };
+  uint8_t personality() const { return personality_; };
+  uint8_t courage() const { return courage_; };
   uint8_t experience() const { return experience_; };
   uint8_t trustworthiness() const { return trustworthiness_; };
   uint8_t honesty() const { return honesty_; };
@@ -147,16 +147,26 @@ public:
   Money starting_money() const { return data_->starting_money; };
   uint8_t gender_flag() const { return data_->gender_flag; };
   uint32_t popularity_multiplier() const {
-    return std::floor(data_->popularity / 2) + MULTIPLIER_CONSTANT;
+    return std::floor(popularity_ / 2) + MULTIPLIER_CONSTANT;
   };
   uint32_t courage_multiplier() const {
-    return std::floor(data_->courage / 2) + MULTIPLIER_CONSTANT;
+    return std::floor(courage_ / 2) + MULTIPLIER_CONSTANT;
   };
 
   // Returns a CharacterData snapshot with current runtime values
   CharacterData to_character_data() const;
 
   // Setters for the things that can change:
+  void adjust_courage(int delta) {
+    courage_ = static_cast<uint8_t>(std::clamp(courage_ + delta, 0, 255));
+  }
+  void adjust_popularity(int delta) {
+    popularity_ = static_cast<uint8_t>(std::clamp(popularity_ + delta, 0, 255));
+  }
+  void adjust_personality(int delta) {
+    personality_ =
+        static_cast<uint8_t>(std::clamp(personality_ + delta, 0, 255));
+  }
   void health(uint8_t health) { health_ = health; };
   void energy(uint8_t energy) { energy_ = energy; };
   void cooking(uint8_t cooking) { cooking_ = cooking; };
@@ -182,6 +192,9 @@ public:
 private:
   const CharacterData* data_;
   uint8_t age_;
+  uint8_t popularity_;
+  uint8_t personality_;
+  uint8_t courage_;
   uint8_t health_;
   uint8_t energy_;
   uint8_t experience_;

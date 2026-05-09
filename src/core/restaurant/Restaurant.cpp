@@ -1423,7 +1423,6 @@ std::optional<bool> Restaurant::update_star_rating() {
   int loss_threshold = (star_rating_ * 16) + 8;
 
   if (pizza_quality_rating_ > award_threshold && star_rating_ < 5) {
-    // TODO: Original also gives +40 reputation
     star_rating_++;
     Logger::info("[Restaurant] {} awarded star! Now {} stars (quality {} > "
                  "threshold {})",
@@ -1431,7 +1430,6 @@ std::optional<bool> Restaurant::update_star_rating() {
     return true;
   }
   if (pizza_quality_rating_ < loss_threshold && star_rating_ > 0) {
-    // TODO: Original also gives -30 reputation, may force close for 7 days
     star_rating_--;
     Logger::info("[Restaurant] {} lost a star! Now {} stars (quality {} < "
                  "threshold {})",

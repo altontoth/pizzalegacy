@@ -6,6 +6,7 @@
 
 #include "views/screens/stock/IngredientOrderScreen.h"
 
+#include "core/character/Player.h"
 #include "core/city/CentralDepot.h"
 #include "core/city/City.h"
 #include "core/finance/Ledger.h"
@@ -438,6 +439,12 @@ void IngredientOrderScreen::place_order() {
 
       auto& rel = const_cast<FoodSupplier*>(supplier_)->relationship(player_id);
       rel.total_spent += total_cost;
+    }
+  }
+
+  if (!is_sell && total_items > 0) {
+    if (auto* player = state_.active_player()) {
+      player->on_food_shop_visit();
     }
   }
 

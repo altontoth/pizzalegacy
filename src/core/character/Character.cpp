@@ -11,12 +11,13 @@
 namespace core::character {
 
 Character::Character(CharacterData* data)
-    : data_(data), age_(data_->age), health_(data_->health),
-      energy_(data_->energy), experience_(data_->experience),
-      cooking_(data_->cooking), serving_(data_->serving),
-      management_(data_->management), motivation_(data_->motivation),
-      trustworthiness_(data_->trustworthiness), honesty_(data_->honesty),
-      pizzas_per_day_(data_->pizzas_per_day) {}
+    : data_(data), age_(data_->age), popularity_(data_->popularity),
+      personality_(data_->personality), courage_(data_->courage),
+      health_(data_->health), energy_(data_->energy),
+      experience_(data_->experience), cooking_(data_->cooking),
+      serving_(data_->serving), management_(data_->management),
+      motivation_(data_->motivation), trustworthiness_(data_->trustworthiness),
+      honesty_(data_->honesty), pizzas_per_day_(data_->pizzas_per_day) {}
 
 int Character::picture_width() const { return PICTURE_WIDTH; }
 
@@ -34,6 +35,9 @@ CharacterData Character::to_character_data() const {
 
   // Override with current mutable runtime values
   snapshot.age = age_;
+  snapshot.popularity = popularity_;
+  snapshot.personality = personality_;
+  snapshot.courage = courage_;
   snapshot.health = health_;
   snapshot.energy = energy_;
   snapshot.experience = experience_;

@@ -2251,6 +2251,12 @@ RankChange GameState::adjust_underworld_score(Player& player, int delta) {
     // Underworld rank LeventIds run from AsGoodAsDead(15) to Godfather(27)
     auto id = static_cast<core::events::LeventId>(15 + rc.new_rank);
     message_manager_.schedule_message(id, player.id(), time_.current_date());
+    player.character().adjust_courage(5);
+    player.character().adjust_personality(4);
+  }
+  else if (rc.demoted()) {
+    player.character().adjust_courage(-7);
+    player.character().adjust_personality(-3);
   }
   return rc;
 }
@@ -2261,6 +2267,12 @@ RankChange GameState::adjust_social_score(Player& player, int delta) {
     // Business rank LeventIds run from LaughingStock(1) to StatusTycoon(14)
     auto id = static_cast<core::events::LeventId>(1 + rc.new_rank);
     message_manager_.schedule_message(id, player.id(), time_.current_date());
+    player.character().adjust_popularity(5);
+    player.character().adjust_personality(4);
+  }
+  else if (rc.demoted()) {
+    player.character().adjust_popularity(-7);
+    player.character().adjust_personality(-3);
   }
   return rc;
 }
@@ -3072,7 +3084,7 @@ void GameState::advance_annual_competition() {
       auto& winner_p = ac.session->participants[winner_slot];
       winner_player_id = winner_p.player_id.value;
       if (auto* winner = player(winner_p.player_id)) {
-        winner->add_score(40);
+        adjust_social_score(*winner, 40);
       }
     }
 
