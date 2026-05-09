@@ -411,7 +411,7 @@ Ingredient* IngredientFactory::create_ingredient(int ingredient_id) {
                                      IngredientCategory::MEAT, std::vector<int>{
                                       213,214,215,216,
                                       217,217,217,217,
-                                      213,213,213,213,
+                                      212,212,212,212,
                                     });
     break;
   }
@@ -421,7 +421,7 @@ Ingredient* IngredientFactory::create_ingredient(int ingredient_id) {
                                      IngredientCategory::MEAT, std::vector<int>{
                                       208,209,208,209,
                                       210,211,210,211,
-                                      213,213,213,213,
+                                      212,212,212,212,
                                     });
     break;
   }
