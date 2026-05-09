@@ -1378,7 +1378,7 @@ void PizzaDesign::on_bake_pressed() {
     s.existing_id = row.recipe_id;
     s.canonical_id = row.canonical;
     s.suggested_name = row.name;
-    s.working = Pizza("work in progress pizza");
+    s.working = Pizza(s.suggested_name);
     auto sp = std::make_shared<BakeSession>(std::move(s));
 
     context_.popup->origin(ViewPoint{6, 14});
@@ -1442,27 +1442,7 @@ void PizzaDesign::on_design_finished() {
     bake_->working.finalize(state_.customer_taste_profiles());
   }
 
-  switch (bake_->kind) {
-  case BakeKind::NewUser:
-    // Just go to judging, naming happens after
-    post_bake();
-    return;
-
-  case BakeKind::InstantiateCanonical: {
-    auto id = state_.active_player()->recipes().create_from_canonical(
-        *bake_->canonical_id, std::move(bake_->working));
-    change_active_key(*bake_->canonical_id);
-    post_bake();
-    return;
-  }
-
-  case BakeKind::RecreateExisting: {
-    // User already confirmed when pressing "Bake pizza", so just recreate
-    finish_recreate_existing();
-    return;
-  }
-  }
-  change_mode(PizzaDesignMode::Recipes);
+  post_bake();
 }
 
 void PizzaDesign::finish_new_user(std::string name) {
@@ -1505,8 +1485,6 @@ void PizzaDesign::finish_recreate_existing() {
                           std::move(bake_->working));
     change_active_key(rid);
   }
-
-  post_bake();
 }
 
 void PizzaDesign::post_bake() {
@@ -1866,7 +1844,15 @@ void PizzaDesign::handle_post_judging() {
         [this](std::string input) { this->finish_new_user(std::move(input)); });
   }
   else {
-    // For other cases, just go to Recipes
+    // Commit recipe now that judging is done
+    if (bake_->kind == BakeKind::InstantiateCanonical) {
+      state_.active_player()->recipes().create_from_canonical(
+          *bake_->canonical_id, std::move(bake_->working));
+      change_active_key(*bake_->canonical_id);
+    }
+    else if (bake_->kind == BakeKind::RecreateExisting) {
+      finish_recreate_existing();
+    }
     change_mode(PizzaDesignMode::Recipes);
     bake_.reset();
   }
