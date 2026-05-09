@@ -25,7 +25,11 @@
 #include "resources/BlitmapManager.h"
 #include "resources/FontManager.h"
 #include "resources/FontTypes.h"
+#include "views/ui/PopupManager.h"
 #include "views/ui/components/BeveledButton.h"
+#include "views/ui/popups/AlertPopup.h"
+
+#include <algorithm>
 
 IngredientCategoryView::IngredientCategoryView(GameContext& context,
                                                GameState& state,
@@ -391,7 +395,21 @@ void IngredientCategoryView::set_up_input_panel() {
   else {
     input_panel_->add_button(
         Icon::CONTRACTS, ButtonType::Vertical, ButtonPosition::TopRight,
-        "Contracts", [this]() { state_.ui().push<ContractsViewState>(); });
+        "Contracts", [this]() {
+          auto* player = state_.active_player();
+          auto* restaurant = state_.active_restaurant();
+          auto& contracts = player->contracts();
+          bool has_contracts = std::any_of(
+              contracts.begin(), contracts.end(), [&](const auto& c) {
+                return c.restaurant_id == restaurant->id();
+              });
+          if (has_contracts) {
+            state_.ui().push<ContractsViewState>();
+          }
+          else {
+            context_.popup->create<AlertPopup>("No contracts!");
+          }
+        });
 
     input_panel_->add_button(
         Icon::SHOPPING_CART, ButtonType::Horizontal, ButtonPosition::BottomLeft,

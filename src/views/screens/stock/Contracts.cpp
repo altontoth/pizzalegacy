@@ -78,8 +78,6 @@ void Contracts::render(const RenderContext& ctx) {
                                    context_.vga->get("gfx/back5"));
 
   if (contract_indices_.empty()) {
-    context_.font->render_text_onto(*ctx.surface, "no contracts",
-                                    ViewPoint{38, 50}, FontFace::PIZ_NUMB, 8);
     return;
   }
 
