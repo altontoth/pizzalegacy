@@ -9,6 +9,7 @@
 #include <filesystem>
 #include <functional>
 #include <optional>
+#include <string>
 #include <variant>
 #include <vector>
 #include "conversations/MafiaLine.h"
@@ -34,6 +35,7 @@ struct ScreenTag {
     MenuNewGame,
     MenuOptions,
     MenuQuickstart,
+    MenuHighScores,
     CharacterSelection,
     DifficultySelection,
     DiskMenu,
@@ -101,12 +103,12 @@ struct EuroMapState {
   std::optional<IngredientCategory> category = std::nullopt;
 };
 enum class GameOverCause {
-  BankruptLoans,
-  BankruptRent,
+  BankruptLoans, // unused
+  BankruptRent,  // unused
   BankruptDebts,
   BankruptSuppliers,
   KilledByMafia,
-  WorldDomination,
+  PizzaTycoon, // you won
 };
 
 struct GameOverState {
@@ -220,6 +222,10 @@ struct FullscreenStatusState {
   core::events::LeventId message_id;
   std::function<void()> on_dismiss;
 };
+struct WinSequenceState {
+  int line_index;
+  core::PlayerId player_id;
+};
 struct MarketResearchState {
   core::DistrictId district_id;
 };
@@ -246,8 +252,8 @@ using UIState = std::variant<
     StockMainState, ContractsViewState, DepotMainState, DepotExportState,
     IngredientSupplierListState, IngredientOrderState,
     DepotWeaponInterfaceState, TerminalState, SupplierContractState,
-    PlayerTurnCardState, FullscreenStatusState, MafiaMissionViewState,
-    MarketResearchState, StatsRestaurantsState, PlayerProfileState,
-    GameOverState,
+    PlayerTurnCardState, FullscreenStatusState, WinSequenceState,
+    MafiaMissionViewState, MarketResearchState, StatsRestaurantsState,
+    PlayerProfileState, GameOverState,
     // nothing on screen:
     std::monostate>;

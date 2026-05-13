@@ -23,8 +23,8 @@ ToggleMenuItem::ToggleMenuItem(GameContext& context, const std::string& text,
                                bool& value, const std::string& false_label,
                                const std::string& true_label,
                                std::function<void()> action, FontFace font_face)
-    : MenuItem(context, font_face, text), context_(context), value_(value),
-      action_(action), false_label_(false_label), true_label_(true_label) {}
+    : MenuItem(context, font_face, text), value_(value), action_(action),
+      false_label_(false_label), true_label_(true_label) {}
 
 void ToggleMenuItem::draw(Surface& screen, ViewPoint p, bool is_selected) {
   const std::string& value_text = value_ ? true_label_ : false_label_;

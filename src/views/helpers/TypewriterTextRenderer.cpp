@@ -66,6 +66,16 @@ void TypewriterTextRenderer::start() {
   transition_to_state(State::RENDERING_CHARACTERS);
 }
 
+void TypewriterTextRenderer::skip_to_end() {
+  if (state_ == State::COMPLETE || state_ == State::IDLE) {
+    return;
+  }
+  const auto& source_text = wrap_width_ ? pre_wrapped_text_ : text_;
+  rendered_text_ = source_text;
+  current_char_index_ = source_text.size();
+  transition_to_state(State::COMPLETE);
+}
+
 void TypewriterTextRenderer::clear() {
   text_.clear();
   rendered_text_.clear();

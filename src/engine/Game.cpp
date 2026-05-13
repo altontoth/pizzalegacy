@@ -65,6 +65,7 @@
 #include "views/screens/StaffView.h"
 #include "views/screens/StatsRestaurants.h"
 #include "views/screens/Terminal.h"
+#include "views/screens/WinSequenceView.h"
 #include "views/screens/city_view/CityView.h"
 #include "views/screens/depot/DepotExportScreen.h"
 #include "views/screens/depot/DepotMain.h"
@@ -73,6 +74,7 @@
 #include "views/screens/menus/DifficultySelection.h"
 #include "views/screens/menus/DiskMenu.h"
 #include "views/screens/menus/MenuGameLoad.h"
+#include "views/screens/menus/MenuHighScores.h"
 #include "views/screens/menus/MenuMain.h"
 #include "views/screens/menus/MenuNewGame.h"
 #include "views/screens/menus/MenuOptions.h"
@@ -635,6 +637,10 @@ Renderable* Game::change_state(GameState& gs, LoopState& /*loop*/) {
               cursor_manager_->base_cursor_mode(CursorMode::MENU);
               current_view_ = std::make_unique<MenuMain>(context, gs);
               break;
+            case K::MenuHighScores:
+              cursor_manager_->base_cursor_mode(CursorMode::MENU);
+              current_view_ = std::make_unique<MenuHighScores>(context, gs);
+              break;
             case K::MenuNewGame:
               cursor_manager_->base_cursor_mode(CursorMode::MENU);
               current_view_ = std::make_unique<MenuNewGame>(context, gs);
@@ -887,6 +893,10 @@ Renderable* Game::change_state(GameState& gs, LoopState& /*loop*/) {
           [&](const FullscreenStatusState& fss) {
             current_view_ = std::make_unique<FullscreenStatus>(
                 context, gs, fss.message_id, fss.on_dismiss);
+          },
+          [&](const WinSequenceState& wss) {
+            current_view_ = std::make_unique<WinSequenceView>(
+                context, gs, wss.line_index, wss.player_id);
           },
           [&](const MafiaMissionViewState& mmvs) {
             current_view_ =

@@ -5,14 +5,52 @@
  */
 
 #include "views/screens/FullscreenStatus.h"
-#include "core/character/Player.h"
+#include "core/events/LeventId.h"
 #include "core/state/GameState.h"
 #include "engine/DisplayConstants.h"
 #include "engine/FormatCompat.h"
 #include "engine/input/InputManager.h"
 #include "engine/ui/InteractionEvent.h"
 #include "gfx/Blit.h"
+#include "gfx/Color.h"
 #include "resources/FontManager.h"
+
+#include <array>
+#include <cstdint>
+
+namespace {
+
+struct BgColorEntry {
+  bool override_palette;
+  uint8_t fg;
+  uint8_t shadow;
+};
+
+// Indexed by ZwBackground cast to int (0-11). Entry 0 = NONE (unused).
+// When override_palette is true, palette slots 0xFD and 0xFE are programmed
+// at render time to near-white (RGB 60,60,60) and near-black (RGB 12,12,12).
+// This matches the original's sub_3B95E calls with 6-bit values 15/15/15 and
+// 3/3/3.
+constexpr std::array<BgColorEntry, 12> BG_COLOR_TABLE = {{
+    {.override_palette = false, .fg = 0x00, .shadow = 0x00}, // 0: NONE (unused)
+    {.override_palette = true, .fg = 0xFD, .shadow = 0xFE},  // 1: BEGGING
+    {.override_palette = false,
+     .fg = 0x1F,
+     .shadow = 0x28}, // 2: PRISON (fixed palette indices)
+    {.override_palette = true, .fg = 0xFD, .shadow = 0xFE},  // 3: FORCED_LABOR
+    {.override_palette = true, .fg = 0xFD, .shadow = 0xFE},  // 4: EXECUTED
+    {.override_palette = true, .fg = 0xFD, .shadow = 0xFE},  // 5: BALANCE
+    {.override_palette = false, .fg = 0x01, .shadow = 0x02}, // 6: RESTAURANT
+    {.override_palette = false, .fg = 0x01, .shadow = 0x0B}, // 7: POSITION
+    {.override_palette = true, .fg = 0xFD, .shadow = 0xFE},  // 8: KIDNAPPED
+    {.override_palette = true,
+     .fg = 0xFD,
+     .shadow = 0xFE}, // 9: SWIM_WITH_FISHES
+    {.override_palette = true, .fg = 0xFD, .shadow = 0xFE},  // 10: RICH
+    {.override_palette = false, .fg = 0x01, .shadow = 0x02}, // 11: PIZZA
+}};
+
+} // namespace
 
 FullscreenStatus::FullscreenStatus(GameContext& context, GameState& state,
                                    core::events::LeventId msg_id,
@@ -21,33 +59,34 @@ FullscreenStatus::FullscreenStatus(GameContext& context, GameState& state,
       listener_(context_.input->register_listener(*this)),
       on_dismiss_(std::move(on_dismiss)), background_([&]() -> const Surface& {
         const auto& msg_data = state_.message_manager().get_data(msg_id);
-
         assert(msg_data.background != core::events::ZwBackground::NONE);
-
-        std::string bg_path =
-            compat::format("gfx/zw{}", static_cast<int>(msg_data.background));
-        return context_.vga->get(bg_path);
+        return context_.vga->get(
+            compat::format("gfx/zw{}", static_cast<int>(msg_data.background)));
       }()) {
 
   text_ = state_.message_manager().get_levent_text(msg_id);
 
-  // Set up typewriter renderer with wrap width
-  // Position is {50, 50}, so available width is SCREEN_WIDTH - 2*50 = 540
-  int wrap_width = DisplayConstants::SCREEN_WIDTH - (2 * 30);
+  const auto& msg_data = state_.message_manager().get_data(msg_id);
+  const auto bg_index = static_cast<int>(msg_data.background);
+  if (bg_index > 0 && bg_index < static_cast<int>(BG_COLOR_TABLE.size())) {
+    const auto& entry = BG_COLOR_TABLE[bg_index];
+    fg_color_ = entry.fg;
+    shadow_color_ = entry.shadow;
+    override_palette_ = entry.override_palette;
+  }
 
-  TextStyle ts{.color = 3,
+  constexpr int wrap_width = DisplayConstants::SCREEN_WIDTH - (2 * 30);
+  TextStyle ts{.color = fg_color_,
                .align = AlignX::Left,
                .shadow = ShadowStyle{
                    .offset = {-1, 1},
-                   .color = 20,
+                   .color = shadow_color_,
                }};
   typewriter_.set_text(text_, ViewPoint{30, 320}, FontFace::ASTANDAR, ts,
                        wrap_width);
-  // 1 tick per character (30 FPS = ~33ms per char)
   typewriter_.set_char_delay(1);
   typewriter_.start();
 
-  // Set up mouse click to dismiss (when typewriter is complete)
   interactions_.create_persistent_item(
       ViewRect{0, 0, DisplayConstants::SCREEN_WIDTH,
                DisplayConstants::SCREEN_HEIGHT},
@@ -57,13 +96,15 @@ FullscreenStatus::FullscreenStatus(GameContext& context, GameState& state,
           if (typewriter_.is_complete()) {
             dismiss();
           }
+          else {
+            typewriter_.skip_to_end();
+            mark_dirty();
+          }
         }
       });
 }
 
 void FullscreenStatus::tick() {
-  if (typewriter_.is_complete()) {
-  }
   if (typewriter_.tick()) {
     mark_dirty();
   }
@@ -71,7 +112,11 @@ void FullscreenStatus::tick() {
 
 void FullscreenStatus::render(const RenderContext& ctx) {
   gfx::blit::blit_raw_with_palette(*ctx.surface, background_);
-
+  if (override_palette_) {
+    auto& pal = ctx.surface->colors();
+    pal[0xFD] = gfx::Color{.r = 60, .g = 60, .b = 60};
+    pal[0xFE] = gfx::Color{.r = 12, .g = 12, .b = 12};
+  }
   typewriter_.render(*ctx.surface);
 }
 
@@ -82,10 +127,12 @@ bool FullscreenStatus::on_action(const input::ActionEvent& ev) {
 
   if (typewriter_.is_complete()) {
     dismiss();
-    return true;
   }
-
-  return false;
+  else {
+    typewriter_.skip_to_end();
+    mark_dirty();
+  }
+  return true;
 }
 
 void FullscreenStatus::dismiss() {

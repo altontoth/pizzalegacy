@@ -165,7 +165,7 @@ constexpr std::array<EventData, 140> levent_data = {{
 }};
 
 FullscreenMessageManager::FullscreenMessageManager()
-    : levent_loaded_(false), leben_loaded_(false) {}
+    : levent_loaded_(false), leben_loaded_(false), ende_loaded_(false) {}
 
 bool FullscreenMessageManager::schedule_message(LeventId msg_id,
                                                 core::PlayerId player_id,
@@ -293,6 +293,25 @@ void FullscreenMessageManager::load_leben_texts() const {
     leben_texts_.push_back(line);
   }
   leben_loaded_ = true;
+}
+
+const std::vector<std::string>&
+FullscreenMessageManager::get_ende_texts() const {
+  if (!ende_loaded_) {
+    load_ende_texts();
+  }
+  return ende_texts_;
+}
+
+void FullscreenMessageManager::load_ende_texts() const {
+  auto file = fileutils::open("t/ende.e");
+  std::string line;
+  while (std::getline(file, line)) {
+    if (!line.empty()) {
+      ende_texts_.push_back(line);
+    }
+  }
+  ende_loaded_ = true;
 }
 
 } // namespace core::events

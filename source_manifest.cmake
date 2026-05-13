@@ -131,6 +131,7 @@ set(GAME_PLEGACY_SOURCES
     src/views/screens/StatsRestaurants.cpp
     src/views/screens/StatusDisplay.cpp
     src/views/screens/Terminal.cpp
+    src/views/screens/WinSequenceView.cpp
     src/views/screens/city_view/CityView.cpp
     src/views/screens/depot/DepotExportScreen.cpp
     src/views/screens/depot/DepotMain.cpp
@@ -139,6 +140,7 @@ set(GAME_PLEGACY_SOURCES
     src/views/screens/menus/DifficultySelection.cpp
     src/views/screens/menus/DiskMenu.cpp
     src/views/screens/menus/MenuGameLoad.cpp
+    src/views/screens/menus/MenuHighScores.cpp
     src/views/screens/menus/MenuMain.cpp
     src/views/screens/menus/MenuNewGame.cpp
     src/views/screens/menus/MenuOptions.cpp
@@ -557,6 +559,7 @@ set(PLEGACY_HEADERS
     src/views/screens/StatsRestaurants.h
     src/views/screens/StatusDisplay.h
     src/views/screens/Terminal.h
+    src/views/screens/WinSequenceView.h
     src/views/screens/city_view/CityView.h
     src/views/screens/city_view/CityViewCommon.h
     src/views/screens/city_view/CityViewMapState.h
@@ -569,6 +572,7 @@ set(PLEGACY_HEADERS
     src/views/screens/menus/DifficultySelection.h
     src/views/screens/menus/DiskMenu.h
     src/views/screens/menus/MenuGameLoad.h
+    src/views/screens/menus/MenuHighScores.h
     src/views/screens/menus/MenuMain.h
     src/views/screens/menus/MenuNewGame.h
     src/views/screens/menus/MenuOptions.h

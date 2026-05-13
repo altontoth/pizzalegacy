@@ -13,6 +13,7 @@
 
 #include "core/character/Player.h"
 #include "core/city/City.h"
+#include "core/events/LeventId.h"
 #include "core/supply/ActiveContract.h"
 #include "core/supply/FoodSupplier.h"
 #include "core/supply/SupplierRelationship.h"
@@ -204,6 +205,12 @@ bool SupplierConversation::advance_proposal(bool agree) {
     }
 
     state_.active_player()->add_contract(std::move(contract));
+
+    if (contract_.discount_score >= 50) {
+      state_.message_manager().schedule_message(
+          core::events::LeventId::ManagedToNegotiate50PctDiscount,
+          state_.active_player()->id(), state_.time().current_date());
+    }
 
     contract_accepted_ = true;
     rel.contract_count++;

@@ -112,6 +112,13 @@ MafiaConversation::MafiaConversation(
     }
     protection_price_ = std::max(amount, 100);
   }
+  else {
+    // Mafia contacting you does not count, only when you call them do you get
+    // this:
+    state.message_manager().schedule_message(
+        core::events::LeventId::MakesFirstContactWithMafia, player->id(),
+        state.time().current_date());
+  }
 
   apply_npc_effects(state, mm);
 }
@@ -129,7 +136,31 @@ void MafiaConversation::apply_npc_effects(GameState& state, MafiaMode mm) {
                                         -mission->reward);
       }
       state.adjust_underworld_score(*player, 20);
+      auto mission_type = mission->mission_type;
       player->mafia_state().active_mission = std::nullopt;
+
+      state.message_manager().schedule_message(
+          core::events::LeventId::CompletedFirstMissionForTheUnderworld,
+          player->id(), date);
+      switch (mission_type) {
+      case MafiaMissionType::Weapon:
+        state.message_manager().schedule_message(
+            core::events::LeventId::CompletedFirstRaidForTheUnderworld,
+            player->id(), date);
+        break;
+      case MafiaMissionType::Laundering:
+        state.message_manager().schedule_message(
+            core::events::LeventId::SuccessfullyLaunderedMoney, player->id(),
+            date);
+        break;
+      case MafiaMissionType::Investment:
+        state.message_manager().schedule_message(
+            core::events::LeventId::FirstExperienceShadyShareDealing,
+            player->id(), date);
+        break;
+      default:
+        break;
+      }
     }
     break;
   }

@@ -581,14 +581,13 @@ Surface StaffView::create_staff_overview(Restaurant* r) {
         blitmap3_.icon_surface(Blitmap3Icon::STATS_BOTTOM_RIGHT);
 
     // This is the main box that we'll be painting some edge pieces on
-    ViewRect box = {38, 6, 300, 150};
+    constexpr ViewRect box = {38, 6, 300, 150};
     constexpr int line_width = 2;
     constexpr int padding = 12;
-    // TODO: Just find which index this is and hardcode it
-    auto bg_color = stats_top_left.get({0, 0});
-    uint8_t line_color = 9;
-    auto outer_color = stats_top_left.get({15, 18});
-    auto inner_color = stats_top_left.get({22, 34});
+    constexpr int bg_color = 13;
+    constexpr int line_color = 9;
+    constexpr int outer_color = 15;
+    constexpr int inner_color = 14;
 
     empty_staff_overview_surface_ =
         SurfaceBuilder::create(views::base::MAIN_PANEL_WIDTH,
@@ -1726,10 +1725,7 @@ void StaffView::create_input_panel() {
     add_applicant_buttons();
     break;
   case StaffScreen::TRAINING:
-    // TODO: Add training-specific buttons
-    break;
   case StaffScreen::MANAGER_SETTINGS:
-    // TODO: Add manager settings buttons
     break;
   }
 }

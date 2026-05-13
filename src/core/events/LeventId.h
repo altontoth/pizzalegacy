@@ -13,9 +13,9 @@ namespace core::events {
 /**
  * Message IDs for one-time fullscreen status updates and CV entries.
  *
- * Entries 1–97 fire fullscreen events (with a background if non-NONE).
- * Entries 98–99 are unused table slots
- * Entries 100–139 are CV-only milestones
+ * Entries 1-97 fire fullscreen events (with a background if non-NONE).
+ * Entries 98-99 are unused table slots
+ * Entries 100-139 are CV-only milestones
  *
  * Technically this is a combination of LEVENT.E and LEBEN.E, but the first 100
  * entries in both those files have a one-to-one mapping for the first 99 lines
@@ -122,7 +122,7 @@ enum class LeventId {
   ManagedToNegotiate50PctDiscount = 95,
   YouHaveUsed1000KiloOfIngredients = 96,
   YouHaveMadeOver3KProfitThroughWeaponDeals = 97,
-  // 98–99 are unused, from here it's only in LEBEN.E:
+  // 98-99 are unused, from here it's only in LEBEN.E:
   ArrivalInParis = 100,
   ArrivalInBerlin = 101,
   ArrivalInBaltimore = 102,

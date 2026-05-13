@@ -12,6 +12,8 @@
 #include "conversations/BankLine.h"
 #include "core/character/Actor.h"
 #include "core/character/Player.h"
+#include "core/events/LeventId.h"
+#include "core/finance/Ledger.h"
 #include "engine/Math.h"
 
 constexpr int MAX_NUMBER_OF_LOANS = 6;
@@ -117,6 +119,9 @@ bool BankConversation::advance_proposal(bool agree) {
     if (agree) {
       state_.active_player()->add_loan(state_.active_city_id(), proposed_loan_,
                                        state_.time().current_date());
+      state_.message_manager().schedule_message(
+          core::events::LeventId::TakesOutFirstLoan,
+          state_.active_player()->id(), state_.time().current_date());
       current_line(BankLine::GOOD_LUCK_WITH_INVESTMENTS);
     }
     else {
@@ -370,49 +375,36 @@ bool BankConversation::has_ended() const {
 }
 
 Loan BankConversation::propose_loan() const {
-  auto player = state_.active_player()->character();
+  auto* player_obj = state_.active_player();
+  const auto& character = player_obj->character();
+  const auto& financials = player_obj->financials();
 
-  // Calculate base credit score (management + personality + experience + age) *
-  // 100
-  int base_credit_score = player.management();
-  base_credit_score += player.personality();
-  base_credit_score += player.experience();
-  base_credit_score += player.age();
-  base_credit_score *= 100;
+  int stat_score = ((character.management() + character.personality() +
+                     character.experience() + character.age()) *
+                    100) +
+                   (5 * character.popularity_multiplier());
 
-  // Add unknown asset modifier (popularity_multiplier * 5)
-  int asset_modifier = 5 * player.popularity_multiplier();
-
-  // Add player modifiers (this would come from save game data)
-  int capital = 0;            // TODO dword_83E8C - player's capital/assets
-  int net_profit_or_loss = 0; // TODO dword_83E7C - player's profit/loss
-  if (net_profit_or_loss >= 0) {
-    capital += net_profit_or_loss;
+  // Capital plus net profit which improves credit score if it's positive.
+  Money capital = -financials.balance(Account::Capital);
+  Money net_profit =
+      -financials.total_receipts() - financials.total_expenditures();
+  if (net_profit > 0_usd) {
+    capital += net_profit;
   }
 
-  // Calculate total creditworthiness
-  int total_creditworthiness = base_credit_score + asset_modifier + capital;
-  int creditworthiness_score = total_creditworthiness / 100;
+  // Character stat score and financial position share the same scale
+  int64_t creditworthiness = (stat_score + capital.whole()) / 100;
 
-  // Calculate loan amount using bank's loan multiplier
-  int loan_amount =
-      creditworthiness_score * bank_settings_.loan_amount_multiplier * 8;
+  int64_t loan_dollars =
+      creditworthiness * bank_settings_.loan_amount_multiplier * 8;
+  loan_dollars >>= state_.difficulty_level();
+  loan_dollars = math::round_up_to_next_power10<3>(loan_dollars);
 
-  // Apply difficulty scaling
-  int difficulty_level = state_.difficulty_level();
-  loan_amount >>= difficulty_level; // Right shift by difficulty level
-
-  // Round to nearest 1000
-  loan_amount = math::round_up_to_next_power10<3>(loan_amount);
-
-  int base_interest_rate = state_.global_interest_rate();
   int interest_rate =
-      base_interest_rate + bank_settings_.interest_rate_modifier;
-
-  // Loan term is always 12 months
+      state_.global_interest_rate() + bank_settings_.interest_rate_modifier;
   const int months = 12;
 
-  return Loan(core::BankId{actor_->id()}, Money{loan_amount * 100},
+  return Loan(core::BankId{actor_->id()}, Money{loan_dollars * 100},
               interest_rate, months);
 }
 

@@ -25,7 +25,6 @@ public:
   Size measure() const override;
 
 private:
-  GameContext& context_;
   bool& value_;
   std::function<void()> action_;
   std::string false_label_;

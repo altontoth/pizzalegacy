@@ -25,6 +25,7 @@ public:
 
   void set_complete_callback(CompleteCallback callback);
   void start();
+  void skip_to_end();
   void clear();
   bool tick();
   void render(Surface& surface);

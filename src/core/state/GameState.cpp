@@ -18,6 +18,7 @@
 #include "core/character/Player.h"
 #include "core/city/District.h"
 #include "core/city/Property.h"
+#include "core/events/LeventId.h"
 #include "core/init/NewGameConfig.h"
 #include "core/restaurant/AIEconomy.h"
 #include "core/restaurant/Restaurant.h"
@@ -890,6 +891,38 @@ void GameState::show_next_deferred_inspection() {
     restaurant->force_close(7);
   }
 
+  if (outcome.star_gained) {
+    using core::events::LeventId;
+    auto* p = active_player();
+    if (p) {
+      const auto& date = time_.current_date();
+      switch (restaurant->star_rating()) {
+      case 1:
+        message_manager_.schedule_message(LeventId::AwardedFirstStar, p->id(),
+                                          date);
+        break;
+      case 2:
+        message_manager_.schedule_message(LeventId::FirstTwoStarRestaurant,
+                                          p->id(), date);
+        break;
+      case 3:
+        message_manager_.schedule_message(LeventId::FirstThreeStarRestaurant,
+                                          p->id(), date);
+        break;
+      case 4:
+        message_manager_.schedule_message(LeventId::FirstFourStarRestaurant,
+                                          p->id(), date);
+        break;
+      case 5:
+        message_manager_.schedule_message(LeventId::FirstFiveStarRestaurant,
+                                          p->id(), date);
+        break;
+      default:
+        break;
+      }
+    }
+  }
+
   MayorConversationType conv_type =
       deferred.is_first ? MayorConversationType::FirstQualityInspection
                         : MayorConversationType::QualityInspection;
@@ -992,6 +1025,46 @@ void GameState::process_mayor_award_event(const MayorAwardEvent& award_event) {
         if (current < AwardLevel::Gold) {
           player.award(cat,
                        static_cast<AwardLevel>(static_cast<int>(current) + 1));
+        }
+      }
+    }
+
+    // Schedule LeventId milestones for the winner if they are the active
+    // player.
+    if (award_winner.has_value()) {
+      auto* p = active_player();
+      if (p && p->id().value == *award_winner) {
+        using core::events::LeventId;
+        const auto& date = time_.current_date();
+        switch (award_event.type) {
+        case MayorAwardType::MostBeautifulRestaurant:
+          message_manager_.schedule_message(LeventId::AwardInteriorOfTheYear,
+                                            p->id(), date);
+          message_manager_.schedule_message(
+              LeventId::AwardMostBeautifulRestaurant, p->id(), date);
+          break;
+        case MayorAwardType::PizzaOfTheYear:
+          message_manager_.schedule_message(LeventId::AwardPizzaOfTheYearMayor,
+                                            p->id(), date);
+          break;
+        case MayorAwardType::BestInvestorInTown:
+          message_manager_.schedule_message(LeventId::AwardBestInvestor,
+                                            p->id(), date);
+          break;
+        case MayorAwardType::BestImitator:
+          message_manager_.schedule_message(LeventId::AwardBestImitator,
+                                            p->id(), date);
+          break;
+        case MayorAwardType::GoldenBowTie:
+          message_manager_.schedule_message(LeventId::AwardGoldenBowTie,
+                                            p->id(), date);
+          break;
+        case MayorAwardType::TransAtlanticTrade:
+          message_manager_.schedule_message(
+              LeventId::AwardTransAtlanticTradePlaque, p->id(), date);
+          break;
+        default:
+          break;
         }
       }
     }
@@ -1277,6 +1350,177 @@ void GameState::deliver_depot_stock(core::PlayerId player_id) {
           static_cast<core::food::IngredientType>(i), transfer, quality, cost);
     }
   }
+
+  auto& central_depot = city.central_depot(player_id);
+  if (central_depot.capacity() > 0 &&
+      central_depot.used() >= central_depot.capacity()) {
+    message_manager_.schedule_message(core::events::LeventId::CentralDepotFull,
+                                      player_id, time_.current_date());
+  }
+}
+
+void GameState::check_milestone_events(Player& player, bool is_end_of_week) {
+  using core::events::LeventId;
+  const auto& date = time_.current_date();
+  const auto pid = player.id();
+
+  // Asset milestones (cash on hand)
+  const Money cash = player.cash_balance();
+  if (cash >= 100'000_usd) {
+    message_manager_.schedule_message(LeventId::HasAssetsOf100K, pid, date);
+  }
+  if (cash >= 500'000_usd) {
+    message_manager_.schedule_message(LeventId::YouHaveAssetsOf500K, pid, date);
+  }
+  if (cash >= 1'000'000_usd) {
+    message_manager_.schedule_message(LeventId::YouHaveBecomeMillionaire, pid,
+                                      date);
+  }
+  if (cash >= 2'000'000_usd) {
+    message_manager_.schedule_message(LeventId::MakesASecondMillion, pid, date);
+  }
+  if (cash >= 10'000'000_usd) {
+    message_manager_.schedule_message(LeventId::MillionaireTenTimesOver, pid,
+                                      date);
+  }
+  if (cash >= 20'000'000_usd) {
+    message_manager_.schedule_message(LeventId::MillionaireTwentyTimesOver, pid,
+                                      date);
+  }
+
+  // Per-restaurant daily stats for active city restaurants.
+  // We can use yesterday because stats_.end_of_day() has already archived
+  // today.
+  int total_daily_pizzas = 0;
+  Money total_daily_revenue;
+  int64_t total_ingredients_today = 0;
+
+  auto city_restaurants = restaurants_for(pid);
+  for (auto* rest : city_restaurants) {
+    if (!rest || rest->property().city().id() != active_city_) {
+      continue;
+    }
+    const auto& yesterday = rest->stats().yesterday;
+    total_daily_pizzas += yesterday.orders_fulfilled;
+    total_daily_revenue = total_daily_revenue + yesterday.revenue;
+    total_ingredients_today += yesterday.ingredients_used_grams;
+
+    if (yesterday.orders_fulfilled >= 1'000) {
+      message_manager_.schedule_message(
+          LeventId::Has1000CustomersPerDayInOneRestaurant, pid, date);
+    }
+
+    int st = rest->service_time_minutes();
+    if (st > 0 && st <= 4) {
+      message_manager_.schedule_message(
+          LeventId::AverageServiceTimeLessThan4Minutes, pid, date);
+    }
+
+    if (rest->fulfillment_rate() >= 100 && yesterday.orders_generated > 0) {
+      message_manager_.schedule_message(LeventId::AbleToMeet100PctDeliveries,
+                                        pid, date);
+    }
+
+    // Cumulative ingredient usage
+    constexpr int64_t kg1000_in_grams = 1000LL * 1000;
+    if (rest->stats().total_ingredients_used_grams >= kg1000_in_grams) {
+      message_manager_.schedule_message(
+          LeventId::YouHaveUsed1000KiloOfIngredients, pid, date);
+    }
+  }
+
+  if (total_daily_pizzas >= 1'000) {
+    message_manager_.schedule_message(LeventId::Sold1KPizzasPerDay, pid, date);
+  }
+  if (total_daily_pizzas >= 10'000) {
+    message_manager_.schedule_message(LeventId::Sold10KPizzasPerDay, pid, date);
+  }
+  if (total_daily_revenue >= 10'000_usd) {
+    message_manager_.schedule_message(LeventId::AchievedTurnover10KPerDay, pid,
+                                      date);
+  }
+  if (total_ingredients_today >= 5'000LL * 1000) {
+    message_manager_.schedule_message(LeventId::Used5000KgIngredientsInOneDay,
+                                      pid, date);
+  }
+
+  // District coverage: fire if player has a restaurant in every district
+  auto* city = active_city();
+  if (city && !city->districts().empty()) {
+    const auto& all_districts = city->districts();
+    std::unordered_set<core::DistrictId, core::DistrictId::Hasher> covered;
+    for (auto* rest : city_restaurants) {
+      if (rest && rest->property().city().id() == active_city_) {
+        covered.insert(rest->property().district().id());
+      }
+    }
+    if (covered.size() >= all_districts.size()) {
+      message_manager_.schedule_message(LeventId::RepresentedInAllAreas, pid,
+                                        date);
+    }
+  }
+
+  if (!is_end_of_week) {
+    return;
+  }
+
+  // Weekly loss milestone
+  const auto week_start = date.add_days(-6);
+  const Money week_receipts =
+      player.financials().total_receipts(week_start, date);
+  const Money week_expenditures =
+      player.financials().total_expenditures(week_start, date);
+  const Money week_net = week_receipts - week_expenditures;
+  if (week_net < -1'000'000_usd) {
+    message_manager_.schedule_message(LeventId::LosesOneMillionInOneWeek, pid,
+                                      date);
+  }
+
+  // Weekly profit per restaurant and per city
+  Money city_weekly_profit;
+  int perfect_delivery_count = 0;
+  for (auto* rest : city_restaurants) {
+    if (!rest || rest->property().city().id() != active_city_) {
+      continue;
+    }
+    const Money wp = rest->last_weekly_profit();
+    city_weekly_profit = city_weekly_profit + wp;
+
+    if (wp >= 25'000_usd) {
+      message_manager_.schedule_message(
+          LeventId::Has25KWeeksProfitInOneRestaurant, pid, date);
+    }
+    if (wp >= 50'000_usd) {
+      message_manager_.schedule_message(
+          LeventId::Has50KWeeksProfitInOneRestaurant, pid, date);
+    }
+
+    // Perfect deliveries: no orders lost in past week. The original gives
+    // you this even if you didn't have any orders, let's optionally prevent
+    // that.
+    const auto week_days = rest->stats().last_week();
+    bool perfect_week = !week_days.empty();
+    for (const auto& day : week_days) {
+      if (day.orders_lost > 0 ||
+          (options().fix_legacy_bugs && day.orders_generated == 0)) {
+        perfect_week = false;
+        break;
+      }
+    }
+    if (perfect_week) {
+      perfect_delivery_count++;
+    }
+  }
+
+  if (city_weekly_profit >= 500'000_usd) {
+    message_manager_.schedule_message(LeventId::Has500KWeeksProfitsInOneCity,
+                                      pid, date);
+  }
+
+  if (perfect_delivery_count >= 5) {
+    message_manager_.schedule_message(
+        LeventId::PerfectDeliveriesFor1WeekAcross5Restaurants, pid, date);
+  }
 }
 
 void GameState::snapshot_weekly_profits() {
@@ -1322,6 +1566,12 @@ void GameState::finish_end_of_turn() {
   auto& state = *end_of_turn_state_;
 
   snapshot_weekly_profits();
+
+  auto* current_player = active_player();
+  if (current_player && current_player->is_human_controlled()) {
+    bool is_eow = time_.current_date().is_end_of_week();
+    check_milestone_events(*current_player, is_eow);
+  }
 
   if (status_display_ && active_player()->is_human_controlled()) {
     status_display_->capture_state();
@@ -1650,6 +1900,13 @@ void GameState::end_of_day() {
   // Rebuild pizza charts and control map for active city
   if (auto* city = active_city()) {
     city->pizza_charts().build(*this);
+    const auto& chart_entries = city->pizza_charts().entries();
+    if (!chart_entries.empty()) {
+      const auto& top = chart_entries[0];
+      message_manager_.schedule_message(
+          core::events::LeventId::PizzaReachedNo1InCharts, top.player_id,
+          time_.current_date());
+    }
     city->control_map().build(*this, *city);
     check_market_share_milestones(*city);
   }
@@ -1686,6 +1943,11 @@ void GameState::run_city_start_of_day(City& city) {
 void GameState::check_market_share_milestones(const City& city) {
   using core::events::LeventId;
   const auto& pcts = city.control_map().player_percentages();
+  const auto& date = time_.current_date();
+
+  auto domination_event = static_cast<LeventId>(
+      static_cast<int>(LeventId::DominatesMarketInParis) + city.id().value);
+
   for (int p = 0; p < NUMBER_OF_PLAYERS; ++p) {
     auto pid = core::PlayerId{p};
     if (!player(pid)) {
@@ -1696,15 +1958,16 @@ void GameState::check_market_share_milestones(const City& city) {
     float first_threshold = options().fix_legacy_bugs ? 10.0f : 5.0f;
     if (pct >= 50) {
       message_manager_.schedule_message(
-          LeventId::Achieved50PctMarketShareInCity, pid, time_.current_date());
+          LeventId::Achieved50PctMarketShareInCity, pid, date);
+      message_manager_.schedule_message(domination_event, pid, date);
     }
     if (pct >= 20) {
       message_manager_.schedule_message(
-          LeventId::Achieved20PctMarketShareInCity, pid, time_.current_date());
+          LeventId::Achieved20PctMarketShareInCity, pid, date);
     }
     if (pct >= first_threshold) {
       message_manager_.schedule_message(
-          LeventId::Achieved10PctMarketShareInCity, pid, time_.current_date());
+          LeventId::Achieved10PctMarketShareInCity, pid, date);
     }
   }
 }
@@ -1731,7 +1994,12 @@ void GameState::check_world_domination() {
     }
   }
 
-  eliminate_player(p->id(), GameOverCause::WorldDomination);
+  trigger_win_sequence(p->id());
+}
+
+void GameState::trigger_win_sequence(core::PlayerId pid) {
+  ui_.push<WinSequenceState>(
+      WinSequenceState{.line_index = 0, .player_id = pid});
 }
 
 void GameState::check_restaurant_milestones(const Player& player) {
@@ -2076,6 +2344,25 @@ Restaurant* GameState::rent_restaurant(Property& property, Player& player,
   return restaurant;
 }
 
+static void check_depot_milestones(GameState& gs, Player& player) {
+  using core::events::LeventId;
+  int depot_count = 0;
+  for (auto* city : gs.initialized_cities()) {
+    if (city->central_depot(player.id()).capacity() > 0) {
+      depot_count++;
+    }
+  }
+  const auto& date = gs.time().current_date();
+  if (depot_count >= 10) {
+    gs.message_manager().schedule_message(LeventId::CentralWarehouseIn10Cities,
+                                          player.id(), date);
+  }
+  if (depot_count >= 5) {
+    gs.message_manager().schedule_message(LeventId::CentralWarehouseIn5Cities,
+                                          player.id(), date);
+  }
+}
+
 bool GameState::buy_depot(Property& property, Player& buyer) {
   Money price = property.get_purchase_price();
   GameDate today = time().current_date();
@@ -2094,6 +2381,8 @@ bool GameState::buy_depot(Property& property, Player& buyer) {
   int capacity = property.size().w * property.size().h * 100;
   city.central_depot(buyer.id()).add_capacity(capacity);
 
+  check_depot_milestones(*this, buyer);
+
   return true;
 }
 
@@ -2111,6 +2400,8 @@ bool GameState::rent_depot(Property& property, Player& player, bool free) {
   auto& city = property.city();
   int capacity = property.size().w * property.size().h;
   city.central_depot(player.id()).add_capacity(capacity);
+
+  check_depot_milestones(*this, player);
 
   return true;
 }
@@ -3085,6 +3376,11 @@ void GameState::advance_annual_competition() {
       winner_player_id = winner_p.player_id.value;
       if (auto* winner = player(winner_p.player_id)) {
         adjust_social_score(*winner, 40);
+        using core::events::LeventId;
+        message_manager_.schedule_message(LeventId::AwardBestPizzaOfTheYear,
+                                          winner->id(), time_.current_date());
+        message_manager_.schedule_message(LeventId::AwardRestaurantOfTheYear,
+                                          winner->id(), time_.current_date());
       }
     }
 

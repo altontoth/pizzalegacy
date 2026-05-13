@@ -723,6 +723,8 @@ json daily_stats_to_json(const core::restaurant::DailyStats& stats) {
   j["total_order_value"] = stats.total_order_value.cents;
   j["order_value_count"] = stats.order_value_count;
 
+  j["ingredients_used_grams"] = stats.ingredients_used_grams;
+
   return j;
 }
 
@@ -785,6 +787,8 @@ core::restaurant::DailyStats json_to_daily_stats(const json& j) {
   stats.total_order_value = Money{j.value("total_order_value", 0LL)};
   stats.order_value_count = j.value("order_value_count", 0);
 
+  stats.ingredients_used_grams = j.value("ingredients_used_grams", 0LL);
+
   return stats;
 }
 
@@ -798,6 +802,7 @@ json restaurant_stats_to_json(const core::restaurant::RestaurantStats& stats) {
 
   // All-time totals
   j["total_pizzas_sold"] = stats.total_pizzas_sold;
+  j["total_ingredients_used_grams"] = stats.total_ingredients_used_grams;
   j["total_revenue"] = stats.total_revenue.cents;
   j["total_profit"] = stats.total_profit.cents;
 
@@ -827,6 +832,8 @@ core::restaurant::RestaurantStats json_to_restaurant_stats(const json& j) {
 
   // All-time totals
   stats.total_pizzas_sold = j.value("total_pizzas_sold", 0);
+  stats.total_ingredients_used_grams =
+      j.value("total_ingredients_used_grams", 0LL);
   stats.total_revenue = Money{j.value("total_revenue", 0LL)};
   stats.total_profit = Money{j.value("total_profit", 0LL)};
 

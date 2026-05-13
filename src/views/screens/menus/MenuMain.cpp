@@ -42,14 +42,20 @@ MenuMain::MenuMain(GameContext& context, GameState& state)
   add_menu_item(std::make_unique<SpacerMenuItem>(context, space_between_lines));
 
   add_menu_item(std::make_unique<TextMenuItem>(
-      context, "Options",
-      [&state] { state.ui().push<ScreenTag>(ScreenTag::Kind::MenuOptions); },
+      context, "High Scores",
+      [&state] { state.ui().push<ScreenTag>(ScreenTag::Kind::MenuHighScores); },
       face, style, sel_style));
+
   add_menu_item(std::make_unique<SpacerMenuItem>(context, space_between_lines));
 
   add_menu_item(std::make_unique<TextMenuItem>(
-      context, "Exit", [&state] { state.request_exit(); }, face, style,
-      sel_style));
+      context, "Options",
+      [&state] { state.ui().push<ScreenTag>(ScreenTag::Kind::MenuOptions); },
+      face, style, sel_style));
+  add_menu_item(std::make_unique<PositionMarkerMenuItem>(context, 276, 164));
+  add_menu_item(std::make_unique<TextMenuItem>(
+      context, "Exit", [&state] { state.request_exit(); }, FontFace::RUBY,
+      style, sel_style));
 
   // Debug info in small text in the corner:
   ViewPoint debug_info{10, 170};

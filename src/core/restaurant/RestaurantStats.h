@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cstdint>
 #include <unordered_map>
 #include <vector>
 #include "core/common/Ids.h"
@@ -84,6 +85,9 @@ struct DailyStats {
   std::unordered_map<core::RecipeId, PizzaSalesData, core::RecipeId::Hasher>
       pizza_sales;
 
+  // Total grams of ingredients consumed in fulfilled orders
+  int64_t ingredients_used_grams{0};
+
   // Demand value calculation (average price of orders including unfulfilled)
   Money total_order_value{0}; // Sum of all order prices (including lost orders)
   int order_value_count{0};   // Orders contributing to total_order_value
@@ -136,6 +140,7 @@ struct DailyStats {
     avg_quality = 0;
     capacity_utilization = 0;
     pizza_sales.clear();
+    ingredients_used_grams = 0;
     total_order_value = Money{0};
     order_value_count = 0;
   }
@@ -178,6 +183,7 @@ struct RestaurantStats {
 
   // All-time totals
   int total_pizzas_sold{0};
+  int64_t total_ingredients_used_grams{0};
   Money total_revenue{0};
   Money total_profit{0};
 

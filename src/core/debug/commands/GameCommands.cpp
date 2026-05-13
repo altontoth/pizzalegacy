@@ -5,8 +5,10 @@
  */
 
 #include "GameCommands.h"
+#include "core/events/LeventId.h"
 #include "core/save/SaveGameManager.h"
 #include "core/state/GameState.h"
+#include "core/state/UIState.h"
 #include "core/time/GameDate.h"
 #include "core/time/GameTime.h"
 
@@ -235,6 +237,73 @@ Example:
                     .category = "game"};
 }
 
+static CommandDef make_game_end() {
+  return CommandDef{
+      .name = "end",
+      .description = "Trigger game over for the active player",
+      .help_text = R"(Usage: game end <cause>
+
+Immediately triggers game over for the active player.
+Valid causes: debts, suppliers, killed, tycoon
+)",
+      .args =
+          {
+              ArgSpec{
+                  .name = "cause",
+                  .type = ArgType::String,
+                  .optional = false,
+                  .default_provider = DefaultProvider::None,
+                  .description = "Game over cause",
+                  .allowed_values =
+                      std::vector<std::string>{"debts", "killed", "suppliers",
+                                               "tycoon"},
+              },
+          },
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        auto* player = ctx.state.active_player();
+        if (!player) {
+          return CommandResult::error("No active player");
+        }
+
+        if (ctx.args.empty()) {
+          return CommandResult::error(
+              "Missing cause argument",
+              "Usage: game end <debts|killed|tycoon|suppliers>");
+        }
+
+        std::string cause_str = ctx.string_arg(0);
+
+        GameOverCause cause;
+        core::events::LeventId message;
+        if (cause_str == "killed") {
+          cause = GameOverCause::KilledByMafia;
+          message =
+              core::events::LeventId::CoolVinnieAndBigLuigiTakeYouForABath;
+        }
+        else if (cause_str == "tycoon") {
+          ctx.state.trigger_win_sequence(player->id());
+          return CommandResult::success().add_message(
+              "Game over triggered: tycoon");
+        }
+        else if (cause_str == "suppliers") {
+          cause = GameOverCause::BankruptSuppliers;
+          message = core::events::LeventId::NotAbleToPaySuppliers;
+        }
+        else {
+          cause = GameOverCause::BankruptDebts;
+          message = core::events::LeventId::NotAbleToPayDebts;
+        }
+
+        ctx.state.deliver_message(message,
+                                  [player, cause, &state = ctx.state]() {
+                                    state.eliminate_player(player->id(), cause);
+                                  });
+        return CommandResult::success().add_message(
+            compat::format("Game over triggered: {}", cause_str));
+      },
+      .category = "game"};
+}
+
 static CommandDef make_game_competition() {
   return CommandDef{
       .name = "competition",
@@ -256,7 +325,8 @@ CommandDef make_game_commands() {
       .add_subcommand(make_game_load())
       .add_subcommand(make_game_exit())
       .add_subcommand(make_game_date())
-      .add_subcommand(make_game_competition());
+      .add_subcommand(make_game_competition())
+      .add_subcommand(make_game_end());
 }
 
 } // namespace debug::commands

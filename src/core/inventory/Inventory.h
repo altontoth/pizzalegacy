@@ -21,54 +21,49 @@ struct Inventory {
   const int max_per_item_ = 255;
 
   int& operator[](item::Item i) noexcept;
-  // read-only access
   int operator[](item::Item i) const noexcept;
 
-  // Return how many units of this item the container holds.
   int count(item::Item id) const noexcept;
 
   // Try to add `amount` units. Returns the number of items actually
-  // added (you can't go beyond 255):
+  // added (given max_per_item_)
   int add(item::Item id, int amount = 1) noexcept;
 
   // Add units with cost tracking for profit calculation on resale.
   int add_with_cost(item::Item id, int amount, Money total_cost) noexcept;
 
   // Try to remove `amount` units. Returns the number of items actually
-  // removed (you can't go negative):
+  // removed. Game actually doesn't allow you to sell 20 when you have 15 for
+  // example, but if we want to allow that in the future, at least this can
+  // handle it.
   int remove(item::Item id, int amount = 1) noexcept;
 
   // Remove units and return the proportional cost basis withdrawn.
   Money remove_with_cost(item::Item id, int amount) noexcept;
 
-  int max_per_item(item::Item id) noexcept { return max_per_item_; }
+  int max_per_item(item::Item /*id*/) const noexcept { return max_per_item_; }
 };
 
 inline std::ostream& operator<<(std::ostream& os,
                                 const inventory::Inventory& inv) {
   os << "Inventory{";
-
   bool first = true;
   for (std::underlying_type_t<item::Item> i = 0; i < item::item_count; ++i) {
-    const item::Item id = static_cast<item::Item>(i);
+    const auto id = static_cast<item::Item>(i);
     const int qty = inv[id];
     if (qty == 0) {
-      continue; // skip empty slots
+      continue;
     }
-
     if (!first) {
       os << ", ";
     }
     first = false;
-
     os << item::to_string(id) << ':' << qty;
   }
-
   if (first) {
-    os << "empty"; // nothing was printed
+    os << "empty";
   }
   os << '}';
-
   return os;
 }
 

@@ -6,6 +6,7 @@
 
 #include "core/save/SaveGameManager.h"
 
+#include <array>
 #include <bit>
 #include <ctime>
 #include <filesystem>
@@ -667,6 +668,121 @@ void SaveGameManager::json_to_state(const json& j, GameState& state,
       }
       state.message_manager().restore_scheduled(pid, entries);
     }
+  }
+}
+
+static constexpr std::array<char, 6> HIGH_SCORE_MAGIC = {'P', 'L', 'H',
+                                                         'I', 'G', 'H'};
+static constexpr std::string_view HIGH_SCORE_FILENAME = "highscore.dat";
+
+std::vector<HighScoreEntry> SaveGameManager::load_high_scores() {
+  try {
+    std::string full_path = get_full_path(std::string(HIGH_SCORE_FILENAME));
+    std::ifstream file(full_path, std::ios::binary);
+    if (!file.is_open()) {
+      return {};
+    }
+
+    file.seekg(0, std::ios::end);
+    auto file_size = file.tellg();
+    file.seekg(0, std::ios::beg);
+    if (!file.good() ||
+        file_size <= static_cast<std::streampos>(sizeof(SaveHeader))) {
+      return {};
+    }
+
+    std::vector<unsigned char> compressed(static_cast<size_t>(file_size));
+    if (!file.read(reinterpret_cast<char*>(compressed.data()), file_size)) {
+      return {};
+    }
+
+    SaveHeader hdr;
+    std::memcpy(&hdr, compressed.data(), sizeof(hdr));
+    if (std::memcmp(hdr.magic, HIGH_SCORE_MAGIC.data(), 6) != 0) {
+      Logger::warn("High score file has invalid magic");
+      return {};
+    }
+
+    uint64_t decompressed_size = from_le64(hdr.size);
+    if (decompressed_size == 0 || decompressed_size > MAX_SAVE_SIZE) {
+      return {};
+    }
+
+    std::string json_str(static_cast<size_t>(decompressed_size), '\0');
+    auto dest_len = static_cast<uLongf>(decompressed_size);
+    int zret =
+        uncompress(reinterpret_cast<Bytef*>(json_str.data()), &dest_len,
+                   compressed.data() + sizeof(SaveHeader),
+                   static_cast<uLong>(compressed.size() - sizeof(SaveHeader)));
+    if (zret != Z_OK) {
+      return {};
+    }
+
+    auto j = json::parse(json_str);
+    std::vector<HighScoreEntry> entries;
+    for (const auto& e : j.value("entries", json::array())) {
+      entries.push_back({
+          .name = e.value("name", ""),
+          .score = e.value("score", 0),
+      });
+    }
+    return entries;
+  }
+  catch (...) {
+    return {};
+  }
+}
+
+bool SaveGameManager::add_high_score(HighScoreEntry entry) {
+  try {
+    auto entries = load_high_scores();
+    entries.push_back(std::move(entry));
+
+    std::sort(entries.begin(), entries.end(),
+              [](const HighScoreEntry& a, const HighScoreEntry& b) {
+                return a.score > b.score;
+              });
+    if (static_cast<int>(entries.size()) > HIGH_SCORE_MAX_ENTRIES) {
+      entries.resize(HIGH_SCORE_MAX_ENTRIES);
+    }
+
+    json j;
+    j["version"] = 1;
+    j["entries"] = json::array();
+    for (const auto& e : entries) {
+      j["entries"].push_back({{"name", e.name}, {"score", e.score}});
+    }
+    std::string json_str = j.dump(-1);
+
+    uLongf bound = compressBound(static_cast<uLong>(json_str.size()));
+    std::vector<Bytef> compressed(sizeof(SaveHeader) + bound);
+    uLongf compressed_size = bound;
+    int zret =
+        compress2(compressed.data() + sizeof(SaveHeader), &compressed_size,
+                  reinterpret_cast<const Bytef*>(json_str.data()),
+                  static_cast<uLong>(json_str.size()), Z_DEFAULT_COMPRESSION);
+    if (zret != Z_OK) {
+      return false;
+    }
+
+    SaveHeader hdr;
+    std::memcpy(hdr.magic, HIGH_SCORE_MAGIC.data(), 6);
+    hdr.version = to_le16(SAVE_HEADER_VERSION);
+    hdr.size = to_le64(static_cast<uint64_t>(json_str.size()));
+    std::memcpy(compressed.data(), &hdr, sizeof(hdr));
+
+    std::string full_path = get_full_path(std::string(HIGH_SCORE_FILENAME));
+    std::ofstream file(full_path, std::ios::binary);
+    if (!file.is_open()) {
+      return false;
+    }
+    file.write(
+        reinterpret_cast<const char*>(compressed.data()),
+        static_cast<std::streamsize>(sizeof(SaveHeader) + compressed_size));
+    return true;
+  }
+  catch (...) {
+    return false;
   }
 }
 

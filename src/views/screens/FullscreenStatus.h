@@ -40,4 +40,7 @@ private:
   input::ListenerToken listener_;
   std::function<void()> on_dismiss_;
   const Surface& background_;
+  uint8_t fg_color_{3};
+  uint8_t shadow_color_{20};
+  bool override_palette_{false};
 };

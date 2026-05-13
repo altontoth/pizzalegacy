@@ -1215,6 +1215,8 @@ void Restaurant::eod_batch_order_fulfillment(class GameState& game_state) {
             Money{(stock.weighted_avg_cost.cents * qty_grams) / 1000};
         ingredient_cost = ingredient_cost + this_cost;
 
+        stats_.today.ingredients_used_grams += qty_grams;
+
         int ing_id = static_cast<int>(ingredient_type);
         for (int cat_idx = 0; cat_idx < 4; ++cat_idx) {
           auto category = static_cast<IngredientCategory>(cat_idx);

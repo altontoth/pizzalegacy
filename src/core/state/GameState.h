@@ -288,6 +288,7 @@ public:
   bool is_refusing_calls(int actor_id) const;
   void clear_all_refused_calls();
   void eliminate_player(core::PlayerId id, GameOverCause cause);
+  void trigger_win_sequence(core::PlayerId pid);
   void next_player();
 
   void on_player_turn_card_finished();
@@ -383,6 +384,7 @@ private:
 
   // finish_end_of_turn helpers
   void snapshot_weekly_profits();
+  void check_milestone_events(Player& player, bool is_end_of_week);
   void
   push_weekly_restaurant_reports(const std::vector<Restaurant*>& restaurants,
                                  core::PlayerId previous_player_id,

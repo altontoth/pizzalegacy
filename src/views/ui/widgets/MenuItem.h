@@ -19,6 +19,8 @@
 class MenuItem {
 public:
   MenuItem(GameContext& gc) : context_(gc), font_face_(FontFace::MENU) {};
+  MenuItem(GameContext& gc, FontFace font_face)
+      : context_(gc), font_face_(font_face) {};
   MenuItem(GameContext& gc, FontFace font_face, std::string text,
            AlignX align = AlignX::Left)
       : context_(gc), font_face_(font_face), text_(std::move(text)),

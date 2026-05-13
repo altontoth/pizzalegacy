@@ -1452,6 +1452,10 @@ void PizzaDesign::finish_new_user(std::string name) {
       cp->recipes().create_user(std::move(name), std::move(bake_->working));
   change_active_key(id);
 
+  state_.message_manager().schedule_message(
+      core::events::LeventId::CreatedFirstPizza, cp->id(),
+      state_.time().current_date());
+
   if (competition_) {
     // Annual competition: hand results to GameState and exit.
     state_.ui().pop();
@@ -2054,7 +2058,7 @@ void PizzaDesign::finalize_competition_results() {
       winner_player->financials().transfer(today, Account::Sales, Account::Cash,
                                            total_bets,
                                            AccountingScope::Operational);
-      winner_player->add_score(40);
+      state_.adjust_social_score(*winner_player, 40);
     }
 
     // Win counter

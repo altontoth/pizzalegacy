@@ -7,7 +7,9 @@
 #include "conversations/ArmsDealerConversation.h"
 #include "conversations/ArmsDealerLine.h"
 #include "core/character/Player.h"
+#include "core/events/LeventId.h"
 #include "core/inventory/Inventory.h"
+#include "core/item/Item.h"
 #include "engine/FormatCompat.h"
 
 ArmsDealerConversation::ArmsDealerConversation(GameState& state,
@@ -37,10 +39,21 @@ bool ArmsDealerConversation::advance() {
     current_line(ArmsDealerLine::ONE_PIECE);
     break;
   case ArmsDealerLine::YOU_REACHED_MAX_ITEMS:
-    // TODO: check if they are buying weapons or joke items
-    // we might have to store an extra line of history for that,
-    // or set a boolean flag or something
-    current_line(ArmsDealerLine::BE_CAREFUL_ICE_IS_HOT);
+    switch (selected_item_) {
+    case core::item::Item::SmellyCheese:
+    case core::item::Item::Laxatives:
+    case core::item::Item::Rats:
+    case core::item::Item::StinkBomb:
+      current_line(ArmsDealerLine::HAVE_FUN);
+      break;
+    case core::item::Item::Bazooka:
+    case core::item::Item::FlameThrower:
+    case core::item::Item::Chemicals:
+    case core::item::Item::Bomb:
+    case core::item::Item::Count:
+      current_line(ArmsDealerLine::BE_CAREFUL_ICE_IS_HOT);
+      break;
+    }
     break;
   case ArmsDealerLine::DONT_NEGOTIATE:
   case ArmsDealerLine::HAVE_FUN:
@@ -419,7 +432,6 @@ constexpr int ArmsDealerConversation::piece_count(ArmsDealerLine l) {
   }
 }
 
-// enum class PurchaseResult { SUCCESS, NOT_ENOUGH_MONEY, MAX_255, };
 ArmsDealerConversation::PurchaseResult
 ArmsDealerConversation::make_purchase(int requested, core::item::Item id,
                                       Money price_per) {
@@ -458,14 +470,20 @@ ArmsDealerConversation::make_purchase(int requested, core::item::Item id,
   (void)player.spend_cash(state_.time().current_date(), Account::Weapons,
                           actual_cost);
 
+  state_.message_manager().schedule_message(
+      core::events::LeventId::CompletedFirstArmsDeal, player.id(),
+      state_.time().current_date());
+
   // Underworld score: total_cost / 500
-  const int delta = static_cast<int>(actual_cost.whole() / 500);
+  const auto delta = static_cast<int>(actual_cost.whole() / 500);
   if (delta > 0) {
     state_.adjust_underworld_score(player, delta);
   }
 
-  return (actually_added == requested) ? PurchaseResult::SUCCESS
-                                       : PurchaseResult::NOW_AT_MAX;
+  const bool filled_to_cap = inv.count(id) >= inv.max_per_item(id);
+  return (actually_added < requested || filled_to_cap)
+             ? PurchaseResult::NOW_AT_MAX
+             : PurchaseResult::SUCCESS;
 }
 
 // enum class SaleResult { SUCCESS, NOT_ENOUGH_STOCK, };

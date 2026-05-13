@@ -32,6 +32,16 @@ struct SaveMetadata {
   int active_city = -1;
 };
 
+// Highscore files are basically the same as save games, zlib compressed json
+// with a magic header, so for now I don't think it's worth pulling that out
+// into its own class.
+struct HighScoreEntry {
+  std::string name;
+  int score;
+};
+
+constexpr int HIGH_SCORE_MAX_ENTRIES = 8;
+
 class SaveGameManager {
 public:
   static bool save(const GameState& state, const GameContext& context,
@@ -47,6 +57,9 @@ public:
 
   static void set_saves_directory(std::string dir);
   static const std::string& get_saves_directory();
+
+  static std::vector<HighScoreEntry> load_high_scores();
+  static bool add_high_score(HighScoreEntry entry);
 
 private:
   static std::optional<json> read_save_json(const std::string& filename);
