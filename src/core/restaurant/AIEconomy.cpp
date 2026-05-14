@@ -64,10 +64,10 @@ void process_restaurant_revenue(Restaurant& restaurant, Player& player,
 
 bool check_bankruptcy(Restaurant& restaurant, Player& player,
                       GameState& game_state) {
-  if (restaurant.ai_profit_days() >= -50) {
-    return false;
-  }
-  if (restaurant.economy().competitor_count() <= 3) {
+  // either bad profit OR crowded market triggers the closure check
+  bool bad_profit = restaurant.ai_profit_days() < -50;
+  bool crowded = restaurant.economy().competitor_count() > 3;
+  if (!bad_profit && !crowded) {
     return false;
   }
 

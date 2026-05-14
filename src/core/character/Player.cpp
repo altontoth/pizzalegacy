@@ -80,11 +80,14 @@ core::time::TimeOfDay Player::end_of_day_time() const {
 void Player::end_of_day(GameState& game_state) {
   // AI daily evaluation
   if (!is_human_controlled()) {
-    // Bankruptcy check on first restaurant
+    // Closure check: evaluate each restaurant until one is closed.
     auto restaurants = game_state.restaurants_for(id_);
-    if (!restaurants.empty() && restaurants[0] &&
-        restaurants[0]->wants_open() && !restaurants[0]->is_force_closed()) {
-      ai::check_bankruptcy(*restaurants[0], *this, game_state);
+    for (auto* rest : restaurants) {
+      if (rest && rest->wants_open() && !rest->is_force_closed()) {
+        if (ai::check_bankruptcy(*rest, *this, game_state)) {
+          break;
+        }
+      }
     }
 
     // AI quality growth chance
@@ -101,7 +104,6 @@ void Player::end_of_day(GameState& game_state) {
   }
 
   // From here on only human players
-
   const auto active_city_id = game_state.active_city_id();
   const auto& current_date = game_state.time().current_date();
 
