@@ -841,6 +841,9 @@ Renderable* Game::change_state(GameState& gs, LoopState& /*loop*/) {
             auto conversation = std::make_unique<MayorConversation>(
                 gs, actor, city->mayor_office(), mys.type, opt_outcome,
                 mys.award_winner_player_id, restaurant_name);
+            if (mys.on_complete) {
+              conversation->on_end_ = mys.on_complete;
+            }
             current_view_ = std::make_unique<ActorView<MayorLine>>(
                 context, gs, actor, std::move(conversation));
           },

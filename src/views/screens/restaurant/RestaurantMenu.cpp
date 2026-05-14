@@ -8,10 +8,15 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cmath>
+#include <cstdlib>
 
 #include "core/city/Property.h"
+#include "core/finance/Money.h"
+#include "core/restaurant/Menu.h"
 #include "core/restaurant/PizzaSalesAggregator.h"
 #include "core/state/GameState.h"
+#include "engine/input/InputManager.h"
 #include "engine/ui/Alignment.h"
 #include "engine/ui/InteractionEvent.h"
 #include "gfx/Blit.h"
@@ -25,6 +30,7 @@ RestaurantMenu::RestaurantMenu(GameContext& context, GameState& state,
                                core::RestaurantId id)
     : MainPanelView(context, state), id_(id),
       restaurant_(state.restaurant(id)) {
+  input_ = context.input->register_listener(*this);
   set_up_buttons();
 }
 
@@ -172,6 +178,9 @@ void RestaurantMenu::render_menu_view(const RenderContext& ctx) {
   const int start_idx = current_page_ * page_size;
   const int end_idx =
       std::min<int>(start_idx + page_size, static_cast<int>(rows.size()));
+  const int sel_row_width = 216;
+  const int price_box_width = 70;
+  const int sel_row_height = 16;
 
   // Draw rows
   int y = text_pos.y;
@@ -185,8 +194,8 @@ void RestaurantMenu::render_menu_view(const RenderContext& ctx) {
 
     // Selection background (full row width, behind all row text)
     const int pad_y = 1;
-    const ViewRect sel_band{list_box.x, // start at number column
-                            y - pad_y, 216, 16};
+    const ViewRect sel_band{list_box.x, y - pad_y, sel_row_width,
+                            sel_row_height};
     if (selected_row_ && i == *selected_row_) {
       ctx.surface->fill_rect(sel_band, 14);
     }
@@ -219,12 +228,35 @@ void RestaurantMenu::render_menu_view(const RenderContext& ctx) {
       cents.insert(cents.begin(), '0');
     }
 
-    context_.font->render_line_onto(
-        *ctx.surface, std::to_string(price.whole()) + ".", ViewPoint{-78, y},
-        FontFace::CSTANDAR, price_whole_style);
-    context_.font->render_line_onto(*ctx.surface, cents,
-                                    ViewPoint{price_cents_pos.x, y},
-                                    FontFace::CSTANDAR, line_style);
+    const ViewRect price_box{list_box.x + sel_row_width, y - pad_y,
+                             price_box_width, sel_row_height};
+    interactions_.create_frame_item(
+        price_box,
+        std::string(recipe->display_name()) + "-" + std::to_string(i) +
+            "-price",
+        [this, i](const views::ui::InteractionEvent& ie) {
+          if (ie.type != views::ui::InteractionEvent::Type::Click ||
+              ie.button != views::ui::MouseButton::Left) {
+            return;
+          }
+          begin_price_edit(i);
+        });
+
+    if (editable_price_row_ && i == *editable_price_row_) {
+      constexpr uint8_t edit_bg = 15;
+      ctx.surface->fill_rect(price_box, edit_bg);
+      context_.font->render_line_onto(*ctx.surface, new_price_ + "_",
+                                      ViewPoint{price_box.x + 2, y},
+                                      FontFace::CSTANDAR, line_style);
+    }
+    else {
+      context_.font->render_line_onto(
+          *ctx.surface, std::to_string(price.whole()) + ".", ViewPoint{-78, y},
+          FontFace::CSTANDAR, price_whole_style);
+      context_.font->render_line_onto(*ctx.surface, cents,
+                                      ViewPoint{price_cents_pos.x, y},
+                                      FontFace::CSTANDAR, line_style);
+    }
   }
 
   const std::string page_text = "- " + std::to_string(current_page_ + 1) + " -";
@@ -330,6 +362,88 @@ void RestaurantMenu::render_sales_view(const RenderContext& ctx) {
   context_.font->render_line_onto(*ctx.surface, page_text, ViewPoint{0, 316},
                                   FontFace::PIZ_NUMB,
                                   {.color = 8, .align = AlignX::Center});
+}
+
+void RestaurantMenu::begin_price_edit(int row) {
+  end_price_edit();
+  editable_price_row_ = row;
+  new_price_.clear();
+  text_session_ = context_.input->start_text_input(*this);
+  mark_dirty();
+}
+
+void RestaurantMenu::end_price_edit() {
+  editable_price_row_.reset();
+  new_price_.clear();
+  text_session_.reset();
+  mark_dirty();
+}
+
+void RestaurantMenu::commit_price_edit() {
+  if (editable_price_row_ && !new_price_.empty()) {
+    const auto& entries = restaurant_->menu().entries();
+    const auto recipe_id = entries[*editable_price_row_].recipe_id;
+    constexpr double price_min = 1.0;
+    constexpr double price_cap = 50.0;
+    char* end = nullptr;
+    double val = std::strtod(new_price_.c_str(), &end);
+    if (end != new_price_.c_str()) {
+      val = std::clamp(val, price_min, price_cap);
+      Money price{static_cast<int64_t>(std::round(val * 100))};
+      restaurant_->menu().set_price(recipe_id, price);
+    }
+  }
+  end_price_edit();
+}
+
+bool RestaurantMenu::on_text(const input::TextEvent& ev) {
+  if (!editable_price_row_) {
+    return false;
+  }
+  for (char c : ev.text) {
+    if (c == ',') {
+      c = '.';
+    }
+    if (std::isdigit(static_cast<unsigned char>(c))) {
+      if (new_price_.size() < max_price_input_length) {
+        new_price_.push_back(c);
+      }
+    }
+    else if (c == '.') {
+      if (new_price_.find('.') == std::string::npos &&
+          new_price_.size() < max_price_input_length) {
+        new_price_.push_back(c);
+      }
+    }
+  }
+  mark_dirty();
+  return true;
+}
+
+bool RestaurantMenu::on_action(const input::ActionEvent& ev) {
+  if (!editable_price_row_ || ev.state.pressed) {
+    return false;
+  }
+  switch (ev.action) {
+  case input::Action::SubmitInput:
+    commit_price_edit();
+    return true;
+  case input::Action::CancelInput:
+    end_price_edit();
+    return true;
+  case input::Action::Backspace:
+    if (!new_price_.empty()) {
+      new_price_.pop_back();
+      mark_dirty();
+    }
+    return true;
+  case input::Action::EraseLine:
+    new_price_.clear();
+    mark_dirty();
+    return true;
+  default:
+    return false;
+  }
 }
 
 void RestaurantMenu::render_customer_ratings_view(const RenderContext& ctx) {

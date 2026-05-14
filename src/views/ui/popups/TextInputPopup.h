@@ -31,8 +31,8 @@ private:
   void cancel();
   void backspace();
 
-  std::string prompt_text_{};
-  std::string input_text_{};
+  std::string prompt_text_;
+  std::string input_text_;
   int max_characters_{0};
   callback_t callback_;
   static constexpr int popup_width_ = 362;

@@ -49,11 +49,10 @@ public:
   GameState();
   ~GameState();
 
-  // Prevent copying/moving due to unique_ptr members with incomplete types
   GameState(const GameState&) = delete;
   GameState& operator=(const GameState&) = delete;
   GameState(GameState&&) = delete;
-  GameState& operator=(GameState&&) = delete;
+  GameState& operator=(GameState&&);
 
   bool should_exit() const { return quit_; }
   void request_exit() { quit_ = true; }
@@ -178,7 +177,7 @@ public:
   // For save/load:
   void add_restaurant(std::unique_ptr<Restaurant> restaurant);
   void remove_restaurant(core::RestaurantId r_id);
-  void clear_restaurants_for_load();
+  void reset_for_load();
 
   // Real Estate management
   bool buy_restaurant(Property&, Player&, Money price);
@@ -241,6 +240,7 @@ public:
   void advance_time_blocks(int n);
 
   int difficulty_level() const { return difficulty_level_; };
+  void difficulty_level(int d) { difficulty_level_ = d; }
 
   RankChange adjust_underworld_score(Player& player, int delta);
   RankChange adjust_social_score(Player& player, int delta);

@@ -28,7 +28,7 @@ void StatusHub::rebuild_now() { rebuild_and_push(); }
 
 void StatusHub::log_ephemeral(const StatusMsg& m) {
   EphemeralEntry e{
-      .time = core::time::make_stamp(time_),
+      .time = core::time::make_stamp(*time_),
       .snapshot = current_,
       .severity = m.severity,
       .scope = m.scope,
@@ -48,7 +48,7 @@ void StatusHub::post(StatusMsg m) {
   // Find a free slot; silently drop if the queue is full
   for (auto& slot : queue_) {
     if (!slot.has_value()) {
-      const int not_before = time_.time_blocks() + m.delay_blocks;
+      const int not_before = time_->time_blocks() + m.delay_blocks;
       slot = QueueSlot{.msg = std::move(m), .not_before_block = not_before};
       return;
     }
@@ -119,7 +119,7 @@ bool StatusHub::scan_queue() {
   if (showing_queued_.has_value()) {
     return false;
   }
-  const int current_block = time_.time_blocks();
+  const int current_block = time_->time_blocks();
   for (int i = 0; i < QUEUE_SIZE; ++i) {
     auto& slot = queue_[i];
     if (slot.has_value() && slot->not_before_block <= current_block) {

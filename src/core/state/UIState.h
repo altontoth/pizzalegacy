@@ -240,6 +240,7 @@ struct MayorState {
   std::optional<int> award_winner_player_id;
   bool inspection_star_gained{false};
   bool inspection_star_lost{false};
+  std::function<void()> on_complete;
 };
 
 using UIState = std::variant<

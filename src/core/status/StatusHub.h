@@ -47,7 +47,7 @@ public:
   using BaselineProvider = std::function<StatusDisplayRecipe()>;
   using Subscriber = std::function<void(StatusDisplayRecipe)>;
 
-  explicit StatusHub(GameTime& time) : time_(time) {}
+  explicit StatusHub(GameTime& time) : time_(&time) {}
 
   class Subscription {
   public:
@@ -139,7 +139,7 @@ private:
   bool scan_queue();
   void log_ephemeral(const StatusMsg& m);
 
-  GameTime& time_;
+  GameTime* time_;
 
   // State
   BaselineProvider baseline_;

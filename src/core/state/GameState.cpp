@@ -48,6 +48,7 @@
 
 GameState::GameState() = default;
 GameState::~GameState() = default;
+GameState& GameState::operator=(GameState&&) = default;
 
 std::ostream& operator<<(std::ostream& os, const GameState& state) {
   os << "GameState:\n";
@@ -760,9 +761,19 @@ void GameState::process_next_restaurant() {
                                         d.restaurant_id == restaurant->id();
                                });
         if (it != deferred_staff_events_.end()) {
+          Logger::debug("[staff_event] replace queued event: rest={} role={} "
+                        "slot={} old_type={} new_type={}",
+                        restaurant->id().value, static_cast<int>(ev.job_role),
+                        ev.slot_index, static_cast<int>(it->event.type),
+                        static_cast<int>(ev.type));
           it->event = ev;
         }
         else {
+          Logger::debug("[staff_event] enqueue: rest={} role={} slot={} "
+                        "type={} queue_size_after={}",
+                        restaurant->id().value, static_cast<int>(ev.job_role),
+                        ev.slot_index, static_cast<int>(ev.type),
+                        deferred_staff_events_.size() + 1);
           deferred_staff_events_.push_back({ev, restaurant->id()});
         }
       }
@@ -805,8 +816,17 @@ void GameState::show_next_deferred_staff_event() {
   auto deferred = deferred_staff_events_.front();
   deferred_staff_events_.erase(deferred_staff_events_.begin());
 
+  Logger::debug(
+      "[staff_event] dequeue for display: rest={} role={} slot={} type={} "
+      "remaining={}",
+      deferred.restaurant_id.value, static_cast<int>(deferred.event.job_role),
+      deferred.event.slot_index, static_cast<int>(deferred.event.type),
+      deferred_staff_events_.size());
+
   auto* restaurant = this->restaurant(deferred.restaurant_id);
   if (!restaurant) {
+    Logger::debug("[staff_event] skip (restaurant gone): rest={}",
+                  deferred.restaurant_id.value);
     // Restaurant gone (sold/closed since EOD), skip and try next.
     show_next_deferred_staff_event();
     return;
@@ -917,36 +937,27 @@ void GameState::show_next_deferred_inspection() {
     restaurant->force_close(7);
   }
 
+  std::function<void()> on_complete;
   if (outcome.star_gained) {
     using core::events::LeventId;
-    auto* p = active_player();
-    if (p) {
-      const auto& date = time_.current_date();
-      switch (restaurant->star_rating()) {
-      case 1:
-        message_manager_.schedule_message(LeventId::AwardedFirstStar, p->id(),
-                                          date);
-        break;
-      case 2:
-        message_manager_.schedule_message(LeventId::FirstTwoStarRestaurant,
-                                          p->id(), date);
-        break;
-      case 3:
-        message_manager_.schedule_message(LeventId::FirstThreeStarRestaurant,
-                                          p->id(), date);
-        break;
-      case 4:
-        message_manager_.schedule_message(LeventId::FirstFourStarRestaurant,
-                                          p->id(), date);
-        break;
-      case 5:
-        message_manager_.schedule_message(LeventId::FirstFiveStarRestaurant,
-                                          p->id(), date);
-        break;
-      default:
-        break;
-      }
+    LeventId msg_id = LeventId::AwardedFirstStar;
+    switch (restaurant->star_rating()) {
+    case 2:
+      msg_id = LeventId::FirstTwoStarRestaurant;
+      break;
+    case 3:
+      msg_id = LeventId::FirstThreeStarRestaurant;
+      break;
+    case 4:
+      msg_id = LeventId::FirstFourStarRestaurant;
+      break;
+    case 5:
+      msg_id = LeventId::FirstFiveStarRestaurant;
+      break;
+    default:
+      break;
     }
+    on_complete = [this, msg_id]() { deliver_message(msg_id); };
   }
 
   MayorConversationType conv_type =
@@ -958,7 +969,8 @@ void GameState::show_next_deferred_inspection() {
                                   .is_first_inspection = deferred.is_first,
                                   .award_winner_player_id = std::nullopt,
                                   .inspection_star_gained = outcome.star_gained,
-                                  .inspection_star_lost = outcome.star_lost});
+                                  .inspection_star_lost = outcome.star_lost,
+                                  .on_complete = std::move(on_complete)});
 }
 
 void GameState::process_mayor_award_event(const MayorAwardEvent& award_event) {
@@ -1145,6 +1157,15 @@ void GameState::show_staff_event_dialog(
   using Dialogs = core::restaurant::StaffEventDialogs;
   using engine::random::rand_between;
   using engine::random::rand_percentage_chance;
+
+  Staff* dbg_staff = restaurant->staff_at(event.job_role, event.slot_index);
+  Logger::debug(
+      "[staff_event] show_dialog: rest={} role={} slot={} type={} staff={}",
+      restaurant->id().value, static_cast<int>(event.job_role),
+      event.slot_index, static_cast<int>(event.type),
+      dbg_staff ? compat::format("{} {}", dbg_staff->character().first_name(),
+                                 dbg_staff->character().last_name())
+                : "(none)");
 
   bool is_persf = (event.type >= Type::DestroyCheeseStock);
   int section_index = 0;
@@ -2492,22 +2513,9 @@ void GameState::remove_restaurant(core::RestaurantId r_id) {
                 [r_id](const auto& r) { return r->id() == r_id; });
 }
 
-void GameState::clear_restaurants_for_load() {
-  // Clear all restaurant references from properties in all loaded cities
-  for (auto& city_ptr : cities_) {
-    if (city_ptr) {
-      for (auto* property : city_ptr->properties()) {
-        if (property && property->has_restaurant()) {
-          // Clear the restaurant link from the property
-          property->clear_restaurant();
-        }
-      }
-    }
-  }
-
-  // Clear the restaurants list
-  restaurants_.clear();
-  next_restaurant_id_ = core::RestaurantId{0};
+void GameState::reset_for_load() {
+  *this = GameState{};
+  status_hub_ = StatusHub{time_};
 }
 
 bool GameState::sell_property(Property& property, Player& seller,

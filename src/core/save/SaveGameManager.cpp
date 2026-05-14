@@ -600,7 +600,7 @@ json SaveGameManager::state_to_json(const GameState& state,
 void SaveGameManager::json_to_state(const json& j, GameState& state,
                                     GameContext& context) {
   // Clear all existing restaurants and reset property states before loading
-  state.clear_restaurants_for_load();
+  state.reset_for_load();
 
   // Restore RNG state so the loaded game continues with the same random
   // sequence
@@ -622,6 +622,9 @@ void SaveGameManager::json_to_state(const json& j, GameState& state,
   if (j.contains("game_mode")) {
     auto mode{j["game_mode"].get<int>()};
     state.game_mode(static_cast<GameMode>(mode));
+  }
+  if (j.contains("difficulty_level")) {
+    state.difficulty_level(j["difficulty_level"].get<int>());
   }
 
   // active_city and active_restaurant will be set after
