@@ -78,10 +78,34 @@ core::time::TimeOfDay Player::end_of_day_time() const {
 }
 
 void Player::end_of_day(GameState& game_state) {
-  // Deduct daily advertising costs for campaigns in active city
+  // AI daily evaluation
+  if (!is_human_controlled()) {
+    // Bankruptcy check on first restaurant
+    auto restaurants = game_state.restaurants_for(id_);
+    if (!restaurants.empty() && restaurants[0] &&
+        restaurants[0]->wants_open() && !restaurants[0]->is_force_closed()) {
+      ai::check_bankruptcy(*restaurants[0], *this, game_state);
+    }
+
+    // AI quality growth chance
+    for (auto* rest : restaurants) {
+      if (rest && rest->wants_open() && !rest->is_force_closed() &&
+          rest->economy().quality_rating() < 100 &&
+          engine::random::rand_percentage_chance(character_.courage())) {
+        rest->economy().quality_rating(rest->economy().quality_rating() + 1);
+      }
+    }
+
+    check_ai_expansion(game_state);
+    return;
+  }
+
+  // From here on only human players
+
   const auto active_city_id = game_state.active_city_id();
   const auto& current_date = game_state.time().current_date();
 
+  // Deduct daily advertising costs for campaigns in active city
   for (const auto& campaign_opt : campaigns_) {
     if (campaign_opt.has_value() && campaign_opt->days_remaining > 0 &&
         campaign_opt->city_id == active_city_id) {
@@ -121,7 +145,7 @@ void Player::end_of_day(GameState& game_state) {
   }
 
   // Early day-end energy bonus
-  // prob = (end_threshold - current_block) + 10; higher the earlier you end.
+  // prob = (end_threshold - current_block) + 10
   {
     int end_threshold = 90 + (character_.energy() / 2);
     int current_block = game_state.time().current_block_of_day();
@@ -153,98 +177,22 @@ void Player::end_of_day(GameState& game_state) {
   // tick term
   process_contracts(game_state);
 
-  // AI daily evaluation
-  if (!is_human_controlled()) {
-    // Bankruptcy check on first restaurant
-    auto restaurants = game_state.restaurants_for(id_);
-    if (!restaurants.empty() && restaurants[0] &&
-        restaurants[0]->wants_open() && !restaurants[0]->is_force_closed()) {
-      ai::check_bankruptcy(*restaurants[0], *this, game_state);
-    }
-
-    // AI quality growth chance
-    for (auto* rest : restaurants) {
-      if (rest && rest->wants_open() && !rest->is_force_closed() &&
-          rest->economy().quality_rating() < 100 &&
-          engine::random::rand_percentage_chance(character_.courage())) {
-        rest->economy().quality_rating(rest->economy().quality_rating() + 1);
-      }
-    }
-
-    check_ai_expansion(game_state);
-    return;
-  }
-
-  // From here on only humans
   Money balance = cash_balance();
 
-  // First time going into debt warning
   if (balance.cents < 0) {
     game_state.message_manager().schedule_message(
         core::events::LeventId::FinancialDifficultiesFirstTime, id_,
         game_state.time().current_date());
-  }
-
-  // Overdrawn account warning
-  if (balance.cents < 0) {
     Logger::warn("[Finance] {} - Account overdrawn: {}", name_, balance);
   }
 }
 
-// Pay weekly staff salaries
+// Pay suppliers and check bankruptcy.
 void Player::end_of_week(GameState& game_state) {
-  Money total_wages{0};
-  int total_staff_count = 0;
-
-  auto restaurants = game_state.restaurants_for(id_);
-  for (auto* restaurant : restaurants) {
-    if (!restaurant) {
-      continue;
-    }
-
-    Money restaurant_wages{0};
-
-    // Count and sum wages for cooks
-    for (const auto& cook : restaurant->cooks()) {
-      if (cook.has_value()) {
-        restaurant_wages += cook->payment();
-        total_staff_count++;
-      }
-    }
-
-    // Count and sum wages for waiters
-    for (const auto& waiter : restaurant->waiters()) {
-      if (waiter.has_value()) {
-        restaurant_wages += waiter->payment();
-        total_staff_count++;
-      }
-    }
-
-    // Count and sum wages for manager
-    if (restaurant->manager().has_value()) {
-      restaurant_wages += restaurant->manager()->payment();
-      total_staff_count++;
-    }
-
-    // Transfer wages from Cash to Staff account per restaurant (can go
-    // negative)
-    if (restaurant_wages.cents > 0) {
-      const auto& current_date = game_state.time().current_date();
-      financials_.transfer(current_date, Account::Cash, Account::Staff,
-                           restaurant_wages, restaurant->id(),
-                           AccountingScope::Operational);
-    }
-
-    total_wages += restaurant_wages;
+  if (!is_human_controlled()) {
+    return;
   }
 
-  if (total_wages.cents > 0) {
-    Logger::info(
-        "[Finance] {} - Weekly salary payment: {} staff paid ${:.2f} total",
-        name_, total_staff_count, total_wages.cents / 100.0);
-  }
-
-  // Supplier debt bankruptcy: any unpaid supplier balance at end of week
   for (City* city : game_state.initialized_cities()) {
     for (const auto& s_ptr : city->suppliers()) {
       if (s_ptr->relationship(id_).outstanding_debt.cents > 0) {
@@ -258,16 +206,6 @@ void Player::end_of_week(GameState& game_state) {
         return;
       }
     }
-  }
-
-  // Bank/loan debt bankruptcy
-  Money balance = cash_balance();
-  if (balance.cents < 0) {
-    Logger::warn("[Finance] {} - BANKRUPT! Balance: {}", name_, balance);
-    game_state.deliver_message(
-        core::events::LeventId::NotAbleToPayDebts, [this, &game_state]() {
-          game_state.eliminate_player(id_, GameOverCause::BankruptDebts);
-        });
   }
 }
 

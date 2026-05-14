@@ -127,9 +127,16 @@ void GameState::deduct_staff_wages_for_restaurant(
     return;
   }
 
-  Money total_wages{0};
+  auto owner_id_opt = restaurant->property().owner_or_tenant();
+  if (!owner_id_opt) {
+    return;
+  }
+  auto* p = player(*owner_id_opt);
+  if (!p) {
+    return;
+  }
 
-  // Calculate total weekly wages
+  Money total_wages{0};
   for (const auto& cook : restaurant->cooks()) {
     if (cook) {
       total_wages = total_wages + cook->payment();
@@ -144,9 +151,27 @@ void GameState::deduct_staff_wages_for_restaurant(
     total_wages = total_wages + restaurant->manager()->payment();
   }
 
-  // Deduct wages (this will show insufficient funds message if needed)
-  // TODO: Figure out exactly what the effect of not being able to pay staff is
-  spend_cash(Account::Staff, total_wages, restaurant_id);
+  if (total_wages.cents == 0) {
+    return;
+  }
+
+  // wages (can go negative)
+  p->financials().transfer(time_.current_date(), Account::Cash, Account::Staff,
+                           total_wages, restaurant_id,
+                           AccountingScope::Operational);
+
+  Logger::info(
+      "[Finance] {} - Staff wages deducted for {}: {} (balance now {})",
+      p->name(), restaurant->name(), total_wages, p->cash_balance());
+
+  if (p->cash_balance().cents < 0) {
+    Logger::warn("[Finance] {} - BANKRUPT after staff payment! Balance: {}",
+                 p->name(), p->cash_balance());
+    deliver_message(core::events::LeventId::NotAbleToPayDebts,
+                    [this, pid = *owner_id_opt]() {
+                      eliminate_player(pid, GameOverCause::BankruptDebts);
+                    });
+  }
 }
 
 void GameState::show_staff_invoice_popup(core::RestaurantId restaurant_id,
@@ -1671,7 +1696,7 @@ void GameState::build_turn_pipeline(
   turn_pipeline_.push_back(Step::CityStartOfDay);
   turn_pipeline_.push_back(Step::PlayerTurnCard);
 
-  if (wrapped && prev_is_human) {
+  if (prev_is_human) {
     if (is_end_of_week) {
       turn_pipeline_.push_back(Step::WeeklyReports);
     }
