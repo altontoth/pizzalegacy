@@ -46,9 +46,6 @@ public:
   // Leben text for CV entries:
   std::string get_cv_text(LeventId msg_id) const;
 
-  // All lines from ENDE.E for the win sequence screen:
-  const std::vector<std::string>& get_ende_texts() const;
-
   struct CvEntry {
     GameDate date;
     LeventId message_id;
@@ -80,12 +77,9 @@ private:
   mutable bool levent_loaded_;
   mutable std::vector<std::string> leben_texts_;
   mutable bool leben_loaded_;
-  mutable std::vector<std::string> ende_texts_;
-  mutable bool ende_loaded_;
 
   void load_levent_texts() const;
   void load_leben_texts() const;
-  void load_ende_texts() const;
 };
 
 } // namespace core::events

@@ -2312,6 +2312,7 @@ bool GameState::buy_restaurant(Property& property, Player& buyer, Money price) {
   // If the buyer was renting, a restaurant already exists
   if (!property.has_restaurant()) {
     create_restaurant(buyer, property);
+    adjust_social_score(buyer, 50);
   }
   return true;
 }
@@ -2341,6 +2342,7 @@ Restaurant* GameState::rent_restaurant(Property& property, Player& player,
     return nullptr;
   }
 
+  adjust_social_score(player, 50);
   return restaurant;
 }
 
@@ -2382,6 +2384,7 @@ bool GameState::buy_depot(Property& property, Player& buyer) {
   city.central_depot(buyer.id()).add_capacity(capacity);
 
   check_depot_milestones(*this, buyer);
+  adjust_social_score(buyer, 180);
 
   return true;
 }
@@ -2487,6 +2490,13 @@ bool GameState::sell_property(Property& property, Player& seller,
   seller.financials().transfer(today, Account::Property, Account::Cash,
                                sale_price, AccountingScope::Capital);
 
+  if (property.type() == PropertyType::DEPOT) {
+    adjust_social_score(seller, -170);
+  }
+  else {
+    adjust_social_score(seller, -50);
+  }
+
   // If this is a depot, remove capacity from central depot
   if (property.type() == PropertyType::DEPOT) {
     auto& city = property.city();
@@ -2521,6 +2531,7 @@ bool GameState::end_property_lease(Property& property, Player& player) {
   }
 
   if (property.has_restaurant()) {
+    adjust_social_score(player, -50);
     remove_restaurant(*property.restaurant_id());
   }
 

@@ -24,7 +24,7 @@ class FoodSupplier {
 public:
   FoodSupplier(IngredientCategory category, uint8_t supplier_id,
                uint8_t quality, std::string name, uint8_t head_id,
-               int min_contract, const uint8_t* price_level,
+               int min_contract, uint8_t file_id, const uint8_t* price_level,
                int price_level_count);
   Money minimum_contract_amount() const;
   int number_of_products() const;
@@ -33,6 +33,7 @@ public:
   uint8_t quality() const;
   const std::string& name() const;
   uint8_t head_id() const;
+  uint8_t file_id() const;
   uint8_t chance_of_no_delivery() const;
 
   SupplierRelationship& relationship(core::PlayerId player_id);
@@ -62,6 +63,7 @@ private:
   std::string name_;
   ActorType actor_type_;
   uint8_t head_id_;
+  uint8_t file_id_;
   Money min_contract_amount_;
   std::array<uint8_t, 22> price_levels_; // Max 22 for vegetables
   std::array<int, 22> stock_levels_{};   // Stock levels in kg

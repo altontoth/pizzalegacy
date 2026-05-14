@@ -14,6 +14,7 @@
 #include "gfx/Blit.h"
 #include "gfx/ColorIndex.h"
 #include "resources/FontManager.h"
+#include "resources/util/FileUtils.h"
 #include "resources/util/Platform.h"
 
 constexpr int ticks_per_logo = 50;
@@ -56,12 +57,7 @@ Intro::Intro(GameContext& context, GameState& state)
                            });
   }
 
-  std::ifstream file = fileutils::open("t/credits.e");
-  // Read the file line-by-line.
-  std::string line;
-  while (std::getline(file, line)) {
-    credit_lines_.push_back(line);
-  }
+  credit_lines_ = fileutils::load_text_lines("t/credits.e");
   credit_lines_.push_back("Open source reimplementation");
   credit_lines_.push_back("Cowomaly");
   interactions_.create_persistent_item(

@@ -25,6 +25,7 @@ private:
   void generate_player_items();
   void active_player(int index);
   void character_for_player(int character_id);
+  void change_character(int delta);
 
   int active_player_{0};
   int human_players_{1};

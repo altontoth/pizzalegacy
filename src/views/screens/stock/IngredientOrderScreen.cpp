@@ -414,6 +414,11 @@ void IngredientOrderScreen::place_order() {
                        batch.price_per_unit, batch.quality);
         }
       }
+
+      int social_gain = total_items / 1000;
+      if (social_gain > 0) {
+        state_.adjust_social_score(*state_.active_player(), social_gain);
+      }
     }
     else {
       auto* restaurant = state_.active_restaurant();

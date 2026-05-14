@@ -11,6 +11,7 @@
 #include "engine/ui/InteractionEvent.h"
 #include "gfx/Blit.h"
 #include "magic_enum/magic_enum.hpp"
+#include "resources/util/FileUtils.h"
 #include "views/base/ViewDefs.h"
 
 #include <cassert>
@@ -204,11 +205,7 @@ void Advertising::render_purchasing_newspaper_ads(const RenderContext& ctx) {
   gfx::blit::blit_raw_with_palette(*ctx.surface,
                                    context_.vga->get("gfx/back31"));
   if (werbung_e_.empty()) {
-    auto file = fileutils::open("T/WERBUNG.E");
-    std::string line;
-    while (std::getline(file, line)) {
-      werbung_e_.push_back(line);
-    }
+    werbung_e_ = fileutils::load_text_lines("T/WERBUNG.E");
   }
   // First we pick a random number that is going to go at the top
   int top_line = engine::random::rand_max_n(number_of_werbung_lines -

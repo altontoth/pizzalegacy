@@ -14,6 +14,7 @@
 #include "engine/geom/Spaces.h"
 #include "gfx/Draw.h"
 #include "resources/FontTypes.h"
+#include "resources/util/FileUtils.h"
 
 namespace {
 
@@ -50,16 +51,8 @@ constexpr int BLINK_MIN_INTERVAL = 60;
 constexpr int BLINK_RANDOM_RANGE = 90; // adds 0-89 ticks
 
 std::vector<std::string> load_gtalk(bool formal) {
-  auto file = fileutils::open(formal ? "t/gtalk1.e" : "t/gtalk0.e");
-  std::vector<std::string> lines;
-  lines.push_back(""); // index 0 unused - lines are 1-based
-  std::string ln;
-  while (std::getline(file, ln)) {
-    if (!ln.empty() && ln.back() == '\r') {
-      ln.pop_back();
-    }
-    lines.push_back(std::move(ln));
-  }
+  auto lines = fileutils::load_text_lines(formal ? "t/gtalk1.e" : "t/gtalk0.e");
+  lines.insert(lines.begin(), ""); // index 0 unused - lines are 1-based
   return lines;
 }
 

@@ -12,11 +12,18 @@
 #include "engine/input/InputManager.h"
 #include "engine/ui/InteractionEvent.h"
 #include "gfx/Blit.h"
+#include "resources/util/FileUtils.h"
 
 namespace {
 constexpr uint8_t FG_COLOR = 7;
 constexpr uint8_t SHADOW_COLOR = 2;
 constexpr int WRAP_WIDTH = DisplayConstants::SCREEN_WIDTH - (2 * 30);
+
+const std::vector<std::string>& ende_texts() {
+  static std::vector<std::string> lines =
+      fileutils::load_text_lines("t/ende.e", true);
+  return lines;
+}
 } // namespace
 
 WinSequenceView::WinSequenceView(GameContext& context, GameState& state,
@@ -26,7 +33,7 @@ WinSequenceView::WinSequenceView(GameContext& context, GameState& state,
       listener_(context_.input->register_listener(*this)),
       background_(context_.vga->get("gfx/ende")) {
 
-  const auto& lines = state_.message_manager().get_ende_texts();
+  const auto& lines = ende_texts();
   total_lines_ = static_cast<int>(lines.size());
 
   TextStyle ts{.color = FG_COLOR,

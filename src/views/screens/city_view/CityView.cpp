@@ -453,6 +453,10 @@ void CityView::handle_mouse_click_zoom_close(WorldPoint p) {
         // Crime code = mission type (Package=1, Weapon=3, Laundering=4, etc.)
         auto crime = static_cast<ArrestReason>(
             static_cast<int>(mission.mission_type) + 1);
+        // Social penalty fires before police: -(crime_code x 10)
+        if (auto* player = state_.active_player()) {
+          state_.adjust_social_score(*player, -static_cast<int>(crime) * 10);
+        }
         mafia.active_mission = std::nullopt;
         state_.initiate_arrest(crime);
         return;

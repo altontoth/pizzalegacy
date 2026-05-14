@@ -617,14 +617,8 @@ Surface PlayerProfile::create_position(const Player* player) {
 
   // Load rank names from LEBEN.E (lines 0-13 social, 14-27 underworld)
   constexpr int relevant_line_count = 28;
-  auto leben = fileutils::open("t/leben.e");
-  std::vector<std::string> leben_lines;
-  leben_lines.reserve(relevant_line_count);
-  std::string line;
-  while (leben_lines.size() < relevant_line_count + 1 &&
-         std::getline(leben, line)) {
-    leben_lines.push_back(std::move(line));
-  }
+  auto leben_lines = fileutils::load_text_lines("t/leben.e");
+  leben_lines.resize(relevant_line_count);
 
   // Underworld reputation (left)
   constexpr int underworld_x = 54;

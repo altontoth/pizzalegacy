@@ -6,7 +6,6 @@
 
 #pragma once
 
-#include <fstream>
 #include <functional>
 #include <iostream>
 #include <optional>
@@ -223,12 +222,7 @@ protected:
   }
 
   void load_text_file(const std::string& file_path) {
-    std::ifstream file = fileutils::open(file_path);
-    lines_.clear();
-    std::string line;
-    while (std::getline(file, line)) {
-      lines_.push_back(line);
-    }
+    lines_ = fileutils::load_text_lines(file_path);
   }
 
   GameState& state_;

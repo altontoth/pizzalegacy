@@ -9,25 +9,15 @@
 
 namespace core::restaurant {
 
-namespace {
-std::vector<std::string> load_e_file(const char* path) {
-  std::vector<std::string> lines;
-  auto file = fileutils::open(path);
-  std::string line;
-  while (std::getline(file, line)) {
-    lines.push_back(std::move(line));
-  }
-  return lines;
-}
-} // namespace
-
 const std::vector<std::string>& StaffEventDialogs::pers_lines() {
-  static std::vector<std::string> cache = load_e_file("t/pers.e");
+  static std::vector<std::string> cache =
+      fileutils::load_text_lines("t/pers.e");
   return cache;
 }
 
 const std::vector<std::string>& StaffEventDialogs::persf_lines() {
-  static std::vector<std::string> cache = load_e_file("t/persf.e");
+  static std::vector<std::string> cache =
+      fileutils::load_text_lines("t/persf.e");
   return cache;
 }
 

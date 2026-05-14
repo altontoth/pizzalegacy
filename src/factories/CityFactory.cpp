@@ -17,6 +17,7 @@
 #include <fstream>
 #include <iostream>
 #include <map>
+#include <optional>
 
 #include "core/city/District.h"
 #include "core/city/Property.h"
@@ -245,7 +246,8 @@ void CityFactory::load_suppliers(std::ifstream& is, int supplier_count) {
     uint8_t quality = (uint8_t)is.get();
     // Logger::debug("Quality is {}", (int)quality);
 
-    is.seekg(2, std::ios_base::cur);
+    uint8_t file_id = (uint8_t)is.get();
+    [[maybe_unused]] uint8_t u1 = (uint8_t)is.get(); // Unknown
 
     // Now, the name of the supplier, I'm guessing 26 bytes this time:
     auto supplier_name = text::read_iso8859_1_string(is, 26);
@@ -270,9 +272,9 @@ void CityFactory::load_suppliers(std::ifstream& is, int supplier_count) {
 
     is.seekg(48, std::ios_base::cur);
 
-    // Map file type (0-7) to IngredientCategory (0-3)
-    // Not sure what's going on with this, but it seems to work like this
-    IngredientCategory category;
+    // The original UI only ever requests categories 0-3. Categories 4-7 are cut
+    // content that exists in the city data but is never surfaced.
+    std::optional<IngredientCategory> category;
     switch (type) {
     case 0:
       category = IngredientCategory::VEGETABLES;
@@ -284,21 +286,21 @@ void CityFactory::load_suppliers(std::ifstream& is, int supplier_count) {
       category = IngredientCategory::FRUIT;
       break;
     case 3:
-    case 4:
-    case 5:
-    case 6:
-    case 7:
       category = IngredientCategory::CHEESE;
       break;
     default:
-      category = IngredientCategory::VEGETABLES;
-      break;
+      break; // cut content, skip
+    }
+
+    if (!category) {
+      continue;
     }
 
     uint8_t supplier_id = head_type;
     auto s = std::make_unique<FoodSupplier>(
-        category, supplier_id, quality, supplier_name, head_type,
-        minimum_contract_amount, price_levels.data(), price_levels.size());
+        *category, supplier_id, quality, supplier_name, head_type,
+        minimum_contract_amount, file_id, price_levels.data(),
+        price_levels.size());
     suppliers_.push_back(std::move(s));
   }
 

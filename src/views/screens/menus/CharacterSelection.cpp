@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <numeric>
 
 #include "core/character/Character.h"
 #include "core/state/GameState.h"
@@ -42,35 +43,20 @@ CharacterSelection::CharacterSelection(GameContext& context, GameState& state)
   reload_character();
 
   // Up arrow to pick next character
-  add_menu_item(std::make_unique<ArrowMenuItem>(context, ArrowType::Up, [this] {
-    selected_character_ =
-        std::clamp(selected_character_ + 1, 0, NUMBER_OF_CHARACTERS - 1);
-    character_for_player(selected_character_);
-  }));
+  add_menu_item(std::make_unique<ArrowMenuItem>(
+      context, ArrowType::Up, [this] { change_character(+1); }));
   // Character stats
   auto char_box = std::make_unique<CharacterSelectionBox>(
       context, &character_, &active_player_, player_items_);
   char_box->on_scroll([this](int delta) {
     // Scroll up (positive) = next character, scroll down (negative) = previous
     // character
-    if (delta > 0) {
-      selected_character_ =
-          std::clamp(selected_character_ + 1, 0, NUMBER_OF_CHARACTERS - 1);
-    }
-    else {
-      selected_character_ =
-          std::clamp(selected_character_ - 1, 0, NUMBER_OF_CHARACTERS - 1);
-    }
-    character_for_player(selected_character_);
+    change_character(delta > 0 ? +1 : -1);
   });
   add_menu_item(std::move(char_box));
   // Down arrow
-  add_menu_item(
-      std::make_unique<ArrowMenuItem>(context, ArrowType::Down, [this] {
-        selected_character_ =
-            std::clamp(selected_character_ - 1, 0, NUMBER_OF_CHARACTERS - 1);
-        character_for_player(selected_character_);
-      }));
+  add_menu_item(std::make_unique<ArrowMenuItem>(
+      context, ArrowType::Down, [this] { change_character(-1); }));
   // New column
   add_menu_item(std::make_unique<PositionMarkerMenuItem>(context, 238, 0));
   // Photo box
@@ -149,15 +135,21 @@ void CharacterSelection::generate_player_items() {
                                company_names.begin() + MAX_HUMAN_PLAYERS);
   }
 
+  std::vector<int> character_ids(NUMBER_OF_CHARACTERS);
+  std::iota(character_ids.begin(), character_ids.end(), 0);
+  if (state_.options().qol_improvements) {
+    engine::random::shuffle(character_ids.begin(), character_ids.end());
+  }
+
   // Generate the player items using the selected names
   player_items_.reserve(MAX_HUMAN_PLAYERS);
   for (int i = 0; i < MAX_HUMAN_PLAYERS; ++i) {
-    auto* char_data = CharacterFactory::create_character(i);
+    auto* char_data = CharacterFactory::create_character(character_ids[i]);
     player_items_.push_back(init::PlayerSlot{
         .name = active_player_names[i],
         .is_selected = i == 0,
         .is_human = i < human_players_,
-        .character_id = i,
+        .character_id = character_ids[i],
         .character_name = char_data->first_name + " " + char_data->last_name,
     });
   }
@@ -214,6 +206,18 @@ void CharacterSelection::active_player(int index) {
       player_items_[active_player_].character_id);
 
   mark_dirty();
+}
+
+void CharacterSelection::change_character(int delta) {
+  if (state_.options().qol_improvements) {
+    selected_character_ = (selected_character_ + NUMBER_OF_CHARACTERS + delta) %
+                          NUMBER_OF_CHARACTERS;
+  }
+  else {
+    selected_character_ =
+        std::clamp(selected_character_ + delta, 0, NUMBER_OF_CHARACTERS - 1);
+  }
+  character_for_player(selected_character_);
 }
 
 void CharacterSelection::character_for_player(int character_id) {

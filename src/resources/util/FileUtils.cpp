@@ -246,6 +246,23 @@ std::ifstream open(const std::string& raw_file_path, std::ios::openmode mode) {
   return final_is;
 }
 
+std::vector<std::string> load_text_lines(const std::string& path,
+                                         bool skip_empty) {
+  auto file = open(path);
+  std::vector<std::string> lines;
+  std::string line;
+  while (std::getline(file, line)) {
+    if (!line.empty() && line.back() == '\r') {
+      line.pop_back();
+    }
+    if (skip_empty && line.empty()) {
+      continue;
+    }
+    lines.push_back(std::move(line));
+  }
+  return lines;
+}
+
 bool fexists(const std::string& raw_file_path) {
   auto file_path = find_file_path(raw_file_path);
   if (!file_path) {

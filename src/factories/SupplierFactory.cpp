@@ -18,13 +18,14 @@ std::vector<const Supplier*> SupplierFactory::all_suppliers() {
     list.push_back(create_supplier(static_cast<SupplierID>(i)));
   }
 
-  // Sort first by quality (descending), then by ID (ascending)
+  // Sort by group first and then by enum order within
   std::sort(list.begin(), list.end(), [](const Supplier* a, const Supplier* b) {
-    if (a->quality() != b->quality()) {
-      return a->quality() < b->quality();
+    int tier_a = a->quality() >> 4;
+    int tier_b = b->quality() >> 4;
+    if (tier_a != tier_b) {
+      return tier_a < tier_b;
     }
-    return static_cast<int>(a->id()) <
-           static_cast<int>(b->id()); // Lower ID first as tie-breaker
+    return static_cast<int>(a->id()) < static_cast<int>(b->id());
   });
 
   return list;

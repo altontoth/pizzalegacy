@@ -23,6 +23,8 @@ struct FileEntry {
 
 std::ifstream open(const std::string& file_path,
                    std::ios::openmode mode = std::ios::binary);
+std::vector<std::string> load_text_lines(const std::string& path,
+                                         bool skip_empty = false);
 std::vector<FileEntry>
 list_files(const std::string& directory, const std::string& extension,
            FileSortOrder sort = FileSortOrder::Alphabetical);
