@@ -46,6 +46,7 @@ class SaveGameManager {
 public:
   static bool save(const GameState& state, const GameContext& context,
                    const std::string& filename);
+  static bool autosave(const GameState& state, const GameContext& context);
   static bool load(GameState& state, GameContext& context,
                    const std::string& filename);
   static bool is_valid_save(const std::string& filename);

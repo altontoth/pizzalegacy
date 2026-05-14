@@ -148,16 +148,27 @@ bool SaveGameManager::save(const GameState& state, const GameContext& context,
     std::memcpy(compressed.data(), &hdr, sizeof(hdr));
 
     std::string full_path = get_full_path(filename);
-    std::ofstream file(full_path, std::ios::binary);
-    if (!file.is_open()) {
-      Logger::warn("Failed to open file for writing: {}", full_path);
-      return false;
+    std::string tmp_path = full_path + ".tmp";
+
+    {
+      std::ofstream file(tmp_path, std::ios::binary);
+      if (!file.is_open()) {
+        Logger::warn("Failed to open temp file for writing: {}", tmp_path);
+        return false;
+      }
+      file.write(
+          reinterpret_cast<const char*>(compressed.data()),
+          static_cast<std::streamsize>(sizeof(SaveHeader) + compressed_size));
     }
 
-    file.write(
-        reinterpret_cast<const char*>(compressed.data()),
-        static_cast<std::streamsize>(sizeof(SaveHeader) + compressed_size));
-    file.close();
+    std::error_code ec;
+    fs::rename(tmp_path, full_path, ec);
+    if (ec) {
+      Logger::warn("Failed to rename temp save to {}: {}", full_path,
+                   ec.message());
+      fs::remove(tmp_path, ec);
+      return false;
+    }
 
     Logger::info("Save completed successfully");
     return true;
@@ -166,6 +177,103 @@ bool SaveGameManager::save(const GameState& state, const GameContext& context,
     Logger::warn("Save failed: {}", e.what());
     return false;
   }
+}
+
+namespace {
+
+constexpr int AUTOSAVE_MAX_COUNT = 3;
+constexpr std::string_view AUTOSAVE_PREFIX = "AS";
+
+// Returns all autosave filenames sorted by their suffix ascending.
+std::vector<std::string> list_autosaves() {
+  std::vector<std::pair<int, std::string>> found;
+  fs::path saves_dir = SaveGameManager::get_saves_directory();
+  std::error_code ec;
+  for (const auto& entry : fs::directory_iterator(saves_dir, ec)) {
+    if (!entry.is_regular_file(ec)) {
+      continue;
+    }
+    std::string name = entry.path().filename().string();
+    // Expect AS??????.plsave
+    if (name.size() != 15) {
+      continue;
+    }
+    if (name.substr(0, 2) != AUTOSAVE_PREFIX) {
+      continue;
+    }
+    if (name.substr(8) != ".plsave") {
+      continue;
+    }
+    std::string digits = name.substr(2, 6);
+    bool all_digits = true;
+    for (char c : digits) {
+      if (c < '0' || c > '9') {
+        all_digits = false;
+        break;
+      }
+    }
+    if (!all_digits) {
+      continue;
+    }
+    found.emplace_back(std::stoi(digits), name);
+  }
+  std::sort(found.begin(), found.end());
+  std::vector<std::string> result;
+  result.reserve(found.size());
+  for (auto& [_, name] : found) {
+    result.push_back(std::move(name));
+  }
+  return result;
+}
+
+std::string next_autosave_filename() {
+  auto existing = list_autosaves();
+  int next_index = 1;
+  if (!existing.empty()) {
+    const std::string& last = existing.back();
+    int last_index = std::stoi(last.substr(2, 6));
+    next_index = last_index + 1;
+    if (next_index > 999999) {
+      next_index = 1;
+    }
+  }
+  std::array<char, 17> buf{};
+  std::snprintf(buf.data(), buf.size(), "AS%06d.plsave", next_index);
+  return {buf.data()};
+}
+
+void prune_old_autosaves() {
+  auto existing = list_autosaves();
+  int excess = static_cast<int>(existing.size()) - AUTOSAVE_MAX_COUNT;
+  fs::path saves_dir = SaveGameManager::get_saves_directory();
+  for (int i = 0; i < excess; ++i) {
+    fs::path full_path = saves_dir / existing[i];
+    std::error_code ec;
+    fs::remove(full_path, ec);
+    if (ec) {
+      Logger::warn("Failed to prune autosave {}: {}", existing[i],
+                   ec.message());
+    }
+    else {
+      Logger::info("Pruned autosave {}", existing[i]);
+    }
+  }
+}
+
+} // namespace
+
+bool SaveGameManager::autosave(const GameState& state,
+                               const GameContext& context) {
+  std::string filename = next_autosave_filename();
+  Logger::info("Autosaving to {}", filename);
+  bool ok = save(state, context, filename);
+  if (ok) {
+    prune_old_autosaves();
+  }
+  else {
+    Logger::warn("Autosave failed");
+  }
+  return ok;
 }
 
 std::optional<json>

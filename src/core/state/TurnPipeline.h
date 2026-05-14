@@ -28,6 +28,7 @@ enum class TurnPipelineStep {
   CityStartOfDay,
   WeeklyReports,
   MonthlyInvoice,
+  Autosave,
 
   // Async
   FadeTransition,

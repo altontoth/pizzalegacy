@@ -74,6 +74,12 @@ MenuOptions::MenuOptions(GameContext& context, GameState& state)
         mark_dirty();
       }));
 
+  add_menu_item(std::make_unique<ToggleMenuItem>(
+      context, "Auto save", state.options().auto_save, [&state, this] {
+        state.options().auto_save = !state.options().auto_save;
+        mark_dirty();
+      }));
+
   /*
   // Asset format toggle - conditional on availability
   auto availability = context.config->detect_available_formats();

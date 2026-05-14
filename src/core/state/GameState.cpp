@@ -23,6 +23,7 @@
 #include "core/restaurant/AIEconomy.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/restaurant/StaffEventDialogs.h"
+#include "core/save/SaveGameManager.h"
 #include "core/util/ConfigManager.h"
 #include "core/util/GameContext.h"
 #include "engine/Fatal.h"
@@ -1657,6 +1658,9 @@ void GameState::build_turn_pipeline(
     }
     turn_pipeline_.push_back(Step::FadeTransition);
     turn_pipeline_.push_back(Step::AdvanceDate);
+    if (options().auto_save) {
+      turn_pipeline_.push_back(Step::Autosave);
+    }
   }
   else {
     turn_pipeline_.push_back(Step::SetTimeOfDay);
@@ -1783,6 +1787,13 @@ void GameState::execute_pipeline_step(TurnPipelineStep step) {
 
   case Step::MonthlyInvoice:
     show_monthly_invoice_popup(ctx.previous.id);
+    advance_pipeline();
+    break;
+
+  case Step::Autosave:
+    if (context_) {
+      save::SaveGameManager::autosave(*this, *context_);
+    }
     advance_pipeline();
     break;
   }
