@@ -207,7 +207,7 @@ Examples:
           return CommandResult::error("No active city");
         }
 
-        city->mayor_office().set_favor(player_id.value, amount);
+        city->mayor_office().favor(player_id.value, amount);
         return CommandResult::success().add_message(compat::format(
             "Set mayor favor for player {} to {}", player_id.value, amount));
       },

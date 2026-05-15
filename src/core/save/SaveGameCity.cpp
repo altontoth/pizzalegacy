@@ -309,7 +309,7 @@ void json_to_economy_trend(const json& j, EconomyTrend& et) {
   }
   if (j.contains("history")) {
     std::array<int, 60> history{};
-    auto arr = j["history"];
+    const auto& arr = j["history"];
     for (int i = 0; i < 60 && i < static_cast<int>(arr.size()); ++i) {
       history[i] = arr[i].get<int>();
     }
@@ -354,21 +354,21 @@ void json_to_mayor_office(const json& j, MayorOffice& mo) {
     for (int i = 0;
          i < NUMBER_OF_PLAYERS && i < static_cast<int>(j["favor_score"].size());
          ++i) {
-      mo.set_favor(i, j["favor_score"][i].get<int>());
+      mo.favor(i, j["favor_score"][i].get<int>());
     }
   }
   if (j.contains("investment_activity")) {
     for (int i = 0; i < NUMBER_OF_PLAYERS &&
                     i < static_cast<int>(j["investment_activity"].size());
          ++i) {
-      mo.set_investment_activity(i, j["investment_activity"][i].get<int32_t>());
+      mo.investment_activity(i, j["investment_activity"][i].get<int32_t>());
     }
   }
   if (j.contains("trade_activity")) {
     for (int i = 0; i < NUMBER_OF_PLAYERS &&
                     i < static_cast<int>(j["trade_activity"].size());
          ++i) {
-      mo.set_trade_activity(i, j["trade_activity"][i].get<int32_t>());
+      mo.trade_activity(i, j["trade_activity"][i].get<int32_t>());
     }
   }
   if (j.contains("fee_paid")) {
@@ -377,7 +377,7 @@ void json_to_mayor_office(const json& j, MayorOffice& mo) {
          i < NUMBER_OF_PLAYERS && i < static_cast<int>(j["fee_paid"].size());
          ++i) {
       if (j["fee_paid"][i].get<bool>()) {
-        mo.set_fee_paid(i);
+        mo.fee_paid(i);
       }
     }
   }
@@ -385,12 +385,11 @@ void json_to_mayor_office(const json& j, MayorOffice& mo) {
     for (int i = 0; i < NUMBER_OF_PLAYERS &&
                     i < static_cast<int>(j["pizza_competition_wins"].size());
          ++i) {
-      mo.set_pizza_competition_wins(i,
-                                    j["pizza_competition_wins"][i].get<int>());
+      mo.pizza_competition_wins(i, j["pizza_competition_wins"][i].get<int>());
     }
   }
   if (j.contains("appointment_day")) {
-    mo.set_appointment_day(j["appointment_day"].get<int>());
+    mo.appointment_day(j["appointment_day"].get<int>());
   }
   if (j.contains("current_quarterly_award")) {
     mo.current_quarterly_award(

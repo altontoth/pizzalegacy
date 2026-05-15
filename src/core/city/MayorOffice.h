@@ -51,7 +51,7 @@ public:
   // private account; decays 1/day. Used as a % chance to pass inspections.
   int favor_score(int player_id) const { return favor_score_[player_id]; }
   void add_favor(int player_id, Money amount);
-  void set_favor(int player_id, int value) {
+  void favor(int player_id, int value) {
     favor_score_[player_id] = std::clamp(value, 0, 200);
   }
 
@@ -66,7 +66,7 @@ public:
   }
 
   // Award participation fee payment (one entry per player).
-  void set_fee_paid(int player_id);
+  void fee_paid(int player_id);
   bool fee_paid(int player_id) const;
   void clear_fee_paid() { fee_paid_.fill(false); }
 
@@ -85,16 +85,16 @@ public:
   }
 
   // Save/load accessors for fields with no other public setter.
-  void set_pizza_competition_wins(int player_id, int value) {
+  void pizza_competition_wins(int player_id, int value) {
     pizza_competition_wins_[player_id] = value;
   }
-  void set_investment_activity(int player_id, int32_t value) {
+  void investment_activity(int player_id, int32_t value) {
     investment_activity_[player_id] = value;
   }
-  void set_trade_activity(int player_id, int32_t value) {
+  void trade_activity(int player_id, int32_t value) {
     trade_activity_[player_id] = value;
   }
-  void set_appointment_day(int day) { appointment_day_ = day; }
+  void appointment_day(int day) { appointment_day_ = day; }
   MayorAwardType current_quarterly_award() const {
     return current_quarterly_award_;
   }

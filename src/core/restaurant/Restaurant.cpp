@@ -1038,9 +1038,9 @@ void Restaurant::end_of_day(GameState& game_state) {
   for (const auto ingredient_type : inventory_.apply_daily_degradation()) {
     game_state.status().post(StatusMsg{
         .payload =
-            compat::format("The supplies of {} were rotten and had to be "
+            compat::format("{}: The supplies of {} were rotten and had to be "
                            "thrown away.",
-                           core::food::to_string(ingredient_type)),
+                           name_, core::food::to_string(ingredient_type)),
         .scope = StatusScope::Restaurant,
         .delay_blocks = 3,
     });

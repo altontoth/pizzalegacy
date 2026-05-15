@@ -1067,7 +1067,7 @@ void GameState::process_mayor_award_event(const MayorAwardEvent& award_event) {
   if (award_event.is_ceremony) {
     auto all_players = players();
     int pc = human_player_count();
-    auto& mayor_office = city->mayor_office();
+    const auto& mayor_office = city->mayor_office();
 
     if (award_event.type == MayorAwardType::MostBeautifulRestaurant) {
       int best_score = -1;
@@ -3202,7 +3202,7 @@ bool GameState::bank_transfer(int account_number, Money amount,
       break;
     }
     if (account_number == mayor.public_bank_account()) {
-      mayor.set_fee_paid(sender.id().value);
+      mayor.fee_paid(sender.id().value);
       break;
     }
   }

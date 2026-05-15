@@ -29,7 +29,8 @@ MayorConversation::MayorConversation(GameState& state, const Actor* actor,
   if (mt == MayorConversationType::PhoneCall) {
     int appt = mo.appointment_day();
     if (appt > 0) {
-      appointment_date_str_ = compat::format("{}", appt);
+      auto month = state.time().current_date().month_name();
+      appointment_date_str_ = compat::format("{} {}", month, appt);
     }
   }
 }
@@ -417,10 +418,12 @@ MayorLine MayorConversation::compute_start_line(const GameState& state,
     // Appointment check: compare current day to scheduled appointment.
     int appt = mo.appointment_day();
     int today = static_cast<int>(state.time().current_date().day());
-    if (appt == 0 || today < appt) {
+    if (appt == 0 || appt < today) {
+      // No appointment set, or appointment day has already passed.
       return MayorLine::IM_SORRY_VERY_BUSY_COME_BACK;
     }
-    if (today > appt) {
+    if (appt > today) {
+      // Upcoming appointment: show the date.
       return MayorLine::I_DONT_HAVE_TIME_MAKE_APPOINTMENT;
     }
     // Exact match: the meeting day.

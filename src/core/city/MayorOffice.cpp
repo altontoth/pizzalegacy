@@ -39,18 +39,23 @@ void MayorOffice::add_trade(int player_id, int32_t amount) {
   trade_activity_[player_id] += amount;
 }
 
-void MayorOffice::set_fee_paid(int player_id) { fee_paid_[player_id] = true; }
+void MayorOffice::fee_paid(int player_id) { fee_paid_[player_id] = true; }
 
 bool MayorOffice::fee_paid(int player_id) const { return fee_paid_[player_id]; }
 
 void MayorOffice::advance_appointment(const GameDate& date) {
-  // 10% chance each day to schedule a new appointment 1-10 days out
+  int current_day = static_cast<int>(date.day());
+  // Only attempt to schedule once the previous appointment has been passed.
+  if (current_day < appointment_day_) {
+    return;
+  }
+  // 10% chance each day: new appointment = 2*day + random(0-9).
+  // This means it can be quite difficult to get an appointment; days past the
+  // 16th always produce >30, setting appointment_day to 0 until the next month
+  // has a chance to reset the current_day back to a low value.
   if (engine::random::rand_percentage_chance(10)) {
-    appointment_day_ =
-        static_cast<int>(date.day()) + engine::random::rand_max_n(10) + 1;
-    if (appointment_day_ > 30) {
-      appointment_day_ -= 30;
-    }
+    int new_day = (2 * current_day) + engine::random::rand_max_n(10);
+    appointment_day_ = (new_day > 30) ? 0 : new_day;
   }
 }
 
