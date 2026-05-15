@@ -2497,7 +2497,9 @@ Restaurant* GameState::rent_restaurant(Property& property, Player& player,
     return nullptr;
   }
 
-  adjust_social_score(player, 50);
+  if (!free) {
+    adjust_social_score(player, 50);
+  }
   return restaurant;
 }
 
