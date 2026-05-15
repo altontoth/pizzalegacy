@@ -69,11 +69,12 @@ RestaurantView::RestaurantView(GameContext& context, GameState& state,
   // Set this restaurant as the active one so other views know which restaurant
   // we're working with
   state_.active_restaurant(r_state.id);
-  state_.prevent_auto_end_of_turn(false);
   if (furniture_placement_.empty()) {
+    state_.prevent_auto_end_of_turn(false);
     state_.resume_time_advancement();
   }
   else {
+    state_.prevent_auto_end_of_turn(true);
     state_.pause_time_advancement(); // only advance explicitly per item placed
   }
 
@@ -1839,7 +1840,7 @@ void RestaurantView::update_buttons_for_furniture_state() {
 
     input_panel_->add_button(Icon::CUP, ButtonType::Vertical,
                              ButtonPosition::TopRight, "Throw away",
-                             [this]() { handle_sell_furniture(); });
+                             [this]() { handle_throw_away(); });
   }
   else {
     // Normal mode: restore default buttons

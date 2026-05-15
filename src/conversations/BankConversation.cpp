@@ -16,7 +16,7 @@
 #include "core/finance/Ledger.h"
 #include "engine/Math.h"
 
-constexpr int MAX_NUMBER_OF_LOANS = 6;
+constexpr int MAX_NUMBER_OF_LOANS = 4;
 
 BankConversation::BankConversation(GameState& state, const Actor* actor,
                                    const BankSettings& bank_settings)

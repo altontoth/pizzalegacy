@@ -23,8 +23,8 @@ DepotMain::DepotMain(GameContext& context, GameState& state, DepotMainState dms)
     : MainPanelView(context, state), status_controller_(state.status()),
       property_(dms.property) {
   set_up_input_panel();
-  status_controller_.show_restaurant(
-      {.state = &state_, .rest = state_.active_restaurant(), .label = "STOCK"});
+  status_controller_.show_city_default(
+      {.state = &state_, .city = state_.active_city()});
 }
 
 void DepotMain::tick() {

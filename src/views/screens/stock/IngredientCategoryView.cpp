@@ -378,19 +378,23 @@ void IngredientCategoryView::set_up_input_panel() {
                                mark_dirty();
                              });
 
-    input_panel_->add_button(Icon::BUY, ButtonType::Square,
-                             ButtonPosition::BottomLeft, "Buy", [this]() {
-                               state_.ui().push<IngredientSupplierListState>(
-                                   category_,
-                                   IngredientScreenMode::CENTRAL_DEPOT);
-                             });
+    input_panel_->add_button(
+        Icon::BUY, ButtonType::Square, ButtonPosition::BottomLeft, "Buy",
+        [this]() {
+          state_.ui().replace_top<IngredientCategoryViewState>(category_,
+                                                               mode_);
+          state_.ui().push<IngredientSupplierListState>(
+              category_, IngredientScreenMode::CENTRAL_DEPOT);
+        });
 
-    input_panel_->add_button(Icon::SELL, ButtonType::Square,
-                             ButtonPosition::BottomCenter, "Sell", [this]() {
-                               state_.ui().push<IngredientSupplierListState>(
-                                   category_,
-                                   IngredientScreenMode::CENTRAL_DEPOT_SELL);
-                             });
+    input_panel_->add_button(
+        Icon::SELL, ButtonType::Square, ButtonPosition::BottomCenter, "Sell",
+        [this]() {
+          state_.ui().replace_top<IngredientCategoryViewState>(category_,
+                                                               mode_);
+          state_.ui().push<IngredientSupplierListState>(
+              category_, IngredientScreenMode::CENTRAL_DEPOT_SELL);
+        });
   }
   else {
     input_panel_->add_button(
@@ -413,8 +417,11 @@ void IngredientCategoryView::set_up_input_panel() {
 
     input_panel_->add_button(
         Icon::SHOPPING_CART, ButtonType::Horizontal, ButtonPosition::BottomLeft,
-        "Shop",
-        [this]() { state_.ui().push<IngredientSupplierListState>(category_); });
+        "Shop", [this]() {
+          state_.ui().replace_top<IngredientCategoryViewState>(category_,
+                                                               mode_);
+          state_.ui().push<IngredientSupplierListState>(category_);
+        });
   }
 }
 

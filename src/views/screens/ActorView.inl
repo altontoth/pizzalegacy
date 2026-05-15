@@ -74,12 +74,26 @@ ActorView<LineEnum>::ActorView(
                            });
 
   input_panel_->add_button(Icon::THUMBS_UP, ButtonType::Horizontal,
-                           ButtonPosition::BottomLeft, "Agree",
-                           [this] { advance_proposal(true); });
+                           ButtonPosition::BottomLeft, "Agree", [this] {
+                             if (conversation_->is_proposal()) {
+                               advance_proposal(true);
+                             }
+                             else if (conversation_->is_terminal()) {
+                               current_phase_ = ConversationPhase::ENDING;
+                               phase_timer_ = 10;
+                             }
+                           });
 
   input_panel_->add_button(Icon::THUMBS_DOWN, ButtonType::Vertical,
-                           ButtonPosition::TopRight, "Reject",
-                           [this] { advance_proposal(false); });
+                           ButtonPosition::TopRight, "Reject", [this] {
+                             if (conversation_->is_proposal()) {
+                               advance_proposal(false);
+                             }
+                             else if (conversation_->is_terminal()) {
+                               current_phase_ = ConversationPhase::ENDING;
+                               phase_timer_ = 10;
+                             }
+                           });
 }
 
 template <typename LineEnum> ActorView<LineEnum>::~ActorView() {

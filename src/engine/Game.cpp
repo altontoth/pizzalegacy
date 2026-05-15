@@ -296,9 +296,11 @@ void Game::run() {
   }
 
   {
-    auto [ww, wh] = resolution_window_size(configManager.options().resolution,
-                                           display_height);
+    int ww;
+    int wh;
+    SDL_GetWindowSize(sdl_.window, &ww, &wh);
     state.window_size(ww, wh);
+    context.cursor->update_scaled_cursor(ww, wh);
   }
   create_some_players(state);
 
@@ -408,8 +410,11 @@ void Game::run() {
       state.clear_resolution_request();
       auto [w, h] = resolution_window_size(*res, display_height_);
       SDL_SetWindowSize(sdl_.window, w, h);
-      state.window_size(w, h);
-      loop_state.context.cursor->update_scaled_cursor(w, h);
+      int actual_w;
+      int actual_h;
+      SDL_GetWindowSize(sdl_.window, &actual_w, &actual_h);
+      state.window_size(actual_w, actual_h);
+      loop_state.context.cursor->update_scaled_cursor(actual_w, actual_h);
     }
 
     // Check if fade requested and not already fading
@@ -603,8 +608,6 @@ bool Game::init(int display_height, ConfigManager& config_manager) {
                            display_height);
 
   cursor_manager_->base_cursor_mode(CursorMode::MENU);
-  // Initialize cursor scaling for the initial window size
-  cursor_manager_->update_scaled_cursor(win_w, win_h);
 
   context.bob = bob_manager_.get();
   context.font = font_manager_.get();

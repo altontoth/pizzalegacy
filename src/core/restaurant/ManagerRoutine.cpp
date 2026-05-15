@@ -7,6 +7,7 @@
 #include "core/restaurant/ManagerRoutine.h"
 #include <algorithm>
 #include <array>
+#include <string_view>
 #include "core/city/City.h"
 #include "core/city/Property.h"
 #include "core/food/IngredientCategoryType.h"
@@ -170,7 +171,7 @@ void ManagerRoutine::do_shopping() {
       continue;
     }
 
-    bool needs_restock = false;
+    int shortage_count = 0;
     for (int i = 0; i < range.count; ++i) {
       auto ingredient_type =
           static_cast<core::food::IngredientType>(range.start + i);
@@ -180,19 +181,19 @@ void ManagerRoutine::do_shopping() {
       }
       int current = restaurant_.inventory().get_stock(ingredient_type).quantity;
       if (current < daily_grams * 3) {
-        needs_restock = true;
-        break;
+        ++shortage_count;
       }
     }
 
-    if (!needs_restock) {
+    if (shortage_count == 0) {
       continue;
     }
 
     if (settings.supply_shortage == ManagerReaction::CallMe) {
-      queue_alert(
-          compat::format("Boss! In restaurant {} we haven't got enough {}!",
-                         restaurant_.name(), range.name));
+      std::string_view order_word = (shortage_count == 1) ? "order" : "orders";
+      queue_alert(compat::format("Boss! We urgently need {} {} of {} for {}",
+                                 shortage_count, order_word, range.name,
+                                 restaurant_.name()));
       continue;
     }
 

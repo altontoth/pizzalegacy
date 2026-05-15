@@ -295,6 +295,9 @@ public:
   int calculate_daily_chef_throughput() const;
   int calculate_daily_waiter_throughput() const;
 
+  Money calculate_electricity_cost() const;
+  Money calculate_slot_machine_income() const;
+
   // (seat_count * 720) / avg_seating_time
   int calculate_seating_capacity(const ServiceTimeData* service_data) const;
 

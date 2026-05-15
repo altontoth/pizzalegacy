@@ -65,8 +65,9 @@ Surface render_invoice(FontManager& font, const InvoiceConfig& config) {
       continue;
     }
 
-    const auto align = has_value ? AlignX::Left : AlignX::Center;
-    const auto x_pos = has_value ? config.label_x : 0;
+    const auto align = has_value ? AlignX::Left : line.align;
+    const auto x_pos =
+        (has_value || line.align == AlignX::Left) ? config.label_x : 0;
     if (has_label) {
       font.render_text_onto(invoice, line.label, ViewPoint{x_pos, y},
                             config.line_font, COLOR_BLACK, align);

@@ -5,14 +5,17 @@
  */
 
 #include "core/restaurant/Restaurant.h"
+
 #include <algorithm>
 #include <cassert>
 #include <cmath>
+#include <cstdint>
 #include "core/Demographics.h"
 #include "core/character/Staff.h"
 #include "core/city/City.h"
 #include "core/city/District.h"
 #include "core/city/Property.h"
+#include "core/finance/Money.h"
 #include "core/food/IngredientCategory.h"
 #include "core/food/IngredientType.h"
 #include "core/restaurant/AIEconomy.h"
@@ -354,6 +357,37 @@ int Restaurant::calculate_daily_waiter_throughput() const {
     }
   }
   return total;
+}
+
+Money Restaurant::calculate_electricity_cost() const {
+  int oven_cap = calculate_daily_oven_throughput();
+  return Money{static_cast<int64_t>(oven_cap) * 300};
+}
+
+Money Restaurant::calculate_slot_machine_income() const {
+  int young_adults = economy_.customer_counts()[ConsumerType::YoungPeople];
+  Money income{0};
+  for (const auto& pf : layout_->placed_furniture()) {
+    if (!pf) {
+      continue;
+    }
+    // Original formula was (8 - category_value), this is more readable.
+    int mult;
+    switch (pf->furniture()->category()) {
+    case FurnitureCategory::GAMES:
+      mult = 3;
+      break;
+    case FurnitureCategory::SLOT_MACHINES:
+      mult = 2;
+      break;
+    default:
+      continue;
+    }
+    int rand1 = young_adults > 0 ? engine::random::rand_max_n(young_adults) : 0;
+    int rand2 = engine::random::rand_max_n(20);
+    income += Money{static_cast<int64_t>(mult * (rand1 + rand2)) * 100};
+  }
+  return income;
 }
 
 int Restaurant::calculate_seating_capacity(

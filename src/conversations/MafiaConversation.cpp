@@ -145,8 +145,7 @@ void MafiaConversation::apply_npc_effects(GameState& state, MafiaMode mm) {
       switch (mission_type) {
       case MafiaMissionType::Weapon:
         state.message_manager().schedule_message(
-            core::events::LeventId::CompletedFirstRaidForTheUnderworld,
-            player->id(), date);
+            core::events::LeventId::CompletedFirstArmsDeal, player->id(), date);
         break;
       case MafiaMissionType::Laundering:
         state.message_manager().schedule_message(

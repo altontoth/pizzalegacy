@@ -125,8 +125,21 @@ public:
   void show_staff_invoice_popup(core::RestaurantId restaurant_id,
                                 std::function<void()> after);
 
+  // Show electricity/slot-machine invoice for one restaurant (end of month).
+  // Calls after when popup is dismissed (financial transfer applied on
+  // dismiss).
+  void show_electricity_slot_invoice_popup(core::RestaurantId restaurant_id,
+                                           std::function<void()> after);
+
+  // Shows the end-of-month electricity/slot invoice for restaurant if it is end
+  // of month but not end of week (end-of-week is handled interleaved in
+  // WeeklyReports). Returns true if an invoice will be shown and next will be
+  // called asynchronously; false if the caller should continue immediately.
+  bool maybe_show_monthly_restaurant_invoice(Restaurant* rest,
+                                             std::function<void()> next);
+
   // Show the monthly costs invoice popup (loans + rent) via PopupManager.
-  // on_done is called after the popup is dismissed (optional).
+  // on_done is called after the popup is dismissed
   void show_monthly_invoice_popup(core::PlayerId player,
                                   std::function<void()> on_done = {});
   void run_monthly_competition();
@@ -388,7 +401,8 @@ private:
   void
   push_weekly_restaurant_reports(const std::vector<Restaurant*>& restaurants,
                                  core::PlayerId previous_player_id,
-                                 std::function<void()> on_done = {});
+                                 std::function<void()> on_done = {},
+                                 bool interleave_electricity = false);
 
   // Turn boundary pipeline
   void build_turn_pipeline(bool wrapped, core::PlayerId prev_player_id,

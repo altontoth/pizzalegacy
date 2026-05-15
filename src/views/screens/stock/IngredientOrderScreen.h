@@ -28,6 +28,7 @@ public:
           std::nullopt);
   void tick() override;
   void render(const RenderContext& ctx) override;
+  bool on_action(const input::ActionEvent& ev) override;
 
 protected:
   void draw_icon(const RenderContext& ctx);

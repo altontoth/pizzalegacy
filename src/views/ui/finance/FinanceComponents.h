@@ -36,6 +36,8 @@ void render_month_header(Surface& surface, FontManager& font,
 struct InvoiceLine {
   std::string label;
   std::optional<Money> value;
+  // only used when value is nullopt
+  AlignX align = AlignX::Center;
 };
 
 struct InvoiceConfig {

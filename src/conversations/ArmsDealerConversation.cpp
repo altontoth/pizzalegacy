@@ -470,10 +470,6 @@ ArmsDealerConversation::make_purchase(int requested, core::item::Item id,
   (void)player.spend_cash(state_.time().current_date(), Account::Weapons,
                           actual_cost);
 
-  state_.message_manager().schedule_message(
-      core::events::LeventId::CompletedFirstArmsDeal, player.id(),
-      state_.time().current_date());
-
   // Underworld score: total_cost / 500
   const auto delta = static_cast<int>(actual_cost.whole() / 500);
   if (delta > 0) {

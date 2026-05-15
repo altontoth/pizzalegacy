@@ -26,6 +26,7 @@
 #include "resources/BlitmapManager.h"
 #include "resources/FontManager.h"
 
+#include "engine/input/Action.h"
 #include "engine/input/InputManager.h"
 #include "engine/input/Key.h"
 
@@ -473,6 +474,14 @@ Money IngredientOrderScreen::calculate_ingredient_price(
 
   return supplier_->calculate_price(ingredient_type, base_price,
                                     difficulty_multipliers[difficulty - 1]);
+}
+
+bool IngredientOrderScreen::on_action(const input::ActionEvent& ev) {
+  if (ev.action == input::Action::NextRestaurant ||
+      ev.action == input::Action::PreviousRestaurant) {
+    return true;
+  }
+  return RestaurantSubView::on_action(ev);
 }
 
 void IngredientOrderScreen::set_up_input_panel() {

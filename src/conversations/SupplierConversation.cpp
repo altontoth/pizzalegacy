@@ -11,6 +11,7 @@
 #include <cstddef>
 #include <magic_enum/magic_enum.hpp>
 
+#include "conversations/SupplierLine.h"
 #include "core/character/Player.h"
 #include "core/city/City.h"
 #include "core/events/LeventId.h"
@@ -182,6 +183,9 @@ bool SupplierConversation::advance_line_choice(SupplierLine choice) {
 bool SupplierConversation::advance_proposal(bool agree) {
   Logger::debug("SupplierConversation::advance_proposal: {}: {}",
                 magic_enum::enum_name(current_line_), agree ? 1 : 0);
+  if (!is_proposal()) {
+    return advance();
+  }
   if (agree) {
     auto player_id = state_.active_player()->id();
     auto& rel = const_cast<FoodSupplier*>(supplier_)->relationship(player_id);
@@ -532,8 +536,9 @@ SupplierConversation::lines() const {
                   {.is_proposal = false,
                    .easy_accept = false,
                    .is_terminal = true,
-                   .custom_text = compat::format(
-                       " {:w}", supplier_->minimum_contract_amount())}),
+                   .custom_text =
+                       compat::format(" {:w}! Goodbye!",
+                                      supplier_->minimum_contract_amount())}),
     };
   case SupplierLine::SETTLE_DEBTS_BEFORE_NEW_CONTRACT:
   case SupplierLine::GOODBYE:
@@ -596,6 +601,7 @@ SupplierConversation::contract_terms() const {
   switch (current_line_) {
   case SupplierLine::NEVER_ENTER_CONTRACTS_BELOW_TOTAL:
   case SupplierLine::SETTLE_DEBTS_BEFORE_NEW_CONTRACT:
+  case SupplierLine::MAYBE_DO_BUSINESS_ANOTHER_TIME:
   case SupplierLine::GOODBYE:
     return std::nullopt;
   default:

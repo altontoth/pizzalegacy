@@ -31,6 +31,7 @@
 #include "engine/Logger.h"
 #include "engine/Random.h"
 #include "engine/geom/Spaces.h"
+#include "engine/ui/Alignment.h"
 #include "factories/CharacterFactory.h"
 #include "factories/CityFactory.h"
 #include "factories/PizzaFactory.h"
@@ -236,6 +237,73 @@ void GameState::show_staff_invoice_popup(core::RestaurantId restaurant_id,
 
   context_->popup->origin({74, 40});
   context_->popup->create<InvoicePopup>(std::move(cfg));
+}
+
+void GameState::show_electricity_slot_invoice_popup(
+    core::RestaurantId restaurant_id, std::function<void()> after) {
+  auto* rest = restaurant(restaurant_id);
+  assert(rest);
+
+  auto owner_id = rest->property().owner_or_tenant();
+  assert(owner_id);
+
+  auto* p = player(*owner_id);
+  assert(p);
+
+  Money electricity = rest->calculate_electricity_cost();
+  Money slot_income = rest->calculate_slot_machine_income();
+  Money total = electricity - slot_income;
+
+  views::ui::finance::InvoiceConfig cfg;
+  cfg.title = "Invoice";
+  cfg.subtitle = "FOR " + rest->name();
+  cfg.lines.push_back(
+      {std::string(time_.current_date().month_name()), std::nullopt});
+
+  const auto empty_line =
+      views::ui::finance::InvoiceLine{.label = "", .value = std::nullopt};
+
+  cfg.lines.push_back(empty_line);
+  cfg.lines.push_back({"ELECTRICITY:", electricity});
+  cfg.lines.push_back(empty_line);
+  cfg.lines.push_back({"SLOT MACHINES", {}, AlignX::Left});
+  cfg.lines.push_back({"INCOME:", slot_income});
+  cfg.lines.push_back(empty_line);
+  cfg.lines.push_back({"TOTAL:", total});
+
+  cfg.on_dismiss = [this, p, restaurant_id, electricity, slot_income,
+                    after = std::move(after)]() {
+    const auto& date = time_.current_date();
+    if (electricity.cents > 0) {
+      p->financials().transfer(date, Account::Cash, Account::Machines,
+                               electricity, restaurant_id,
+                               AccountingScope::Operational);
+    }
+    if (slot_income.cents > 0) {
+      p->financials().transfer(date, Account::CoinMachines, Account::Cash,
+                               slot_income, restaurant_id,
+                               AccountingScope::Operational);
+    }
+    if (status_display_) {
+      status_display_->mark_dirty();
+    }
+    if (after) {
+      after();
+    }
+  };
+
+  context_->popup->origin({74, 40});
+  context_->popup->create<InvoicePopup>(std::move(cfg));
+}
+
+bool GameState::maybe_show_monthly_restaurant_invoice(
+    Restaurant* rest, std::function<void()> next) {
+  if (!rest || !time_.current_date().is_end_of_month() ||
+      time_.current_date().is_end_of_week()) {
+    return false;
+  }
+  show_electricity_slot_invoice_popup(rest->id(), std::move(next));
+  return true;
 }
 
 void GameState::show_monthly_invoice_popup(core::PlayerId player_id,
@@ -779,15 +847,22 @@ void GameState::process_next_restaurant() {
       }
     }
 
-    // Show daily report if needed -- yields to UI callback
+    // Show daily report if needed -- yields to UI callback.
+    // on_restaurant_processed() will handle the electricity invoice (end of
+    // month) then increment the index and re-enter.
     if (state.is_human && !options().automatic_report &&
         restaurant->wants_open() && !restaurant->is_force_closed()) {
       ui().push<RestaurantStatsState>(restaurant->id(), std::nullopt, true);
-      // on_restaurant_processed() will increment index and re-enter
       return;
     }
 
     state.current_index++;
+
+    if (state.is_human &&
+        maybe_show_monthly_restaurant_invoice(
+            restaurant, [this]() { process_next_restaurant(); })) {
+      return;
+    }
 
     // Human turns: short delay between restaurants so the status display
     // can update visually. update() will re-enter process_next_restaurant().
@@ -1326,8 +1401,18 @@ void GameState::on_restaurant_processed() {
     return;
   }
 
-  // Move to next restaurant
+  auto idx = end_of_turn_state_->current_index;
+  auto* rest = (idx < end_of_turn_state_->restaurants.size())
+                   ? end_of_turn_state_->restaurants[idx]
+                   : nullptr;
+
   end_of_turn_state_->current_index++;
+
+  if (maybe_show_monthly_restaurant_invoice(
+          rest, [this]() { process_next_restaurant(); })) {
+    return;
+  }
+
   process_next_restaurant();
 }
 
@@ -1463,11 +1548,6 @@ void GameState::check_milestone_events(Player& player, bool is_end_of_week) {
           LeventId::AverageServiceTimeLessThan4Minutes, pid, date);
     }
 
-    if (rest->fulfillment_rate() >= 100 && yesterday.orders_generated > 0) {
-      message_manager_.schedule_message(LeventId::AbleToMeet100PctDeliveries,
-                                        pid, date);
-    }
-
     // Cumulative ingredient usage
     constexpr int64_t kg1000_in_grams = 1000LL * 1000;
     if (rest->stats().total_ingredients_used_grams >= kg1000_in_grams) {
@@ -1556,17 +1636,19 @@ void GameState::check_milestone_events(Player& player, bool is_end_of_week) {
     }
     if (perfect_week) {
       perfect_delivery_count++;
+      message_manager_.schedule_message(LeventId::AbleToMeet100PctDeliveries,
+                                        pid, date);
     }
-  }
-
-  if (city_weekly_profit >= 500'000_usd) {
-    message_manager_.schedule_message(LeventId::Has500KWeeksProfitsInOneCity,
-                                      pid, date);
   }
 
   if (perfect_delivery_count >= 5) {
     message_manager_.schedule_message(
         LeventId::PerfectDeliveriesFor1WeekAcross5Restaurants, pid, date);
+  }
+
+  if (city_weekly_profit >= 500'000_usd) {
+    message_manager_.schedule_message(LeventId::Has500KWeeksProfitsInOneCity,
+                                      pid, date);
   }
 }
 
@@ -1586,7 +1668,8 @@ void GameState::snapshot_weekly_profits() {
 
 void GameState::push_weekly_restaurant_reports(
     const std::vector<Restaurant*>& restaurants,
-    core::PlayerId previous_player_id, std::function<void()> on_done) {
+    core::PlayerId previous_player_id, std::function<void()> on_done,
+    bool interleave_electricity) {
   std::function<void()> profit_cb = [this, previous_player_id,
                                      on_done = std::move(on_done)] {
     show_weekly_city_invoice_popup(previous_player_id, on_done);
@@ -1596,6 +1679,12 @@ void GameState::push_weekly_restaurant_reports(
       continue;
     }
     std::function<void()> cb = std::move(profit_cb);
+    if (interleave_electricity) {
+      auto rest_id = (*it)->id();
+      cb = [this, rest_id, next = std::move(cb)]() mutable {
+        show_electricity_slot_invoice_popup(rest_id, std::move(next));
+      };
+    }
     if ((*it)->wants_open() && !(*it)->is_force_closed()) {
       ui().push<WeeksTakingsState>(
           WeeksTakingsState{(*it)->id(), true, std::move(cb)});
@@ -1826,8 +1915,17 @@ void GameState::execute_pipeline_step(TurnPipelineStep step) {
         restaurants.push_back(r);
       }
     }
-    push_weekly_restaurant_reports(restaurants, ctx.previous.id);
-    advance_pipeline();
+    if (ctx.is_end_of_month) {
+      // Interleave electricity invoice after each restaurant's weekly report.
+      // Defer advance_pipeline() via on_done so MonthlyInvoice only runs after
+      // all restaurant invoices and the city invoice are dismissed.
+      push_weekly_restaurant_reports(
+          restaurants, ctx.previous.id, [this]() { advance_pipeline(); }, true);
+    }
+    else {
+      push_weekly_restaurant_reports(restaurants, ctx.previous.id);
+      advance_pipeline();
+    }
     break;
   }
 
