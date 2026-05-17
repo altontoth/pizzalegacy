@@ -196,6 +196,11 @@ CharacterFactory::create_character(int id, core::character::JobRole role) {
 }
 
 core::character::CharacterData* CharacterFactory::create_original(int id) {
+  auto it = cache_.find(id);
+  if (it != cache_.end()) {
+    return it->second.get();
+  }
+
   auto c = std::make_unique<core::character::CharacterData>();
   c->id = static_cast<uint8_t>(id);
 
@@ -323,8 +328,8 @@ CharacterFactory::create_double(int id, core::character::JobRole role) {
   if (c->first_name.empty() || c->first_name.size() < 2) {
     fatal("Double.e: First name too short.");
   }
-  if (c->last_name.empty() || c->last_name.size() < 2) {
-    fatal("Double.e: Last name too short.");
+  if (c->last_name.empty()) {
+    fatal("Double.e: Last name is empty for character {}.", id);
   }
 
   // Salary tweak
