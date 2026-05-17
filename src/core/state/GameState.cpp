@@ -491,10 +491,21 @@ City* GameState::active_city() const {
   return cities_[active_city_.value].get();
 }
 
+std::vector<std::pair<uint8_t, int>> GameState::build_player_chars() const {
+  std::vector<std::pair<uint8_t, int>> result;
+  for (int i = 0; i < NUMBER_OF_PLAYERS; ++i) {
+    if (players_[i]) {
+      result.push_back({players_[i]->character().id(), i});
+    }
+  }
+  return result;
+}
+
 void GameState::active_city(core::CityId city_id) {
   active_city_ = city_id;
   if (cities_[city_id.value] == nullptr) {
-    cities_[city_id.value] = CityFactory::create_city(city_id);
+    cities_[city_id.value] =
+        CityFactory::create_city(city_id, build_player_chars());
   }
   city_view_view_state_[active_player_.value].city_id = city_id;
   run_city_start_of_day(*cities_[city_id.value]);
@@ -504,7 +515,8 @@ void GameState::ensure_city_loaded(core::CityId city_id) {
   // Create city if it doesn't exist, but don't change active_city_
   if (cities_[city_id.value] == nullptr) {
     Logger::info("Creating city {} during ensure_city_loaded", city_id.value);
-    cities_[city_id.value] = CityFactory::create_city(city_id);
+    cities_[city_id.value] =
+        CityFactory::create_city(city_id, build_player_chars());
   }
 }
 
@@ -1956,7 +1968,7 @@ void GameState::tick_active_cities() {
   }
   for (int i = 0; i < NUMBER_OF_CITIES; ++i) {
     if (cities_to_tick[i] && cities_[i]) {
-      cities_[i]->end_of_day();
+      cities_[i]->end_of_day(difficulty_level_);
     }
   }
 }

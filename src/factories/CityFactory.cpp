@@ -66,7 +66,9 @@ struct DistrictDataRaw {
 static_assert(sizeof(DistrictDataRaw) == 104,
               "DistrictDataRaw should be 104 bytes");
 
-std::unique_ptr<City> CityFactory::create_city(core::CityId cid) {
+std::unique_ptr<City> CityFactory::create_city(
+    core::CityId cid,
+    const std::vector<std::pair<uint8_t, int>>& player_chars) {
   CityFactory factory;
   factory.e = platform::is_amiga() ? Endian::Big : Endian::Little;
   auto id = cid.value;
@@ -79,6 +81,7 @@ std::unique_ptr<City> CityFactory::create_city(core::CityId cid) {
   auto city = std::make_unique<City>(core::CityId{id});
   factory.populate_properties(*city);
   factory.build_city_object(*city, id);
+  city->job_market().init(player_chars);
   return city;
 }
 

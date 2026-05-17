@@ -34,6 +34,8 @@
 #include <optional>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
+#include <vector>
 
 class Player;
 class Property;
@@ -456,6 +458,7 @@ private:
   void launch_monthly_competition(std::shared_ptr<CompetitionSession> session);
   void advance_annual_competition();
   [[nodiscard]] bool annual_comp_ready_to_advance() const;
+  std::vector<std::pair<uint8_t, int>> build_player_chars() const;
 
   GameTime time_;
   core::PlayerId active_player_{0};

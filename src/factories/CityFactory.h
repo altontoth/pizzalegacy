@@ -12,6 +12,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "core/city/City.h"
@@ -25,7 +26,9 @@ class Property;
 
 class CityFactory {
 public:
-  static std::unique_ptr<City> create_city(core::CityId id);
+  static std::unique_ptr<City>
+  create_city(core::CityId id,
+              const std::vector<std::pair<uint8_t, int>>& player_chars = {});
 
 private:
   static constexpr int NUMBER_OF_NAMED_BUILDINGS = 8;

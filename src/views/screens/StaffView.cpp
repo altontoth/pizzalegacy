@@ -9,6 +9,7 @@
 #include <algorithm>
 
 #include "core/character/Character.h"
+#include "core/city/JobMarket.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/restaurant/RestaurantStats.h"
 #include "core/state/GameState.h"
@@ -1312,6 +1313,11 @@ void StaffView::add_overview_buttons() {
                 if (fired && character_id != 0) {
                   Logger::info("Fired staff member with ID {}", character_id);
                   city->add_to_blacklist(character_id, 30);
+                  // Restore market slot so the character can be re-hired
+                  // elsewhere
+                  city->job_market().set_status(
+                      character_id,
+                      static_cast<core::character::MarketStatus>(job_));
                   selected_slot_index_.reset();
                   card_animator_.start_hide();
                 }
@@ -1672,6 +1678,11 @@ void StaffView::add_applicant_buttons() {
                   Logger::info("Successfully hired {} {}",
                                char_data->first_name, char_data->last_name);
 
+                  // Mark character as hired in the city job market
+                  city->job_market().set_status(
+                      char_data->id, core::character::hired_status(
+                                         state_.active_player()->id().value));
+
                   // Remove hired candidate from applicant pool
                   auto& vec = applicant_pool_[job_];
                   vec.erase(vec.begin() + applicant_cursor_[job_]);
@@ -1745,54 +1756,35 @@ std::string StaffView::job_string(core::character::JobRole job) const {
 }
 
 void StaffView::load_applicant_pool() {
-  // Collect all player character IDs to exclude them from applicants
+  applicant_pool_.clear();
+
   std::set<uint8_t> player_char_ids;
   for (const auto* player : state_.players()) {
     if (player) {
       player_char_ids.insert(player->character().id());
-      Logger::debug("Excluding player character ID: {} ({})",
-                    player->character().id(), player->character().first_name());
     }
   }
 
-  auto is = fileutils::open("chr/amarkt");
-  if (!is) {
-    fatal("Can't open chr/amarkt!");
+  auto* city = state_.active_city();
+  if (!city) {
+    return;
   }
+  const auto& market = city->job_market();
 
-  uint8_t count = 0;
-  is.read(reinterpret_cast<char*>(&count), 1);
-
-  for (uint8_t i = 0; i < count; ++i) {
-    uint8_t role_raw = 0;
-    is.read(reinterpret_cast<char*>(&role_raw), 1);
-
-    core::character::JobRole role;
-    switch (role_raw) {
-    case 0:
-      role = core::character::JobRole::CHEF;
-      break;
-    case 1:
-      role = core::character::JobRole::WAITER;
-      break;
-    case 2:
-      role = core::character::JobRole::MANAGER;
-      break;
-    default:
-      Logger::debug("Invalid role byte {} at index {}", role_raw, i);
+  for (int id = 0; id < market.total_slots(); ++id) {
+    auto s = market.status(id);
+    if (!core::character::is_available(s)) {
       continue;
     }
-
-    auto* char_data = CharacterFactory::create_character(i);
-
-    // Skip if this character is one of the players
-    if (player_char_ids.contains(char_data->id)) {
-      Logger::debug("Skipping player character {} from applicant pool",
-                    char_data->id);
+    auto role = core::character::job_role(s);
+    auto* cd = CharacterFactory::create_character(id, role);
+    if (player_char_ids.contains(cd->id)) {
       continue;
     }
-
-    applicant_pool_[role].push_back(char_data);
+    if (city->is_blacklisted(cd->id)) {
+      continue;
+    }
+    applicant_pool_[role].push_back(cd);
   }
 }
 

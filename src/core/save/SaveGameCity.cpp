@@ -6,8 +6,12 @@
 
 #include "core/save/SaveGameCity.h"
 
+#include <algorithm>
+#include <array>
+
 #include "core/city/CentralDepot.h"
 #include "core/city/City.h"
+#include "core/city/JobMarket.h"
 #include "core/city/MayorOffice.h"
 #include "core/city/Property.h"
 #include "core/food/IngredientCategory.h"
@@ -491,6 +495,13 @@ json city_to_json(const City& city) {
   }
   j["blacklist"] = blacklist;
 
+  // Save job market status array
+  json market_array = json::array();
+  for (const auto& s : city.job_market().slots()) {
+    market_array.push_back(static_cast<uint8_t>(s));
+  }
+  j["job_market"] = market_array;
+
   // Save all suppliers
   json suppliers_array = json::array();
   for (const auto& supplier : city.suppliers()) {
@@ -605,6 +616,18 @@ void json_to_city(const json& j, City& city) {
       int days = value.get<int>();
       city.add_to_blacklist(char_id, days);
     }
+  }
+
+  // Restore job market status array
+  if (j.contains("job_market")) {
+    const auto& arr = j["job_market"];
+    std::vector<core::character::MarketStatus> slots;
+    slots.reserve(arr.size());
+    for (const auto& entry : arr) {
+      slots.push_back(
+          static_cast<core::character::MarketStatus>(entry.get<uint8_t>()));
+    }
+    city.job_market().load_slots(slots);
   }
 
   // Restore suppliers

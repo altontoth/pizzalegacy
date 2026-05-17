@@ -20,6 +20,7 @@
 #include "core/city/ControlMap.h"
 #include "core/city/EconomyTrend.h"
 #include "core/city/IngredientTrendSystem.h"
+#include "core/city/JobMarket.h"
 #include "core/city/MayorOffice.h"
 #include "core/city/PizzaCharts.h"
 #include "core/common/Ids.h"
@@ -93,7 +94,7 @@ public:
   std::string tile_description(int index) const;
   const std::vector<std::unique_ptr<District>>& districts() const;
   const District& district(core::DistrictId district_id) const;
-  void end_of_day();
+  void end_of_day(int difficulty);
   void end_of_month();
   static constexpr int index_to_x(int index) {
     return index % MAP_TILES_PER_ROW;
@@ -284,6 +285,9 @@ public:
     return ingredient_base_prices_[ingredient];
   }
 
+  core::character::JobMarket& job_market() { return job_market_; }
+  const core::character::JobMarket& job_market() const { return job_market_; }
+
   // Blacklist management (for fired staff)
   void add_to_blacklist(uint8_t character_id, int days = 30);
   void remove_from_blacklist(uint8_t character_id);
@@ -376,6 +380,7 @@ private:
   int first_bank_id_ = -1;
   // Blacklist: character_id -> days_remaining
   std::unordered_map<uint8_t, int> staff_blacklist_;
+  core::character::JobMarket job_market_;
   // Vendor spending tracking (resets weekly, per-player): vendor_id -> total
   // spent this week
   std::array<std::unordered_map<uint8_t, Money>, NUMBER_OF_PLAYERS>

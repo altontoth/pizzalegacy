@@ -300,7 +300,7 @@ const District& City::district(core::DistrictId district_id) const {
   return *districts_.at(district_id.value);
 }
 
-void City::end_of_day() {
+void City::end_of_day(int difficulty) {
   for (auto& district : districts_) {
     district->end_of_day();
   }
@@ -332,6 +332,8 @@ void City::end_of_day() {
       trade_embargo_counters_[i]--;
     }
   }
+
+  job_market_.end_of_day(difficulty);
 }
 
 void City::end_of_month() {
