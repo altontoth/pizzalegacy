@@ -40,7 +40,7 @@ PaneledView::PaneledView(GameContext& context, GameState& state,
   ViewRect size_and_pos_main = {WOOD_BORDER_WIDTH_LEFT, WOOD_BORDER_HEIGHT_TOP,
                                 MAIN_PANEL_WIDTH, MAIN_PANEL_HEIGHT};
   ViewRect size_and_pos_status = {STATUS_PANEL_OFFSET_X, STATUS_PANEL_OFFSET_Y,
-                                  STATUS_PANEL_WIDTH, STATUS_PANEL_WIDTH};
+                                  STATUS_PANEL_WIDTH, STATUS_PANEL_HEIGHT};
   ViewRect size_and_pos_input = {INPUT_PANEL_OFFSET_X, INPUT_PANEL_OFFSET_Y,
                                  INPUT_PANEL_WIDTH, INPUT_PANEL_HEIGHT};
 

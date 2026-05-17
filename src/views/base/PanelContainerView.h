@@ -16,8 +16,10 @@ public:
       : View(context, state) {}
 
   void render(const RenderContext& ctx) override {
-    // Draw the wooden border background
-    gfx::blit::blit_raw_with_palette(*ctx.surface, context_.vga->get("gfx/bo"));
+    // Draw the wooden border background; it has transparent areas so make sure
+    // we have a black surface to work on:
+    ctx.surface->fill(240);
+    ctx.surface->blit_masked(context_.vga->get("gfx/bo"), {0, 0});
   }
   void tick() override {}
 };
