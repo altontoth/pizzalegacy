@@ -252,7 +252,12 @@ bool Restaurant::fire_staff(core::character::JobRole role, int slot_index) {
 
   if (slot_index >= 0 && slot_index < static_cast<int>(staff_array.size())) {
     if (staff_array[slot_index].has_value()) {
-      staff_array[slot_index].reset();
+      // Shift remaining staff left to fill the gap
+      for (int i = slot_index; i < static_cast<int>(staff_array.size()) - 1;
+           ++i) {
+        staff_array[i] = std::move(staff_array[i + 1]);
+      }
+      staff_array.back().reset();
       return true;
     }
   }
