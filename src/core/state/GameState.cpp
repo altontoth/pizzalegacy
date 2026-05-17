@@ -2148,16 +2148,26 @@ void GameState::check_world_domination() {
     return;
   }
 
-  // Must have visited and have data for all 10 cities.
-  auto cities = initialized_cities();
-  if (static_cast<int>(cities.size()) < NUMBER_OF_CITIES) {
-    return;
-  }
-
   constexpr float win_threshold = 5.0f;
-  for (auto* city : cities) {
-    if (city->control_map().player_percentage(p->id().value) < win_threshold) {
+
+  if (!options().fix_legacy_bugs) {
+    // Original: only Paris (city 0) needs >= 5% market share.
+    auto* paris = city(core::CityId{0});
+    if (!paris ||
+        paris->control_map().player_percentage(p->id().value) < win_threshold) {
       return;
+    }
+  }
+  else {
+    // Fixed: must have >= 5% in all 10 cities.
+    auto cities = initialized_cities();
+    if (static_cast<int>(cities.size()) < NUMBER_OF_CITIES) {
+      return;
+    }
+    for (auto* c : cities) {
+      if (c->control_map().player_percentage(p->id().value) < win_threshold) {
+        return;
+      }
     }
   }
 

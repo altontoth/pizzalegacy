@@ -147,3 +147,8 @@ When a skill check failed for complaining about the penalty clause with a
 supplier contract, the original would half it despite saying not seeing a
 reason to do so. Now the penalty is only reduced if the checks actually all
 succeed.
+
+### Win condition fixed
+In the original Pizza Tycoon there was a bug (at least I think it
+wasn't on purpose?) that you had to have >= 5% market share in just Paris
+instead of all 10 cities.
