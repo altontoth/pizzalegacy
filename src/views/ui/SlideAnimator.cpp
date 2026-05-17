@@ -46,7 +46,8 @@ void SlideAnimator::start_hide() {
 bool SlideAnimator::update() {
   switch (state_) {
   case SlideState::APPEARING: {
-    int step = std::max(4, (offset_ - target_offset_) / 12);
+    int step =
+        std::max(MIN_STEP_PX, (offset_ - target_offset_) / DISTANCE_DIVISOR);
     offset_ -= step;
     if (offset_ <= target_offset_) {
       snap_visible();
@@ -54,7 +55,8 @@ bool SlideAnimator::update() {
     return true;
   }
   case SlideState::DISAPPEARING: {
-    int step = std::max(4, (screen_height_ - offset_) / 12);
+    int step =
+        std::max(MIN_STEP_PX, (screen_height_ - offset_) / DISTANCE_DIVISOR);
     offset_ += step;
     if (offset_ >= screen_height_) {
       snap_hidden();

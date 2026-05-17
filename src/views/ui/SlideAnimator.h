@@ -15,6 +15,14 @@ public:
     DISAPPEARING,
   };
 
+  // step = remaining_distance / DISTANCE_DIVISOR each frame.
+  // Smaller = faster start and steeper deceleration.
+  static constexpr int DISTANCE_DIVISOR = 6;
+
+  // Minimum pixels moved per frame, used near the end of the slide.
+  // Larger = faster final approach.
+  static constexpr int MIN_STEP_PX = 8;
+
   SlideAnimator(int screen_height, int target_offset);
   void start_show();
   void start_hide();
