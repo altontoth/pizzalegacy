@@ -12,6 +12,13 @@ configure_file(
     @ONLY
 )
 
+# Load shared README partials
+foreach(_partial INTRO REQUIREMENTS STATUS LICENSE)
+    string(TOLOWER "${_partial}" _partial_lower)
+    file(READ "${CMAKE_CURRENT_SOURCE_DIR}/dist/partials/${_partial_lower}.txt" _content)
+    string(CONFIGURE "${_content}" README_${_partial} @ONLY)
+endforeach()
+
 # Generate versioned READMEs for distribution packages into the build dir
 configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/dist/README-macOS.txt.in

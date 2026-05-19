@@ -1,11 +1,10 @@
 Pizza Legacy v@PROJECT_VERSION@ - Linux Release
 ===============================================
 
-Pizza Legacy is an open-source reimplementation of the 1994 DOS game
-Pizza Connection/Pizza Tycoon.
+@README_INTRO@
 
 RUNNING
-------------
+-------
 
 Make the AppImage executable and run it:
 
@@ -13,23 +12,10 @@ Make the AppImage executable and run it:
     ./PizzaLegacy_v@PROJECT_VERSION@_linux-x86_64.AppImage
 
 
-REQUIREMENTS
-------------
-The game requires the asset files from the original Pizza Tycoon /
-Pizza Connection. Point the game at your installation directory on
-first launch (the folder containing PT.EXE).
-
-The original game (Pizza Connection) is available on GOG and Steam,
-frequently on sale for under a euro.
+@README_REQUIREMENTS@
 
 
-STATUS
-------
-Alpha. Expect rough edges and missing features. Development is active.
-See https://pizzalegacy.nl/ for current status.
-
-Find the full README online:
-https://codeberg.org/cowomaly/pizzalegacy/src/branch/main/README.md
+@README_STATUS@
 
 
 THIRD-PARTY SOFTWARE
@@ -41,8 +27,6 @@ A summary of all third-party components can be found in
 `usr/share/doc/plegacy/THIRD_PARTIES.txt`.
 
 
-LICENSE
--------
-Pizza Legacy is licensed under the GNU General Public License v3.0.
+@README_LICENSE@
 LICENSE.txt (in usr/share/licenses/plegacy/) contains the full license text.
 Source code: https://codeberg.org/cowomaly/pizzalegacy/
