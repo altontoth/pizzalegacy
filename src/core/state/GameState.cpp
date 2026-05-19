@@ -1470,28 +1470,31 @@ void GameState::deliver_depot_stock(core::PlayerId player_id) {
         continue;
       }
 
-      auto& depot_stock =
-          depot.get_stock(static_cast<core::food::IngredientType>(i));
+      auto ing_type = static_cast<core::food::IngredientType>(i);
+      auto& depot_stock = depot.get_stock(ing_type);
+
+      constexpr int grams_per_kg = 1000;
+      int current_raw = rest->inventory().get_stock(ing_type).quantity;
+      int current = (current_raw / grams_per_kg) * grams_per_kg;
+      int shortfall = needed - current;
+
       if (depot_stock.quantity <= 0) {
         continue;
       }
 
       // We just top up the stock until it's at 2x yesterday's demand
-      int current = rest->inventory()
-                        .get_stock(static_cast<core::food::IngredientType>(i))
-                        .quantity;
-      int shortfall = needed - current;
       if (shortfall <= 0) {
         continue;
       }
 
-      int transfer = std::min(shortfall, depot_stock.quantity);
+      int shortfall_rounded =
+          ((shortfall + grams_per_kg - 1) / grams_per_kg) * grams_per_kg;
+      int transfer = std::min(shortfall_rounded, depot_stock.quantity);
       int quality = depot_stock.weighted_avg_quality;
       Money cost = depot_stock.weighted_avg_cost;
 
       depot_stock.consume(transfer);
-      rest->inventory().add_ingredient(
-          static_cast<core::food::IngredientType>(i), transfer, quality, cost);
+      rest->inventory().add_ingredient(ing_type, transfer, quality, cost);
     }
   }
 
@@ -1559,15 +1562,12 @@ void GameState::check_milestone_events(Player& player, bool is_end_of_week) {
       message_manager_.schedule_message(
           LeventId::AverageServiceTimeLessThan4Minutes, pid, date);
     }
-
-    // Cumulative ingredient usage
-    constexpr int64_t kg1000_in_grams = 1000LL * 1000;
-    if (rest->stats().total_ingredients_used_grams >= kg1000_in_grams) {
-      message_manager_.schedule_message(
-          LeventId::YouHaveUsed1000KiloOfIngredients, pid, date);
-    }
   }
 
+  if (total_ingredients_today >= 1000LL * 1000) {
+    message_manager_.schedule_message(
+        LeventId::YouHaveUsed1000KiloOfIngredients, pid, date);
+  }
   if (total_daily_pizzas >= 1'000) {
     message_manager_.schedule_message(LeventId::Sold1KPizzasPerDay, pid, date);
   }
@@ -1889,12 +1889,12 @@ void GameState::execute_pipeline_step(TurnPipelineStep step) {
     break;
 
   case Step::PreparePlayerTurn:
-    deliver_depot_stock(active_player_);
     for (auto* restaurant : restaurants_for(active_player_)) {
       if (restaurant) {
         restaurant->start_of_day(*this);
       }
     }
+    deliver_depot_stock(active_player_);
     pending_ai_auto_end_turn_ =
         !players_[active_player_.value]->is_human_controlled();
     if (!pending_ai_auto_end_turn_) {

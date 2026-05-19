@@ -249,7 +249,7 @@ void CityFactory::load_suppliers(std::ifstream& is, int supplier_count) {
     uint8_t quality = (uint8_t)is.get();
     // Logger::debug("Quality is {}", (int)quality);
 
-    uint8_t file_id = (uint8_t)is.get();
+    uint8_t supplier_id = (uint8_t)is.get();
     [[maybe_unused]] uint8_t u1 = (uint8_t)is.get(); // Unknown
 
     // Now, the name of the supplier, I'm guessing 26 bytes this time:
@@ -299,11 +299,9 @@ void CityFactory::load_suppliers(std::ifstream& is, int supplier_count) {
       continue;
     }
 
-    uint8_t supplier_id = head_type;
     auto s = std::make_unique<FoodSupplier>(
         *category, supplier_id, quality, supplier_name, head_type,
-        minimum_contract_amount, file_id, price_levels.data(),
-        price_levels.size());
+        minimum_contract_amount, price_levels.data(), price_levels.size());
     suppliers_.push_back(std::move(s));
   }
 

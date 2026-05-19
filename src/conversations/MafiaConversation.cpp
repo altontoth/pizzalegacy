@@ -18,6 +18,7 @@
 #include "core/city/District.h"
 #include "core/city/Property.h"
 #include "core/common/Ids.h"
+#include "core/finance/Ledger.h"
 #include "core/item/Item.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/state/UIState.h"
@@ -439,8 +440,9 @@ bool MafiaConversation::advance_proposal(bool agree) {
           }
 
           if (total_damage.cents > 0) {
-            player->financials().spend_cash(date, Account::Furniture,
-                                            total_damage);
+            player->financials().transfer(
+                date, Account::Furniture, Account::ProfitAndLoss, total_damage,
+                *restaurant_id_, AccountingScope::Capital);
           }
           restaurant->update_demographics(player->recipes());
         }

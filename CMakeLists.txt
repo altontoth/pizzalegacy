@@ -28,6 +28,11 @@ configure_file(
     ${CMAKE_BINARY_DIR}/dist/README-Linux.txt
     @ONLY
 )
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/dist/README-Haiku.txt.in
+    ${CMAKE_BINARY_DIR}/dist/README-Haiku.txt
+    @ONLY
+)
 # Copy the credits/third-party listing into the build dist dir
 configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/docs/CREDITS.md
@@ -227,7 +232,7 @@ if(PLEGACY_ENABLE_MUSIC)
       message(STATUS "libADLMIDI: using system CONFIG package")
     endif()
   else()
-    pkg_check_modules(ADLMIDI QUIET libadlmidi)
+    pkg_check_modules(ADLMIDI QUIET libADLMIDI)
     if(ADLMIDI_FOUND)
       set(_ADLMIDI_FOUND TRUE)
       message(STATUS "libADLMIDI: using system pkg-config package")
@@ -410,14 +415,18 @@ set(PLEGACY_DIST_SOURCES
 )
 
 target_include_directories(plegacy PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+target_include_directories(plegacy SYSTEM PRIVATE
     ${SDL2_INCLUDE_DIRS}
     ${PNG_INCLUDE_DIRS}
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party
 )
 
 target_include_directories(game_plegacy PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+target_include_directories(game_plegacy SYSTEM PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party
 )
 
@@ -438,6 +447,8 @@ if(PLEGACY_BUILD_TESTS)
         target_link_libraries(test_plegacy PRIVATE game_plegacy Catch2::Catch2WithMain)
         target_include_directories(test_plegacy PRIVATE
             ${CMAKE_CURRENT_SOURCE_DIR}/src
+        )
+        target_include_directories(test_plegacy SYSTEM PRIVATE
             ${CMAKE_CURRENT_SOURCE_DIR}/third_party
         )
         include(CTest)
@@ -458,7 +469,7 @@ endif()
 
 set(PLEGACY_TOOLS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/tools")
 
-if(UNIX AND NOT APPLE)
+if(UNIX AND NOT APPLE AND NOT CMAKE_SYSTEM_NAME STREQUAL "Haiku")
     add_custom_target(release_linux
         DEPENDS plegacy
         COMMAND "${PLEGACY_TOOLS_DIR}/package_linux_appimage.sh"
@@ -466,6 +477,18 @@ if(UNIX AND NOT APPLE)
                 "${PROJECT_VERSION}"
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
         COMMENT "Packaging Linux AppImage v${PROJECT_VERSION}"
+        VERBATIM
+    )
+endif()
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Haiku")
+    add_custom_target(release_haiku
+        DEPENDS plegacy
+        COMMAND "${PLEGACY_TOOLS_DIR}/package_haiku_zip.sh"
+                "${CMAKE_BINARY_DIR}"
+                "${PROJECT_VERSION}"
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+        COMMENT "Packaging Haiku ZIP v${PROJECT_VERSION}"
         VERBATIM
     )
 endif()

@@ -887,8 +887,8 @@ Renderable* Game::change_state(GameState& gs, LoopState& /*loop*/) {
                 std::make_unique<StatsRestaurants>(context, gs, srs.player_id);
           },
           [&](const AnimatedStatsState& ass) {
-            current_view_ =
-                std::make_unique<AnimatedStats>(context, gs, ass.id);
+            current_view_ = std::make_unique<AnimatedStats>(context, gs, ass.id,
+                                                            ass.screen);
           },
           [&](const PizzaDesignState& pms) {
             current_view_ = std::make_unique<PizzaDesign>(context, gs, pms);

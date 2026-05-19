@@ -1,0 +1,48 @@
+Pizza Legacy v@PROJECT_VERSION@ - Haiku Release
+===============================================
+
+Pizza Legacy is an open-source reimplementation of the 1994 DOS game
+Pizza Connection/Pizza Tycoon.
+
+RUNNING
+-------
+
+Extract the zip, then launch the game with the PizzaLegacy wrapper script:
+
+    ./PizzaLegacy
+
+The wrapper sets LIBRARY_PATH so the bundled libraries are found automatically.
+Do not run plegacy.bin directly unless you have SDL2/libpng in your system path.
+
+
+REQUIREMENTS
+------------
+The game requires the asset files from the original Pizza Tycoon /
+Pizza Connection. Point the game at your installation directory on
+first launch (the folder containing PT.EXE).
+
+The original game (Pizza Connection) is available on GOG and Steam,
+frequently on sale for under a euro.
+
+
+STATUS
+------
+Alpha. Expect rough edges and missing features. Development is active.
+See https://pizzalegacy.nl/ for current status.
+
+Find the full README online:
+https://codeberg.org/cowomaly/pizzalegacy/src/branch/main/README.md
+
+
+THIRD-PARTY SOFTWARE
+--------------------
+This build may include bundled third-party libraries (SDL2, libpng, libADLMIDI).
+Their individual licenses are in the LICENSES/ directory.
+A summary of all third-party components is in THIRD_PARTIES.txt.
+
+
+LICENSE
+-------
+Pizza Legacy is licensed under the GNU General Public License v3.0.
+LICENSE.txt contains the full license text.
+Source code: https://codeberg.org/cowomaly/pizzalegacy/

@@ -68,10 +68,11 @@ enum class ManagerBehavior {
 };
 
 struct ProductionScreenData {
-  int order_count{0};
-  std::vector<int> oven_capacities;
-  int fulfillment_rate{0};
-  int fulfilled_orders{0};
+  int order_count{0};               // North: order slips
+  std::vector<int> oven_capacities; // East: pizzas per oven column
+  int oven_util{0}; // East: oven utilization % (demand_chef_limited / oven_cap)
+  int baked_pizza_count{0}; // South: baked pizza symbols
+  int bill_count{0};        // West: money bills
 };
 
 struct ManagerSettings {
@@ -308,7 +309,8 @@ public:
   // How many guests are concurrently seated vs total linked seats
   Occupancy guest_occupancy() const;
 
-  ProductionScreenData get_production_screen_data() const;
+  ProductionScreenData
+  get_production_screen_data(const core::food::PlayerRecipes& recipes) const;
 
   // All timing metrics used by staff screen and seating capacity calc
   ServiceTimeData calculate_service_time_data() const;

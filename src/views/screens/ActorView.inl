@@ -82,6 +82,9 @@ ActorView<LineEnum>::ActorView(
                                current_phase_ = ConversationPhase::ENDING;
                                phase_timer_ = 10;
                              }
+                             else {
+                               advance_conversation();
+                             }
                            });
 
   input_panel_->add_button(Icon::THUMBS_DOWN, ButtonType::Vertical,

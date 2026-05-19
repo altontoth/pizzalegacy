@@ -8,25 +8,16 @@
 
 #include <array>
 #include "core/common/Ids.h"
+#include "core/restaurant/Restaurant.h"
+#include "core/state/AnimatedStatsScreen.h"
 #include "resources/Bob.h"
 #include "views/base/RestaurantSubView.h"
-
-class Restaurant;
-
-enum class AnimatedStatsScreen {
-  Production,
-  Reputation,
-  Capacity,
-  Pizza_Quality,
-  Popularity,
-  Turnover,
-  None,
-};
 
 class AnimatedStats : public RestaurantSubView {
 public:
   AnimatedStats(GameContext& context, GameState& state,
-                core::RestaurantId restaurant_id);
+                core::RestaurantId restaurant_id,
+                AnimatedStatsScreen screen = AnimatedStatsScreen::Production);
   void tick() override;
   void render(const RenderContext& ctx) override;
 
@@ -87,19 +78,28 @@ private:
 
   static constexpr int POPULARITY_FILL_SPEED = 2; // Rows per tick
   static constexpr int POPULARITY_NUM_DEMOGRAPHICS = 6;
+  static constexpr int POPULARITY_BAR_FILL_START = 278 - 32;
+  static constexpr int POPULARITY_BAR_FILL_MIN = 132 - 32;
 
-  static constexpr int ANIM_TICKS_PER_UNIT = 4; // Ticks per fill unit
+  // Returns the target Y position for a bar with the given strength value.
+  // Higher value = bar filled higher = lower Y coordinate.
+  static int popularity_target_y(int value) {
+    return std::clamp(POPULARITY_BAR_FILL_START - (value / 2),
+                      POPULARITY_BAR_FILL_MIN, POPULARITY_BAR_FILL_START);
+  }
+
+  static constexpr int ANIM_TICKS_PER_UNIT = 4;
   static constexpr int REPUTATION_NUM_COMPONENTS = 8;
   static constexpr int PIZZA_QUALITY_NUM_COMPONENTS = 4;
 
-  // Cached capacity values (calculated once per screen switch)
-  int capacity_demand_value_{0};
   // Seating, Stock, Chef, Oven, Waiter
   std::array<int, 5> capacity_category_values_{0, 0, 0, 0, 0};
   int capacity_final_value_{0};
 
-  // Cached pizza quality factor values (calculated once per screen switch)
+  // Caches (calculated once per screen switch)
+  int capacity_demand_value_{0};
   std::array<int, 4> pizza_quality_values_{};
+  ProductionScreenData production_data_{};
 
   void calculate_capacity_stats();
 };

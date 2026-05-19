@@ -34,9 +34,7 @@ struct BgColorEntry {
 constexpr std::array<BgColorEntry, 12> BG_COLOR_TABLE = {{
     {.override_palette = false, .fg = 0x00, .shadow = 0x00}, // 0: NONE (unused)
     {.override_palette = true, .fg = 0xFD, .shadow = 0xFE},  // 1: BEGGING
-    {.override_palette = false,
-     .fg = 0x1F,
-     .shadow = 0x28}, // 2: PRISON (fixed palette indices)
+    {.override_palette = false, .fg = 0x1F, .shadow = 0x28}, // 2: PRISON
     {.override_palette = true, .fg = 0xFD, .shadow = 0xFE},  // 3: FORCED_LABOR
     {.override_palette = true, .fg = 0xFD, .shadow = 0xFE},  // 4: EXECUTED
     {.override_palette = true, .fg = 0xFD, .shadow = 0xFE},  // 5: BALANCE
@@ -79,7 +77,7 @@ FullscreenStatus::FullscreenStatus(GameContext& context, GameState& state,
   TextStyle ts{.color = fg_color_,
                .align = AlignX::Left,
                .shadow = ShadowStyle{
-                   .offset = {-1, 1},
+                   .offset = {-2, 2},
                    .color = shadow_color_,
                }};
   typewriter_.set_text(text_, ViewPoint{30, 320}, FontFace::ASTANDAR, ts,
@@ -114,8 +112,8 @@ void FullscreenStatus::render(const RenderContext& ctx) {
   gfx::blit::blit_raw_with_palette(*ctx.surface, background_);
   if (override_palette_) {
     auto& pal = ctx.surface->colors();
-    pal[0xFD] = gfx::Color{.r = 60, .g = 60, .b = 60};
-    pal[0xFE] = gfx::Color{.r = 12, .g = 12, .b = 12};
+    pal[0xFD] = gfx::Color{.r = 240, .g = 240, .b = 240};
+    pal[0xFE] = gfx::Color{.r = 48, .g = 48, .b = 48};
   }
   typewriter_.render(*ctx.surface);
 }

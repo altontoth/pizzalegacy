@@ -22,6 +22,7 @@
 #include "core/food/Pizza.h"
 #include "core/food/PlayerRecipes.h"
 #include "core/restaurant/RestaurantTypes.h"
+#include "core/state/AnimatedStatsScreen.h"
 #include "core/state/CompetitionSession.h"
 #include "core/state/ViewerType.h"
 #include "core/supply/IngredientBatch.h"
@@ -79,6 +80,7 @@ struct WeeksTakingsState {
 };
 struct AnimatedStatsState {
   core::RestaurantId id;
+  AnimatedStatsScreen screen{AnimatedStatsScreen::Production};
 };
 struct RestaurantViewState {
   core::RestaurantId id;

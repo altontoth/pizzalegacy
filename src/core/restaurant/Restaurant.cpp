@@ -448,36 +448,76 @@ Restaurant::Occupancy Restaurant::guest_occupancy() const {
   return {.guests = guests, .seats = seat_count};
 }
 
-ProductionScreenData Restaurant::get_production_screen_data() const {
+ProductionScreenData Restaurant::get_production_screen_data(
+    const core::food::PlayerRecipes& recipes) const {
   ProductionScreenData data;
 
-  // order_count = sum(demand_factors) * quality_multiplier / 720, clamped to 20
   int demand_sum = 0;
-  for (const auto& factor : economy_.customer_counts()) {
-    demand_sum += factor;
+  for (const auto& count : economy_.customer_counts()) {
+    demand_sum += count;
   }
-  float raw_orders =
-      static_cast<float>(demand_sum * economy_.quality_rating()) / 720.0f;
-  data.order_count = std::min(static_cast<int>(raw_orders), 20);
 
-  data.fulfillment_rate = fulfillment_rate_;
+  auto service_data = calculate_service_time_data();
 
-  // Max 4 ovens for display
+  // Money box (bills): demand * avg_seating_time / 720, cap 20.
+  if (service_data.avg_seating_time > 0.0f) {
+    float raw =
+        static_cast<float>(demand_sum) * service_data.avg_seating_time / 720.0f;
+    data.bill_count = std::min(static_cast<int>(raw), 20);
+  }
+
+  // Demand cascade where each stage limits the next;
+  // utilization = demand_at_stage / cap_at_stage.
+  int seating_cap = calculate_seating_capacity(&service_data);
+  int stock_cap = calculate_stock_capacity(recipes);
+  int chef_cap = calculate_daily_chef_throughput();
+  int oven_cap = calculate_daily_oven_throughput();
+  int waiter_cap = calculate_daily_waiter_throughput();
+
+  int d_seating = std::min(demand_sum, seating_cap);
+  int d_stock = std::min(d_seating, stock_cap);
+  int d_chef = std::min(d_stock, chef_cap);
+  int d_oven = std::min(d_chef, oven_cap);
+
+  auto util_pct = [](int numerator, int denominator) -> int {
+    if (denominator <= 0) {
+      return 0;
+    }
+    return std::clamp((numerator * 100) / denominator, 0, 100);
+  };
+
+  int stock_util = util_pct(d_seating, stock_cap);
+  int chef_util = util_pct(d_stock, chef_cap);
+  data.oven_util = util_pct(d_chef, oven_cap);
+  int waiter_work = util_pct(d_oven, waiter_cap);
+
+  // South box (delivered pizzas)
+  int base_baked = (d_oven < 160) ? d_oven / 16 : 10;
+  data.baked_pizza_count = (base_baked * waiter_work) / 100;
+
+  // North box (order papers): seating-limited demand / 16 (cap 10),
+  // scaled by max(stock_util, chef_util)^2 / 10000 + 1.
+  int base_slips = (d_seating < 160) ? d_seating / 16 : 10;
+  int max_util = std::max(stock_util, chef_util);
+  data.order_count =
+      std::min(((base_slips * max_util * max_util) / 10000) + 1, 10);
+
+  // East box (ovens + pizza stacks): max 4 ovens, pizza count per oven
+  // scaled by oven_util
   if (layout_) {
     int oven_count = 0;
     for (const auto& pf : layout_->placed_kitchen_furniture()) {
       if (pf && pf->furniture()->category() == FurnitureCategory::KITCHENWARE) {
         int capacity = pf->furniture()->capacity();
-        // Scale oven display by fulfillment rate (>90% shows full capacity)
         int scaled_capacity;
-        if (data.fulfillment_rate > 90) {
+        if (data.oven_util > 90) {
           scaled_capacity = capacity;
         }
-        else if (data.fulfillment_rate == 0) {
+        else if (data.oven_util == 0) {
           scaled_capacity = 0;
         }
         else {
-          scaled_capacity = (capacity * data.fulfillment_rate) / 100;
+          scaled_capacity = (capacity * data.oven_util) / 100;
         }
         data.oven_capacities.push_back(scaled_capacity);
         oven_count++;
@@ -487,9 +527,6 @@ ProductionScreenData Restaurant::get_production_screen_data() const {
       }
     }
   }
-
-  data.fulfilled_orders = (data.order_count * data.fulfillment_rate) / 100;
-  data.fulfilled_orders = std::min(data.fulfilled_orders, 20);
 
   return data;
 }
@@ -1040,17 +1077,6 @@ void Restaurant::end_of_day(GameState& game_state) {
     }
   }
 
-  for (const auto ingredient_type : inventory_.apply_daily_degradation()) {
-    game_state.status().post(StatusMsg{
-        .payload =
-            compat::format("{}: The supplies of {} were rotten and had to be "
-                           "thrown away.",
-                           name_, core::food::to_string(ingredient_type)),
-        .scope = StatusScope::Restaurant,
-        .delay_blocks = 3,
-    });
-  }
-
   if (!is_open(game_state.time().time_of_day())) {
     stats_.end_of_day(0);
     return;
@@ -1586,6 +1612,17 @@ int Restaurant::calculate_trend_appeal(const City& city) const {
 }
 
 void Restaurant::start_of_day(GameState& game_state) {
+  for (const auto ingredient_type : inventory_.apply_daily_degradation()) {
+    game_state.status().post(StatusMsg{
+        .payload =
+            compat::format("{}: The supplies of {} were rotten and had to be "
+                           "thrown away.",
+                           name_, core::food::to_string(ingredient_type)),
+        .scope = StatusScope::Restaurant,
+        .delay_blocks = 3,
+    });
+  }
+
   // Tick down forced closures
   if (forced_days_remaining_ > 0) {
     --forced_days_remaining_;

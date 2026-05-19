@@ -13,10 +13,10 @@
 
 FoodSupplier::FoodSupplier(IngredientCategory category, uint8_t supplier_id,
                            uint8_t quality, std::string name, uint8_t head_id,
-                           int min_contract, uint8_t file_id,
-                           const uint8_t* price_level, int price_level_count)
+                           int min_contract, const uint8_t* price_level,
+                           int price_level_count)
     : category_(category), supplier_id_(supplier_id), quality_(quality),
-      name_(std::move(name)), head_id_(head_id), file_id_(file_id),
+      name_(std::move(name)), head_id_(head_id),
       min_contract_amount_(Money{static_cast<int64_t>(min_contract * 100)}) {
   auto meta = core::food::CategoryRegistry::get(category_);
   actor_type_ = meta.supplier_type;
@@ -88,8 +88,6 @@ Money FoodSupplier::calculate_price(core::food::IngredientType ingredient_type,
 }
 
 uint8_t FoodSupplier::head_id() const { return head_id_; }
-
-uint8_t FoodSupplier::file_id() const { return file_id_; }
 
 SupplierRelationship& FoodSupplier::relationship(core::PlayerId player_id) {
   return relationships_[player_id];

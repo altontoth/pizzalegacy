@@ -11,6 +11,7 @@
 #include "core/restaurant/Furniture.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/restaurant/RestaurantLayout.h"
+#include "core/state/AnimatedStatsScreen.h"
 #include "core/state/GameState.h"
 #include "core/state/UIState.h"
 #include "core/util/LegacyConstants.h"
@@ -25,12 +26,14 @@
 #include "views/ui/PageDecoration.h"
 
 AnimatedStats::AnimatedStats(GameContext& context, GameState& state,
-                             core::RestaurantId restaurant_id)
-    : RestaurantSubView(context, state, restaurant_id),
-      lebbo_bob_(context_.bob->get("bob/lebbo.bob")) {
+                             core::RestaurantId restaurant_id,
+                             AnimatedStatsScreen screen)
+    : RestaurantSubView(context, state, restaurant_id), current_screen_(screen),
+      previous_screen_(screen), lebbo_bob_(context_.bob->get("bob/lebbo.bob")) {
 
   restaurant_ = state_.restaurant(restaurant_id_);
   create_buttons();
+  reset_animation();
 }
 
 void AnimatedStats::tick() {
@@ -110,19 +113,16 @@ void AnimatedStats::tick_capacity() {
 
 void AnimatedStats::tick_popularity() {
   if (anim_sub_progress_ >= POPULARITY_NUM_DEMOGRAPHICS) {
-    // Animation complete
     return;
   }
 
-  // Maximum fill height per demographic (from BAR_FILL_START to BAR_FILL_MIN)
-  constexpr int MAX_FILL_HEIGHT = 250 - 104;
+  const auto& strength = restaurant_->economy().competitive_strength();
+  int value = strength[static_cast<ConsumerType>(anim_sub_progress_)];
+  int fill_target = POPULARITY_BAR_FILL_START - popularity_target_y(value);
 
   anim_progress_ += POPULARITY_FILL_SPEED * 2;
 
-  // Check if this demographic is complete (reached max possible fill)
-  // (actual fill depends on demographic value, but tick doesn't know that)
-  // We advance when we've covered the full possible range
-  if (anim_progress_ >= MAX_FILL_HEIGHT) {
+  if (anim_progress_ >= fill_target) {
     anim_sub_progress_++;
     anim_progress_ = 0;
   }
@@ -183,6 +183,7 @@ void AnimatedStats::tick_pizza_quality() {
 }
 
 void AnimatedStats::render(const RenderContext& ctx) {
+  interactions_.begin_frame();
   switch (current_screen_) {
   case AnimatedStatsScreen::Reputation:
     render_reputation(ctx);
@@ -234,7 +235,7 @@ void AnimatedStats::create_buttons() {
                      ButtonPosition::TopRight, "Reputation");
 
   make_screen_button(BT::Horizontal, AS::Capacity, Icon::CAPACITY,
-                     ButtonPosition::MiddleLeft, "Production");
+                     ButtonPosition::MiddleLeft, "Capacity");
 
   make_screen_button(BT::Square, AS::Pizza_Quality, Icon::Q,
                      ButtonPosition::MiddleRight, "Pizza Quality");
@@ -623,6 +624,35 @@ void AnimatedStats::render_capacity(const RenderContext& ctx) {
                                 capacity_bar_start.y});
   }
 
+  // Hover tooltips over the row icons (left of each bar)
+  if (context_.config->options().qol_improvements) {
+    static constexpr std::array<std::string_view, 5> CAT_LABELS = {
+        "Seating", "Ingredient stock", "Chefs", "Ovens", "Waiters"};
+
+    auto tooltip = [&](ViewRect r, std::string_view id, std::string_view text) {
+      interactions_.create_frame_item(
+          r, id, [](const views::ui::InteractionEvent&) {},
+          [text](const views::ui::InteractionEvent& ie) {
+            return TooltipRequest{.text = std::string(text),
+                                  .anchor = TooltipAnchor::Mouse,
+                                  .screenPos = ie.pos,
+                                  .palette = 62,
+                                  .bg_color = 15,
+                                  .text_color = 240,
+                                  .border_color = 240,
+                                  .padding = 4};
+          });
+    };
+
+    static constexpr std::array<std::string_view, 5> CAT_IDS = {
+        "cap_cat_0", "cap_cat_1", "cap_cat_2", "cap_cat_3", "cap_cat_4"};
+
+    for (int i = 0; i < CAPACITY_NUM_CATEGORIES; i++) {
+      int bar_y = category_bar_start.y + (i * bar_height);
+      tooltip({0, bar_y, 40, bar_height}, CAT_IDS[i], CAT_LABELS[i]);
+    }
+  }
+
   // Draw labels once both bars have finished animating.
   // If the bar is wide enough (>= 52 scaled units = 104px in 2x), the label
   // fits inside the bar; otherwise it appears just after the bar end.
@@ -681,20 +711,13 @@ void AnimatedStats::render_popularity(const RenderContext& ctx) {
   const int spacing_x = 52;
   const auto& blitmap = context_.blitmap->get2();
 
-  constexpr int BAR_FILL_START = 278 - 32;
-  constexpr int BAR_FILL_MIN = 132 - 32;
-
   const auto& strength = restaurant_->economy().competitive_strength();
 
   constexpr auto demo_count = static_cast<std::size_t>(ConsumerType::Count);
-  // Calculate target Y for each demographic
   std::array<int, demo_count> target_y_values{};
   for (std::size_t i = 0; i < demo_count; ++i) {
-    int value = strength[static_cast<ConsumerType>(i)]; // 1..250
-
-    int target = BAR_FILL_START - (value / 2);
-
-    target_y_values[i] = std::clamp(target, BAR_FILL_MIN, BAR_FILL_START);
+    int value = strength[static_cast<ConsumerType>(i)];
+    target_y_values[i] = popularity_target_y(value);
   }
 
   // Loop over the demographics
@@ -708,22 +731,19 @@ void AnimatedStats::render_popularity(const RenderContext& ctx) {
 
     // Calculate how much to fill based on animation state
     // Animation fills one demographic at a time, from bottom to top
-    int current_fill_y = BAR_FILL_START; // Start with no fill
+    int current_fill_y = POPULARITY_BAR_FILL_START; // Start with no fill
 
     if (i < anim_sub_progress_) {
-      // This demographic is fully animated - show final fill
       current_fill_y = target_y_values[i];
     }
     else if (i == anim_sub_progress_) {
-      // Currently animating this demographic
-      current_fill_y = BAR_FILL_START - anim_progress_;
+      current_fill_y = POPULARITY_BAR_FILL_START - anim_progress_;
       current_fill_y = std::max(current_fill_y, target_y_values[i]);
     }
-    // else: not yet animated, stays at BAR_FILL_START (no fill)
 
     // Draw fill using PIXEL_LINE for each row
     const int fill_x = bar_x + 6; // Offset into thermometer
-    for (int y = BAR_FILL_START; y > current_fill_y; y -= 2) {
+    for (int y = POPULARITY_BAR_FILL_START; y > current_fill_y; y -= 2) {
       blitmap.render_icon(Blitmap2Icon::PIXEL_LINE, *ctx.surface,
                           ViewPoint{fill_x, y});
     }
@@ -831,21 +851,19 @@ void AnimatedStats::render_production(const RenderContext& ctx) {
   context_.font->render_text_onto(*ctx.surface, "output", ViewPoint{150, 18},
                                   FontFace::ASTANDAR, 244, AlignX::Left);
 
-  // Get production data from restaurant
-  auto production_data = restaurant_->get_production_screen_data();
-  const int order_count = production_data.order_count;
+  const int order_count = production_data_.order_count;
   const int oven_count =
-      static_cast<int>(production_data.oven_capacities.size());
-  const int fulfilled_orders = production_data.fulfilled_orders;
+      static_cast<int>(production_data_.oven_capacities.size());
+  const int bill_count = production_data_.bill_count;
 
-  // North Box: Orders/Demand (Paper Notes)
+  // North Box: Orders (paper notes)
   if (order_count == 0) {
     context_.font->render_text_onto(*ctx.surface, "NO|ORDERS",
                                     ViewPoint{136, 64}, FontFace::CSTANDAR, 244,
                                     AlignX::Left);
   }
   else {
-    // Render paper note icons (sprite 13) in grid
+    // Render paper notes (sprite 13) in grid
     const int grid_start_x = 136;
     const int grid_start_y = 44;
     const int spacing_x = 20;
@@ -863,9 +881,8 @@ void AnimatedStats::render_production(const RenderContext& ctx) {
     }
   }
 
-  // East Box: Production (Ovens & Pizzas)
+  // East Box: Production (ovens & pizzas)
   // Ovens are positioned horizontally, pizzas stack vertically below each
-
   const int oven_y = 174 - LegacyConstants::WOOD_BORDER_HEIGHT_TOP;
   const int oven_base_x = 278 - LegacyConstants::WOOD_BORDER_WIDTH_LEFT;
   const int oven_spacing_x = 26;
@@ -884,9 +901,9 @@ void AnimatedStats::render_production(const RenderContext& ctx) {
     ctx.surface->blit_masked(oven_sprite, ViewPoint{oven_x, oven_y});
 
     // Get capacity for this oven (already scaled by fulfillment rate)
-    int pizzas_to_show = production_data.oven_capacities[oven_idx];
+    int pizzas_to_show = production_data_.oven_capacities[oven_idx];
 
-    // Render pizza icons (sprite 14) stacked vertically below this oven
+    // Render pizza icons
     int pizza_x = pizza_base_x + (oven_idx * pizza_oven_spacing_x);
     for (int pizza_idx = 0; pizza_idx < pizzas_to_show; ++pizza_idx) {
       int pizza_y = pizza_base_y + (pizza_idx * pizza_spacing_y);
@@ -894,16 +911,15 @@ void AnimatedStats::render_production(const RenderContext& ctx) {
     }
   }
 
-  // West Box: Revenue/Money (Dollar Bills)
-  // Sprite 16 (green dollar bills)
-  const int money_start_x = 10;
-  const int money_start_y = 150;
+  // West Box: Money (Dollar Bills)
+  const int money_start_x = 12;
+  const int money_start_y = 148;
   const int money_spacing_x = 24;
   const int money_spacing_y = 14;
   const int money_columns = 5;
 
   auto money_sprite = lebbo_bob_.frame(16);
-  for (int i = 0; i < fulfilled_orders; ++i) {
+  for (int i = 0; i < bill_count; ++i) {
     int col = i % money_columns;
     int row = i / money_columns;
     int x = money_start_x + (col * money_spacing_x);
@@ -947,7 +963,62 @@ void AnimatedStats::render_production(const RenderContext& ctx) {
                                        arrow_coords_y[current_arrow]});
   }
 
-  // South Box: Unknown, never seen it do anything
+  // Hover tooltips to give some sense of what's going on on this screen
+  if (context_.config->options().qol_improvements) {
+    constexpr int WL = LegacyConstants::WOOD_BORDER_WIDTH_LEFT;
+    constexpr int WT = LegacyConstants::WOOD_BORDER_HEIGHT_TOP;
+
+    auto tip = [&](ViewRect r, std::string_view id, std::string_view text) {
+      interactions_.create_frame_item(
+          r, id, [](const views::ui::InteractionEvent&) {},
+          [text](const views::ui::InteractionEvent& ie) {
+            return TooltipRequest{.text = std::string(text),
+                                  .anchor = TooltipAnchor::Mouse,
+                                  .screenPos = ie.pos,
+                                  .palette = 62,
+                                  .bg_color = 15,
+                                  .text_color = 240,
+                                  .border_color = 240,
+                                  .padding = 4};
+          });
+    };
+
+    tip({(76 * 2) - WL, (34 * 2) - WT, 63 * 2, 44 * 2}, "prod_north",
+        "Orders from customers");
+    tip({(15 * 2) - WL, (86 * 2) - WT, 63 * 2, 44 * 2}, "prod_west",
+        "Pizzas paid for");
+    tip({(139 * 2) - WL, (87 * 2) - WT, 61 * 2, 42 * 2}, "prod_east",
+        "Oven output");
+    tip({(76 * 2) - WL, (139 * 2) - WT, 63 * 2, 44 * 2}, "prod_south",
+        "Delivered pizzas");
+  }
+
+  // South Box: baked pizza count
+  {
+    constexpr int WL = LegacyConstants::WOOD_BORDER_WIDTH_LEFT;
+    constexpr int WT = LegacyConstants::WOOD_BORDER_HEIGHT_TOP;
+
+    const int pizza_box_count = production_data_.baked_pizza_count;
+
+    constexpr int bg_color = 29;
+    ctx.surface->fill_rect(
+        ViewRect{(76 * 2) - WL, (139 * 2) - WT, 63 * 2, 44 * 2}, bg_color);
+
+    // Little pizza box, drawing code as per the original: the code was there it
+    // just drawing in the wrong spot, making it invisible
+    auto draw_pizza_box = [&](int sx, int sy) {
+      gfx::draw::line(*ctx.surface, {sx + 2, sy}, {sx + 18, sy}, 14, 2);
+      gfx::draw::line(*ctx.surface, {sx, sy + 2}, {sx + 18, sy + 2}, 14, 2);
+      gfx::draw::line(*ctx.surface, {sx, sy + 4}, {sx + 16, sy + 4}, 12, 2);
+    };
+
+    constexpr int base_x = (82 * 2) - WL;
+    int count = std::min(pizza_box_count, 10);
+    for (int i = 0; i < count; i++) {
+      int sy = ((180 - i * 3) * 2) - WT;
+      draw_pizza_box(base_x, sy);
+    }
+  }
 }
 
 void AnimatedStats::reset_animation() {
@@ -967,6 +1038,11 @@ void AnimatedStats::reset_animation() {
     calculate_capacity_stats();
   }
 
+  if (current_screen_ == AnimatedStatsScreen::Production && restaurant_) {
+    production_data_ = restaurant_->get_production_screen_data(
+        state_.active_player()->recipes());
+  }
+
   // Recalculate and cache pizza quality factors when switching to quality
   // screen. The factors are derived values that may not be up-to-date after
   // loading a save (they're only recalculated at end of day).
@@ -984,7 +1060,7 @@ void AnimatedStats::reset_animation() {
 
 void AnimatedStats::navigate_to_restaurant(core::RestaurantId new_id) {
   state_.active_restaurant(new_id);
-  state_.ui().replace_top<AnimatedStatsState>(new_id);
+  state_.ui().replace_top<AnimatedStatsState>(new_id, current_screen_);
 }
 
 void AnimatedStats::calculate_capacity_stats() {
