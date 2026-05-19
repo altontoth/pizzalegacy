@@ -65,6 +65,7 @@ bool ArmsDealerConversation::advance() {
     current_line(ArmsDealerLine::I_WANT_JOKE_ARTICLES);
     break;
   case ArmsDealerLine::HELP_POLICE:
+    state_.ui().pop(); // remove ourselves
     state_.initiate_arrest(ArrestReason::WeaponsDealing);
     break;
   default:
