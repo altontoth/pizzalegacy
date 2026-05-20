@@ -377,4 +377,17 @@ ViewPoint InteractionManager::screen_to_view_point(ScreenPoint sp) const {
                    (sp.y * DisplayConstants::LOGICAL_HEIGHT) / display_height_};
 }
 
+void InteractionManager::set_relative_mouse_mode(bool enable) {
+  if (enable) {
+    // Store cursor position before locking.
+    SDL_GetGlobalMouseState(&relative_mode_origin_x_, &relative_mode_origin_y_);
+    SDL_SetRelativeMouseMode(SDL_TRUE);
+  }
+  else {
+    // Restore the cursor to its pre-drag position when leaving relative mode.
+    SDL_SetRelativeMouseMode(SDL_FALSE);
+    SDL_WarpMouseGlobal(relative_mode_origin_x_, relative_mode_origin_y_);
+  }
+}
+
 } // namespace views::ui

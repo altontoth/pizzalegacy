@@ -30,6 +30,7 @@ public:
   static SDL_Surface_unique_ptr to_sdl_surface(const Surface& surface,
                                                float fade_factor = 1.0f);
   void with_current_frame(std::function<void(SDL_Surface*)> callback) const;
+  void set_display_height(int height) { display_height_ = height; }
 
   // Fade control - returns true when fade completes
   bool tick_fade();
@@ -41,7 +42,7 @@ public:
 private:
   void update_cache(Renderable* layer, const gfx::Surface& source_surface);
   void ensure_backbuffer(int w, int h);
-  SDL_Surface_unique_ptr apply_crt_scaling(SDL_Surface* source);
+  SDL_Surface_unique_ptr apply_crt_scaling(SDL_Surface* source) const;
 
   std::unordered_map<Renderable*, SDL_Surface_unique_ptr> cache_;
   SDL_Surface_unique_ptr backbuffer_;

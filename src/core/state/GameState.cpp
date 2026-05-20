@@ -2807,6 +2807,17 @@ std::vector<Restaurant*> GameState::restaurants_for(core::PlayerId pid) const {
   return result;
 }
 
+int GameState::restaurant_count_for_player_in_city(core::PlayerId pid,
+                                                   core::CityId city) const {
+  int count = 0;
+  for (const auto* rest : restaurants_for(pid)) {
+    if (rest->property().city().id() == city) {
+      count++;
+    }
+  }
+  return count;
+}
+
 std::vector<const Restaurant*> GameState::all_restaurants() const {
   std::vector<const Restaurant*> result;
   for (const auto& uptr : restaurants_) {
@@ -3155,6 +3166,14 @@ std::optional<ScreenResolution> GameState::pending_resolution_change() const {
 }
 
 void GameState::clear_resolution_request() { pending_resolution_.reset(); }
+
+void GameState::request_crt_change(bool enabled) { pending_crt_ = enabled; }
+
+std::optional<bool> GameState::pending_crt_change() const {
+  return pending_crt_;
+}
+
+void GameState::clear_crt_request() { pending_crt_.reset(); }
 
 core::food::IngredientDemand
 GameState::total_ingredient_need_for_player(core::PlayerId player_id) const {

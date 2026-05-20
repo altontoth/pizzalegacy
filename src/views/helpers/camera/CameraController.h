@@ -8,9 +8,8 @@
 
 #include "engine/DebugLabel.h"
 #include "engine/geom/Camera.h"
+#include "engine/geom/Spaces.h"
 #include "engine/input/InputManager.h"
-
-#define SCROLL_BORDER_WIDTH 27
 
 enum class ScrollEdge { Left, Right, Top, Bottom };
 
@@ -54,19 +53,30 @@ public:
   void edge_active(ScrollEdge e, bool on) noexcept;
   void clear_edges() noexcept;
 
+  // Scroll the camera by (dx, dy) screen pixels, scaled by the camera zoom
+  // factor. Syncs internal accumulators so the next tick() doesn't fight it.
+  // inverted=true means drag-the-map style: drag right scrolls left.
+  // inverted=false means swipe style: drag right scrolls right. Returns true if
+  // the camera scroll position actually changed
+  [[nodiscard]] bool apply_drag_delta(int dx, int dy, bool inverted) noexcept;
+
   // Reset controller internal state (after view/world resize, map swap, etc.).
   // Does not change camera; it re-syncs to camera.scroll().
   void reset() noexcept;
 
-  bool on_text(const input::TextEvent&) override { return false; }
-  bool on_action(const input::ActionEvent&) override { return false; }
+  bool on_text(const input::TextEvent& /*ev*/) override { return false; }
+  bool on_action(const input::ActionEvent& /*ev*/) override { return false; }
 
 private:
-  constexpr static float step_towards(float cur, float target,
-                                      float step) noexcept;
-  constexpr static float tile_align_target(float pos, int view_len,
-                                           int world_len, int tile,
-                                           int last_dir) noexcept;
+  static float step_towards(float cur, float target, float step) noexcept;
+  static float tile_align_target(float pos, int view_len, int world_len,
+                                 int tile, int last_dir) noexcept;
+
+  // tick() sub-routines: active motion and idle alignment
+  void tick_active(float dx, float dy, float x_vel, float y_vel, float max_xf,
+                   float max_yf, WorldPoint& scroll);
+  void tick_idle(float base_step_x, float base_step_y, float max_xf,
+                 float max_yf, WorldPoint& scroll);
 
   input::InputManager* input_{nullptr};
   Camera& camera_;

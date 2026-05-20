@@ -38,7 +38,7 @@ int SeatedCharacterRenderer::base_index_for(Part p) {
 Surface SeatedCharacterRenderer::frame_for(Part p,
                                            const CharacterPose& pose) const {
   const int r = static_cast<int>(pose.facing) & 3;
-  const int c = static_cast<int>(pose.customer_type) * 4;
+  const int c = pose.guest_type * 4;
   const int idx = base_index_for(p) + r + c;
   return guests_bob_.frame(idx);
 }

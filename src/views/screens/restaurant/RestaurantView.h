@@ -18,6 +18,7 @@
 #include "views/base/BobRenderer.h"
 #include "views/base/MainPanelView.h"
 #include "views/helpers/camera/CameraController.h"
+#include "views/helpers/camera/RmbDragScroller.h"
 #include "views/helpers/camera/ScrollEdges.h"
 #include "views/screens/restaurant/CharacterController.h"
 #include "views/screens/restaurant/SeatedCharacterRenderer.h"
@@ -210,4 +211,5 @@ private:
   StatusController status_controller_;
   input::ListenerToken listener_;
   std::optional<core::item::Item> hovered_sabotage_item_;
+  RmbDragScroller rmb_drag_scroller_;
 };

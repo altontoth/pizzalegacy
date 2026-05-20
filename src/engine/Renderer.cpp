@@ -197,10 +197,16 @@ SDL_Surface_unique_ptr Renderer::to_sdl_surface(const Surface& src,
 
 void Renderer::with_current_frame(
     std::function<void(SDL_Surface*)> callback) const {
-  callback(backbuffer_.get());
+  if (display_height_ == DisplayConstants::CRT_DISPLAY_HEIGHT) {
+    auto scaled = apply_crt_scaling(backbuffer_.get());
+    callback(scaled.get());
+  }
+  else {
+    callback(backbuffer_.get());
+  }
 }
 
-SDL_Surface_unique_ptr Renderer::apply_crt_scaling(SDL_Surface* source) {
+SDL_Surface_unique_ptr Renderer::apply_crt_scaling(SDL_Surface* source) const {
   // 640x400 -> 640x1200 (nearest) -> 640x480 (bilinear)
   // Thanks to https://www.youtube.com/watch?v=YvckyWxHAIw (DOS Gaming Aspect
   // Ratio - 320x200) which talks about why this is a good way to do it

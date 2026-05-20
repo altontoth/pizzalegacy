@@ -139,6 +139,30 @@ CityView::CityView(GameContext& context, GameState& state, core::CityId id)
 
   scroll_edges_.add_interactions(interactions_);
 
+  using namespace views::base;
+  const ViewRect panel{LegacyConstants::WOOD_BORDER_WIDTH_LEFT,
+                       LegacyConstants::WOOD_BORDER_HEIGHT_TOP,
+                       MAIN_PANEL_WIDTH, MAIN_PANEL_HEIGHT};
+  rmb_drag_scroller_.init(
+      camctrl_,
+      [this] {
+        return context_.config->options().qol_improvements && !zoom_selector_;
+      },
+      [this] { return context_.config->options().rmb_drag_inverted; },
+      [this](ViewPoint abs_pos) {
+        const auto cfg = ZoomConfig::for_zoom_level(zoom_);
+        ViewPoint vp{abs_pos.x - cfg.x_borders_offset,
+                     abs_pos.y - cfg.y_borders_offset};
+        if (zoom_ == ZoomLevel::CLOSE || zoom_ == ZoomLevel::MEDIUM) {
+          zoom_out(vp);
+        }
+      },
+      [this](bool lock) {
+        context_.interaction->set_relative_mouse_mode(lock);
+      });
+  rmb_drag_scroller_.add_interaction(interactions_, panel,
+                                     [this] { mark_dirty(); });
+
   // Build season-adjusted palette: start from the seasonal base palette,
   // then override indices 28-31 with per-season vegetation colors.
   // VGA values are 6-bit (0-63), shift left 2 to get 8-bit (0-252).
@@ -230,13 +254,13 @@ void CityView::register_map_interactions_viewport() {
             mark_dirty();
           }
           else if (ie.button == views::ui::MouseButton::Right) {
-            if (zoom_ == ZoomLevel::CLOSE ||
-                (zoom_ == ZoomLevel::MEDIUM && !zoom_selector_)) {
-              // ie.local is already viewport-relative
-              zoom_out(ie.local);
-            }
-            else if (zoom_selector_) {
+            if (zoom_selector_) {
               disable_zoom_cursor();
+            }
+            else if (!context_.config->options().qol_improvements) {
+              if (zoom_ == ZoomLevel::CLOSE || zoom_ == ZoomLevel::MEDIUM) {
+                zoom_out(ie.local);
+              }
             }
             mark_dirty();
           }

@@ -108,6 +108,25 @@ RestaurantView::RestaurantView(GameContext& context, GameState& state,
 
   // Calculate background dimensions based on restaurant/kitchen size
   calculate_background_dimensions();
+  rmb_drag_scroller_.init(
+      camctrl_, [this] { return state_.options().qol_improvements; },
+      [this] { return state_.options().rmb_drag_inverted; },
+      [this](ViewPoint) {
+        if (on_cursor_) {
+          on_cursor_->rotate();
+          if (show_furniture_cursor_) {
+            context_.cursor->custom_cursor(
+                bob_renderer_for(*on_cursor_).image(*on_cursor_), false);
+          }
+          mark_dirty();
+        }
+        else {
+          zoom_out_of_restaurant_view();
+        }
+      },
+      [this](bool lock) {
+        context_.interaction->set_relative_mouse_mode(lock);
+      });
   register_interactions_viewport();
   if (view_mode_ == RestaurantViewMode::PLAYER_NEW_FURNITURE) {
     init_active_batch_if_needed();
@@ -429,7 +448,7 @@ void RestaurantView::register_interactions_viewport() {
         }
 
         if (ev.button == views::ui::MouseButton::Right) {
-          if (on_cursor_) {
+          if (on_cursor_ && !state_.options().qol_improvements) {
             on_cursor_->rotate();
             // Only update cursor if it's visible (mouse is in viewport)
             if (show_furniture_cursor_) {
@@ -438,7 +457,7 @@ void RestaurantView::register_interactions_viewport() {
             }
             mark_dirty();
           }
-          else {
+          else if (!on_cursor_ && !state_.options().qol_improvements) {
             zoom_out_of_restaurant_view();
           }
           return;
@@ -529,6 +548,9 @@ void RestaurantView::register_interactions_viewport() {
       },
       {}, // no tooltip
       views::ui::InteractionLayer::Background);
+
+  rmb_drag_scroller_.add_interaction(interactions_, vp_local,
+                                     [this] { mark_dirty(); });
 }
 
 void RestaurantView::handle_mouse_click(WorldPoint map_point) {
@@ -939,7 +961,7 @@ void RestaurantView::render_placement_layer(PlacementLayer placement) {
               handle_furniture_click(pf);
             }
             else if (ev.button == views::ui::MouseButton::Right) {
-              if (on_cursor_) {
+              if (on_cursor_ && !state_.options().qol_improvements) {
                 on_cursor_->rotate();
                 // Only update cursor if it's visible (mouse is in viewport)
                 if (show_furniture_cursor_) {
@@ -948,7 +970,7 @@ void RestaurantView::render_placement_layer(PlacementLayer placement) {
                 }
                 mark_dirty();
               }
-              else {
+              else if (!on_cursor_ && !state_.options().qol_improvements) {
                 zoom_out_of_restaurant_view();
               }
             }
@@ -1109,15 +1131,44 @@ std::span<const GuestRenderItem> RestaurantView::visible_guests() const {
       const PlacedFurniture* pf = shuffled_chairs_[chair_idx];
       const core::FurnitureId chair_id = pf->id();
 
+      // Guest sprite and portrait asset mapping:
+      //
+      // gaeste.bob contains 12 seated guest types
+      // Each type has 4 facing directions, so the frame index for any part is
+      // `frame = base_index_for(part) + guest_type * 4 + facing`
+      //
+      // The 12 types are organised as two options per demographic, first we
+      // have demographic 0 to 5 for the first option, then 6 to 11 for the
+      // second option per demographic (so 0 and 6 are two options for the first
+      // demographic, etc).
+      //
+      // Portrait files are gfx/g0.vga through g23.vga, two per guest type:
+      // face_index = guest_type * 2 + (0 or 1) (chosen randomly at spawn)
+      //
+      // We determine guest_type and face_index when a guest is spawned
+      // and store it on the controller so sprite and portrait always match.
+
       auto it = guest_controllers_.find(chair_id);
       if (it == guest_controllers_.end()) {
         CharacterController controller;
-        controller.set_customer_type(static_cast<ConsumerType>(demo_i));
+        const ConsumerType demo = static_cast<ConsumerType>(demo_i);
+        controller.set_customer_type(demo);
         controller.set_eating((chair_id.value % 2) == 0);
+        const int guest_type = demo_i + (engine::random::coin_flip() ? 6 : 0);
+        controller.set_guest_type(guest_type);
+        controller.set_face_index(guest_type * 2 +
+                                  (engine::random::coin_flip() ? 1 : 0));
         it = guest_controllers_.emplace(chair_id, std::move(controller)).first;
       }
       else {
-        it->second.set_customer_type(static_cast<ConsumerType>(demo_i));
+        const ConsumerType new_demo = static_cast<ConsumerType>(demo_i);
+        if (it->second.pose().customer_type != new_demo) {
+          it->second.set_customer_type(new_demo);
+          const int guest_type = demo_i + (engine::random::coin_flip() ? 6 : 0);
+          it->second.set_guest_type(guest_type);
+          it->second.set_face_index(guest_type * 2 +
+                                    (engine::random::coin_flip() ? 1 : 0));
+        }
       }
 
       const int rotation = pf->bob_state() % 4;
@@ -1148,13 +1199,12 @@ std::span<const GuestRenderItem> RestaurantView::visible_guests() const {
 
       CharacterPose pose = it->second.pose();
       pose.facing = guest_facing;
-      const int face_index = (demo_i * 4) + (chair_id.value % 4);
       guests_cache_.push_back(GuestRenderItem{
           .torso_anchor_map = guest_pos,
           .pose = pose,
           .chair_id = chair_id,
           .interacted_before = false,
-          .face_index = face_index,
+          .face_index = it->second.face_index(),
       });
     }
   }

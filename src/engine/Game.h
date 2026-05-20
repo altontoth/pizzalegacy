@@ -82,6 +82,7 @@ private:
   void save_screenshot(SDL_Surface* surface);
   static std::string generate_screenshot_filename();
   static int get_display_height(bool crt_mode);
+  SDL_Texture* create_display_texture(int display_height) const;
 
   std::unordered_map<std::string, std::string> config_;
   bool window_resizing_in_progress_{false};

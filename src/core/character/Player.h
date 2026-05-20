@@ -50,7 +50,6 @@ public:
   const std::vector<ActiveContract>& contracts() const { return contracts_; }
   std::vector<ActiveContract>& contracts() { return contracts_; }
   void remove_contract(size_t index);
-  int restaurant_count_for_city(core::CityId city) const { return 1; }
   int recipe_count() const {
     return static_cast<int>(recipes_.recipe_count());
   };

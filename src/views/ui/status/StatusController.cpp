@@ -98,9 +98,9 @@ StatusDisplayRecipe StatusController::build_city_default(const CityCtx& c) {
   r.add_header(
       compat::format("IN {}", GameTime::to_string(state->time().season())));
   r.add_header(player->name());
-  r.add_two_column(
-      "RESTAURANTS",
-      std::to_string(player->restaurant_count_for_city(c.city->id())));
+  r.add_two_column("RESTAURANTS",
+                   std::to_string(state->restaurant_count_for_player_in_city(
+                       player->id(), c.city->id())));
   r.add_two_column("RECIPES", std::to_string(player->recipe_count()));
   r.add_two_column("CONTRACTS", std::to_string(player->contract_count_for_city(
                                     c.city->id())));
@@ -233,9 +233,9 @@ build_competitor_recipe(const CityCtx& c, Player* owner,
 
   if (owner) {
     r.add_header(owner->name());
-    r.add_two_column(
-        "RESTAURANTS",
-        std::to_string(owner->restaurant_count_for_city(c.city->id())));
+    r.add_two_column("RESTAURANTS",
+                     std::to_string(state->restaurant_count_for_player_in_city(
+                         owner->id(), c.city->id())));
     r.add_two_column("RECIPES", std::to_string(owner->recipe_count()));
     r.add_two_column("CONTRACTS", std::to_string(owner->contract_count_for_city(
                                       c.city->id())));

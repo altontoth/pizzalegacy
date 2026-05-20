@@ -110,6 +110,7 @@ set(GAME_PLEGACY_SOURCES
     src/views/helpers/TVPlaybackEngine.cpp
     src/views/helpers/TypewriterTextRenderer.cpp
     src/views/helpers/camera/CameraController.cpp
+    src/views/helpers/camera/RmbDragScroller.cpp
     src/views/layers/ConsoleLayer.cpp
     src/views/layers/DebugLayer.cpp
     src/views/layers/PauseLayer.cpp
@@ -388,6 +389,7 @@ set(PLEGACY_HEADERS
     src/core/settings/InsuranceSettings.h
     src/core/settings/MafiaSettings.h
     src/core/settings/RealtorSettings.h
+    src/core/state/AnimatedStatsScreen.h
     src/core/state/AnnualCompetitionFlow.h
     src/core/state/CompetitionSession.h
     src/core/state/GameOptions.h
@@ -535,6 +537,7 @@ set(PLEGACY_HEADERS
     src/views/helpers/TVPlaybackEngine.h
     src/views/helpers/TypewriterTextRenderer.h
     src/views/helpers/camera/CameraController.h
+    src/views/helpers/camera/RmbDragScroller.h
     src/views/helpers/camera/ScrollEdges.h
     src/views/layers/ConsoleLayer.h
     src/views/layers/DebugLayer.h

@@ -63,6 +63,11 @@ public:
                      int display_height = DisplayConstants::LOGICAL_HEIGHT)
       : tt_mgr_(tt_mgr), display_height_(display_height) {}
   void update_mouse(ScreenPoint sp);
+  void set_display_height(int height) { display_height_ = height; }
+  // Enable or disable SDL relative mouse mode for cursor locking during drag.
+  // On enable the current global cursor position is saved; on disable SDL
+  // relative mode is turned off and the cursor is explicitly warped back
+  void set_relative_mouse_mode(bool enable);
   void clear() {
     items_.clear();
     current_hover_ = 0;
@@ -231,6 +236,9 @@ private:
   std::function<void()> on_hot_changed_;
   int display_height_{DisplayConstants::LOGICAL_HEIGHT};
   ViewPoint last_logical_mouse_pos_;
+  // Saved global cursor position for restoring after relative mouse mode.
+  int relative_mode_origin_x_{0};
+  int relative_mode_origin_y_{0};
 };
 
 } // namespace views::ui

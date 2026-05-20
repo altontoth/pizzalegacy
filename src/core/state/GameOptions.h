@@ -22,4 +22,5 @@ struct GameOptions {
   platform::AssetFormat asset_format = platform::AssetFormat::DOS;
   ScreenResolution resolution = ScreenResolution::Res_640x400;
   bool auto_save = true;
+  bool rmb_drag_inverted = false;
 };

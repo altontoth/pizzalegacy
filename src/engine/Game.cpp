@@ -6,6 +6,7 @@
 
 #include "engine/Game.h"
 
+#include <algorithm>
 #include <cassert>
 #include <filesystem>
 #include <numeric>
@@ -43,6 +44,7 @@
 #include "views/base/PaneledView.h"
 #include "views/base/View.h"
 #include "views/factories/ActorViewFactory.h"
+#include "views/helpers/camera/RmbDragScroller.h"
 #include "views/layers/ConsoleLayer.h"
 #include "views/layers/DebugLayer.h"
 #include "views/layers/PauseLayer.h"
@@ -405,16 +407,35 @@ void Game::run() {
       loop_state.skip_tick_during_fade_in = false;
     }
 
-    // Check if resolution change was requested
-    if (auto res = state.pending_resolution_change()) {
-      state.clear_resolution_request();
-      auto [w, h] = resolution_window_size(*res, display_height_);
-      SDL_SetWindowSize(sdl_.window, w, h);
+    auto apply_window_size = [&](int target_w, int target_h) {
+      SDL_SetWindowSize(sdl_.window, target_w, target_h);
       int actual_w;
       int actual_h;
       SDL_GetWindowSize(sdl_.window, &actual_w, &actual_h);
       state.window_size(actual_w, actual_h);
       loop_state.context.cursor->update_scaled_cursor(actual_w, actual_h);
+    };
+
+    // Check if resolution change was requested
+    if (auto res = state.pending_resolution_change()) {
+      state.clear_resolution_request();
+      auto [w, h] = resolution_window_size(*res, display_height_);
+      apply_window_size(w, h);
+    }
+
+    // Check if CRT aspect ratio change was requested
+    if (auto crt = state.pending_crt_change()) {
+      state.clear_crt_request();
+      display_height_ = get_display_height(*crt);
+      SDL_DestroyTexture(sdl_.texture);
+      sdl_.texture = create_display_texture(display_height_);
+      SDL_RenderSetLogicalSize(sdl_.renderer, DisplayConstants::SCREEN_WIDTH,
+                               display_height_);
+      renderer.set_display_height(display_height_);
+      interaction_manager_->set_display_height(display_height_);
+      auto [w, h] =
+          resolution_window_size(state.options().resolution, display_height_);
+      apply_window_size(w, h);
     }
 
     // Check if fade requested and not already fading
@@ -493,7 +514,21 @@ void Game::handle_events(LoopState& loop_state) {
       break;
     }
     if (event.type == SDL_MOUSEMOTION) {
-      last_mouse_pos_ = ScreenPoint{event.motion.x, event.motion.y};
+      if (SDL_GetRelativeMouseMode()) {
+        // In relative mode the cursor is locked; accumulate relative deltas so
+        // the interaction system keeps receiving hover events at a virtual
+        // position that moves with the physical mouse.
+        last_mouse_pos_.x += event.motion.xrel;
+        last_mouse_pos_.y += event.motion.yrel;
+        // Clamp to stay inside the huge interaction rect registered in
+        // RmbDragScroller::add_interaction, so hover events keep firing.
+        constexpr int lim = RmbDragScroller::DRAG_REACH - 1;
+        last_mouse_pos_.x = std::clamp(last_mouse_pos_.x, -lim, lim);
+        last_mouse_pos_.y = std::clamp(last_mouse_pos_.y, -lim, lim);
+      }
+      else {
+        last_mouse_pos_ = ScreenPoint{event.motion.x, event.motion.y};
+      }
     }
     else {
       interaction_manager_->process(event);
@@ -597,9 +632,7 @@ bool Game::init(int display_height, ConfigManager& config_manager) {
 
   screen_.reset(main_surface);
 
-  sdl_.texture = SDL_CreateTexture(
-      sdl_.renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING,
-      DisplayConstants::SCREEN_WIDTH, display_height);
+  sdl_.texture = create_display_texture(display_height);
 
   if (!screen_ || sdl_.texture == nullptr || sdl_.renderer == nullptr) {
     return false;
@@ -1115,4 +1148,10 @@ int Game::get_display_height(bool crt_mode) {
   assert(height == DisplayConstants::LOGICAL_HEIGHT ||
          height == DisplayConstants::CRT_DISPLAY_HEIGHT);
   return height;
+}
+
+SDL_Texture* Game::create_display_texture(int display_height) const {
+  return SDL_CreateTexture(sdl_.renderer, SDL_PIXELFORMAT_RGBA8888,
+                           SDL_TEXTUREACCESS_STREAMING,
+                           DisplayConstants::SCREEN_WIDTH, display_height);
 }

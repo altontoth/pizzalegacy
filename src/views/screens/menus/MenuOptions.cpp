@@ -45,11 +45,11 @@ MenuOptions::MenuOptions(GameContext& context, GameState& state)
         state.options().automatic_report = !state.options().automatic_report;
         mark_dirty();
       }));
-  // * indicates requires restart to take effect (but we don't tell anyone that)
   add_menu_item(std::make_unique<ToggleMenuItem>(
-      context, "CRT Aspect Ratio (4:3) *", state.options().crt_aspect_ratio,
+      context, "CRT Aspect Ratio (4:3)", state.options().crt_aspect_ratio,
       [&state, this] {
         state.options().crt_aspect_ratio = !state.options().crt_aspect_ratio;
+        state.request_crt_change(state.options().crt_aspect_ratio);
         mark_dirty();
       }));
   add_menu_item(std::make_unique<EnumMenuItem<ScreenResolution>>(
@@ -71,6 +71,12 @@ MenuOptions::MenuOptions(GameContext& context, GameState& state)
       context, "Quality of Life improvements", state.options().qol_improvements,
       [&state, this] {
         state.options().qol_improvements = !state.options().qol_improvements;
+        mark_dirty();
+      }));
+  add_menu_item(std::make_unique<ToggleMenuItem>(
+      context, "Natural RMB scrolling", state.options().rmb_drag_inverted,
+      [&state, this] {
+        state.options().rmb_drag_inverted = !state.options().rmb_drag_inverted;
         mark_dirty();
       }));
 

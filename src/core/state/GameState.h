@@ -78,6 +78,11 @@ public:
   pending_resolution_change() const;
   void clear_resolution_request();
 
+  // CRT aspect ratio change request (consumed by engine)
+  void request_crt_change(bool enabled);
+  [[nodiscard]] std::optional<bool> pending_crt_change() const;
+  void clear_crt_request();
+
   // Game setup
   void begin_initialization();
   init::Config& initializer();
@@ -184,6 +189,8 @@ public:
   Restaurant* active_restaurant() const;
   std::vector<Restaurant*> restaurants_for(core::PlayerId pid) const;
   std::vector<const Restaurant*> all_restaurants() const;
+  int restaurant_count_for_player_in_city(core::PlayerId pid,
+                                          core::CityId city) const;
   Restaurant* restaurant(core::RestaurantId r_id) const;
   std::optional<core::RestaurantId>
   next_restaurant(core::PlayerId pid, core::RestaurantId from) const;
@@ -492,6 +499,7 @@ private:
   StatusHub status_hub_{time_};
   std::unique_ptr<StatusDisplay> status_display_;
   std::optional<ScreenResolution> pending_resolution_;
+  std::optional<bool> pending_crt_;
   bool fade_requested_{false};
   int fade_duration_frames_{default_fade_length};
   bool pending_fade_midpoint_{false};

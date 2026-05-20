@@ -17,6 +17,7 @@
 #include "gfx/PaletteCycleController.h"
 #include "views/base/MainPanelView.h"
 #include "views/helpers/camera/CameraController.h"
+#include "views/helpers/camera/RmbDragScroller.h"
 #include "views/helpers/camera/ScrollEdges.h"
 #include "views/screens/city_view/CityViewCommon.h"
 #include "views/screens/city_view/CityViewMapState.h"
@@ -164,6 +165,7 @@ private:
   Camera camera_;
   CameraController camctrl_;
   ScrollEdges scroll_edges_{camctrl_, wood_edge_rects(panel_origin_)};
+  RmbDragScroller rmb_drag_scroller_;
   gfx::PaletteOverride water_ovr_;
   std::vector<gfx::Color> water_buf_;
   bool should_save_map_state_on_exit_ = true;
