@@ -47,6 +47,8 @@ public:
   RmbDragScroller() = default;
   ~RmbDragScroller();
 
+  bool is_active() const { return active_; }
+
   // Call once before add_interaction.
   void init(CameraController& cc, Predicate can_drag, Predicate is_inverted,
             OnClick on_click, CursorLockFn cursor_lock_fn);

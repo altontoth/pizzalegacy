@@ -496,6 +496,11 @@ void RestaurantView::register_interactions_viewport() {
           break;
 
         case views::ui::InteractionEvent::Type::Hover: {
+          // Suppress ghost updates while RMB scrolling to prevent the ghost
+          // from randomly appearing
+          if (rmb_drag_scroller_.is_active()) {
+            break;
+          }
           // Update ghost position as mouse moves
           const WorldPoint mouse_world = camera_.view_to_world(ev.local);
 
@@ -1850,7 +1855,9 @@ RestaurantView::clamp_furniture_to_interior(WorldPoint mouse_world) const {
 
 void RestaurantView::render_furniture_ghost() {
   // Only render ghost when cursor is hidden (outside viewport, frozen state)
-  if (!on_cursor_ || !ghost_furniture_topleft_ || show_furniture_cursor_) {
+  // and not mid-scroll-drag (ghost position is stale while camera moves).
+  if (!on_cursor_ || !ghost_furniture_topleft_ || show_furniture_cursor_ ||
+      rmb_drag_scroller_.is_active()) {
     return;
   }
 
