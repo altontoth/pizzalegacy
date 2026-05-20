@@ -1,0 +1,13 @@
+STATUS
+------
+Free mode is now playable from start to finish. The full economic loop works:
+restaurants, staff, pizzas, competitors. The surrounding systems are running
+now too: random staff events, mayor award ceremonies, police and mafia
+interactions, pizza competitions, and all the financial and market research
+screens. You get points, you can get a high score and you can go bust. You can
+even win!
+
+See https://pizzalegacy.nl/ for details on the current status.
+
+Find the full README online:
+https://codeberg.org/cowomaly/pizzalegacy/src/branch/main/README.md

@@ -1,0 +1,2 @@
+Pizza Legacy is an open-source reimplementation of the 1994 DOS game
+Pizza Tycoon (aka Pizza Connection).

@@ -1,0 +1,9 @@
+REQUIREMENTS
+------------
+The game requires the asset files from the original, English-language,
+Pizza Tycoon/Pizza Connection. Point the game at your installation directory
+on first launch (the folder containing PT.EXE).
+
+The original Pizza Tycoon is available on GOG and Steam (as "Pizza
+Connection"), and frequently on sale for under a euro. See
+https://pizzalegacy.nl/ for links.
