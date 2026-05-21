@@ -67,11 +67,16 @@ IngredientOrderScreen::IngredientOrderScreen(
   }
   const auto& inventory = restaurant->inventory();
 
-  // Calculate daily ingredient demand in grams (always from restaurant)
   auto* player = state_.active_player();
   assert(player);
-  auto demand_grams =
-      restaurant->calculate_daily_ingredient_demand_grams(player->recipes());
+  core::food::IngredientDemand demand_grams{};
+  if (is_depot) {
+    demand_grams = state_.total_ingredient_need_for_player(player->id());
+  }
+  else {
+    demand_grams =
+        restaurant->calculate_daily_ingredient_demand_grams(player->recipes());
+  }
 
   auto [start_id, end_id] = core::food::CategoryRegistry::id_range(category);
   for (int ing_id = start_id; ing_id < end_id; ing_id++) {
