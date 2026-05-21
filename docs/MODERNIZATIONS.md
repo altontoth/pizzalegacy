@@ -71,6 +71,14 @@ in effect.
   you selected to be highlighted will be double the size compared to the
   original, since often it can be hard too see otherwise.
 
+### RMB/LMB alignment for ingredient ordering
+
+* When increasing your ingredient order from a restaurant you use Left Mouse
+  Button (LMB) to increase the count and Right Mouse Button (RMB) to dcrease
+  the count. In the depot interface in the original that is switch around, you
+  use RMB to increase and LMB to decrease. In Pizza Legacy I've normalized this
+  to always use LMB for increasing and RMB for decreasing.
+
 ## Life quality improvements option
 
 We have a new option to optionally make some more improvements:
@@ -109,6 +117,13 @@ If you try to take a contract with a food supplier but for some reason are
 unable to (order too small, or you tried to negotiate but failed) then now your
 order is remembered so you can make adjustments to the order and try again
 without having to make the whole selection again.
+
+## Map scrolling
+You can now scroll the map by using the right mouse button and dragging. This
+works on both the city view and the restaurant view.
+
+## Zooming using mouse wheel
+In the city view you can use the mouse wheel to change zoom level.
 
 ## Bug fixes
 
