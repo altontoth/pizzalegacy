@@ -35,6 +35,7 @@ public:
   }
 
   void set_painter(Painter p) { painter_ = std::move(p); }
+  void set_rect(ViewRect r) { rect_ = r; }
 
 private:
   ViewRect rect_;

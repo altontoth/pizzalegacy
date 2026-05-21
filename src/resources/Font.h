@@ -62,6 +62,8 @@ public:
                                        const TextStyle& style = {});
   RenderedTextMetrics size_text(std::string_view text,
                                 const TextStyle& style = {});
+  RenderedTextMetrics size_text(std::string_view text, int max_width,
+                                const TextStyle& style = {});
   int count_wrapped_lines(std::string_view text, int max_width,
                           const TextStyle& style = {});
   uint32_t substitute_character(uint32_t codepoint);

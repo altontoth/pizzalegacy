@@ -25,8 +25,15 @@ private:
   const RawRenderable* renderable_;
   PopupButton btn_ok_;
   static constexpr int popup_width_ = 380;
-  static constexpr int popup_height_ = 136;
+  static constexpr int default_popup_height_ = 136;
   static constexpr int text_left_margin_ = 6;
   static constexpr int text_top_margin_ = 16;
   static constexpr int button_bottom_margin_ = 20;
+  static constexpr int text_area_width_ = 360;
+  static constexpr int button_height_ = 38;
+  static constexpr int button_width_ = 74;
+  static constexpr int button_x_ = 30;
+  static constexpr int text_to_button_gap_ = 8;
+  static constexpr int text_color_ = 9;
+  int popup_height_{default_popup_height_};
 };

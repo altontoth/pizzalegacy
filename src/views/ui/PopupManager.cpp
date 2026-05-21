@@ -66,9 +66,9 @@ void PopupManager::render(const RenderContext& ctx) {
 
     views::ui::InteractionContext ui{
         .layers = interactions_, .invalidate = [this] { mark_self_dirty(); }};
-    active_popup_->add_interactions(ui, active_origin_);
-
     active_popup_->render(*ctx.surface, active_origin_);
+
+    active_popup_->add_interactions(ui, active_origin_);
   }
 }
 

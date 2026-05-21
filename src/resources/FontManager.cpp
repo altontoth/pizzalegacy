@@ -61,6 +61,12 @@ RenderedTextMetrics FontManager::size_text(std::string_view text, FontFace face,
   return get(face).size_text(text, style);
 }
 
+RenderedTextMetrics FontManager::size_text(std::string_view text, FontFace face,
+                                           int max_width,
+                                           const TextStyle& style) {
+  return get(face).size_text(text, max_width, style);
+}
+
 int FontManager::count_wrapped_lines(std::string_view text, FontFace face,
                                      int max_width) {
   return get(face).count_wrapped_lines(text, max_width);

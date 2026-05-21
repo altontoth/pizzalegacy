@@ -187,6 +187,21 @@ RenderedTextMetrics Font::size_text(std::string_view text,
   return metrics;
 }
 
+RenderedTextMetrics Font::size_text(std::string_view text, int max_width,
+                                    const TextStyle& style) {
+  auto lines = split_and_wrap_text(text, max_width, style);
+  RenderedTextMetrics metrics;
+  for (const auto& line : lines) {
+    auto line_metrics = size_text(line, style);
+    metrics.width = std::max(metrics.width, line_metrics.width);
+    metrics.height += line_spacing() + style.line_spacing;
+  }
+  if (style.shadow && style.shadow->offset.dy > 0) {
+    metrics.height += style.shadow->offset.dy;
+  }
+  return metrics;
+}
+
 int Font::count_wrapped_lines(std::string_view text, int max_width,
                               const TextStyle& style) {
   auto lines = split_and_wrap_text(text, max_width, style);

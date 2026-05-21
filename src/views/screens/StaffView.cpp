@@ -1302,9 +1302,9 @@ void StaffView::add_overview_buttons() {
 
         uint8_t character_id = staff_ptr->character().id();
 
-        context_.popup->origin(ViewPoint{52, 80});
+        context_.popup->origin(ViewPoint{30, 40});
         context_.popup->create<ConfirmPopup>(
-            "Are you sure you want to fire me?",
+            "Do you really want to fire me, boss?",
             [this, slot_index, character_id](bool sure) {
               if (sure) {
                 auto* restaurant = state_.active_restaurant();
@@ -1326,7 +1326,8 @@ void StaffView::add_overview_buttons() {
                 }
               }
               mark_dirty();
-            });
+            },
+            &staff_ptr->character());
       });
 
   // Wages button - shows alert if no staff selected
