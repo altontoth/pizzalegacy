@@ -160,6 +160,7 @@ void ConfigManager::save_options(const GameOptions& opts) {
   save_bool("fix_legacy_bugs", opts.fix_legacy_bugs);
   save_bool("qol_improvements", opts.qol_improvements);
   save_bool("rmb_drag_inverted", opts.rmb_drag_inverted);
+  save_bool("scroll_zoom_inverted", opts.scroll_zoom_inverted);
 
   const char* format_str =
       (opts.asset_format == platform::AssetFormat::AMIGA) ? "amiga" : "dos";
@@ -188,6 +189,7 @@ GameOptions ConfigManager::load_options() const {
   load_bool("fix_legacy_bugs", opts.fix_legacy_bugs);
   load_bool("qol_improvements", opts.qol_improvements);
   load_bool("rmb_drag_inverted", opts.rmb_drag_inverted);
+  load_bool("scroll_zoom_inverted", opts.scroll_zoom_inverted);
 
   auto it = config_.find("active_asset_format");
   if (it != config_.end()) {

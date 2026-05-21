@@ -531,6 +531,10 @@ void Game::handle_events(LoopState& loop_state) {
       }
     }
     else {
+      if (event.type == SDL_MOUSEWHEEL &&
+          loop_state.game_state.options().scroll_zoom_inverted) {
+        event.wheel.y = -event.wheel.y;
+      }
       interaction_manager_->process(event);
       input_manager_->process(event);
     }

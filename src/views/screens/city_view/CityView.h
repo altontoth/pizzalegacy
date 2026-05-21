@@ -44,6 +44,7 @@ private:
   // Zooming
   void zoom_in(ViewPoint p);
   void zoom_out(ViewPoint p);
+  void zoom_scroll(int direction, ViewPoint cursor);
   void on_zoom_close();
   void on_zoom_medium();
   void on_zoom_far();

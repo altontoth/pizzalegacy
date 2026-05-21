@@ -23,4 +23,5 @@ struct GameOptions {
   ScreenResolution resolution = ScreenResolution::Res_640x400;
   bool auto_save = true;
   bool rmb_drag_inverted = false;
+  bool scroll_zoom_inverted = false;
 };

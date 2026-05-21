@@ -74,9 +74,16 @@ MenuOptions::MenuOptions(GameContext& context, GameState& state)
         mark_dirty();
       }));
   add_menu_item(std::make_unique<ToggleMenuItem>(
-      context, "Natural RMB scrolling", state.options().rmb_drag_inverted,
+      context, "Invert map scrolling", state.options().rmb_drag_inverted,
       [&state, this] {
         state.options().rmb_drag_inverted = !state.options().rmb_drag_inverted;
+        mark_dirty();
+      }));
+  add_menu_item(std::make_unique<ToggleMenuItem>(
+      context, "Invert scroll wheel direction",
+      state.options().scroll_zoom_inverted, [&state, this] {
+        state.options().scroll_zoom_inverted =
+            !state.options().scroll_zoom_inverted;
         mark_dirty();
       }));
 

@@ -266,6 +266,18 @@ void CityView::register_map_interactions_viewport() {
           }
           break;
         }
+        case views::ui::InteractionEvent::Type::Scroll: {
+          if (!context_.config->options().qol_improvements) {
+            break;
+          }
+          if (ie.scroll_delta > 0 && zoom_ != ZoomLevel::CLOSE) {
+            zoom_scroll(1, ie.local);
+          }
+          else if (ie.scroll_delta < 0 && zoom_ != ZoomLevel::FAR) {
+            zoom_scroll(-1, ie.local);
+          }
+          break;
+        }
         default:
           break;
         }
@@ -300,7 +312,6 @@ void CityView::zoom_in(ViewPoint p_view_local) {
   apply_zoom_profile(zoom_);
 
   camera_.scroll(anchor_world);
-  camctrl_.tile_grid(to.tile_width, to.tile_height);
   camctrl_.reset();
 
   mark_dirty();
@@ -416,13 +427,47 @@ void CityView::zoom_out(ViewPoint p_view_local) {
   mark_dirty();
 }
 
+void CityView::zoom_scroll(int direction, ViewPoint cursor) {
+  ZoomLevel new_zoom;
+  if (direction > 0) {
+    new_zoom =
+        (zoom_ == ZoomLevel::MEDIUM) ? ZoomLevel::CLOSE : ZoomLevel::MEDIUM;
+  }
+  else {
+    new_zoom = (zoom_ == ZoomLevel::CLOSE) ? ZoomLevel::MEDIUM : ZoomLevel::FAR;
+  }
+  const auto to = ZoomConfig::for_zoom_level(new_zoom);
+
+  const WorldPoint anchor_world = camera_.view_to_world(cursor);
+
+  if (new_zoom == ZoomLevel::MEDIUM) {
+    state_.status().clear_overlay();
+  }
+
+  zoom_ = new_zoom;
+  disable_zoom_cursor();
+  apply_zoom_profile(zoom_);
+
+  // Keep anchor_world under cursor after the zoom change.
+  // Derived from view_to_world: world = (view - o) * zoom + scroll
+  // => new_scroll = anchor_world - (cursor - o) * new_zoom
+  const ViewPoint o = camera_.origin_offset_in_view();
+  camera_.scroll(
+      WorldPoint{anchor_world.x - ((cursor.x - o.x) * to.zoom_multiplier),
+                 anchor_world.y - ((cursor.y - o.y) * to.zoom_multiplier)});
+  camctrl_.reset();
+
+  mark_dirty();
+}
+
 void CityView::apply_zoom_profile(ZoomLevel zoom) {
   const auto cfg = ZoomConfig::for_zoom_level(zoom);
 
   camera_.view_size(Size{cfg.viewport_width, cfg.viewport_height});
   camera_.zoom(cfg.zoom_multiplier);
 
-  camctrl_.tile_grid(cfg.tile_width, cfg.tile_height);
+  camctrl_.tile_grid(cfg.tile_width * cfg.zoom_multiplier,
+                     cfg.tile_height * cfg.zoom_multiplier);
   camctrl_.speed_multipliers(cfg.scroll_speed_multiplier,
                              cfg.scroll_speed_multiplier * 4.0f);
   camctrl_.reset();
