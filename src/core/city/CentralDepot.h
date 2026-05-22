@@ -64,7 +64,6 @@ public:
 
 private:
   int capacity_ = 0;
-  int used_ = 0;
   core::food::IngredientArray<IngredientStock> stocks_;
   std::vector<core::RestaurantId> delivery_priorities_;
   std::optional<IngredientCategory> stock_stolen_;

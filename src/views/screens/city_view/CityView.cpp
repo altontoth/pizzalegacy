@@ -997,13 +997,13 @@ void CityView::render_districts(const RenderContext& ctx) {
 // These map player index 0-7 to visually distinct palette colors.
 constexpr std::array<uint8_t, NUMBER_OF_PLAYERS> PLAYER_CONTROL_COLORS = {
     15, // Player 0: White
-    8,  // Player 1: Black
+    9,  // Player 1: Black
     27, // Player 2: Dark blue
-    9,  // Player 3: Brown
-    13, // Player 4: Orange
+    5,  // Player 3: Brown
+    22, // Player 4: Orange
     20, // Player 5: Red
-    25, // Player 6: Light blue
-    16, // Player 7: Yellow
+    24, // Player 6: Light blue
+    17, // Player 7: Yellow
 };
 
 void CityView::render_with_cell_color(Surface& map,

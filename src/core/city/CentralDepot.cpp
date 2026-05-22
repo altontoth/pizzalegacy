@@ -15,7 +15,13 @@ using namespace core::city;
 using core::restaurant::IngredientStock;
 
 int CentralDepot::capacity() const { return capacity_; }
-int CentralDepot::used() const { return used_; }
+int CentralDepot::used() const {
+  int total = 0;
+  for (const auto& stock : stocks_) {
+    total += stock.quantity / 1000;
+  }
+  return total;
+}
 
 void CentralDepot::add_capacity(int delta) { capacity_ += delta; }
 void CentralDepot::remove_capacity(int delta) { capacity_ -= delta; }

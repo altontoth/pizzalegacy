@@ -2559,8 +2559,8 @@ bool GameState::buy_depot(Property& property, Player& buyer) {
 
   // Add depot capacity to player's central depot in this city
   auto& city = property.city();
-  int capacity = property.size().w * property.size().h * 100;
-  city.central_depot(buyer.id()).add_capacity(capacity);
+  int capacity_kg = property.size().w * property.size().h * 100;
+  city.central_depot(buyer.id()).add_capacity(capacity_kg);
 
   check_depot_milestones(*this, buyer);
   adjust_social_score(buyer, 180);
@@ -2580,8 +2580,8 @@ bool GameState::rent_depot(Property& property, Player& player, bool free) {
 
   // Add depot capacity to player's central depot in this city
   auto& city = property.city();
-  int capacity = property.size().w * property.size().h;
-  city.central_depot(player.id()).add_capacity(capacity);
+  int capacity_kg = property.size().w * property.size().h * 100;
+  city.central_depot(player.id()).add_capacity(capacity_kg);
 
   check_depot_milestones(*this, player);
 
@@ -2666,8 +2666,8 @@ bool GameState::sell_property(Property& property, Player& seller,
   // If this is a depot, remove capacity from central depot
   if (property.type() == PropertyType::DEPOT) {
     auto& city = property.city();
-    int capacity = property.size().w * property.size().h * 100;
-    city.central_depot(seller.id()).remove_capacity(capacity);
+    int capacity_kg = property.size().w * property.size().h * 100;
+    city.central_depot(seller.id()).remove_capacity(capacity_kg);
   }
 
   if (property.has_restaurant()) {

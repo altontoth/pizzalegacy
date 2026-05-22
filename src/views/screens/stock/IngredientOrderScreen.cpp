@@ -48,7 +48,7 @@ IngredientOrderScreen::IngredientOrderScreen(
       core::food::CategoryRegistry::supplier_type(category);
 
   auto suppliers = city->food_suppliers(supplier_type);
-  for (auto* s : suppliers) {
+  for (const auto* s : suppliers) {
     if (s->id() == supplier_id) {
       supplier_ = s;
       break;
@@ -141,32 +141,185 @@ void IngredientOrderScreen::draw_page_header(const RenderContext& ctx) {
   draw_icon(ctx);
 
   if (mode_ != IngredientScreenMode::RESTAURANT) {
+    constexpr uint8_t header_color = 12;
     const bool is_sell = mode_ == IngredientScreenMode::CENTRAL_DEPOT_SELL;
     std::string prefix = is_sell ? "central sale  " : "central purch.  ";
     std::string title = prefix + state_.active_city()->name();
     context_.font->render_text_onto(*ctx.surface, title, ViewPoint{40, 12},
-                                    FontFace::PIZ_NUMB, 8, AlignX::Center);
+                                    FontFace::PIZ_NUMB, header_color,
+                                    AlignX::Center);
   }
   else {
+    constexpr uint8_t header_color = 8;
     std::string title = supplier_ ? supplier_->name() : "SUPPLIER";
     context_.font->render_text_onto(*ctx.surface, title, ViewPoint{40, 16},
-                                    FontFace::PIZ_NUMB, 8, AlignX::Center);
+                                    FontFace::PIZ_NUMB, header_color,
+                                    AlignX::Center);
   }
+}
+
+void IngredientOrderScreen::register_ingredient_row(ViewRect row_rect,
+                                                    size_t i) {
+  interactions_.create_frame_item(
+      row_rect, compat::format("ingredient_{}", i),
+      [this, i](views::ui::InteractionEvent ie) {
+        switch (ie.type) {
+        case views::ui::InteractionEvent::Type::Enter:
+          // Don't change hover if a button is currently held
+          if (button_held_index_ < 0) {
+            hovered_index_ = i;
+            mark_dirty();
+          }
+          break;
+        case views::ui::InteractionEvent::Type::Leave:
+          // Don't clear hover if a button is currently held
+          if (button_held_index_ < 0 && hovered_index_ == static_cast<int>(i)) {
+            hovered_index_ = -1;
+            mark_dirty();
+          }
+          break;
+        case views::ui::InteractionEvent::Type::ButtonDown: {
+          bool is_left = ie.button == views::ui::MouseButton::Left;
+          bool is_right = ie.button == views::ui::MouseButton::Right;
+          if (is_left || is_right) {
+            handle_button_press(i, is_left);
+          }
+          break;
+        }
+        case views::ui::InteractionEvent::Type::ButtonUp: {
+          bool is_left = ie.button == views::ui::MouseButton::Left;
+          bool is_right = ie.button == views::ui::MouseButton::Right;
+          if (is_left || is_right) {
+            handle_button_release(is_left);
+          }
+          break;
+        }
+        case views::ui::InteractionEvent::Type::Scroll:
+          handle_scroll(i, ie.scroll_delta);
+          break;
+        default:
+          break;
+        }
+      });
 }
 
 void IngredientOrderScreen::draw_ingredient_list(const RenderContext& ctx) {
   interactions_.begin_frame();
+  if (mode_ == IngredientScreenMode::RESTAURANT) {
+    draw_restaurant_ingredient_list(ctx);
+  }
+  else {
+    draw_depot_ingredient_list(ctx);
+  }
+}
 
-  const bool is_depot = mode_ != IngredientScreenMode::RESTAURANT;
+void IngredientOrderScreen::draw_depot_ingredient_list(
+    const RenderContext& ctx) {
   const bool is_sell = mode_ == IngredientScreenMode::CENTRAL_DEPOT_SELL;
 
-  // Column headers - using same positions as IngredientCategoryView
+  constexpr int name_x = 8;
+  constexpr int row_width = 334;
+  constexpr uint8_t text_color = 8;
+  constexpr uint8_t header_color = 12;
+  constexpr int line_height = 12;
+  constexpr int header_y = 34;
+  constexpr int header_price_x = 196;
+  constexpr int header_suppl_x = 258;
+  constexpr int header_amount_x = 312;
+  constexpr int header_store_x = 360;
+  constexpr int price_x = 200;
+  constexpr int amount_x = 312;
+  constexpr int store_x = 360;
+  constexpr int sum_x = 300;
+  constexpr int footer_y = 320;
+
+  context_.font->render_text_onto(
+      *ctx.surface, "price", ViewPoint{header_price_x, header_y},
+      FontFace::SUPERSMA, header_color, AlignX::RightEdge);
+  context_.font->render_text_onto(
+      *ctx.surface, "suppl", ViewPoint{header_suppl_x, header_y},
+      FontFace::SUPERSMA, header_color, AlignX::RightEdge);
+  context_.font->render_text_onto(
+      *ctx.surface, "amount", ViewPoint{header_amount_x, header_y},
+      FontFace::SUPERSMA, header_color, AlignX::RightEdge);
+  context_.font->render_text_onto(
+      *ctx.surface, "store", ViewPoint{header_store_x, header_y},
+      FontFace::SUPERSMA, header_color, AlignX::RightEdge);
+
+  int y = header_y + 20;
+  for (size_t i = 0; i < ingredients_.size(); i++) {
+    auto& batch = ingredients_[i];
+    bool supplier_sells = batch.price_per_unit.cents > 0;
+
+    if (hovered_index_ == static_cast<int>(i) ||
+        button_held_index_ == static_cast<int>(i)) {
+      constexpr int highlight_x = 210;
+      constexpr int highlight_w = 160;
+      ctx.surface->fill_rect(
+          ViewRect{highlight_x, y - 2, highlight_w, line_height + 2}, 165);
+    }
+
+    if (supplier_sells) {
+      register_ingredient_row({name_x, y - 2, row_width, line_height}, i);
+    }
+
+    context_.font->render_text_onto(*ctx.surface, batch.ingredient->name(),
+                                    ViewPoint{name_x, y}, FontFace::CSTANDAR,
+                                    text_color);
+
+    if (supplier_sells) {
+      context_.font->render_text_onto(
+          *ctx.surface, compat::format("{:n}", batch.price_per_unit),
+          ViewPoint{price_x, y}, FontFace::CSTANDAR, text_color,
+          AlignX::RightEdge);
+      int city_supply = supplier_ ? supplier_->stock(batch.ingredient_type) : 0;
+      context_.font->render_text_onto(
+          *ctx.surface, std::to_string(city_supply - batch.count),
+          ViewPoint{header_suppl_x, y}, FontFace::CSTANDAR, text_color,
+          AlignX::RightEdge);
+      context_.font->render_text_onto(
+          *ctx.surface, std::to_string(batch.count), ViewPoint{amount_x, y},
+          FontFace::CSTANDAR, text_color, AlignX::RightEdge);
+      int projected_store = is_sell ? batch.current_stock - batch.count
+                                    : batch.current_stock + batch.count;
+      context_.font->render_text_onto(
+          *ctx.surface, std::to_string(projected_store), ViewPoint{store_x, y},
+          FontFace::CSTANDAR, text_color, AlignX::RightEdge);
+    }
+    else {
+      context_.font->render_text_onto(*ctx.surface, "------",
+                                      ViewPoint{price_x, y}, FontFace::CSTANDAR,
+                                      text_color, AlignX::RightEdge);
+    }
+
+    y += line_height;
+  }
+
+  Money total_cost{0};
+  for (const auto& batch : ingredients_) {
+    if (batch.count > 0) {
+      total_cost = total_cost + Money{batch.price_per_unit.cents * batch.count};
+    }
+  }
+
+  context_.font->render_text_onto(
+      *ctx.surface,
+      is_sell ? "income:" : "sum:", ViewPoint{header_price_x, footer_y},
+      FontFace::CSTANDAR, text_color, AlignX::RightEdge);
+  context_.font->render_text_onto(
+      *ctx.surface, compat::format("{:n}", total_cost),
+      ViewPoint{sum_x, footer_y}, FontFace::CSTANDAR,
+      is_sell ? uint8_t{40} : uint8_t{20}, AlignX::RightEdge);
+}
+
+void IngredientOrderScreen::draw_restaurant_ingredient_list(
+    const RenderContext& ctx) {
+  const bool is_sell = mode_ == IngredientScreenMode::CENTRAL_DEPOT_SELL;
+
   const int header_y = 34;
   const uint8_t text_color = 8;
   const uint8_t text_color_days = 12;
 
-  // Column X positions
-  // TODO: Change alignment to RightEdge instead of Right
   const int name_x = 22;
   const int header_price_x = -178;
   const int price_x = -172;
@@ -190,22 +343,18 @@ void IngredientOrderScreen::draw_ingredient_list(const RenderContext& ctx) {
       *ctx.surface, "DAYS", ViewPoint{header_days_x, header_y},
       FontFace::SUPERSMA, text_color, AlignX::Right);
 
-  const int line_color = is_depot ? 14 : 15;
+  const int line_color = 15;
   const int line_width = 2;
   // Between price and amount
   ViewPoint line_top{172 + 42, 48};
-  ViewPoint line_bottom{172 + 42, is_depot ? 324 : 318};
+  ViewPoint line_bottom{172 + 42, 318};
   gfx::draw::line(*ctx.surface, line_top, line_bottom, line_color, line_width);
-
   // Between amount and stock
   line_top.x += 48;
   line_bottom.x += 48;
   gfx::draw::line(*ctx.surface, line_top, line_bottom, line_color, line_width);
-
-  if (!is_depot) {
-    // Under the last ingredient above the total:
-    gfx::draw::line(*ctx.surface, {176, 318}, {320, 318}, 13, line_width);
-  }
+  // Under the last ingredient above the total:
+  gfx::draw::line(*ctx.surface, {176, 318}, {320, 318}, 13, line_width);
 
   // Render ingredients
   int y = header_y + 20;
@@ -229,49 +378,7 @@ void IngredientOrderScreen::draw_ingredient_list(const RenderContext& ctx) {
     // Create interactive region for the entire row (only if supplier sells this
     // ingredient)
     if (supplier_sells) {
-      interactions_.create_frame_item(
-          ViewRect{name_x, y - 2, row_width, line_height},
-          compat::format("ingredient_{}", i),
-          [this, i](views::ui::InteractionEvent ie) {
-            switch (ie.type) {
-            case views::ui::InteractionEvent::Type::Enter:
-              // Don't change hover if a button is currently held
-              if (button_held_index_ < 0) {
-                hovered_index_ = i;
-                mark_dirty();
-              }
-              break;
-            case views::ui::InteractionEvent::Type::Leave:
-              // Don't clear hover if a button is currently held
-              if (button_held_index_ < 0 &&
-                  hovered_index_ == static_cast<int>(i)) {
-                hovered_index_ = -1;
-                mark_dirty();
-              }
-              break;
-            case views::ui::InteractionEvent::Type::ButtonDown: {
-              bool is_left = ie.button == views::ui::MouseButton::Left;
-              bool is_right = ie.button == views::ui::MouseButton::Right;
-              if (is_left || is_right) {
-                handle_button_press(i, is_left);
-              }
-              break;
-            }
-            case views::ui::InteractionEvent::Type::ButtonUp: {
-              bool is_left = ie.button == views::ui::MouseButton::Left;
-              bool is_right = ie.button == views::ui::MouseButton::Right;
-              if (is_left || is_right) {
-                handle_button_release(is_left);
-              }
-              break;
-            }
-            case views::ui::InteractionEvent::Type::Scroll:
-              handle_scroll(i, ie.scroll_delta);
-              break;
-            default:
-              break;
-            }
-          });
+      register_ingredient_row({name_x, y - 2, row_width, line_height}, i);
     }
 
     // Render ingredient name
@@ -324,16 +431,15 @@ void IngredientOrderScreen::draw_ingredient_list(const RenderContext& ctx) {
 
   // Footer section
   const int footer_y = 320;
-  const uint8_t red_color = is_depot ? 40 : 20;
+  const uint8_t red_color = 20;
 
   // Show supplier quality
   if (supplier_) {
     std::string quality_text =
         compat::format("QUALITY: {}", supplier_->quality());
-    context_.font->render_text_onto(
-        *ctx.surface, quality_text,
-        ViewPoint{name_x + (is_depot ? 0 : 26), footer_y}, FontFace::SUPERSMA,
-        text_color);
+    context_.font->render_text_onto(*ctx.surface, quality_text,
+                                    ViewPoint{name_x + 26, footer_y},
+                                    FontFace::SUPERSMA, text_color);
   }
 
   // Calculate total cost
@@ -345,12 +451,11 @@ void IngredientOrderScreen::draw_ingredient_list(const RenderContext& ctx) {
   }
 
   // Total
+  std::string total_text = compat::format("{:n}", total_cost);
   context_.font->render_text_onto(
       *ctx.surface,
       is_sell ? "INCOME:" : "TOTAL:", ViewPoint{header_price_x, footer_y},
       FontFace::SUPERSMA, text_color, AlignX::Right);
-
-  std::string total_text = compat::format("{:n}", total_cost);
   context_.font->render_text_onto(*ctx.surface, total_text,
                                   ViewPoint{stock_x, footer_y},
                                   FontFace::SUPERSMA, red_color, AlignX::Right);
@@ -563,6 +668,10 @@ void IngredientOrderScreen::handle_button_press(size_t ingredient_index,
       }
       c = std::min(c + step, batch.current_stock);
     }
+    else if (mode_ == IngredientScreenMode::CENTRAL_DEPOT) {
+      int city_supply = supplier_ ? supplier_->stock(batch.ingredient_type) : 0;
+      c = std::min(c + step, city_supply);
+    }
     else {
       c = std::min(c + step, max_ingredient_stock_kg);
     }
@@ -621,6 +730,10 @@ void IngredientOrderScreen::handle_scroll(size_t ingredient_index, int delta) {
       }
       c = std::min(c + step, batch.current_stock);
     }
+    else if (mode_ == IngredientScreenMode::CENTRAL_DEPOT) {
+      int city_supply = supplier_ ? supplier_->stock(batch.ingredient_type) : 0;
+      c = std::min(c + step, city_supply);
+    }
     else {
       c = std::min(c + step, max_ingredient_stock_kg);
     }
@@ -652,9 +765,16 @@ void IngredientOrderScreen::update_held_button_repeat() {
 
     // Continue in the direction set by the first button pressed
     if (increment_direction_) {
-      int max_count = (mode_ == IngredientScreenMode::CENTRAL_DEPOT_SELL)
-                          ? batch.current_stock
-                          : max_ingredient_stock_kg;
+      int max_count;
+      if (mode_ == IngredientScreenMode::CENTRAL_DEPOT_SELL) {
+        max_count = batch.current_stock;
+      }
+      else if (mode_ == IngredientScreenMode::CENTRAL_DEPOT) {
+        max_count = supplier_ ? supplier_->stock(batch.ingredient_type) : 0;
+      }
+      else {
+        max_count = max_ingredient_stock_kg;
+      }
       c = std::min(c + step, max_count);
     }
     else {

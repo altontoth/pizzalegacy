@@ -35,6 +35,9 @@ protected:
   void draw_page_header(const RenderContext& ctx);
   void draw_page_screen(const RenderContext& ctx);
   void draw_ingredient_list(const RenderContext& ctx);
+  void draw_depot_ingredient_list(const RenderContext& ctx);
+  void draw_restaurant_ingredient_list(const RenderContext& ctx);
+  void register_ingredient_row(ViewRect row_rect, size_t i);
   void set_up_input_panel() override;
   void place_order();
 

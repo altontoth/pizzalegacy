@@ -42,41 +42,37 @@ void DepotMain::render(const RenderContext& ctx) {
   interactions_.begin_frame();
   gfx::blit::blit_raw_with_palette(*ctx.surface,
                                    context_.vga->get("gfx/back3"));
-  ctx.surface->palette({59});
+  ctx.surface->palette({15});
 
   context_.font->render_text_onto(*ctx.surface, "central", ViewPoint{168, 126},
                                   FontFace::ASTANDAR, 8);
   context_.font->render_text_onto(*ctx.surface, "stock", ViewPoint{170, 150},
                                   FontFace::ASTANDAR, 8);
 
-  // Calculate depot info from central depot
   auto& depot =
       state_.active_city()->central_depot(state_.active_player()->id());
-  const auto& stocks = depot.all_stocks();
 
-  int total_kg = 0;
-  Money total_value{0};
+  std::string capacity_text = compat::format("{} kg", depot.capacity());
+  std::string in_use_text = compat::format("{} kg", depot.used());
 
-  for (const auto& stock : stocks) {
-    total_kg += stock.quantity / 1000;
-    total_value = total_value + Money{stock.weighted_avg_cost.cents *
-                                      (stock.quantity / 1000)};
-  }
+  TextStyle ts{
+      .color = 240,
+      .align = AlignX::Left,
+      .shadow = std::nullopt,
+      .character_spacing = 1,
+  };
 
-  // Show kilograms and value
-  std::string kg_text = compat::format("{} kg", total_kg);
-  std::string value_text = compat::format("{:w}", total_value);
+  context_.font->render_text_onto(*ctx.surface, "capacity", ViewPoint{130, 210},
+                                  FontFace::PIZ_NUMB, ts);
+  context_.font->render_text_onto(*ctx.surface, "in use", ViewPoint{130, 240},
+                                  FontFace::PIZ_NUMB, ts);
 
-  context_.font->render_text_onto(*ctx.surface, "kilogram", ViewPoint{130, 210},
-                                  FontFace::PIZ_NUMB, 12);
-  context_.font->render_text_onto(*ctx.surface, "value", ViewPoint{130, 240},
-                                  FontFace::PIZ_NUMB, 12);
-
-  context_.font->render_text_onto(*ctx.surface, kg_text, ViewPoint{-106, 210},
-                                  FontFace::PIZ_NUMB, 8, AlignX::Right);
-  context_.font->render_text_onto(*ctx.surface, value_text,
-                                  ViewPoint{-110, 240}, FontFace::PIZ_NUMB, 8,
-                                  AlignX::Right);
+  ts.align = AlignX::Right;
+  ts.color = 8;
+  context_.font->render_text_onto(*ctx.surface, capacity_text,
+                                  ViewPoint{-106, 210}, FontFace::PIZ_NUMB, ts);
+  context_.font->render_text_onto(*ctx.surface, in_use_text,
+                                  ViewPoint{-110, 240}, FontFace::PIZ_NUMB, ts);
 }
 
 void DepotMain::set_up_input_panel() {
