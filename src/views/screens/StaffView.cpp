@@ -75,6 +75,21 @@ StaffView::StaffView(GameContext& context, GameState& state)
         if (ie.type == views::ui::InteractionEvent::Type::Click &&
             ie.button == views::ui::MouseButton::Left) {
           handle_left_mouse_click(ie.local);
+          return;
+        }
+        if (ie.type == views::ui::InteractionEvent::Type::Scroll) {
+          const bool on_applicant_screen =
+              screen_ == StaffScreen::APPLICANT_CARD ||
+              screen_ == StaffScreen::APPLICATIONS;
+          if (!on_applicant_screen) {
+            return;
+          }
+          if (ie.scroll_delta > 0) {
+            handle_next_applicant();
+          }
+          else if (ie.scroll_delta < 0) {
+            handle_previous_applicant();
+          }
         }
       });
 }
@@ -1514,41 +1529,9 @@ void StaffView::add_hired_employee_buttons() {
 
 void StaffView::add_applicant_buttons() {
   // Up arrow: move to next candidate (push - new card slides down from top)
-  input_panel_->add_button(
-      Icon::ARROW_UP, ButtonType::Square, ButtonPosition::MiddleLeft,
-      "TURN PAGE", [this]() {
-        if (card_animator_.is_animating()) {
-          return;
-        }
-        auto& vec = applicant_pool_[job_];
-        if (vec.empty()) {
-          return;
-        }
-        // Move to next candidate
-        applicant_cursor_[job_] = (applicant_cursor_[job_] + 1) % vec.size();
-        Logger::debug("Moving to next candidate, index: {}",
-                      applicant_cursor_[job_]);
-
-        if (screen_ == StaffScreen::APPLICATIONS) {
-          // In applications view, switch to data card with animation
-          auto* char_data = vec[applicant_cursor_[job_]];
-          auto new_card = create_data_card(char_data, job_);
-          bg_card_ = std::move(*fg_card_);
-          fg_card_.reset(); // Clear fg_card_ after moving from it
-          fg_card_ = std::move(new_card);
-          change_screen(StaffScreen::APPLICANT_CARD);
-          card_animator_.push(); // Slide down from top
-        }
-        else {
-          // In data card view, animate the transition
-          auto new_card = make_card(job_, applicant_cursor_[job_]);
-          bg_card_ = std::move(*fg_card_);
-          fg_card_.reset(); // Clear fg_card_ after moving from it
-          fg_card_ = std::move(new_card);
-          card_animator_.push(); // Slide down from top
-        }
-        mark_dirty();
-      });
+  input_panel_->add_button(Icon::ARROW_UP, ButtonType::Square,
+                           ButtonPosition::MiddleLeft, "TURN PAGE",
+                           [this]() { handle_next_applicant(); });
 
   input_panel_->add_button(Icon::BAR_CHART, ButtonType::Square,
                            ButtonPosition::MiddleCenter, "DATA", [this]() {
@@ -1582,39 +1565,9 @@ void StaffView::add_applicant_buttons() {
 
   // Down arrow: move to previous candidate (pop - current slides up revealing
   // previous)
-  input_panel_->add_button(
-      Icon::ARROW_DOWN, ButtonType::Square, ButtonPosition::BottomLeft,
-      "TURN PAGE", [this]() {
-        if (card_animator_.is_animating()) {
-          return;
-        }
-        auto& vec = applicant_pool_[job_];
-        if (vec.empty()) {
-          return;
-        }
-
-        // Move to previous candidate
-        std::size_t prev = (applicant_cursor_[job_] == 0)
-                               ? vec.size() - 1
-                               : applicant_cursor_[job_] - 1;
-        Logger::debug("Moving to previous candidate, index: {}", prev);
-
-        applicant_cursor_[job_] = prev;
-
-        if (screen_ == StaffScreen::APPLICATIONS) {
-          // In applications view, switch to data card with animation
-          auto* char_data = vec[applicant_cursor_[job_]];
-          bg_card_ = create_data_card(char_data, job_);
-          change_screen(StaffScreen::APPLICANT_CARD);
-          card_animator_.pop(); // Current slides up
-        }
-        else {
-          // In data card view, animate the transition
-          bg_card_ = make_card(job_, prev);
-          card_animator_.pop(); // Current slides up
-        }
-        mark_dirty();
-      });
+  input_panel_->add_button(Icon::ARROW_DOWN, ButtonType::Square,
+                           ButtonPosition::BottomLeft, "TURN PAGE",
+                           [this]() { handle_previous_applicant(); });
 
   input_panel_->add_button(
       Icon::THUMBS_UP, ButtonType::Square, ButtonPosition::BottomCenter, "HIRE",
@@ -1835,4 +1788,61 @@ Surface StaffView::make_card(core::character::JobRole role, std::size_t idx) {
 void StaffView::navigate_to_restaurant(core::RestaurantId new_id) {
   state_.active_restaurant(new_id);
   state_.ui().replace_top<ScreenTag>(ScreenTag::Kind::StaffView);
+}
+
+void StaffView::handle_next_applicant() {
+  if (card_animator_.is_animating()) {
+    return;
+  }
+  auto& vec = applicant_pool_[job_];
+  if (vec.empty()) {
+    return;
+  }
+  applicant_cursor_[job_] = (applicant_cursor_[job_] + 1) % vec.size();
+  Logger::debug("Moving to next candidate, index: {}", applicant_cursor_[job_]);
+
+  if (screen_ == StaffScreen::APPLICATIONS) {
+    auto* char_data = vec[applicant_cursor_[job_]];
+    auto new_card = create_data_card(char_data, job_);
+    bg_card_ = std::move(*fg_card_);
+    fg_card_.reset();
+    fg_card_ = std::move(new_card);
+    change_screen(StaffScreen::APPLICANT_CARD);
+    card_animator_.push();
+  }
+  else {
+    auto new_card = make_card(job_, applicant_cursor_[job_]);
+    bg_card_ = std::move(*fg_card_);
+    fg_card_.reset();
+    fg_card_ = std::move(new_card);
+    card_animator_.push();
+  }
+  mark_dirty();
+}
+
+void StaffView::handle_previous_applicant() {
+  if (card_animator_.is_animating()) {
+    return;
+  }
+  auto& vec = applicant_pool_[job_];
+  if (vec.empty()) {
+    return;
+  }
+  std::size_t prev = (applicant_cursor_[job_] == 0)
+                         ? vec.size() - 1
+                         : applicant_cursor_[job_] - 1;
+  Logger::debug("Moving to previous candidate, index: {}", prev);
+  applicant_cursor_[job_] = prev;
+
+  if (screen_ == StaffScreen::APPLICATIONS) {
+    auto* char_data = vec[applicant_cursor_[job_]];
+    bg_card_ = create_data_card(char_data, job_);
+    change_screen(StaffScreen::APPLICANT_CARD);
+    card_animator_.pop();
+  }
+  else {
+    bg_card_ = make_card(job_, prev);
+    card_animator_.pop();
+  }
+  mark_dirty();
 }

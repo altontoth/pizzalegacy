@@ -46,6 +46,7 @@ private:
   void handle_button_press(size_t ingredient_index, bool is_left_button);
   void handle_button_release(bool is_left_button);
   void update_held_button_repeat();
+  void handle_scroll(size_t ingredient_index, int delta);
 
   IngredientCategory category_;
   IngredientScreenMode mode_;

@@ -547,6 +547,22 @@ void RestaurantView::register_interactions_viewport() {
           mark_dirty();
           break;
 
+        case views::ui::InteractionEvent::Type::Scroll:
+          // Item cycling via scroll wheel lives here rather than in the
+          // catchall because furniture frame items steal the normal-layer
+          // scroll event when the mouse is over placed furniture, and they
+          // ignore scroll entirely. Background items receive scroll
+          // regardless, so cycling works everywhere in the viewport.
+          if (return_to_supplier_type_) {
+            if (ev.scroll_delta > 0) {
+              handle_next_item();
+            }
+            else if (ev.scroll_delta < 0) {
+              handle_previous_item();
+            }
+          }
+          break;
+
         default:
           break;
         }
@@ -2016,6 +2032,7 @@ void RestaurantView::handle_next_item() {
     const size_t i = (start + step) % n;
     if (furniture_placement_[i].count > 0) {
       set_active_batch(i);
+      refresh_furniture_cursor_image();
       mark_dirty();
       return;
     }
@@ -2035,9 +2052,17 @@ void RestaurantView::handle_previous_item() {
     const size_t i = (start + n - step) % n;
     if (furniture_placement_[i].count > 0) {
       set_active_batch(i);
+      refresh_furniture_cursor_image();
       mark_dirty();
       return;
     }
+  }
+}
+
+void RestaurantView::refresh_furniture_cursor_image() {
+  if (on_cursor_ && show_furniture_cursor_) {
+    context_.cursor->custom_cursor(
+        bob_renderer_for(*on_cursor_).image(*on_cursor_), false);
   }
 }
 

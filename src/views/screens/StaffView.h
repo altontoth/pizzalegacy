@@ -47,6 +47,8 @@ private:
   void add_hired_employee_buttons();
   void add_applicant_buttons();
   void add_common_buttons();
+  void handle_next_applicant();
+  void handle_previous_applicant();
 
   // Rendering methods
   void draw_gray_header(Surface& dst, int y, int height = 16);

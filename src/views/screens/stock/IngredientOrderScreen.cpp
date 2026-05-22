@@ -265,6 +265,9 @@ void IngredientOrderScreen::draw_ingredient_list(const RenderContext& ctx) {
               }
               break;
             }
+            case views::ui::InteractionEvent::Type::Scroll:
+              handle_scroll(i, ie.scroll_delta);
+              break;
             default:
               break;
             }
@@ -593,6 +596,40 @@ void IngredientOrderScreen::handle_button_release(bool is_left_button) {
     button_held_index_ = -1;
     button_held_frames_ = 0;
   }
+}
+
+void IngredientOrderScreen::handle_scroll(size_t ingredient_index, int delta) {
+  auto& batch = ingredients_.at(ingredient_index);
+  auto& c = batch.count;
+  int step = std::max(1, std::abs(delta));
+  const bool is_sell = mode_ == IngredientScreenMode::CENTRAL_DEPOT_SELL;
+
+  if (delta > 0) {
+    if (is_sell) {
+      auto& depot =
+          state_.active_city()->central_depot(state_.active_player()->id());
+      auto* stock =
+          depot.get_ingredient_stock(static_cast<int>(batch.ingredient_type));
+      if (stock && supplier_ &&
+          stock->weighted_avg_quality < supplier_->quality()) {
+        state_.status().post_direct(StatusMsg{
+            .payload = "The quality of this ingredient is lower than expected "
+                       "from the supplier selected!",
+            .severity = StatusSeverity::Warning,
+        });
+        return;
+      }
+      c = std::min(c + step, batch.current_stock);
+    }
+    else {
+      c = std::min(c + step, max_ingredient_stock_kg);
+    }
+  }
+  else if (delta < 0) {
+    c = std::max(c - step, 0);
+  }
+
+  mark_dirty();
 }
 
 void IngredientOrderScreen::update_held_button_repeat() {

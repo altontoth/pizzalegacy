@@ -91,15 +91,15 @@ CharacterSelection::CharacterSelection(GameContext& context, GameState& state)
       std::make_unique<CompanySelectionBox>(context, player_items_);
   company_box->on_company_clicked([this](int index) { active_player(index); });
   company_box->on_scroll([this](int delta) {
-    // Scroll up (positive) = decrease human players, scroll down (negative) =
-    // increase human players
+    // Scroll up (positive) = increase human players, scroll down (negative) =
+    // decrease human players
     if (delta > 0) {
-      human_players_ = std::clamp(human_players_ - 1, 1, MAX_HUMAN_PLAYERS);
-      player_items_.at(human_players_).is_human = false;
-    }
-    else {
       human_players_ = std::clamp(human_players_ + 1, 1, MAX_HUMAN_PLAYERS);
       player_items_.at(human_players_ - 1).is_human = true;
+    }
+    else {
+      human_players_ = std::clamp(human_players_ - 1, 1, MAX_HUMAN_PLAYERS);
+      player_items_.at(human_players_).is_human = false;
     }
     mark_dirty();
   });

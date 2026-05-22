@@ -5,6 +5,7 @@
  */
 
 #include "views/ui/popups/NumberInputPopup.h"
+#include <algorithm>
 #include <cmath>
 #include "engine/input/InputManager.h"
 
@@ -95,6 +96,12 @@ void NumberInputPopup::add_interactions(views::ui::InteractionContext ctx,
         if (ev.type == views::ui::InteractionEvent::Type::Click) {
           start_editing();
           inv();
+          return;
+        }
+        if (ev.type == views::ui::InteractionEvent::Type::Scroll) {
+          int delta = std::clamp(ev.scroll_delta, -1, 1);
+          value_ = std::clamp(value_ + (delta * step_size_), min_, max_);
+          mark_dirty();
         }
       });
 }

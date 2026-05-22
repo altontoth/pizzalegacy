@@ -147,10 +147,26 @@ void FurnitureListView::draw_furniture_list(const RenderContext& ctx) {
         compat::format("furniture_list.{}.{}",
                        magic_enum::enum_name(supplier_type()), f->name()),
         [this, i](views::ui::InteractionEvent ie) {
+          auto& c = furniture_.at(i).count;
+          if (ie.type == views::ui::InteractionEvent::Type::Scroll) {
+            // scroll up (positive delta) increases, scroll down decreases
+            // clamp delta to 1 so fast scrolling doesn't jump by large amounts
+            int delta = std::clamp(ie.scroll_delta, -1, 1);
+            int new_c = std::clamp(c + delta, 0, 99);
+            if (new_c == 99 && c < 99) {
+              StatusMsg msg{
+                  .payload = "You can only order 99 at a time!",
+                  .scope = StatusScope::Restaurant,
+              };
+              state_.status().post_direct(msg);
+            }
+            c = new_c;
+            mark_dirty();
+            return;
+          }
           if (ie.type != views::ui::InteractionEvent::Type::ButtonDown) {
             return;
           }
-          auto& c = furniture_.at(i).count;
           switch (ie.button) {
           case views::ui::MouseButton::Left:
             if (c == 99) {

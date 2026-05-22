@@ -80,6 +80,7 @@ private:
   void handle_sell_furniture();
   void handle_next_item();
   void handle_previous_item();
+  void refresh_furniture_cursor_image();
   const BobRenderer& bob_renderer_for(const PlacedFurniture& pf) const;
   const std::vector<std::unique_ptr<PlacedFurniture>>&
   current_furniture_list() const;
