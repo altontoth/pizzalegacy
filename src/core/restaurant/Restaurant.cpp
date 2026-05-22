@@ -1020,7 +1020,7 @@ void Restaurant::end_of_day(GameState& game_state) {
   // AI players use a simplified pipeline: range, reputation, competition,
   // revenue. They skip full order fulfillment and ingredient consumption.
   if (!player->is_human_controlled()) {
-    if (!is_open(game_state.time().time_of_day())) {
+    if (!wants_open_ || forced_days_remaining_ > 0) {
       return;
     }
 
@@ -1077,7 +1077,7 @@ void Restaurant::end_of_day(GameState& game_state) {
     }
   }
 
-  if (!is_open(game_state.time().time_of_day())) {
+  if (!wants_open_ || forced_days_remaining_ > 0) {
     stats_.end_of_day(0);
     return;
   }
