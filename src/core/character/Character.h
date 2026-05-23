@@ -19,7 +19,6 @@
 // DOS version dimensions (most common)
 #define PICTURE_WIDTH 52
 #define PICTURE_HEIGHT 59
-// Amiga version is 51x58, handled in CharacterFactory
 #define NUMBER_OF_CHARACTERS 100
 
 namespace core::character {

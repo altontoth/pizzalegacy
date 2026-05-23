@@ -89,67 +89,6 @@ find_file_path(const std::string& file_path) {
     return without_extension;
   }
 
-  // Amiga fallback: chr/c0e.pc -> chr/c0
-  // If stem ends with a letter followed by extension, try removing the last
-  // char of stem
-  if (!stem.empty() && resolved.has_extension()) {
-    char last_char = stem.back();
-    if (std::isalpha(static_cast<unsigned char>(last_char))) {
-      std::string stem_without_last = stem.substr(0, stem.size() - 1);
-      fs::path amiga_fallback;
-      if (!parent.empty() && parent != ".") {
-        amiga_fallback = fs::path(parent) / stem_without_last;
-      }
-      else {
-        amiga_fallback = stem_without_last;
-      }
-
-      if (fs::exists(amiga_fallback)) {
-        return amiga_fallback;
-      }
-    }
-  }
-
-  // Amiga directory fallback: bob/ -> vga/
-  // On Amiga, all graphics files are in vga/ instead of separate bob/ directory
-  std::string resolved_str = resolved.string();
-  if (resolved_str.find("bob/") != std::string::npos ||
-      resolved_str.find("bob\\") != std::string::npos) {
-    std::string vga_path = resolved_str;
-
-    // Replace bob/ with vga/ (handle both forward and back slashes)
-    size_t pos = vga_path.find("bob/");
-    if (pos != std::string::npos) {
-      vga_path.replace(pos, 4, "gfx/");
-    }
-    else {
-      pos = vga_path.find("bob\\");
-      if (pos != std::string::npos) {
-        vga_path.replace(pos, 4, "gfx\\");
-      }
-    }
-
-    fs::path vga_candidate(vga_path);
-    if (fs::exists(vga_candidate)) {
-      return vga_candidate;
-    }
-
-    // Also try without extension for the vga/ path
-    fs::path vga_without_ext;
-    std::string vga_stem = vga_candidate.stem().string();
-    std::string vga_parent = vga_candidate.parent_path().string();
-    if (!vga_parent.empty() && vga_parent != ".") {
-      vga_without_ext = fs::path(vga_parent) / vga_stem;
-    }
-    else {
-      vga_without_ext = vga_stem;
-    }
-
-    if (fs::exists(vga_without_ext)) {
-      return vga_without_ext;
-    }
-  }
-
 #if PLEGACY_CASE_INSENSITIVE_FS
   auto fallback = case_insensitive_lookup(
       fs::path(game_data_path_), input_path.is_absolute()

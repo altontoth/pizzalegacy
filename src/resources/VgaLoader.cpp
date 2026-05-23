@@ -13,60 +13,18 @@
 #include <iostream>
 #include <vector>
 
-#include "core/util/ConfigManager.h"
 #include "engine/Fatal.h"
+#include "engine/Math.h"
 #include "resources/AssetMetadata.h"
-#include "resources/BitplaneDecoder.h"
 #include "resources/Vga.h"
-#include "resources/util/Platform.h"
 
 #define DOS_VGA_HEADER_SIZE 7
 
-ConfigManager* VgaLoader::s_config_manager = nullptr;
-
-void VgaLoader::config_manager(ConfigManager* config) {
-  s_config_manager = config;
-}
-
 Surface VgaLoader::load(const std::string& filename) {
-  bool is_amiga_format = platform::is_amiga();
-
-  // Special case: cursor files are always DOS format
-  if (is_amiga_format && filename.find("cursor") != std::string::npos) {
-    is_amiga_format = false;
-  }
-
-  // Build the actual file path with appropriate extension
-  // filename is expected to be like "gfx/back1" (no extension)
-  std::string actual_path;
-
-  if (is_amiga_format) {
-    // Amiga: try base name first, then try with .f extension
-    actual_path = filename;
-
-    if (!fileutils::fexists(actual_path)) {
-      // Try with .f extension (menu.f, etc.)
-      actual_path = filename + ".f";
-      if (!fileutils::fexists(actual_path)) {
-        actual_path = filename + ".i";
-      }
-      if (!fileutils::fexists(actual_path)) {
-        actual_path = filename + ".96";
-      }
-      if (!fileutils::fexists(actual_path)) {
-        fatal("Cannot find Amiga VGA file: " + filename +
-              " (tried both with and without .f/.i extension)");
-      }
-    }
-    Logger::debug("Loading Amiga VGA file: {}", actual_path);
-  }
-  else {
-    // DOS: always add .vga extension
-    actual_path = filename + ".vga";
-    Logger::debug("Loading DOS VGA file: {}", actual_path);
-    if (filename.find("euromap") != std::string::npos) {
-      actual_path = "gfx/" + actual_path;
-    }
+  std::string actual_path = filename + ".vga";
+  Logger::debug("Loading VGA file: {}", actual_path);
+  if (filename.find("euromap") != std::string::npos) {
+    actual_path = "gfx/" + actual_path;
   }
 
   auto is = fileutils::open(actual_path, std::ios::binary | std::ios::ate);
@@ -84,102 +42,6 @@ Surface VgaLoader::load(const std::string& filename) {
   std::vector<char> raw_buffer(length);
   is.read(raw_buffer.data(), static_cast<std::streamsize>(length));
   is.close();
-
-  // If using Amiga bitplane format, decode directly
-  if (is_amiga_format) {
-    // Read entire file as bitplane data
-    std::vector<uint8_t> raw_data(raw_buffer.begin(), raw_buffer.end());
-
-    // Look up dimensions from asset metadata
-    std::optional<Size> size_hint =
-        resources::AssetMetadataRegistry::get_size(actual_path);
-    if (!size_hint.has_value()) {
-      fatal("No size hint found for VGA file: " + actual_path);
-    }
-
-    int width = size_hint->w;
-    int height = size_hint->h;
-
-    // Calculate bytes per line (rounded up to byte boundary)
-    int data_bytes_per_line = (width + 7) / 8;
-
-    // Amiga bitplane files may have 16-byte aligned rows
-    int padded_bytes_per_line = ((data_bytes_per_line + 15) / 16) * 16;
-
-    // Try to determine number of bitplanes and padding from file size
-    // Most common: 5 bitplanes (32 colors)
-    size_t expected_5plane_unpadded = data_bytes_per_line * height * 5;
-    size_t expected_5plane_padded = padded_bytes_per_line * height * 5;
-
-    // Also try 4 bitplanes (16 colors) for smaller files
-    size_t expected_4plane_unpadded = data_bytes_per_line * height * 4;
-    size_t expected_4plane_padded = padded_bytes_per_line * height * 4;
-
-    // Also try 3 bitplanes (8 colors) for even smaller files
-    size_t expected_3plane_unpadded = data_bytes_per_line * height * 3;
-    size_t expected_3plane_padded = padded_bytes_per_line * height * 3;
-
-    int bytes_per_line = -1;
-    int num_bitplanes = 5; // default
-
-    if (length == expected_5plane_unpadded) {
-      bytes_per_line = data_bytes_per_line;
-      num_bitplanes = 5;
-      Logger::info("Detected: 5 bitplanes, unpadded ({} bytes/line)",
-                   bytes_per_line);
-    }
-    else if (length == expected_5plane_padded) {
-      bytes_per_line = padded_bytes_per_line;
-      num_bitplanes = 5;
-      Logger::info("Detected: 5 bitplanes, padded ({} bytes/line)",
-                   bytes_per_line);
-    }
-    else if (length == expected_4plane_unpadded) {
-      bytes_per_line = data_bytes_per_line;
-      num_bitplanes = 4;
-      Logger::info("Detected: 4 bitplanes, unpadded ({} bytes/line)",
-                   bytes_per_line);
-    }
-    else if (length == expected_4plane_padded) {
-      bytes_per_line = padded_bytes_per_line;
-      num_bitplanes = 4;
-      Logger::info("Detected: 4 bitplanes, padded ({} bytes/line)",
-                   bytes_per_line);
-    }
-    else if (length == expected_3plane_unpadded) {
-      bytes_per_line = data_bytes_per_line;
-      num_bitplanes = 3;
-      Logger::info("Detected: 3 bitplanes, unpadded ({} bytes/line)",
-                   bytes_per_line);
-    }
-    else if (length == expected_3plane_padded) {
-      bytes_per_line = padded_bytes_per_line;
-      num_bitplanes = 3;
-      Logger::info("Detected: 3 bitplanes, padded ({} bytes/line)",
-                   bytes_per_line);
-    }
-    else {
-      // File size doesn't match expected - log details for debugging
-      fatal(compat::format("Cannot determine bitplane format for {}: "
-                           "file size {} doesn't match expected sizes "
-                           "(5pl unpadded={}, 5pl padded={}, "
-                           "4pl unpadded={}, 4pl padded={}, "
-                           "3pl unpadded={}, 3pl padded={})",
-                           filename, length, expected_5plane_unpadded,
-                           expected_5plane_padded, expected_4plane_unpadded,
-                           expected_4plane_padded, expected_3plane_unpadded,
-                           expected_3plane_padded));
-    }
-
-    // Get palette from asset metadata
-    auto palette_opt = resources::AssetMetadataRegistry::get_palette(filename);
-    uint8_t palette_index = palette_opt.value_or(0);
-
-    Surface bitplane_surface =
-        BitplaneDecoder::decode(raw_data, width, height, num_bitplanes,
-                                bytes_per_line, palette_index, 2);
-    return bitplane_surface;
-  }
 
   // DOS RLE format
   // Pointers start at zero, so last element in the array is length - 1:

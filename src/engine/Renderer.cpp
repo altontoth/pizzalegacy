@@ -65,7 +65,7 @@ void Renderer::render() {
     if (rerender) {
       if (!layer.preserve_background) {
         layer_surface->fill(0);
-        layer_surface->clear_palette_segments();
+        layer_surface->clear_palette_state();
       }
 
       RenderContext ctx{layer_surface.get()};
@@ -81,7 +81,7 @@ void Renderer::render() {
         }
         if (!layer.preserve_background) {
           layer_surface->fill(0);
-          layer_surface->clear_palette_segments();
+          layer_surface->clear_palette_state();
         }
         RenderContext ctx{layer_surface.get()};
         view->render(ctx);

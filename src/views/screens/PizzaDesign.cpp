@@ -27,7 +27,6 @@
 #include "gfx/Draw.h"
 #include "gfx/PaletteBank.h"
 #include "resources/BobSizeFn.h"
-#include "resources/util/Platform.h"
 #include "views/base/ViewDefs.h"
 #include "views/screens/restaurant/RecipeListRow.h"
 #include "views/ui/PopupManager.h"
@@ -410,8 +409,7 @@ bool PizzaDesign::on_action(const input::ActionEvent& ev) {
             return;
           }
           std::filesystem::path path(platform_paths::recipes_dir() + "r" +
-                                     std::to_string(number) +
-                                     (platform::is_amiga() ? "" : ".pc"));
+                                     std::to_string(number) + ".pc");
           std::filesystem::create_directories(path.parent_path());
           if (fileutils::fexists(path.string())) {
             context_.popup->create<ConfirmPopup>(
@@ -1566,9 +1564,8 @@ const Pizza* PizzaDesign::current_pizza() const {
 }
 
 void PizzaDesign::load_user_recipe(int number) {
-  std::string filename = platform_paths::recipes_dir() + "r" +
-                         std::to_string(number) +
-                         (platform::is_amiga() ? "" : ".pc");
+  std::string filename =
+      platform_paths::recipes_dir() + "r" + std::to_string(number) + ".pc";
 
   // Check if file exists first
   if (!fileutils::fexists(filename)) {
@@ -1621,8 +1618,7 @@ void PizzaDesign::load_user_recipe(int number) {
 
 void PizzaDesign::load_canonical_recipe(int number) {
   // Create the pizza from disk (from r/ directory)
-  std::string filename =
-      "r/r" + std::to_string(number) + (platform::is_amiga() ? "" : ".pc");
+  std::string filename = "r/r" + std::to_string(number) + ".pc";
 
   // Check if file exists first
   if (!fileutils::fexists(filename)) {
@@ -1729,15 +1725,13 @@ void PizzaDesign::load_recipe_for_debug(const std::string& filename) {
 }
 
 void PizzaDesign::load_user_recipe_for_debug(int number) {
-  std::string filename = platform_paths::recipes_dir() + "r" +
-                         std::to_string(number) +
-                         (platform::is_amiga() ? "" : ".pc");
+  std::string filename =
+      platform_paths::recipes_dir() + "r" + std::to_string(number) + ".pc";
   load_recipe_for_debug(filename);
 }
 
 void PizzaDesign::load_canonical_for_debug(int number) {
-  std::string filename =
-      "r/r" + std::to_string(number) + (platform::is_amiga() ? "" : ".pc");
+  std::string filename = "r/r" + std::to_string(number) + ".pc";
   load_recipe_for_debug(filename);
 }
 

@@ -37,7 +37,6 @@
 #include "factories/PizzaFactory.h"
 #include "factories/RestaurantLayoutFactory.h"
 #include "resources/BobSizeFn.h"
-#include "resources/util/Platform.h"
 #include "views/screens/StatusDisplay.h"
 #include "views/ui/PopupManager.h"
 #include "views/ui/finance/FinanceComponents.h"
@@ -2884,12 +2883,7 @@ Restaurant* GameState::create_restaurant_with_layout(Player& player, City& city,
   // Build the layout filename from the layout_id
   std::string filename = compat::format("q/f{}.pc", layout_id);
   std::unique_ptr<RestaurantLayout> layout = nullptr;
-  if (platform::is_amiga()) {
-    layout = std::make_unique<RestaurantLayout>(Size{16, 16}, Size{16, 16});
-  }
-  else {
-    layout = RestaurantLayoutFactory::create_layout(filename);
-  }
+  layout = RestaurantLayoutFactory::create_layout(filename);
 
   if (!layout) {
     return nullptr;

@@ -43,11 +43,7 @@ public:
     std::optional<bool> crt_mode; // --crt to force CRT mode
     std::optional<std::string> vga_viewer;   // --vga <path>
     std::optional<std::string> bob_viewer;   // --bob <path>
-    std::optional<std::string> abob_viewer;  // --abob <path>
-    std::optional<std::string> raw_viewer;   // --raw <path>
     std::optional<std::string> sound_viewer; // --sound <path>
-    std::optional<int> raw_width;            // --width <pixels>
-    std::optional<int> raw_height;           // --height <pixels>
   };
 
   Game(LaunchOptions opts);
@@ -110,10 +106,6 @@ private:
   std::optional<std::string> startup_console_line_;
   std::optional<std::string> vga_viewer_path_;
   std::optional<std::string> bob_viewer_path_;
-  std::optional<std::string> abob_viewer_path_;
   std::optional<std::string> fnt_viewer_path_;
-  std::optional<std::string> raw_viewer_path_;
   std::optional<std::string> sound_viewer_path_;
-  std::optional<int> raw_width_;
-  std::optional<int> raw_height_;
 };

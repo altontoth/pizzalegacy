@@ -48,7 +48,8 @@ std::unique_ptr<core::food::Pizza> PizzaFactory::create_pizza(
     return nullptr;
   }
 
-  // Read the first 4 bytes (header 'PREZ' or big-endian int for Amiga)
+  // Read the first 4 bytes: 'PREZ' for user-saved recipes, or empty for
+  // canonical
   char header[4];
   is.read(header, 4);
   int offset = 302;
@@ -56,37 +57,17 @@ std::unique_ptr<core::food::Pizza> PizzaFactory::create_pizza(
   int stats_offset = 84; // Stats offset for PREZ files
   bool is_prez = (strncmp(header, "PREZ", 4) == 0);
 
-  // For DOS: Next 4 bytes after PREZ/non-PREZ header contain unknown state
-  // For Amiga: First 4 bytes are big-endian int32, skip to offset 4
-  if (platform::is_amiga()) {
-    // Amiga format: header is big-endian int32 (already read)
-    // All offsets are 14 bytes earlier than DOS non-PREZ format
-    is_prez = false;   // We don't understand amiga prez yet
-    offset = 280;      // Ingredient data at 0x118 (vs 0x126/294 for DOS)
-    name_offset = 14;  // Amiga name starts at offset 0x0E (vs 0x1C/28 for DOS)
-    stats_offset = 62; // Amiga stats offset 0x3E (vs 0x4C/76 for DOS)
-
-    // Read the big-endian header value for debugging
-    uint32_t header_val =
-        (static_cast<uint32_t>(static_cast<uint8_t>(header[0])) << 24) |
-        (static_cast<uint32_t>(static_cast<uint8_t>(header[1])) << 16) |
-        (static_cast<uint32_t>(static_cast<uint8_t>(header[2])) << 8) |
-        static_cast<uint32_t>(static_cast<uint8_t>(header[3]));
-    Logger::debug("[Amiga] Recipe: {}, Header value: 0x{:08x} ({})", filename,
-                  header_val, header_val);
+  if (!is_prez) {
+    offset = 294;
+    name_offset = 28;
+    stats_offset = 76; // Stats offset for non-PREZ files (28 + 48)
   }
-  else {
-    if (!is_prez) {
-      offset = 294;
-      name_offset = 28;
-      stats_offset = 76; // Stats offset for non-PREZ files (28 + 48)
-    }
 
-    uint8_t u1 = is.get();
-    uint8_t u2 = is.get();
-    uint8_t u3 = is.get();
-    uint8_t u4 = is.get();
-  }
+  // Skip 4 unknown bytes after PREZ/non-PREZ header
+  is.get();
+  is.get();
+  is.get();
+  is.get();
 
   // Skip to offset 0x20 (32 bytes) to read the recipe name
   is.seekg(name_offset, std::ios::beg);
@@ -237,7 +218,6 @@ std::unique_ptr<core::food::Pizza> PizzaFactory::create_pizza(
     int recipe_id, const BobSizeFn& get_size,
     const core::food::CustomerTasteProfiles& taste_profiles) {
   char filename[16];
-  snprintf(filename, sizeof(filename), "r/r%d%s", recipe_id,
-           platform::is_amiga() ? "" : ".pc");
+  snprintf(filename, sizeof(filename), "r/r%d.pc", recipe_id);
   return create_pizza(std::string(filename), get_size, taste_profiles);
 }

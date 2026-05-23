@@ -93,40 +93,6 @@ MenuOptions::MenuOptions(GameContext& context, GameState& state)
         mark_dirty();
       }));
 
-  /*
-  // Asset format toggle - conditional on availability
-  auto availability = context.config->detect_available_formats();
-
-  if (availability.dos_available && availability.amiga_available) {
-    // Both formats available - show interactive toggle
-    add_menu_item(std::make_unique<ToggleMenuItem>(
-        context,
-        "Asset Format *", // * = requires restart
-        format_is_dos_,
-        "AMIGA", // false_label
-        "DOS",   // true_label
-        [this] {
-          // Toggle the local state first
-          format_is_dos_ = !format_is_dos_;
-          // Then save the new format to config
-          auto new_format = format_is_dos_ ? "dos" : "amiga";
-          context_.config->value("active_asset_format", new_format);
-          context_.config->save_config();
-          mark_dirty();
-        },
-        face));
-  }
-  else {
-    // Only one available - show non-interactive text
-    std::string format_name = availability.dos_available ? "DOS" : "AMIGA";
-    std::string label = "Asset Format: " + format_name;
-
-    add_menu_item(std::make_unique<TextMenuItem>(
-        context, label, []() {}, // Empty action - non-interactive
-        face, style, sel_style));
-  }
-  */
-
   add_menu_item(std::make_unique<SpacerMenuItem>(context, 30));
   add_menu_item(std::make_unique<TextMenuItem>(
       context, "Save and exit",

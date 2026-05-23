@@ -7,69 +7,14 @@
 #include "resources/BobLoader.h"
 
 #include <cstddef>
-#include <unordered_map>
+#include <fstream>
 #include <vector>
-
-#include "resources/AmigaBobLoader.h"
-#include "resources/util/Platform.h"
-
-namespace {
-// Translate DOS BOB paths to Amiga paths
-std::string translate_amiga_path(const std::string& dos_path) {
-  if (!platform::is_amiga()) {
-    return dos_path;
-  }
-
-  // Mapping of DOS filename exceptions to Amiga names with special characters
-  static const std::unordered_map<std::string, std::string> name_map = {
-      {"moebel", "möbel"},
-      {"kuebobs", "kübobs"},
-      {"gaeste", "gäste"},
-  };
-
-  std::string path = dos_path;
-
-  // Always translate bob/ to gfx/ on Amiga
-  if (path.starts_with("bob/")) {
-    path = "gfx/" + path.substr(4);
-  }
-
-  // Check if we need to translate the filename itself
-  // Extract just the filename without extension
-  size_t last_slash = path.rfind('/');
-  size_t dot_pos = path.rfind('.');
-  std::string dir =
-      (last_slash != std::string::npos) ? path.substr(0, last_slash + 1) : "";
-  std::string basename =
-      (last_slash != std::string::npos) ? path.substr(last_slash + 1) : path;
-
-  // Remove extension if present
-  if (dot_pos != std::string::npos && dot_pos > last_slash) {
-    basename = basename.substr(
-        0, dot_pos - (last_slash != std::string::npos ? last_slash + 1 : 0));
-  }
-
-  // Look up the translation
-  auto it = name_map.find(basename);
-  if (it != name_map.end()) {
-    path = dir + it->second;
-    Logger::debug("Translated BOB path: {} -> {}", dos_path, path);
-  }
-
-  return path;
-}
-} // anonymous namespace
+#include "engine/Fatal.h"
+#include "engine/Math.h"
+#include "resources/util/FileUtils.h"
 
 std::unique_ptr<Bob> BobLoader::load(const std::string& filename) {
-  std::string actual_path = translate_amiga_path(filename);
-  if (platform::is_amiga()) {
-    return AmigaBobLoader::load(actual_path);
-  }
-
-  std::ifstream is = fileutils::open(actual_path);
-  if (!is.is_open()) {
-    fatal("Could not open BOB file: " + actual_path);
-  }
+  std::ifstream is = fileutils::open(filename);
 
   is.seekg(0, std::ios::end);
   std::streamsize length = is.tellg();
@@ -114,6 +59,6 @@ std::unique_ptr<Bob> BobLoader::load(const std::string& filename) {
     sum_of_previous_pixels += (static_cast<std::size_t>(w * h));
   }
 
-  return std::make_unique<Bob>(actual_path, std::move(raw_data),
+  return std::make_unique<Bob>(filename, std::move(raw_data),
                                std::move(frames));
 }

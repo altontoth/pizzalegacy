@@ -8,14 +8,14 @@
 #include "core/util/ConfigManager.h"
 
 namespace {
-inline platform::AssetFormat g_asset_format = platform::AssetFormat::DOS;
+inline platform::AssetFormat g_asset_format = platform::AssetFormat::ENGLISH;
 };
 namespace platform {
 
 void init_asset_format() {
   auto* config = ConfigManager::instance();
   if (!config) {
-    g_asset_format = AssetFormat::DOS;
+    g_asset_format = AssetFormat::ENGLISH;
     return;
   }
 
@@ -24,15 +24,11 @@ void init_asset_format() {
 
 AssetFormat asset_format() { return g_asset_format; }
 
-bool is_amiga() { return asset_format() == AssetFormat::AMIGA; }
+Endian endianness() { return Endian::Little; }
 
-bool is_dos() { return asset_format() == AssetFormat::DOS; }
-
-Endian endianness() {
-  return asset_format() == AssetFormat::AMIGA ? Endian::Big : Endian::Little;
+const char* asset_format_string() {
+  return (asset_format() == AssetFormat::GERMAN) ? "german" : "english";
 }
-
-const char* asset_format_string() { return is_amiga() ? "amiga" : "dos"; }
 
 bool can_toggle_format() {
   auto* config = ConfigManager::instance();
@@ -43,12 +39,12 @@ bool can_toggle_format() {
 }
 
 AssetFormat alternate_format() {
-  return (asset_format() == AssetFormat::DOS) ? AssetFormat::AMIGA
-                                              : AssetFormat::DOS;
+  return (asset_format() == AssetFormat::ENGLISH) ? AssetFormat::GERMAN
+                                                  : AssetFormat::ENGLISH;
 }
 
 std::string format_display_name(AssetFormat format) {
-  return (format == AssetFormat::DOS) ? "DOS" : "AMIGA";
+  return (format == AssetFormat::ENGLISH) ? "English (DOS)" : "German (DOS)";
 }
 
 } // namespace platform

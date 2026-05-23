@@ -78,7 +78,7 @@ public:
   [[nodiscard]] std::vector<Color>& colors();
   [[nodiscard]] const std::vector<Color>& colors() const;
   void clear_custom_palette();
-  void clear_palette_segments(); // Clear multi-palette state (Amiga)
+  void clear_palette_state();
 
   // Disable palette translation for this surface (useful for font atlases,
   // templates)
@@ -101,16 +101,9 @@ private:
 
   std::vector<uint8_t> pixels_; // size = width*height
 
-  // Multi-palette support (Amiga): up to 8 x 32-color palettes = 256 colors
-  std::vector<PaletteHandle> palette_segments_;
   // Skip palette mapping (for fonts)
   bool disable_palette_translation_{false};
 
   [[nodiscard]] bool in_bounds(ViewPoint p) const noexcept;
-
-  // Returns base index for this palette in the surface's local 256-color space
-  // Adds palette to palette_segments_ if not already present (up to 8 segments
-  // max) If pal is nullopt, uses the surface's primary palette
-  uint8_t translate(std::optional<PaletteHandle> pal);
 };
 } // namespace gfx

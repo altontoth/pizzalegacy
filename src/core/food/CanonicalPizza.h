@@ -10,7 +10,6 @@
 #include <string>
 #include <string_view>
 #include "engine/FormatCompat.h"
-#include "resources/util/Platform.h"
 
 namespace core::food {
 
@@ -36,8 +35,7 @@ constexpr int to_index(CanonicalPizza id) { return static_cast<int>(id); }
 constexpr int CANON_COUNT = static_cast<int>(CanonicalPizza::COUNT);
 
 inline std::string filename_for(CanonicalPizza id) {
-  return compat::format("r/r{}{}", to_index(id),
-                        platform::is_amiga() ? "" : ".pc");
+  return compat::format("r/r{}.pc", to_index(id));
 }
 
 inline constexpr std::array<std::string_view, CANON_COUNT>

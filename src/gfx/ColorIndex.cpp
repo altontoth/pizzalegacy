@@ -6,15 +6,8 @@
 
 #include "gfx/ColorIndex.h"
 
-#include "resources/util/Platform.h"
-
 namespace gfx {
 
-uint8_t ColorIndex::get() const {
-  if (platform::is_amiga() && amiga.has_value()) {
-    return amiga.value();
-  }
-  return dos;
-}
+uint8_t ColorIndex::get() const { return dos; }
 
 } // namespace gfx

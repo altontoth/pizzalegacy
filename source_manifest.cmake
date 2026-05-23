@@ -199,22 +199,17 @@ set(GAME_PLEGACY_SOURCES
     src/views/ui/widgets/StatBar.cpp
     src/views/ui/widgets/TextMenuItem.cpp
     src/views/ui/widgets/ToggleMenuItem.cpp
-    src/views/viewers/AmigaBobViewer.cpp
-    src/views/viewers/AmigaCharacterViewer.cpp
     src/views/viewers/BobViewer.cpp
     src/views/viewers/CharacterViewer.cpp
     src/views/viewers/FontViewer.cpp
     src/views/viewers/PaletteView.cpp
-    src/views/viewers/RawViewer.cpp
     src/views/viewers/SoundViewer.cpp
     src/views/viewers/VgaViewer.cpp
     src/gfx/ColorIndex.cpp
     src/gfx/Draw.cpp
     src/gfx/Surface.cpp
     src/gfx/SurfaceBuilder.cpp
-    src/resources/AmigaBobLoader.cpp
     src/resources/AssetMetadata.cpp
-    src/resources/BitplaneDecoder.cpp
     src/resources/BlitmapManager.cpp
     src/resources/Bob.cpp
     src/resources/BobLoader.cpp
@@ -489,10 +484,7 @@ set(PLEGACY_HEADERS
     src/gfx/PaletteHandle.h
     src/gfx/Surface.h
     src/gfx/SurfaceBuilder.h
-    src/resources/AmigaBobLoader.h
-    src/resources/AmigaFontHeader.h
     src/resources/AssetMetadata.h
-    src/resources/BitplaneDecoder.h
     src/resources/Blitmap.h
     src/resources/Blitmap.inl
     src/resources/BlitmapIcons.h
@@ -645,13 +637,10 @@ set(PLEGACY_HEADERS
     src/views/ui/widgets/StatBar.h
     src/views/ui/widgets/TextMenuItem.h
     src/views/ui/widgets/ToggleMenuItem.h
-    src/views/viewers/AmigaBobViewer.h
-    src/views/viewers/AmigaCharacterViewer.h
     src/views/viewers/BobViewer.h
     src/views/viewers/CharacterViewer.h
     src/views/viewers/FontViewer.h
     src/views/viewers/PaletteView.h
-    src/views/viewers/RawViewer.h
     src/views/viewers/SoundViewer.h
     src/views/viewers/VgaViewer.h
     third_party/magic_enum/magic_enum.hpp

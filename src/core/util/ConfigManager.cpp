@@ -6,8 +6,10 @@
 
 #include "core/util/ConfigManager.h"
 
+#include <filesystem>
 #include <fstream>
 #include <tinyfiledialogs/tinyfiledialogs.h>
+#include <vector>
 #include "core/state/GameState.h"
 #include "engine/Fatal.h"
 #include "resources/util/FileUtils.h"
@@ -46,8 +48,6 @@ bool ConfigManager::load_config() {
   }
   options_ = load_options();
 
-  migrate_legacy_game_path();
-
   return true;
 }
 
@@ -62,16 +62,65 @@ void ConfigManager::save_config() {
   }
 }
 
+// Returns the directory containing PT.EXE if found anywhere under `base`,
+// checking known Steam and DOSBox wrapper subdirectory layouts. Empty if not
+// found.
+static std::string probe_for_dos_game(const std::string& base) {
+  namespace fs = std::filesystem;
+  fs::path b(base);
+
+  std::vector<fs::path> candidates;
+  auto add = [&](auto&& p) { candidates.push_back(b / p); };
+
+  add("game");
+  add("Pizza Connection");
+  add("Pizza Connection/game");
+
+#ifdef __APPLE__
+  add("Pizza Connection.app/Contents/Resources/game");
+  add("Contents/Resources/game");
+  add("Pizza Connection/Pizza Connection.app/Contents/Resources/game");
+  add("steamapps/common/Pizza Connection/Pizza "
+      "Connection.app/Contents/Resources/game");
+#endif
+
+  for (const auto& candidate : candidates) {
+    if (fileutils::fexists((candidate / "PT.EXE").string())) {
+      return candidate.string();
+    }
+  }
+  return {};
+}
+
+#ifdef __APPLE__
+static constexpr const char* k_location_hint =
+    "Select the folder containing your original Pizza Tycoon / Pizza "
+    "Connection game files.\n\n"
+    "Steam users: you can point to your Steam directory, your steamapps/common "
+    "folder, or the Pizza Connection folder. The game inside the app bundle "
+    "will be found automatically.";
+#elif defined(_WIN32)
+static constexpr const char* k_location_hint =
+    "Select the folder containing your original Pizza Tycoon / Pizza "
+    "Connection game files.\n\n"
+    "Steam users: you can point to your Steam directory, your "
+    "steamapps\\common "
+    "folder, or directly to the Pizza Connection folder.";
+#else
+static constexpr const char* k_location_hint =
+    "Select the folder containing your original Pizza Tycoon / Pizza "
+    "Connection game files.\n\n"
+    "Steam users: you can point to your Steam directory, your steamapps/common "
+    "folder, or the Pizza Connection folder.";
+#endif
+
 std::string ConfigManager::prompt_for_game_location() {
-  tinyfd_messageBox("Note",
-                    "Please select the directory where to find the "
-                    "original Pizza Tycoon or Pizza Connection game.",
-                    "ok", "info", 1);
+  tinyfd_messageBox("Note", k_location_hint, "ok", "info", 1);
 
   bool give_up = false;
   bool game_found = false;
   std::string selected_folder;
-  std::string active_asset_format = "dos";
+  std::string active_asset_format = "english";
 
   while (!give_up && !game_found) {
     const char* folder_name =
@@ -80,29 +129,18 @@ std::string ConfigManager::prompt_for_game_location() {
       give_up = true;
     }
     else {
-      selected_folder = folder_name;
-
-      // Check for Amiga version first (PC1.2)
-      std::string amiga_exe = selected_folder + "/PC1.2";
-      if (fileutils::fexists(amiga_exe)) {
+      std::string dos_path = probe_for_dos_game(folder_name);
+      if (!dos_path.empty()) {
+        selected_folder = dos_path;
         game_found = true;
-        active_asset_format = "amiga";
-        Logger::info("Detected Amiga version (PC1.2)");
+        Logger::info("Detected DOS version (PT.EXE) at: {}", dos_path);
       }
       else {
-        // Check for DOS version (PT.EXE)
-        std::string dos_exe = selected_folder + "/PT.EXE";
-        if (fileutils::fexists(dos_exe)) {
-          game_found = true;
-          active_asset_format = "dos";
-          Logger::info("Detected DOS version (PT.EXE)");
-        }
-        else {
-          tinyfd_messageBox(
-              "Error",
-              "Could not find PT.EXE (DOS) or PC1.2 (Amiga) in this directory.",
-              "ok", "error", 1);
-        }
+        tinyfd_messageBox(
+            "Error",
+            "Could not find PT.EXE in this directory or any known "
+            "Steam/DOSBox subdirectory.",
+            "ok", "error", 1);
       }
     }
   }
@@ -112,16 +150,7 @@ std::string ConfigManager::prompt_for_game_location() {
   }
 
   value("active_asset_format", active_asset_format);
-
-  std::string pt_exe = selected_folder + "/PT.EXE";
-  std::string pc1_2 = selected_folder + "/PC1.2";
-
-  if (fileutils::fexists(pt_exe)) {
-    value("game_path_dos", selected_folder);
-  }
-  if (fileutils::fexists(pc1_2)) {
-    value("game_path_amiga", selected_folder);
-  }
+  value("game_path_english", selected_folder);
 
   return selected_folder;
 }
@@ -162,9 +191,9 @@ void ConfigManager::save_options(const GameOptions& opts) {
   save_bool("rmb_drag_inverted", opts.rmb_drag_inverted);
   save_bool("scroll_zoom_inverted", opts.scroll_zoom_inverted);
 
-  const char* format_str =
-      (opts.asset_format == platform::AssetFormat::AMIGA) ? "amiga" : "dos";
-  config_["active_asset_format"] = format_str;
+  config_["active_asset_format"] =
+      (opts.asset_format == platform::AssetFormat::GERMAN) ? "german"
+                                                           : "english";
 
   config_["resolution"] = std::string(to_string(opts.resolution));
 
@@ -193,8 +222,9 @@ GameOptions ConfigManager::load_options() const {
 
   auto it = config_.find("active_asset_format");
   if (it != config_.end()) {
-    opts.asset_format = (it->second == "amiga") ? platform::AssetFormat::AMIGA
-                                                : platform::AssetFormat::DOS;
+    opts.asset_format = (it->second == "german")
+                            ? platform::AssetFormat::GERMAN
+                            : platform::AssetFormat::ENGLISH;
   }
 
   auto res_it = config_.find("resolution");
@@ -213,7 +243,7 @@ GameOptions ConfigManager::load_options() const {
 std::string
 ConfigManager::game_path_for_format(const std::string& format) const {
   const std::string key =
-      (format == "dos") ? "game_path_dos" : "game_path_amiga";
+      (format == "german") ? "game_path_german" : "game_path_english";
 
   auto it = config_.find(key);
   if (it != config_.end()) {
@@ -231,7 +261,7 @@ ConfigManager::game_path_for_format(const std::string& format) const {
 std::string ConfigManager::active_game_path() const {
   std::string format = value("active_asset_format");
   if (format.empty()) {
-    format = "dos";
+    format = "english";
   }
 
   return game_path_for_format(format);
@@ -239,47 +269,18 @@ std::string ConfigManager::active_game_path() const {
 
 ConfigManager::FormatAvailability
 ConfigManager::detect_available_formats() const {
-  FormatAvailability result{false, false, "", ""};
+  FormatAvailability result{.english_available = false,
+                            .german_available = false,
+                            .english_path = "",
+                            .german_path = ""};
 
-  // Check game_path_dos if set
-  auto it = config_.find("game_path_dos");
-  if (it != config_.end()) {
-    std::string dos_path = it->second;
-    std::string pt_exe = dos_path + "/PT.EXE";
-    if (fileutils::fexists(pt_exe)) {
-      result.dos_available = true;
-      result.dos_path = dos_path;
-    }
-  }
-
-  it = config_.find("game_path_amiga");
-  if (it != config_.end()) {
-    std::string amiga_path = it->second;
-    std::string pc1_2 = amiga_path + "/PC1.2";
-    if (fileutils::fexists(pc1_2)) {
-      result.amiga_available = true;
-      result.amiga_path = amiga_path;
-    }
-  }
-
-  it = config_.find("game_path");
-  if (it != config_.end()) {
-    std::string legacy_path = it->second;
-
-    if (!result.dos_available) {
-      std::string pt_exe = legacy_path + "/PT.EXE";
-      if (fileutils::fexists(pt_exe)) {
-        result.dos_available = true;
-        result.dos_path = legacy_path;
-      }
-    }
-
-    if (!result.amiga_available) {
-      std::string pc1_2 = legacy_path + "/PC1.2";
-      if (fileutils::fexists(pc1_2)) {
-        result.amiga_available = true;
-        result.amiga_path = legacy_path;
-      }
+  // Check game_path_english if set
+  auto it = config_.find("game_path_english");
+  if (it != config_.end() && !result.english_available) {
+    std::string path = it->second;
+    if (fileutils::fexists(path + "/PT.EXE")) {
+      result.english_available = true;
+      result.english_path = path;
     }
   }
 
@@ -288,34 +289,5 @@ ConfigManager::detect_available_formats() const {
 
 bool ConfigManager::both_formats_available() const {
   auto availability = detect_available_formats();
-  return availability.dos_available && availability.amiga_available;
-}
-
-void ConfigManager::migrate_legacy_game_path() {
-  auto it = config_.find("game_path");
-  if (it != config_.end() && config_.find("game_path_dos") == config_.end() &&
-      config_.find("game_path_amiga") == config_.end()) {
-
-    std::string legacy_path = it->second;
-
-    // Detect what formats exist at legacy path
-    std::string pt_exe = legacy_path + "/PT.EXE";
-    std::string pc1_2 = legacy_path + "/PC1.2";
-
-    bool has_dos = fileutils::fexists(pt_exe);
-    bool has_amiga = fileutils::fexists(pc1_2);
-
-    // Set new keys based on what we found
-    if (has_dos) {
-      config_["game_path_dos"] = legacy_path;
-    }
-    if (has_amiga) {
-      config_["game_path_amiga"] = legacy_path;
-    }
-
-    if (has_dos || has_amiga) {
-      config_.erase("game_path");
-      save_config();
-    }
-  }
+  return availability.english_available && availability.german_available;
 }

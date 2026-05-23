@@ -30,7 +30,7 @@ void init() {
 
 const std::string& base_dir() { return base_dir_; }
 
-std::string config_file_path() { return base_dir_ + "plegacy.conf"; }
+std::string config_file_path() { return base_dir_ + "settings.conf"; }
 
 std::string saves_dir() { return base_dir_ + "saves/"; }
 

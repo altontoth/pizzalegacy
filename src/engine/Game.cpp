@@ -38,7 +38,6 @@
 #include "engine/ui/CursorManager.h"
 #include "engine/ui/TooltipManager.h"
 #include "factories/CharacterFactory.h"
-#include "gfx/PaletteBank.h"
 #include "gfx/Surface.h"
 #include "resources/VgaLoader.h"
 #include "views/base/PaneledView.h"
@@ -100,12 +99,10 @@
 #include "views/screens/stock/StockMain.h"
 #include "views/ui/PopupManager.h"
 #include "views/ui/popups/ConfirmPopup.h"
-#include "views/viewers/AmigaBobViewer.h"
 #include "views/viewers/BobViewer.h"
 #include "views/viewers/CharacterViewer.h"
 #include "views/viewers/FontViewer.h"
 #include "views/viewers/PaletteView.h"
-#include "views/viewers/RawViewer.h"
 #include "views/viewers/SoundViewer.h"
 #include "views/viewers/VgaViewer.h"
 
@@ -182,10 +179,7 @@ Game::Game(LaunchOptions opts)
       game_path_override_(std::move(opts.game_path)),
       startup_console_line_(std::move(opts.console_line)),
       vga_viewer_path_(std::move(opts.vga_viewer)),
-      bob_viewer_path_(std::move(opts.bob_viewer)),
-      abob_viewer_path_(std::move(opts.abob_viewer)),
-      raw_viewer_path_(std::move(opts.raw_viewer)), raw_width_(opts.raw_width),
-      raw_height_(opts.raw_height) {}
+      bob_viewer_path_(std::move(opts.bob_viewer)) {}
 
 // Define this here instead of the header to let forward declares work inside
 // unique_ptrs
@@ -272,22 +266,10 @@ void Game::run() {
     vs.type = ViewerType::Vga;
     state.ui().push<ViewerState>(vs);
   }
-  else if (abob_viewer_path_) {
-    ViewerState vs;
-    vs.filename = *abob_viewer_path_;
-    vs.type = ViewerType::ABob;
-    state.ui().push<ViewerState>(vs);
-  }
   else if (bob_viewer_path_) {
     ViewerState vs;
     vs.filename = *bob_viewer_path_;
     vs.type = ViewerType::Bob;
-    state.ui().push<ViewerState>(vs);
-  }
-  else if (raw_viewer_path_) {
-    ViewerState vs;
-    vs.filename = *raw_viewer_path_;
-    vs.type = ViewerType::Raw;
     state.ui().push<ViewerState>(vs);
   }
   else if (!filename_.empty()) {
@@ -585,11 +567,6 @@ bool Game::init(int display_height, ConfigManager& config_manager) {
 
   // Seed the LCG from wall-clock time so each run differs.
   engine::random::seed(static_cast<uint32_t>(time(nullptr)));
-
-  // Set ConfigManager for VgaLoader and PaletteBank so they can determine
-  // graphics format
-  VgaLoader::config_manager(&config_manager);
-  gfx::PaletteBank::config_manager(&config_manager);
 
   // Set ConfigManager instance for global access (used by Platform and
   // TextEncoding)
@@ -1032,23 +1009,11 @@ void Game::open_viewer(GameState& state, const std::filesystem::path& path,
           std::make_unique<VgaViewer>(context, state, path.string());
       Logger::info("VGA viewer loaded successfully");
       break;
-    case ViewerType::ABob:
-      Logger::info("Loading ABOB file: {}", path.string());
-      current_view_ =
-          std::make_unique<AmigaBobViewer>(context, state, path.string());
-      Logger::info("ABOB viewer loaded successfully");
-      break;
     case ViewerType::Bob:
       Logger::info("Loading BOB file: {}", path.string());
       current_view_ =
           std::make_unique<BobViewer>(context, state, path.string());
       Logger::info("BOB viewer loaded successfully");
-      break;
-    case ViewerType::Raw:
-      Logger::info("Loading Raw image file: {}", path.string());
-      current_view_ = std::make_unique<RawViewer>(context, state, path.string(),
-                                                  raw_width_, raw_height_);
-      Logger::info("Raw viewer loaded successfully");
       break;
     case ViewerType::Auto:
       // Fallback to extension-based detection

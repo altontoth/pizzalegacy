@@ -40,12 +40,6 @@ namespace { // anonymous
          "file\n"
       << "  --bob <path>                           # open BOB viewer with "
          "file\n"
-      << "  --raw <path>                           # open Raw image viewer "
-         "with file\n"
-      << "  --width <pixels>                       # raw image width (for "
-         "--raw)\n"
-      << "  --height <pixels>                      # raw image height (for "
-         "--raw)\n"
       << "  --crt                                  # force CRT aspect ratio "
          "(4:3)\n"
       << "  -h, --help\n";
@@ -94,47 +88,11 @@ static Game::LaunchOptions parse_args(int argc, char* argv[]) {
       }
       opts.vga_viewer = argv[++i];
     }
-    else if (arg == "--abob") {
-      if (i + 1 >= argc) {
-        usage(argv[0], 2);
-      }
-      opts.abob_viewer = argv[++i];
-    }
     else if (arg == "--bob") {
       if (i + 1 >= argc) {
         usage(argv[0], 2);
       }
       opts.bob_viewer = argv[++i];
-    }
-    else if (arg == "--raw") {
-      if (i + 1 >= argc) {
-        usage(argv[0], 2);
-      }
-      opts.raw_viewer = argv[++i];
-    }
-    else if (arg == "--width") {
-      if (i + 1 >= argc) {
-        usage(argv[0], 2);
-      }
-      try {
-        opts.raw_width = std::stoi(argv[++i]);
-      }
-      catch (...) {
-        std::cerr << "error: --width requires an integer value.\n";
-        usage(argv[0], 2);
-      }
-    }
-    else if (arg == "--height") {
-      if (i + 1 >= argc) {
-        usage(argv[0], 2);
-      }
-      try {
-        opts.raw_height = std::stoi(argv[++i]);
-      }
-      catch (...) {
-        std::cerr << "error: --height requires an integer value.\n";
-        usage(argv[0], 2);
-      }
     }
     else if (arg == "console") {
       // Join the rest into a single console line.

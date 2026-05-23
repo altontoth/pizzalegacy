@@ -12,18 +12,14 @@ Website: [pizzalegacy.nl](https://pizzalegacy.nl)
 
 ## Getting the original game
 
-Pizza Legacy requires the asset files from the original DOS version of
-Pizza Tycoon / Pizza Connection. The game is available digitally and
+Pizza Legacy requires the asset files from the original English-language DOS
+version of Pizza Tycoon / Pizza Connection. The game is available digitally and
 frequently goes on sale for under a euro:
 
 - [GOG](https://www.gog.com/en/game/pizza_connection)
 - [Steam](https://store.steampowered.com/app/598990/Pizza_Connection/)
 
 If you have a legal copy of the original DOS game on disk, that works too.
-
-Before buying the game specifically for Pizza Legacy, please check the
-current status below — the project is playable but
-still in alpha and not yet feature-complete.
 
 The original game manual is available online at
 [pizzatycoon.org](https://www.pizzatycoon.org/p/manual.html).
@@ -35,12 +31,11 @@ Prebuilt releases of Pizza Legacy are available on Codeberg:
 
 ## Current status
 
-**Alpha.** The core gameplay loop is working: you can open restaurants, hire
-staff, design pizzas and compete with computer players. However, expect rough
-edges: multiple features are incomplete or completely missing, and crashes may
-occur. Development is active.
-
-See [pizzalegacy.nl](https://pizzalegacy.nl) for a detailed status overview.
+Pizza Legacy is fully playable in Free mode from start to finish. Restaurant
+management, the economic simulation, staff, recipes, advertising, and AI
+competitors are all working. A few systems are not yet implemented: staff
+training, in-restaurant walking animations, competitor attacks (weapons can be
+purchased but not used at opponents), the newspaper ads, and Mission mode.
 
 ## Engine features
 
@@ -124,9 +119,17 @@ game's data files.
 
 ### Cross-platform
 
-Builds on Linux, macOS, and Windows. SDL2 is confined to the engine layer; game
-logic never touches SDL directly. Platform-specific paths (config, saves,
-screenshots) are resolved automatically.
+Binary releases are available for Windows, Linux, macOS, and Haiku. The engine
+is designed to be highly portable and should build on most modern desktop platforms
+with SDL2 support, including the BSDs and other Unix-like systems.
+
+Only the primary release platforms are regularly tested, so support for BSD and
+other secondary platforms is currently best-effort, but portability is a major
+project goal and platform-specific code is kept to a minimum.
+
+Save data and configuration files are stored in the appropriate user data
+directories for each platform; the only external files accessed are the
+original game assets from the directory you selected.
 
 ### Enhancements
 
@@ -139,15 +142,16 @@ game. See docs/MODERNIZATIONS.md for a full list of intentional differences.
 ### Prerequisites
 
 - CMake 3.25+
-- [Ninja](https://ninja-build.org/) build system
+- [Ninja](https://ninja-build.org/) build system (optional)
 - A C++20 compiler: **GCC 13+**, **Clang 17+**, or **MSVC 2022+**.
-  GCC 12 works with the `libfmt-dev` library as a fallback for `std::format`. GCC 11 and below are not supported.
+  GCC 12 works with the libfmt-dev library as a fallback for std::format; GCC
+  11 and below are not supported.
 - SDL2 (>= 2.0.16)
 - libpng (for PNG screenshots)
 - zlib (save file compression)
 - [libADLMIDI](https://github.com/Wohlstand/libADLMIDI) for music support
   (optional); you can install it on your system or download the sources and put them in
-  `third_party/libadlmidi/` and it wil be picked up during the build
+  `third_party/libadlmidi/` and it will be picked up during the build
   automatically
 
 Platform-specific setup:
@@ -172,14 +176,13 @@ cmake --build build -j
 
 ### Run
 
-When you launch Pizza Legacy you will be prompted for the original Pizza Tycoon / Pizza Connection
-installation directory; point to the directory that contains PT.EXE.
+When you launch Pizza Legacy you will be prompted for the original game's
+installation directory. Point it to the directory containing PT.EXE.
 
 ## History
 
 Pizza Legacy has been in development since 2010 as a hobby project. Over
-these years the project has gone through several technology migrations,
-some of which might have left marks on the code or architecture.
+these years the project has gone through several technology migrations:
 
 - C++ standard: from pre-C++11 through C++11, C++17, and now C++20
 - Build system: from a hand-written Makefile to autotools to CMake
@@ -192,11 +195,10 @@ some of which might have left marks on the code or architecture.
 ## Contributing
 
 Questions and bug reports are welcome via [Codeberg
-Issues](https://codeberg.org/cowomaly/pizzalegacy/issues), though the project
-has many known rough edges that will be addressed as core features are
-completed. Development currently happens offline and updates are pushed
-periodically, so pull requests may not be reviewed immediately. For larger
-contributions, it's best to open an issue first to discuss the approach.
+Issues](https://codeberg.org/cowomaly/pizzalegacy/issues). Development
+currently happens offline and updates are pushed periodically, so pull requests
+may not be reviewed immediately. For larger contributions, it's best to open an
+issue first to discuss the approach.
 
 ## License
 

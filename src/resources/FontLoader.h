@@ -23,22 +23,13 @@ private:
   [[nodiscard]] static std::vector<uint8_t>
   load_file_bytes(std::string_view fname);
 
-  [[nodiscard]] static std::string
-  dos_to_amiga_font_name(std::string_view dos_name);
-  [[nodiscard]] static std::optional<std::string>
-  read_amiga_font_path(const std::string& font_file);
-  [[nodiscard]] static std::optional<std::vector<uint8_t>>
-  try_load_amiga_font(std::string_view fname);
-
   struct ParsedFont {
     FontHeader header;
     std::vector<uint8_t> bitmap;              // row-major, as stored
     std::vector<CharacterPosition> positions; // one per glyph
-    bool is_amiga{false};
   };
 
   [[nodiscard]] static ParsedFont parse(std::span<const uint8_t> bytes);
-  [[nodiscard]] static ParsedFont parse_amiga(std::span<const uint8_t> bytes);
 
   [[nodiscard]] static int render_scale(FontFace face) noexcept {
     return face == FontFace::MINI ? 1 : 2;

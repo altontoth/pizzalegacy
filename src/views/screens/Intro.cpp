@@ -15,7 +15,6 @@
 #include "gfx/ColorIndex.h"
 #include "resources/FontManager.h"
 #include "resources/util/FileUtils.h"
-#include "resources/util/Platform.h"
 
 constexpr int ticks_per_logo = 50;
 
@@ -40,22 +39,20 @@ Intro::Intro(GameContext& context, GameState& state)
       {12, {45}},                // pc graphics
       {46, {47}},                // reimplementation
   };
-  if (!platform::is_amiga()) {
-    credit_mapping_.insert(credit_mapping_.end(),
-                           {
-                               {12, {45}},                 // distribution
-                               {13, {}},                   // FOR MICROPROSE
-                               {14, {47}},                 // producer
-                               {15, {48, 49, 50}},         // graphic artists
-                               {16, {51, 52, 53, 54, 55}}, // qa
-                               {17, {56, 57, 58, 59, 60, 61}}, // qa
-                               {18, {62}},         // additional design
-                               {19, {63, 64, 65}}, // translation
-                               {20, {66, 67, 68}}, // publishers
-                               {21, {69}},         // publishers
-                               {70, {71}},         // reimplementation
-                           });
-  }
+  credit_mapping_.insert(credit_mapping_.end(),
+                         {
+                             {12, {45}},                     // distribution
+                             {13, {}},                       // FOR MICROPROSE
+                             {14, {47}},                     // producer
+                             {15, {48, 49, 50}},             // graphic artists
+                             {16, {51, 52, 53, 54, 55}},     // qa
+                             {17, {56, 57, 58, 59, 60, 61}}, // qa
+                             {18, {62}},         // additional design
+                             {19, {63, 64, 65}}, // translation
+                             {20, {66, 67, 68}}, // publishers
+                             {21, {69}},         // publishers
+                             {70, {71}},         // reimplementation
+                         });
 
   credit_lines_ = fileutils::load_text_lines("t/credits.e");
   credit_lines_.push_back("Open source reimplementation");
@@ -163,7 +160,7 @@ void Intro::render(const RenderContext& ctx) {
     break;
   case Logo::CREDITS: {
     ctx.surface->palette(PaletteHandle{39});
-    ctx.surface->fill(gfx::ColorIndex{2}); // Same index for both DOS and Amiga
+    ctx.surface->fill(gfx::ColorIndex{2});
     auto& entry = credit_mapping_[current_credit_line_];
     int x = 0;
     int y = 128;

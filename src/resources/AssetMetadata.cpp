@@ -5,19 +5,10 @@
  */
 
 #include "resources/AssetMetadata.h"
-#include "resources/util/Platform.h"
 
 namespace resources {
 
-uint8_t AssetMetadata::palette() const {
-  if (platform::is_amiga() && amiga_palette.has_value()) {
-    return *amiga_palette;
-  }
-  if (dos_palette.has_value()) {
-    return *dos_palette;
-  }
-  return 0;
-}
+uint8_t AssetMetadata::palette() const { return dos_palette.value_or(0); }
 
 const std::unordered_map<std::string, AssetMetadata>
     AssetMetadataRegistry::metadata_ = {

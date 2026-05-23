@@ -32,7 +32,6 @@
 #include "engine/ui/ICursorManager.h"
 #include "gfx/Draw.h"
 #include "gfx/Surface.h"
-#include "resources/util/Platform.h"
 #include "views/base/ViewDefs.h"
 #include "views/screens/StatusDisplay.h"
 #include "views/screens/city_view/CityViewCommon.h"
@@ -177,9 +176,7 @@ CityView::CityView(GameContext& context, GameState& state, core::CityId id)
     };
   }
 
-  if (!platform::is_amiga()) {
-    setup_water_animation();
-  }
+  setup_water_animation();
   status_controller_.show_city_default({.state = &state_, .city = city_});
 }
 
@@ -669,7 +666,7 @@ void CityView::render(const RenderContext& ctx) {
 }
 
 void CityView::render_map_zoom_close(const RenderContext& ctx) {
-  ctx.surface->fill(platform::is_amiga() ? 1 : 240);
+  ctx.surface->fill(240);
 
   // zoom/tiles
   const uint8_t multiplier = BASE_MAP_ZOOM_MULTIPLIER;
@@ -1103,9 +1100,7 @@ void CityView::set_active_tab(CityViewTabType type) {
 void CityView::render_tabs(const RenderContext& ctx) {
   show_tabs(ctx);
 
-  const std::array<uint8_t, 3> colors =
-      platform::is_amiga() ? std::array<uint8_t, 3>{13, 14, 15}
-                           : std::array<uint8_t, 3>{246, 249, 251};
+  const std::array<uint8_t, 3> colors = {246, 249, 251};
 
   int index = 0;
   for (const CityViewTab& tab : tabs_) {
@@ -1124,7 +1119,7 @@ void CityView::render_tabs(const RenderContext& ctx) {
       tab_label = "CONTROL";
       break;
     }
-    const int text_color = platform::is_amiga() ? 255 : 240;
+    const int text_color = 240;
 
     ctx.surface->fill_rect(r, color_idx);
     context_.font->render_text_onto(*ctx.surface, tab_label,
@@ -1172,7 +1167,7 @@ void CityView::draw_cell_with_pattern(Surface& map, ViewRect cell,
   // Line pattern constants
   const int line_gap = 6;  // Number of normal pixels before black
   const int line_size = 2; // Size of the black "dot"
-  const uint8_t line_color = platform::is_amiga() ? 255 : 240;
+  const uint8_t line_color = 240;
 
   const int zoom = camera_.zoom();
 
@@ -1542,9 +1537,6 @@ void CityView::store_state_in_city(CityViewReentryMode entry_mode) {
 }
 
 void CityView::update_water_palette(const RenderContext& ctx) {
-  if (platform::is_amiga()) {
-    return;
-  }
   // Start from the season palette (which already has indices 28-31 overridden)
   // and apply water cycling on top
   auto pal = season_palette_;
@@ -1556,9 +1548,6 @@ void CityView::update_water_palette(const RenderContext& ctx) {
 }
 
 void CityView::setup_water_animation() {
-  if (platform::is_amiga()) {
-    return;
-  }
   static constexpr std::array<uint8_t, 4> WATER_INDICES = {140, 141, 142, 143};
 
   static constexpr std::array<std::array<uint8_t, 4>, 4> WATER_CYCLES = {{

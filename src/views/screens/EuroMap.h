@@ -41,7 +41,7 @@ enum class Destination {
 };
 
 /// This class is called EuroMap despite also having a chunk of the US in there
-/// because the Amiga version of the game only had Europe.
+/// because the original German version of the game only had Europe.
 class EuroMap : public View, public debug::AutoLabel<EuroMap> {
 public:
   EuroMap(GameContext& context, GameState& state, MapMode mode,

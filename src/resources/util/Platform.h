@@ -11,9 +11,7 @@
 
 namespace platform {
 
-enum class AssetFormat { DOS, AMIGA };
-bool is_amiga();
-bool is_dos();
+enum class AssetFormat { ENGLISH, GERMAN };
 void init_asset_format();
 AssetFormat asset_format();
 Endian endianness();

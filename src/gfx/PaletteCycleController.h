@@ -6,7 +6,6 @@
 
 #pragma once
 
-#include "resources/util/Platform.h"
 struct PaletteCycleController {
   enum class State {
     STOPPED,
@@ -16,7 +15,7 @@ struct PaletteCycleController {
     DISABLED,
   };
 
-  State state = platform::is_amiga() ? State::DISABLED : State::STOPPED;
+  State state = State::STOPPED;
   int frame_index = 0;
   int tick_counter = 0;
   int ticks_per_frame = 10;

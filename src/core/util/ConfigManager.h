@@ -12,7 +12,7 @@
 
 class ConfigManager {
 public:
-  explicit ConfigManager(std::string filename = "./plegacy.conf");
+  explicit ConfigManager(std::string filename = "./settings.conf");
 
   bool load_config();
 
@@ -29,10 +29,10 @@ public:
   GameOptions load_options() const;
 
   struct FormatAvailability {
-    bool dos_available;
-    bool amiga_available;
-    std::string dos_path;
-    std::string amiga_path;
+    bool english_available;
+    bool german_available;
+    std::string english_path;
+    std::string german_path;
   };
 
   std::string game_path_for_format(const std::string& format) const;

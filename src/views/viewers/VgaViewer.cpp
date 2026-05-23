@@ -13,7 +13,6 @@
 #include "gfx/Surface.h"
 #include "resources/AssetMetadata.h"
 #include "resources/FontManager.h"
-#include "resources/util/Platform.h"
 #include "views/base/ViewDefs.h"
 
 constexpr int camctrl_amount_px_x = 10;
@@ -127,12 +126,8 @@ void VgaViewer::apply_palette_rotation() {
   // Create rotated palette
   std::vector<gfx::Color> rotated_colors = base_colors;
 
-  // For Amiga mode, rotate only the first 32 colors
-  int max_rotate = platform::is_amiga() ? 32 : 256;
-
-  for (int i = 0; i < max_rotate; ++i) {
-    int src_index = (i + palette_offset_) % max_rotate;
-    rotated_colors[i] = base_colors[src_index];
+  for (int i = 0; i < 256; ++i) {
+    rotated_colors[i] = base_colors[(i + palette_offset_) % 256];
   }
 
   // Apply rotated palette to image
@@ -151,10 +146,8 @@ void VgaViewer::render(const RenderContext& ctx) {
     auto base_colors =
         gfx::PaletteBank::instance().colors(PaletteHandle{palette_});
     std::vector<gfx::Color> rotated_colors = base_colors;
-    int max_rotate = platform::is_amiga() ? 32 : 256;
-    for (int i = 0; i < max_rotate; ++i) {
-      int src_index = (i + palette_offset_) % max_rotate;
-      rotated_colors[i] = base_colors[src_index];
+    for (int i = 0; i < 256; ++i) {
+      rotated_colors[i] = base_colors[(i + palette_offset_) % 256];
     }
     ctx.surface->colors(rotated_colors);
   }

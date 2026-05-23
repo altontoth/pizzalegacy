@@ -247,10 +247,10 @@ Surface PlayerProfile::create_overview(const Player* player) {
   const int text_color = 240;
 
   auto game_mode = state_.game_mode();
-  if (!state_.options().fix_legacy_bugs && game_mode == GameMode::QUICKSTART) {
-    // In the original it always shows "Free mode". Not sure it's a bug but I
-    // consider it to be one (Quick start was not present on the Amiga version,
-    // so I assume it's an oversight after adding it for the DOS version).
+  if (game_mode == GameMode::QUICKSTART) {
+    // In the original it always shows "Free mode", I think it's just to
+    // differentiate between mission and free mode, so quick start is just free
+    // mode for this purpose.
     game_mode = GameMode::FREEMODE;
   }
 

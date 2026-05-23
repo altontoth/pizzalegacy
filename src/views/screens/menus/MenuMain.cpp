@@ -23,12 +23,6 @@ using namespace views::ui::menu;
 MenuMain::MenuMain(GameContext& context, GameState& state)
     : Menu(context, state, ViewPoint{0, 210}, -8) {
   constexpr int space_between_lines = 24;
-  if (platform::is_amiga()) {
-    context_.popup->origin({50, 50});
-    context_.popup->create<AlertPopup>(
-        "Amiga assets are not|supported and the game|will crash");
-  }
-
   add_menu_item(std::make_unique<TextMenuItem>(
       context, "Old Game",
       [&state] { state.ui().push<ScreenTag>(ScreenTag::Kind::MenuGameLoad); },

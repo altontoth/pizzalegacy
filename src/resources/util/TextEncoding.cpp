@@ -53,7 +53,6 @@ std::string convert_platform_text(std::string_view input) {
   if (utf8::find_invalid(input.begin(), input.end()) == input.end()) {
     return std::string(input);
   }
-  // Both Amiga and DOS assets use ISO-8859-1 for extended characters
   return iso8859_1_to_utf8(input);
 }
 

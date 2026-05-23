@@ -16,21 +16,24 @@ namespace resources {
 
 // Metadata for legacy asset files (VGA, BOB) from original game.
 // Stores per-file information that isn't embedded in the file format:
-// Palette indexes (different for DOS vs Amiga versions)
-// Dimensions (for headerless Amiga bitplane files)
+// Palette index and dimensions.
 struct AssetMetadata {
   std::optional<uint8_t> dos_palette;
-  std::optional<uint8_t> amiga_palette;
-
-  // Dimensions (primarily for amiga vga files)
   std::optional<Size> size;
 
-  // Get the palette for the currently active format
+  // Three-arg constructor for backwards compatibility with {p, p2, size}
+  // initializers.
+  AssetMetadata(std::optional<uint8_t> p, std::optional<uint8_t> /*unused*/,
+                std::optional<Size> s = std::nullopt)
+      : dos_palette(p), size(s) {}
+
+  AssetMetadata(std::optional<uint8_t> p, std::optional<Size> s = std::nullopt)
+      : dos_palette(p), size(s) {}
+
   [[nodiscard]] uint8_t palette() const;
 
   [[nodiscard]] bool has_metadata() const {
-    return dos_palette.has_value() || amiga_palette.has_value() ||
-           size.has_value();
+    return dos_palette.has_value() || size.has_value();
   }
 };
 

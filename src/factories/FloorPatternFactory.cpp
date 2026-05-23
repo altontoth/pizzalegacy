@@ -9,12 +9,10 @@
 #include "engine/Fatal.h"
 #include "factories/SupplierFactory.h"
 #include "resources/util/FileUtils.h"
-#include "resources/util/Platform.h"
 
 std::unordered_map<SupplierID, std::vector<FloorPattern>>
     FloorPatternFactory::by_supplier_{};
-std::string FloorPatternFactory::kachinfo_path_ =
-    "d/kachinfo" + std::string(platform::is_amiga() ? "" : ".pc");
+std::string FloorPatternFactory::kachinfo_path_ = "d/kachinfo.pc";
 
 namespace {
 std::vector<uint8_t> slurp(const std::string& path) {

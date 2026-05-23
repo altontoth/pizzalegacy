@@ -11,7 +11,6 @@
 #include <numeric>
 #include "engine/Fatal.h"
 #include "gfx/PaletteBank.h"
-#include "resources/util/Platform.h"
 
 namespace gfx {
 
@@ -72,105 +71,31 @@ inline bool Surface::in_bounds(ViewPoint p) const noexcept {
   return p.x >= 0 && p.x < width_ && p.y >= 0 && p.y < height_;
 }
 
-/* Set surface palette - clears multi-palette state */
 void Surface::palette(PaletteHandle h) noexcept {
   palette_ = h;
-  // Clear multi-palette segments and cached palette when changing primary
-  // palette
-  palette_segments_.clear();
   custom_palette_.reset();
-}
-
-/* translate() - Get or insert palette segment, returns base index */
-uint8_t Surface::translate(std::optional<PaletteHandle> pal) {
-  // Skip multi-palette logic for DOS assets (256-color palettes)
-  if (!platform::is_amiga()) {
-    return 0;
-  }
-
-  // Determine which palette to use
-  PaletteHandle actual_pal;
-  if (pal.has_value()) {
-    // Explicit palette provided
-    actual_pal = *pal;
-  }
-  else if (palette_.has_value()) {
-    // Use surface's primary palette
-    actual_pal = *palette_;
-  }
-  else {
-    // Surface has no palette set yet - this shouldn't happen in normal use
-    // but we'll handle it gracefully by using palette 0
-    actual_pal = PaletteHandle{0};
-  }
-
-  // If this is the first time setting a palette on an uninitialized surface,
-  // update the primary palette before adding to segments
-  if (!palette_.has_value() && palette_segments_.empty()) {
-    palette_ = actual_pal;
-  }
-
-  // Check if palette already exists in segments
-  for (size_t i = 0; i < palette_segments_.size(); ++i) {
-    if (palette_segments_[i].id == actual_pal.id) {
-      return static_cast<uint8_t>(i * 32);
-    }
-  }
-
-  // Add new segment if we have space (7 max, index 255 reserved for black)
-  if (palette_segments_.size() >= 7) {
-    fatal("Surface: Cannot add more than 7 palette segments "
-          "(224 colors max, index 255 reserved for black)");
-  }
-
-  uint8_t base_index = static_cast<uint8_t>(palette_segments_.size() * 32);
-  palette_segments_.push_back(actual_pal);
-  return base_index;
 }
 
 /* put a pixel at a specific point */
 void Surface::put(ViewPoint p, ColorIndex idx,
                   std::optional<PaletteHandle> pal) {
-  // Logger::debug("Surface::put");
+  (void)pal;
   if (!in_bounds(p)) {
     return;
   }
-
-  uint8_t pixel_index = idx.get();
-
-  // On Amiga, only remap indices 0-31 (palette segment colors)
-  // Indices >= 32 are absolute (UI colors, etc.) and don't get remapped
-  if (platform::is_amiga() && pixel_index > 0 && pixel_index < 32) {
-    uint8_t base = translate(pal);
-    pixels_[(p.y * pitch_) + p.x] = base + pixel_index;
-  }
-  else {
-    // DOS or absolute index: use as-is
-    pixels_[(p.y * pitch_) + p.x] = pixel_index;
-  }
+  pixels_[(p.y * pitch_) + p.x] = idx.get();
 }
 
 /* fill, all the pixels will be updated */
 void Surface::fill(ColorIndex idx, std::optional<PaletteHandle> pal) {
-  // Logger::debug("Surface::fill");
-
-  uint8_t pixel_index = idx.get();
-  uint8_t final_index = pixel_index;
-
-  // On Amiga, only remap indices 0-31 (palette segment colors)
-  // Indices >= 32 are absolute (UI colors, etc.) and don't get remapped
-  if (platform::is_amiga() && pixel_index > 0 && pixel_index < 32) {
-    uint8_t base = translate(pal);
-    final_index = base + pixel_index;
-  }
-
-  std::memset(pixels_.data(), final_index, height_ * pitch_);
+  (void)pal;
+  std::memset(pixels_.data(), idx.get(), height_ * pitch_);
 }
 
 /* fill_rect, give it a rect and all the pixels in it will be updated */
 void Surface::fill_rect(ViewRect r, ColorIndex idx,
                         std::optional<PaletteHandle> pal) {
-  // Logger::debug("Surface::fill_rect");
+  (void)pal;
   if (r.w <= 0 || r.h <= 0) {
     return;
   }
@@ -180,44 +105,13 @@ void Surface::fill_rect(ViewRect r, ColorIndex idx,
   const int x1 = std::min(width_, r.x + r.w);
   const int y1 = std::min(height_, r.y + r.h);
 
-  uint8_t pixel_index = idx.get();
-  uint8_t final_index = pixel_index;
-
-  // On Amiga, only remap indices 0-31 (palette segment colors)
-  // Indices >= 32 are absolute (UI colors, etc.) and don't get remapped
-  if (platform::is_amiga() && pixel_index > 0 && pixel_index < 32) {
-    uint8_t base = translate(pal);
-    final_index = base + pixel_index;
-  }
-
   for (int y = y0; y < y1; ++y) {
-    std::fill_n(&pixels_[y * pitch_ + x0], x1 - x0, final_index);
+    std::fill_n(&pixels_[y * pitch_ + x0], x1 - x0, idx.get());
   }
 }
 
 // blit  (no transparency / colorkey yet: copy all bytes)
 void Surface::blit_raw(const Surface& src, ViewPoint dst) {
-#ifdef DEBUG
-  bool has_transparency = std::any_of(pixels_.begin(), pixels_.end(),
-                                      [](uint8_t c) { return c == 0; });
-  if (has_transparency) {
-    // Logger::warn("Calling blit_raw with a surface that has 0!");
-  }
-#endif
-  // Logger::debug("Surface::blit_raw");
-
-  // For multi-palette sources, add all palette segments to destination
-  if (platform::is_amiga() && !src.disable_palette_translation_ &&
-      !src.palette_segments_.empty()) {
-    for (const auto& segment : src.palette_segments_) {
-      translate(segment);
-    }
-  }
-
-  // Get base index for source palette (Amiga multi-palette support)
-  // Skip translation if source has it disabled (e.g., font atlases)
-  uint8_t base = src.disable_palette_translation_ ? 0 : translate(src.palette_);
-
   for (int sy = 0; sy < src.height_; ++sy) {
     const int dy = dst.y + sy;
     if (dy < 0 || dy >= height_) {
@@ -242,24 +136,7 @@ void Surface::blit_raw(const Surface& src, ViewPoint dst) {
 
     const uint8_t* src_row = &src.pixels_[(sy * src.pitch_) + sx];
     uint8_t* dst_row = &pixels_[(dy * pitch_) + dx];
-
-    // If not Amiga or base is 0, use fast memcpy
-    if (!platform::is_amiga() || base == 0) {
-      std::memcpy(dst_row, src_row, static_cast<std::size_t>(copy_w));
-    }
-    else {
-      // Remap each pixel to the correct palette segment
-      // Only remap indices 0-31 (palette colors); >= 32 are absolute
-      for (int i = 0; i < copy_w; ++i) {
-        uint8_t src_pixel = src_row[i];
-        if (src_pixel > 0 && src_pixel < 32) {
-          dst_row[i] = base + src_pixel;
-        }
-        else {
-          dst_row[i] = src_pixel; // transparent (0) or absolute index (>=32)
-        }
-      }
-    }
+    std::memcpy(dst_row, src_row, static_cast<std::size_t>(copy_w));
   }
 }
 
@@ -309,10 +186,6 @@ void Surface::blit(const Surface& src, ViewRect s, ViewPoint d,
     return;
   }
 
-  // Get base index for source palette (Amiga multi-palette support)
-  // Skip translation if source has it disabled (e.g., font atlases)
-  uint8_t base = src.disable_palette_translation_ ? 0 : translate(src.palette_);
-
   // Transfer line by line
   for (int row = 0; row < s.h; ++row) {
     const uint8_t* src_row = &src.pixels_[(s.y + row) * src.pitch_ + s.x];
@@ -321,14 +194,7 @@ void Surface::blit(const Surface& src, ViewRect s, ViewPoint d,
     for (int col = 0; col < s.w; ++col) {
       uint8_t pix = src_row[col];
       if (pix != transparent) {
-        // On Amiga, only remap indices 1-31 (palette colors); 0 and >=32 are
-        // absolute
-        if (platform::is_amiga() && pix > 0 && pix < 32) {
-          dst_row[col] = base + pix;
-        }
-        else {
-          dst_row[col] = pix; // DOS, transparent (0), or absolute index (>=32)
-        }
+        dst_row[col] = pix;
       }
     }
   }
@@ -337,12 +203,6 @@ void Surface::blit(const Surface& src, ViewRect s, ViewPoint d,
 /* Blit masked, so respect transparency */
 void Surface::blit_masked(const Surface& src, ViewPoint dst,
                           uint8_t transparent) {
-  // Logger::debug("Surface::blit_masked");
-
-  // Get base index for source palette (Amiga multi-palette support)
-  // Skip translation if source has it disabled (e.g., font atlases)
-  uint8_t base = src.disable_palette_translation_ ? 0 : translate(src.palette_);
-
   for (int sy = 0; sy < src.height_; ++sy) {
     int dy = dst.y + sy;
     if (dy < 0 || dy >= height_) {
@@ -357,15 +217,7 @@ void Surface::blit_masked(const Surface& src, ViewPoint dst,
 
       uint8_t pixel = src.pixels_[sy * src.pitch_ + sx];
       if (pixel != transparent) {
-        // On Amiga, only remap indices 1-31 (palette colors); 0 and >=32 are
-        // absolute
-        if (platform::is_amiga() && pixel > 0 && pixel < 32) {
-          pixels_[dy * pitch_ + dx] = base + pixel;
-        }
-        else {
-          pixels_[dy * pitch_ + dx] =
-              pixel; // DOS, transparent (0), or absolute index (>=32)
-        }
+        pixels_[dy * pitch_ + dx] = pixel;
       }
     }
   }
@@ -416,28 +268,6 @@ std::span<const uint8_t> Surface::pixels() const noexcept {
 
 const std::vector<Color>& Surface::colors() const {
   if (!custom_palette_) {
-    // If we have multiple palette segments (Amiga mode), build combined palette
-    if (platform::is_amiga() && !palette_segments_.empty()) {
-      // Need to cast away const to cache the combined palette
-      auto* mutable_this = const_cast<Surface*>(this);
-      mutable_this->custom_palette_ = std::vector<Color>(256);
-
-      // Fill each 32-color segment
-      for (size_t i = 0; i < palette_segments_.size(); ++i) {
-        const auto& segment_colors =
-            PaletteBank::instance().colors(palette_segments_[i]);
-        // Copy first 32 colors of this palette to the appropriate segment
-        for (size_t c = 0; c < 32 && c < segment_colors.size(); ++c) {
-          (*mutable_this->custom_palette_)[(i * 32) + c] = segment_colors[c];
-        }
-      }
-      // Index 255 is always opaque black for Amiga backgrounds
-      // This is a hack because our surfaces don't start black. Not sure
-      // how they start even, can't be bothered to figure that out now.
-      (*mutable_this->custom_palette_)[255] = Color{0, 0, 0};
-      return *mutable_this->custom_palette_;
-    }
-
     return PaletteBank::instance().colors(palette_.value_or(PaletteHandle{0}));
   }
   return *custom_palette_;
@@ -445,25 +275,6 @@ const std::vector<Color>& Surface::colors() const {
 
 std::vector<Color>& Surface::colors() {
   if (!custom_palette_) {
-    // If we have multiple palette segments (Amiga mode), build combined palette
-    if (platform::is_amiga() && !palette_segments_.empty()) {
-      custom_palette_ = std::vector<Color>(256);
-
-      // Fill each 32-color segment
-      for (size_t i = 0; i < palette_segments_.size(); ++i) {
-        const auto& segment_colors =
-            PaletteBank::instance().colors(palette_segments_[i]);
-        // Copy first 32 colors of this palette to the appropriate segment
-        for (size_t c = 0; c < 32 && c < segment_colors.size(); ++c) {
-          (*custom_palette_)[(i * 32) + c] = segment_colors[c];
-        }
-      }
-      // Index 255 is always opaque black for Amiga backgrounds
-      (*custom_palette_)[255] = Color{0, 0, 0};
-      return *custom_palette_;
-    }
-
-    // Create custom palette based on current palette handle
     custom_palette_ =
         PaletteBank::instance().colors(palette_.value_or(PaletteHandle{0}));
   }
@@ -476,9 +287,8 @@ void Surface::colors(const std::vector<Color>& custom_palette) {
 
 void Surface::clear_custom_palette() { custom_palette_.reset(); }
 
-void Surface::clear_palette_segments() {
+void Surface::clear_palette_state() {
   palette_ = std::nullopt;
-  palette_segments_.clear();
   custom_palette_.reset();
 }
 

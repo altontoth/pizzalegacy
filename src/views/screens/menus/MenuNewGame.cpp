@@ -8,7 +8,6 @@
 
 #include <cassert>
 #include "core/state/GameState.h"
-#include "resources/util/Platform.h"
 #include "views/screens/menus/MenuTheme.h"
 #include "views/ui/widgets/PositionMarkerMenuItem.h"
 #include "views/ui/widgets/SpacerMenuItem.h"
@@ -47,17 +46,15 @@ MenuNewGame::MenuNewGame(GameContext& context, GameState& state)
       face, style, sel_style));
   add_menu_item(std::make_unique<SpacerMenuItem>(context, space_between_lines));
 
-  if (!platform::is_amiga()) {
-    add_menu_item(std::make_unique<TextMenuItem>(
-        context, "Quickstart",
-        [&state] {
-          Logger::debug("Set game mode to Quickstart");
-          state.begin_initialization();
-          state.initializer().mode = GameMode::QUICKSTART;
-          state.ui().push<ScreenTag>(ScreenTag::Kind::MenuQuickstart);
-        },
-        face, style, sel_style));
-  }
+  add_menu_item(std::make_unique<TextMenuItem>(
+      context, "Quickstart",
+      [&state] {
+        Logger::debug("Set game mode to Quickstart");
+        state.begin_initialization();
+        state.initializer().mode = GameMode::QUICKSTART;
+        state.ui().push<ScreenTag>(ScreenTag::Kind::MenuQuickstart);
+      },
+      face, style, sel_style));
 
   add_menu_item(std::make_unique<PositionMarkerMenuItem>(context, 270, 244));
   add_menu_item(std::make_unique<TextMenuItem>(

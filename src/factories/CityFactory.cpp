@@ -24,7 +24,6 @@
 #include "engine/Fatal.h"
 #include "engine/Logger.h"
 #include "resources/util/FileUtils.h"
-#include "resources/util/Platform.h"
 #include "resources/util/TextEncoding.h"
 
 using namespace core;
@@ -70,7 +69,7 @@ std::unique_ptr<City> CityFactory::create_city(
     core::CityId cid,
     const std::vector<std::pair<uint8_t, int>>& player_chars) {
   CityFactory factory;
-  factory.e = platform::is_amiga() ? Endian::Big : Endian::Little;
+  factory.e = Endian::Little;
   auto id = cid.value;
   factory.load_color_definition();
   factory.load_city_data(id);
@@ -92,8 +91,7 @@ void CityFactory::load_color_definition() {
 
 void CityFactory::load_map_data(int city_id) {
   char filename[15];
-  snprintf(filename, sizeof(filename),
-           platform::is_amiga() ? "map%d.dat" : "dat/map%d.dat", city_id);
+  snprintf(filename, sizeof(filename), "dat/map%d.dat", city_id);
   std::string path(filename);
   std::ifstream is = fileutils::open(path);
 
@@ -132,8 +130,7 @@ void CityFactory::load_map_data(int city_id) {
 
 void CityFactory::load_city_data(int city_id) {
   char filename[16];
-  snprintf(filename, sizeof(filename),
-           platform::is_amiga() ? "city%d.dat" : "dat/city%d.pc", city_id);
+  snprintf(filename, sizeof(filename), "dat/city%d.pc", city_id);
   std::string path(filename);
   std::ifstream is = fileutils::open(path);
 
@@ -705,8 +702,7 @@ void CityFactory::populate_properties(City& city) {
 }
 
 void CityFactory::load_district_bez(int id) {
-  std::string path =
-      (platform::is_amiga() ? "bez" : "dat/bez") + std::to_string(id) + ".dat";
+  std::string path = "dat/bez" + std::to_string(id) + ".dat";
   std::ifstream is = fileutils::open(path);
 
   district_bez_.fill(0);
