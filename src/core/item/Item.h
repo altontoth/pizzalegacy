@@ -45,7 +45,7 @@ constexpr std::string_view to_string(Item i) noexcept {
   case Item::Rats:
     return "Rats";
   case Item::StinkBomb:
-    return "StinkBomb";
+    return "Stink Bomb";
   case Item::FlameThrower:
     return "Flamethrower";
   case Item::Chemicals:

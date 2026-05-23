@@ -22,6 +22,7 @@
 #include "core/food/PlayerRecipes.h"
 #include "core/inventory/Inventory.h"
 #include "core/marketing/AdvertisingCampaign.h"
+#include "core/status/StatusHub.h"
 #include "core/supply/ActiveContract.h"
 #include "core/time/TimeOfDay.h"
 
@@ -172,6 +173,13 @@ public:
   std::optional<int> holiday_days_left() const { return holiday_days_left_; }
   void decrement_holiday_day();
 
+  // Pending notifications to be shown at the start of this player's next turn.
+  void queue_notification(StatusMsg m);
+  std::vector<StatusMsg> take_pending_notifications();
+  const std::vector<StatusMsg>& pending_notifications() const {
+    return pending_notifications_;
+  }
+
 private:
   core::PlayerId id_;
   core::character::Character character_;
@@ -208,4 +216,5 @@ private:
   uint8_t competition_willingness_{0};
   uint8_t competition_win_count_{0};
   std::vector<ActiveContract> contracts_;
+  std::vector<StatusMsg> pending_notifications_;
 };

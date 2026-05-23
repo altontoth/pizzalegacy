@@ -72,6 +72,7 @@ static std::string probe_for_dos_game(const std::string& base) {
   std::vector<fs::path> candidates;
   auto add = [&](auto&& p) { candidates.push_back(b / p); };
 
+  add(".");
   add("game");
   add("Pizza Connection");
   add("Pizza Connection/game");
@@ -246,11 +247,6 @@ ConfigManager::game_path_for_format(const std::string& format) const {
       (format == "german") ? "game_path_german" : "game_path_english";
 
   auto it = config_.find(key);
-  if (it != config_.end()) {
-    return it->second;
-  }
-
-  it = config_.find("game_path");
   if (it != config_.end()) {
     return it->second;
   }

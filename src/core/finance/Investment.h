@@ -58,7 +58,7 @@ public:
   core::BankId bank_id() const { return bank_id_; }
   core::CityId city_id() const { return city_id_; }
   Money amount() const { return amount_; }
-  uint8_t return_rate() const { return return_rate_; }
+  int return_rate() const { return return_rate_; }
   int start_months() const { return months_; }
   int months_left() const { return months_left_; }
   Money monthly_return() const { return monthly_return_; }

@@ -92,6 +92,7 @@ private:
   void render_scene_passes();
 
   void render_sabotage(const RenderContext& ctx);
+  void execute_sabotage_attack(core::item::Item item);
 
   void draw_floor_tiles(ViewRect interior);
 

@@ -7,7 +7,6 @@
 #pragma once
 
 #include <algorithm>
-#include <cmath>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -100,7 +99,7 @@ struct CharacterData : public RawRenderable {
 
     /* scale and round */
     int pay = (base * factor) / 100;
-    pay = math::round_up_to_next_power10<1>(pay);
+    pay = static_cast<int>(math::round_up_to_next_power10<1>(pay));
 
     return pay;
   }
@@ -147,10 +146,10 @@ public:
   Money starting_money() const { return data_->starting_money; };
   uint8_t gender_flag() const { return data_->gender_flag; };
   uint32_t popularity_multiplier() const {
-    return std::floor(popularity_ / 2) + MULTIPLIER_CONSTANT;
+    return popularity_ / 2 + MULTIPLIER_CONSTANT;
   };
   uint32_t courage_multiplier() const {
-    return std::floor(courage_ / 2) + MULTIPLIER_CONSTANT;
+    return courage_ / 2 + MULTIPLIER_CONSTANT;
   };
 
   // Returns a CharacterData snapshot with current runtime values

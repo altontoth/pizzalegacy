@@ -52,6 +52,7 @@ set(GAME_PLEGACY_SOURCES
     src/core/food/RecipeCodec.cpp
     src/core/food/Topping.cpp
     src/core/inventory/Inventory.cpp
+    src/core/item/ActionText.cpp
     src/core/marketing/Commercial.cpp
     src/core/newspaper/ArticleDatabase.cpp
     src/core/newspaper/NewspaperEventSystem.cpp
@@ -348,6 +349,8 @@ set(PLEGACY_HEADERS
     src/core/food/Topping.h
     src/core/init/NewGameConfig.h
     src/core/inventory/Inventory.h
+    src/core/item/ActionLine.h
+    src/core/item/ActionText.h
     src/core/item/Item.h
     src/core/logistics/IngredientStock.h
     src/core/marketing/AdvertisingCampaign.h

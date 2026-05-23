@@ -1026,8 +1026,8 @@ void Restaurant::end_of_day(GameState& game_state) {
 
     economy_.update_restaurant_range();
 
-    economy_.total_popularity(
-        static_cast<int16_t>(sync_reputation_and_total_popularity()));
+    economy_.total_popularity(sync_reputation_and_total_popularity());
+    economy_.calculate_competitive_strength(*this);
     process_daily_reputation_deltas();
 
     economy_.calculate_demand_with_competition(*this, game_state);
@@ -1096,8 +1096,7 @@ void Restaurant::end_of_day(GameState& game_state) {
   }
 
   // Sync popularity with current reputation, then decay for next day
-  economy_.total_popularity(
-      static_cast<int16_t>(sync_reputation_and_total_popularity()));
+  economy_.total_popularity(sync_reputation_and_total_popularity());
   process_daily_reputation_deltas();
 
   // Original game bug: sabotage contamination never decays, so multiple
@@ -1636,14 +1635,9 @@ void Restaurant::start_of_day(GameState& game_state) {
       const auto& district = property_.district();
 
       calculate_popularity(*player, city, district);
-      economy_.total_popularity(static_cast<int16_t>(popularity_.total()));
+      economy_.total_popularity(popularity_.total());
 
       update_demographics(player->recipes());
-    }
-    else {
-      // AI: skip popularity calc (penalizes missing menu/staff/stars),
-      // just recalculate competitive_strength from static init values.
-      economy_.calculate_competitive_strength(*this);
     }
   }
 

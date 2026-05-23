@@ -456,6 +456,14 @@ void Player::decrement_holiday_day() {
   }
 }
 
+void Player::queue_notification(StatusMsg m) {
+  pending_notifications_.push_back(std::move(m));
+}
+
+std::vector<StatusMsg> Player::take_pending_notifications() {
+  return std::exchange(pending_notifications_, {});
+}
+
 void Player::add_score(int points) {
   score_ += points;
   Logger::info("[Score] {} - Score changed by {}, new total: {}", name_, points,

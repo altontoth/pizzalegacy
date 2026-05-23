@@ -207,7 +207,7 @@ void Game::run() {
 
   // If --game-path was provided on CLI, take it (and persist).
   if (game_path_override_) {
-    configManager.value("game_path", *game_path_override_);
+    configManager.value("game_path_english", *game_path_override_);
     configManager.save_config();
   }
   // Otherwise, if no config file, prompt
@@ -217,7 +217,7 @@ void Game::run() {
       std::cout << "Didn't find the original game, giving up.\n";
       return;
     }
-    configManager.value("game_path", location);
+    configManager.value("game_path_english", location);
     configManager.save_config();
   }
 
@@ -537,11 +537,14 @@ void Game::handle_resize_event(const SDL_Event& event, LoopState& loop_state) {
   int new_width = event.window.data1;
   int new_height = event.window.data2;
 
-  // Check and enforce aspect ratio
-  if (!enforce_aspect_ratio(sdl_.window, new_width, new_height)) {
-    // Skip further handling as a new SDL_WINDOWEVENT_RESIZED will be
-    // triggered
-    return;
+  // In fullscreen, SDL_RenderSetLogicalSize handles letterboxing so aspect
+  // ratio enforcement is not possible or needed.
+  if (!loop_state.fullscreen) {
+    if (!enforce_aspect_ratio(sdl_.window, new_width, new_height)) {
+      // Skip further handling as a new SDL_WINDOWEVENT_RESIZED will be
+      // triggered
+      return;
+    }
   }
   loop_state.game_state.window_size(new_width, new_height);
   loop_state.context.cursor->update_scaled_cursor(new_width, new_height);

@@ -21,7 +21,8 @@ struct TimeOfDay {
   uint8_t minute{0}; // 0, 10, 20, 30, 40, 50 (10-minute increments)
 
   constexpr TimeOfDay() = default;
-  constexpr TimeOfDay(int h, int m) : hour(h), minute(m) {}
+  constexpr TimeOfDay(int h, int m)
+      : hour(static_cast<uint8_t>(h)), minute(static_cast<uint8_t>(m)) {}
 
   // Convert to block number within a day (0-143).
   // Each block is 10 minutes: 6 blocks per hour x 24 hours = 144 blocks.

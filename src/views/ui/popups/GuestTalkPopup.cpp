@@ -134,9 +134,8 @@ GuestTalkPopup::select_dialogue(const Restaurant* restaurant,
     // Atmosphere fallback: map total_popularity (roughly -100 to +200) to
     // lines 35-42. Shift by 100 to make the neutral restaurant land in the
     // middle of that range.
-    const int pop = std::clamp(
-        static_cast<int>(restaurant->economy().total_popularity()) + 100, 0,
-        245);
+    const int pop =
+        std::clamp(restaurant->economy().total_popularity() + 100, 0, 245);
     return line(std::clamp((pop / 35) + 35, 35, 42));
   }
 

@@ -1898,6 +1898,9 @@ void GameState::execute_pipeline_step(TurnPipelineStep step) {
         !players_[active_player_.value]->is_human_controlled();
     if (!pending_ai_auto_end_turn_) {
       status_hub_.suppress(false);
+      for (auto& msg : active_player()->take_pending_notifications()) {
+        status_hub_.post(std::move(msg));
+      }
     }
     advance_pipeline();
     break;

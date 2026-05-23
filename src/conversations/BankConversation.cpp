@@ -84,7 +84,7 @@ bool BankConversation::advance_line_choice(BankLine choice) {
 
       // Check if player has enough money
       if (state_.active_player()->cash_balance() <
-          Money{repaying_loan_->repay_amount()}) {
+          repaying_loan_->repay_amount()) {
         current_line(BankLine::YOU_DONT_HAVE_ENOUGH_TO_REPAY);
       }
       else {
@@ -130,7 +130,7 @@ bool BankConversation::advance_proposal(bool agree) {
     break;
   case BankLine::ARE_YOU_SURE_YOU_WANT_TO_REPAY:
     if (agree) {
-      Money amount{repaying_loan_->repay_amount()};
+      Money amount = repaying_loan_->repay_amount();
       // Money already checked in advance_line_choice, so this won't fail
       (void)state_.active_player()->spend_cash(state_.time().current_date(),
                                                Account::Loan, amount);
@@ -276,7 +276,7 @@ std::vector<ConversationLine<BankLine>> BankConversation::lines() const {
   case BankLine::ARE_YOU_SURE_YOU_WANT_TO_REPAY: {
     // "OK. So that's $12000. Are you sure, you want to repay this loan?"
     std::ostringstream oss;
-    oss << Money{repaying_loan_->repay_amount()}.whole() << ". ";
+    oss << repaying_loan_->repay_amount().whole() << ". ";
     return {
         make_concat_proposal(BankLine::OK_SO_THATS, oss.str(),
                              BankLine::ARE_YOU_SURE_YOU_WANT_TO_REPAY),

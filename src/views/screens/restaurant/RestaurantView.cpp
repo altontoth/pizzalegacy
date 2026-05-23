@@ -15,6 +15,7 @@
 #include "core/city/District.h"
 #include "core/city/Property.h"
 #include "core/finance/Ledger.h"
+#include "core/item/ActionText.h"
 #include "core/restaurant/Furniture.h"
 #include "core/restaurant/RestaurantTypes.h"
 #include "core/state/CompetitionSession.h"
@@ -290,6 +291,7 @@ bool RestaurantView::on_action(const input::ActionEvent& ev) {
 }
 
 void RestaurantView::set_up_buttons() {
+  input_panel_->delete_buttons();
   if (view_mode_ == RestaurantViewMode::OPPONENT_VIEW) {
     auto opp_pid_opt = restaurant_->property().owner_or_tenant();
     if (!opp_pid_opt) {
@@ -2166,7 +2168,7 @@ void RestaurantView::render_sabotage(const RenderContext& ctx) {
 
     interactions_.create_frame_item(
         hover_box, name,
-        [this, name, item, bag_count](views::ui::InteractionEvent ev) {
+        [this, item, bag_count](views::ui::InteractionEvent ev) {
           if (ev.type == views::ui::InteractionEvent::Type::Enter) {
             hovered_sabotage_item_ = item;
             mark_dirty();
@@ -2176,17 +2178,49 @@ void RestaurantView::render_sabotage(const RenderContext& ctx) {
             mark_dirty();
           }
           else if (ev.type == views::ui::InteractionEvent::Type::Click) {
-            if (ev.button == views::ui::MouseButton::Left) {
-              if (bag_count > 0) {
-                Logger::debug("Attack with {}", std::string(name));
-              }
-              // Move from depot to bag (as long as depot > 0 and bag < 255)
+            if (ev.button == views::ui::MouseButton::Left && bag_count > 0) {
+              execute_sabotage_attack(item);
             }
           }
         });
 
     y_position += 20;
   }
+}
+
+void RestaurantView::execute_sabotage_attack(core::item::Item item) {
+  auto* attacker = state_.active_player();
+  if (!attacker || !restaurant_) {
+    return;
+  }
+
+  attacker->inventory().remove(item, 1);
+  restaurant_->apply_sabotage(item);
+
+  constexpr int first_sabotage_item =
+      static_cast<int>(core::item::Item::SmellyCheese);
+  int item_index = static_cast<int>(item) - first_sabotage_item;
+  state_.adjust_underworld_score(*attacker, (item_index + 1) * 5);
+
+  auto owner_id = restaurant_->property().owner_or_tenant();
+  if (owner_id.has_value()) {
+    auto* victim = state_.player(*owner_id);
+    if (victim && victim->is_human_controlled()) {
+      auto msg_line = static_cast<core::item::ActionLine>(
+          static_cast<int>(
+              core::item::ActionLine::SmellyCheesePizzasSmellAwful) +
+          item_index);
+      victim->queue_notification(StatusMsg{
+          .payload = compat::format("{}: {}", restaurant_->name(),
+                                    core::item::ActionText::get(msg_line)),
+          .scope = StatusScope::Restaurant,
+      });
+    }
+  }
+
+  view_mode_ = RestaurantViewMode::OPPONENT_VIEW;
+  set_up_buttons();
+  mark_dirty();
 }
 
 void RestaurantView::challenge_check_and_start(core::PlayerId opp_pid) {

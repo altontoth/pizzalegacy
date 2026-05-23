@@ -62,7 +62,7 @@ public:
   bool is_settled() const { return months_left_ == 0; }
   int months_left() const { return months_left_; }
 
-  int repay_amount() const { return months_left_ * monthly_repayment(); }
+  Money repay_amount() const { return months_left_ * monthly_repayment(); }
 
   void repay() { months_left_ = 0; }
 

@@ -177,7 +177,9 @@ cmake --build build -j
 ### Run
 
 When you launch Pizza Legacy you will be prompted for the original game's
-installation directory. Point it to the directory containing PT.EXE.
+installation directory. Point it to the directory containing PT.EXE, or if
+you bought Pizza Connection on steam you can just point it at your Steam
+installation directory and it should find the right directory itself.
 
 ## History
 

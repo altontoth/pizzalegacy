@@ -50,8 +50,8 @@ public:
   int range_tiles() const { return range_tiles_; }
   void range_tiles(int tiles) { range_tiles_ = tiles; }
 
-  int16_t total_popularity() const { return total_popularity_; }
-  void total_popularity(int16_t pop) { total_popularity_ = pop; }
+  int total_popularity() const { return total_popularity_; }
+  void total_popularity(int pop) { total_popularity_ = pop; }
 
   FurnitureAppeal& furniture_appeal() { return furniture_appeal_; }
   const FurnitureAppeal& furniture_appeal() const { return furniture_appeal_; }

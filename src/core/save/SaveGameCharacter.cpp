@@ -10,6 +10,7 @@
 #include "core/character/Player.h"
 #include "core/food/IngredientCategoryType.h"
 #include "core/state/GameState.h"
+#include "core/status/StatusHub.h"
 #include "core/supply/ActiveContract.h"
 #include "core/util/GameContext.h"
 #include "factories/CharacterFactory.h"
@@ -213,6 +214,18 @@ json player_to_json(const Player& player) {
   }
   j["contracts"] = contracts_array;
 
+  json pending_notifications_array = json::array();
+  for (const auto& msg : player.pending_notifications()) {
+    if (const auto* text = std::get_if<std::string>(&msg.payload)) {
+      json mj;
+      mj["text"] = *text;
+      mj["severity"] = static_cast<int>(msg.severity);
+      mj["scope"] = static_cast<int>(msg.scope);
+      pending_notifications_array.push_back(mj);
+    }
+  }
+  j["pending_notifications"] = pending_notifications_array;
+
   return j;
 }
 
@@ -347,6 +360,16 @@ json_to_player(const json& j, GameContext& context,
       if (c.remaining_term > 0) {
         player->add_contract(std::move(c));
       }
+    }
+  }
+
+  if (j.contains("pending_notifications")) {
+    for (const auto& mj : j["pending_notifications"]) {
+      StatusMsg msg;
+      msg.payload = mj.value("text", std::string{});
+      msg.severity = static_cast<StatusSeverity>(mj.value("severity", 0));
+      msg.scope = static_cast<StatusScope>(mj.value("scope", 0));
+      player->queue_notification(std::move(msg));
     }
   }
 

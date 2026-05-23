@@ -24,7 +24,7 @@ ParsedValue resolve_default(DefaultProvider provider, ArgType type,
   result.type = type;
   result.source = ValueSource::DefaultProvider;
   result.provider_used = provider;
-  result.original_token = "@"; // Default marker
+  result.original_token = std::string{"@"};
 
   switch (provider) {
   case DefaultProvider::None:
