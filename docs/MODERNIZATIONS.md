@@ -79,6 +79,12 @@ in effect.
   use RMB to increase and LMB to decrease. In Pizza Legacy I've normalized this
   to always use LMB for increasing and RMB for decreasing.
 
+### Mouse scroll wheel
+
+* In various screens you can now use the mouse wheel, for example to change the
+  ingredient and furniture order count, switch between candidate cards in the
+  staff screen and when selecting characters when creating a new game.
+
 ## Life quality improvements option
 
 We have a new option to optionally make some more improvements:
