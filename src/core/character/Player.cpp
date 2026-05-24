@@ -82,12 +82,20 @@ void Player::end_of_day(GameState& game_state) {
   if (!is_human_controlled()) {
     // Closure check: evaluate each restaurant until one is closed.
     auto restaurants = game_state.restaurants_for(id_);
+    bool closed_one = false;
     for (auto* rest : restaurants) {
       if (rest && rest->wants_open() && !rest->is_force_closed()) {
         if (ai::check_bankruptcy(*rest, *this, game_state)) {
+          closed_one = true;
           break;
         }
       }
+    }
+
+    // If a restaurant was closed the list now has a non existing restaurant in
+    // it, do a refresh:
+    if (closed_one) {
+      restaurants = game_state.restaurants_for(id_);
     }
 
     // AI quality growth chance
