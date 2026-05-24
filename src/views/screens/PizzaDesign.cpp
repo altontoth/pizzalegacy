@@ -391,6 +391,43 @@ bool PizzaDesign::on_action(const input::ActionEvent& ev) {
     return true;
   }
 
+  // Tab: cycle active restaurant (only in browsing modes, not during baking or
+  // competition)
+  if (ev.action == input::Action::NextRestaurant ||
+      ev.action == input::Action::PreviousRestaurant) {
+    const bool in_competition =
+        mode_ == PizzaDesignMode::CompetitionDesign ||
+        mode_ == PizzaDesignMode::CompetitionReveal ||
+        mode_ == PizzaDesignMode::CompetitionResults ||
+        mode_ == PizzaDesignMode::CompetitionJudging ||
+        mode_ == PizzaDesignMode::OwnPizzaJudging ||
+        mode_ == PizzaDesignMode::CanonicalPizzaJudging ||
+        mode_ == PizzaDesignMode::MonthlyChallenge ||
+        mode_ == PizzaDesignMode::CompetitorChallenge ||
+        mode_ == PizzaDesignMode::AnnualCompetitionDesign;
+    if (!in_competition && !bake_) {
+      auto* player = state_.active_player();
+      auto* rest = state_.active_restaurant();
+      if (player && rest) {
+        const auto cur = rest->id();
+        std::optional<core::RestaurantId> next =
+            ev.action == input::Action::NextRestaurant
+                ? state_.next_restaurant(player->id(), cur)
+                : state_.prev_restaurant(player->id(), cur);
+        if (next && *next != cur) {
+          state_.active_restaurant(*next);
+          if (!bake_) {
+            status_.show_restaurant({.state = &state_,
+                                     .rest = state_.active_restaurant(),
+                                     .label = "RECIPES"});
+          }
+          mark_dirty();
+        }
+      }
+    }
+    return true;
+  }
+
   // Block all other actions in Design mode
   if (mode_ == PizzaDesignMode::Design) {
     return false;
@@ -1461,8 +1498,16 @@ void PizzaDesign::finish_new_user(std::string name) {
     return;
   }
 
-  change_mode(PizzaDesignMode::Recipes);
   bake_.reset();
+  design_mode_ = false;
+  // Replace the OwnPizzaJudging state on the stack with a clean Recipes state.
+  // Any subsequent view rebuild (e.g. when the CreatedFirstPizza fullscreen is
+  // pushed and then dismissed) will construct PizzaDesign in Recipes mode
+  // instead of re-entering handle_post_judging with the already-consumed bake.
+  state_.ui().replace_top<PizzaDesignState>(PizzaDesignState{
+      .initial_mode = PizzaDesignMode::Recipes,
+      .active_key = active_key_,
+  });
 }
 
 void PizzaDesign::finish_recreate_existing() {
