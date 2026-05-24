@@ -50,13 +50,6 @@ Usage: JSON production/consumption for save games
     Copyright: Copyright (c) 2013-2024 Niels Lohmann
     License:   MIT (see LICENSES/MIT-nlohmann.txt)
 
-### Explosion (defimp.c, explode.c)
-
-Usage: Decompression of Amiga IMP!-compressed assets
-
-    Author:    Stuart Caie
-    License:   Public Domain
-
 ### SavePNG
 
 Usage: SDL\_Surface to PNG wrapper for screenshots

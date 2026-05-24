@@ -17,7 +17,6 @@
 #include "engine/Fatal.h"
 #include "engine/Logger.h"
 #include "engine/Random.h"
-#include "resources/ImploderDecompressor.h"
 #if PLEGACY_CASE_INSENSITIVE_FS
 #include <string.h>
 #endif
@@ -110,79 +109,12 @@ std::ifstream open(const std::string& raw_file_path, std::ios::openmode mode) {
     fatal("File not found: " + raw_file_path);
   }
 
-  // Open file in binary mode to check for IMP! magic
-  std::ifstream is(*file_path, std::ios::binary);
-  if (!is.is_open()) {
+  std::ifstream is(*file_path, mode);
+  if (!is) {
     fatal("Failed to open: " + raw_file_path);
   }
 
-  // Check for IMP! compressed magic bytes
-  uint8_t magic[4] = {0};
-  is.read(reinterpret_cast<char*>(magic), 4);
-  is.seekg(0);
-
-  if (ImploderDecompressor::is_imploder_magic(
-          std::vector<uint8_t>(magic, magic + 4))) {
-    // File is IMP! compressed - decompress it
-    try {
-      Logger::debug("Decompressing IMP! file: {}", file_path->string());
-
-      // Read entire compressed file
-      is.seekg(0, std::ios::end);
-      std::streamsize file_size = is.tellg();
-      is.seekg(0, std::ios::beg);
-
-      std::vector<uint8_t> compressed(file_size);
-      is.read(reinterpret_cast<char*>(compressed.data()), file_size);
-      is.close();
-
-      // Decompress
-      auto decompressed = ImploderDecompressor::decompress(compressed);
-
-      // Create temporary file in system temp directory
-      namespace fs = std::filesystem;
-      fs::path temp_dir = fs::temp_directory_path();
-      std::string temp_filename =
-          "plegacy_" + std::to_string(std::hash<std::string>{}(raw_file_path)) +
-          ".tmp";
-      fs::path temp_path = temp_dir / temp_filename;
-
-      // Write decompressed data to temp file
-      std::ofstream temp_file(temp_path, std::ios::binary);
-      if (!temp_file) {
-        fatal("Failed to create temporary decompressed file: " +
-              temp_path.string());
-      }
-      temp_file.write(reinterpret_cast<char*>(decompressed.data()),
-                      decompressed.size());
-      temp_file.close();
-
-      Logger::debug("Wrote decompressed data to: {}", temp_path.string());
-
-      // Open and return the temporary file
-      std::ifstream temp_read(temp_path, mode);
-      if (!temp_read.is_open()) {
-        fatal("Failed to open decompressed temporary file: " +
-              temp_path.string());
-      }
-
-      return temp_read;
-    }
-    catch (const std::exception& e) {
-      fatal(std::string("Failed to decompress file: ") + raw_file_path + " - " +
-            e.what());
-    }
-  }
-
-  // Not compressed - return file as-is with requested mode
-  // Close and reopen with actual requested mode
-  is.close();
-  std::ifstream final_is(*file_path, mode);
-  if (!final_is.is_open()) {
-    fatal("Failed to open: " + raw_file_path);
-  }
-
-  return final_is;
+  return is;
 }
 
 std::vector<std::string> load_text_lines(const std::string& path,

@@ -49,14 +49,13 @@ DOS executable. The engine itself is designed from scratch.
 
 The engine parses the original 1994 asset formats:
 
-- **BOB sprites** (DOS and Amiga bitplane variants) with animation sequences
+- **BOB sprites** with animation sequences
 - **VGA graphics** with indexed-color palettes
 - **FNT bitmap fonts**
 - **CMF music** (Creative Music Format, OPL3 FM synthesis via libADLMIDI)
 - **VOC audio** (Creative Voice Format, decoded and resampled to stereo)
-- **Imploder decompression** for Amiga IMP!-compressed assets
 - City map data, pizza recipes, restaurant layouts, and character data from
-  original formats (DOS version only)
+  original formats (English version only)
 
 All assets are loaded on demand through a template-based `ResourceManager<T, Loader>`
 that caches resources by filename.
@@ -81,7 +80,7 @@ Rendering uses a layered composition model with per-layer dirty tracking:
   the original CRT aspect ratio
 
 Screens are managed as a stack, with an overlay system composited on top.
-Popups, tooltips, a pause screen, and a debug layer are all independent
+Popups, tooltips, and a debug layer are all independent
 overlays that can block or pass through input to the view beneath them.
 Screen transitions use palette-based fade-out/fade-in.
 

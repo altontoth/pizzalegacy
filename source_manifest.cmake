@@ -217,8 +217,6 @@ set(GAME_PLEGACY_SOURCES
     src/resources/Font.cpp
     src/resources/FontLoader.cpp
     src/resources/FontManager.cpp
-    src/resources/ImploderDecompressor.cpp
-    src/resources/ImploderWrapper.c
     src/resources/MFileLoader.cpp
     src/resources/Vga.cpp
     src/resources/VgaLoader.cpp
@@ -501,7 +499,6 @@ set(PLEGACY_HEADERS
     src/resources/FontLoader.h
     src/resources/FontManager.h
     src/resources/FontTypes.h
-    src/resources/ImploderDecompressor.h
     src/resources/MFileLoader.h
     src/resources/ResourceManager.h
     src/resources/Vga.h
