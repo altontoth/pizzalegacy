@@ -90,7 +90,7 @@ private:
   // Controller config (world-space)
   int tile_w_{0};
   int tile_h_{0};
-  int substeps_per_tile_{8};
+  int substeps_per_tile_{4};
   float normal_mult_{1.5f};
   float fast_mult_{3.0f};
   float min_step_px_{1.0f};
