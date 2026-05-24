@@ -89,11 +89,7 @@ Money FoodSupplier::calculate_price(core::food::IngredientType ingredient_type,
 
 uint8_t FoodSupplier::head_id() const { return head_id_; }
 
-SupplierRelationship& FoodSupplier::relationship(core::PlayerId player_id) {
-  return relationships_[player_id];
-}
-
-const SupplierRelationship&
+SupplierRelationship&
 FoodSupplier::relationship(core::PlayerId player_id) const {
   return relationships_[player_id];
 }

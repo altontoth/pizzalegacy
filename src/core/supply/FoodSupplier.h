@@ -35,8 +35,7 @@ public:
   uint8_t head_id() const;
   uint8_t chance_of_no_delivery() const;
 
-  SupplierRelationship& relationship(core::PlayerId player_id);
-  const SupplierRelationship& relationship(core::PlayerId player_id) const;
+  SupplierRelationship& relationship(core::PlayerId player_id) const;
   int spending_rank(core::PlayerId player_id) const;
 
   // Get price level for a specific ingredient ID

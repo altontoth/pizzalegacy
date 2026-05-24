@@ -33,8 +33,9 @@
 #include "core/status/StatusHub.h"
 
 #include <algorithm>
+#include <array>
 
-constexpr float sell_price_ratio = 0.8f;
+constexpr int sell_price_percent = 80;
 
 IngredientOrderScreen::IngredientOrderScreen(
     GameContext& context, GameState& state, uint8_t supplier_id,
@@ -89,7 +90,7 @@ IngredientOrderScreen::IngredientOrderScreen(
       Money base_price = calculate_ingredient_price(ingredient->type());
       if (mode == IngredientScreenMode::CENTRAL_DEPOT_SELL) {
         batch.price_per_unit =
-            Money{static_cast<int64_t>(base_price.cents * sell_price_ratio)};
+            Money{base_price.cents * sell_price_percent / 100};
       }
       else {
         batch.price_per_unit = base_price;
@@ -165,16 +166,12 @@ void IngredientOrderScreen::register_ingredient_row(ViewRect row_rect,
       [this, i](views::ui::InteractionEvent ie) {
         switch (ie.type) {
         case views::ui::InteractionEvent::Type::Enter:
-          // Don't change hover if a button is currently held
-          if (button_held_index_ < 0) {
-            hovered_index_ = i;
-            mark_dirty();
-          }
+          hovered_index_ = i;
+          mark_dirty();
           break;
         case views::ui::InteractionEvent::Type::Leave:
-          // Don't clear hover if a button is currently held
-          if (button_held_index_ < 0 && hovered_index_ == static_cast<int>(i)) {
-            hovered_index_ = -1;
+          if (hovered_index_ == i) {
+            hovered_index_.reset();
             mark_dirty();
           }
           break;
@@ -251,8 +248,7 @@ void IngredientOrderScreen::draw_depot_ingredient_list(
     auto& batch = ingredients_[i];
     bool supplier_sells = batch.price_per_unit.cents > 0;
 
-    if (hovered_index_ == static_cast<int>(i) ||
-        button_held_index_ == static_cast<int>(i)) {
+    if (button_held_index_ ? button_held_index_ == i : hovered_index_ == i) {
       constexpr int highlight_x = 210;
       constexpr int highlight_w = 160;
       ctx.surface->fill_rect(
@@ -295,12 +291,7 @@ void IngredientOrderScreen::draw_depot_ingredient_list(
     y += line_height;
   }
 
-  Money total_cost{0};
-  for (const auto& batch : ingredients_) {
-    if (batch.count > 0) {
-      total_cost = total_cost + Money{batch.price_per_unit.cents * batch.count};
-    }
-  }
+  Money total_cost = calculate_total_cost();
 
   context_.font->render_text_onto(
       *ctx.surface,
@@ -343,8 +334,8 @@ void IngredientOrderScreen::draw_restaurant_ingredient_list(
       *ctx.surface, "DAYS", ViewPoint{header_days_x, header_y},
       FontFace::SUPERSMA, text_color, AlignX::Right);
 
-  const int line_color = 15;
-  const int line_width = 2;
+  constexpr int line_color = 15;
+  constexpr int line_width = 2;
   // Between price and amount
   ViewPoint line_top{172 + 42, 48};
   ViewPoint line_bottom{172 + 42, 318};
@@ -369,8 +360,7 @@ void IngredientOrderScreen::draw_restaurant_ingredient_list(
 
     // Draw gray background on hover or when holding button (only if supplier
     // sells this ingredient)
-    if ((hovered_index_ == static_cast<int>(i) ||
-         button_held_index_ == static_cast<int>(i))) {
+    if (button_held_index_ ? button_held_index_ == i : hovered_index_ == i) {
       ctx.surface->fill_rect(
           ViewRect{name_x, y - 2, row_width, line_height + 2}, 165);
     }
@@ -442,13 +432,7 @@ void IngredientOrderScreen::draw_restaurant_ingredient_list(
                                     FontFace::SUPERSMA, text_color);
   }
 
-  // Calculate total cost
-  Money total_cost{0};
-  for (const auto& batch : ingredients_) {
-    if (batch.count > 0) {
-      total_cost = total_cost + Money{batch.price_per_unit.cents * batch.count};
-    }
-  }
+  Money total_cost = calculate_total_cost();
 
   // Total
   std::string total_text = compat::format("{:n}", total_cost);
@@ -468,20 +452,15 @@ void IngredientOrderScreen::draw_page_screen(const RenderContext& ctx) {
 void IngredientOrderScreen::render(const RenderContext& ctx) {
   draw_page_header(ctx);
   draw_page_screen(ctx);
-  // ctx.surface->palette({60});
 }
 
 void IngredientOrderScreen::place_order() {
   const bool is_sell = mode_ == IngredientScreenMode::CENTRAL_DEPOT_SELL;
 
-  // Calculate total cost first
-  Money total_cost{0};
+  Money total_cost = calculate_total_cost();
   int total_items = 0;
   for (const auto& batch : ingredients_) {
-    if (batch.count > 0) {
-      total_items += batch.count;
-      total_cost = total_cost + Money{batch.price_per_unit.cents * batch.count};
-    }
+    total_items += batch.count;
   }
 
   Logger::info("[Order] Total: {} items for {}", total_items, total_cost);
@@ -556,7 +535,7 @@ void IngredientOrderScreen::place_order() {
       auto player_id = state_.active_player()->id();
       city->record_vendor_purchase(player_id, supplier_->id(), total_cost);
 
-      auto& rel = const_cast<FoodSupplier*>(supplier_)->relationship(player_id);
+      auto& rel = supplier_->relationship(player_id);
       rel.total_spent += total_cost;
     }
   }
@@ -577,8 +556,8 @@ Money IngredientOrderScreen::calculate_ingredient_price(
     return Money{0};
   }
 
-  static constexpr float difficulty_multipliers[] = {0.6f, 0.8f, 1.0f, 1.5f,
-                                                     1.9f};
+  static constexpr std::array<float, 5> difficulty_multipliers = {
+      0.6f, 0.8f, 1.0f, 1.5f, 1.9f};
 
   auto* city = state_.active_city();
   Money base_price = city->ingredient_base_price(ingredient_type);
@@ -587,6 +566,34 @@ Money IngredientOrderScreen::calculate_ingredient_price(
 
   return supplier_->calculate_price(ingredient_type, base_price,
                                     difficulty_multipliers[difficulty - 1]);
+}
+
+Money IngredientOrderScreen::calculate_total_cost() const {
+  Money total{0};
+  for (const auto& batch : ingredients_) {
+    if (batch.count > 0) {
+      total += Money{batch.price_per_unit.cents * batch.count};
+    }
+  }
+  return total;
+}
+
+bool IngredientOrderScreen::check_depot_quality(
+    const IngredientBatch& batch) const {
+  auto& depot =
+      state_.active_city()->central_depot(state_.active_player()->id());
+  auto* stock =
+      depot.get_ingredient_stock(static_cast<int>(batch.ingredient_type));
+  if (stock && supplier_ &&
+      stock->weighted_avg_quality < supplier_->quality()) {
+    state_.status().post_direct(StatusMsg{
+        .payload = "The quality of this ingredient is lower than expected "
+                   "from the supplier selected!",
+        .severity = StatusSeverity::Warning,
+    });
+    return false;
+  }
+  return true;
 }
 
 bool IngredientOrderScreen::on_action(const input::ActionEvent& ev) {
@@ -652,18 +659,7 @@ void IngredientOrderScreen::handle_button_press(size_t ingredient_index,
   // Perform immediate increment/decrement
   if (is_left_button) {
     if (is_sell) {
-      // Check quality: depot stock quality must be >= supplier quality
-      auto& depot =
-          state_.active_city()->central_depot(state_.active_player()->id());
-      auto* stock =
-          depot.get_ingredient_stock(static_cast<int>(batch.ingredient_type));
-      if (stock && supplier_ &&
-          stock->weighted_avg_quality < supplier_->quality()) {
-        state_.status().post_direct(StatusMsg{
-            .payload = "The quality of this ingredient is lower than expected "
-                       "from the supplier selected!",
-            .severity = StatusSeverity::Warning,
-        });
+      if (!check_depot_quality(batch)) {
         return;
       }
       c = std::min(c + step, batch.current_stock);
@@ -683,9 +679,10 @@ void IngredientOrderScreen::handle_button_press(size_t ingredient_index,
   }
 
   // If this is the first button pressed, set direction and index
-  if (button_held_index_ < 0) {
+  if (!button_held_index_) {
     button_held_index_ = ingredient_index;
-    increment_direction_ = is_left_button;
+    hold_direction_ =
+        is_left_button ? HoldDirection::Increment : HoldDirection::Decrement;
     button_held_frames_ = 0;
   }
 
@@ -702,7 +699,7 @@ void IngredientOrderScreen::handle_button_release(bool is_left_button) {
 
   // If both buttons are now released, reset held state
   if (!left_button_held_ && !right_button_held_) {
-    button_held_index_ = -1;
+    button_held_index_.reset();
     button_held_frames_ = 0;
   }
 }
@@ -715,17 +712,7 @@ void IngredientOrderScreen::handle_scroll(size_t ingredient_index, int delta) {
 
   if (delta > 0) {
     if (is_sell) {
-      auto& depot =
-          state_.active_city()->central_depot(state_.active_player()->id());
-      auto* stock =
-          depot.get_ingredient_stock(static_cast<int>(batch.ingredient_type));
-      if (stock && supplier_ &&
-          stock->weighted_avg_quality < supplier_->quality()) {
-        state_.status().post_direct(StatusMsg{
-            .payload = "The quality of this ingredient is lower than expected "
-                       "from the supplier selected!",
-            .severity = StatusSeverity::Warning,
-        });
+      if (!check_depot_quality(batch)) {
         return;
       }
       c = std::min(c + step, batch.current_stock);
@@ -747,7 +734,7 @@ void IngredientOrderScreen::handle_scroll(size_t ingredient_index, int delta) {
 
 void IngredientOrderScreen::update_held_button_repeat() {
   // Handle continuous clicking when button is held
-  if (button_held_index_ < 0 || (!left_button_held_ && !right_button_held_)) {
+  if (!button_held_index_ || (!left_button_held_ && !right_button_held_)) {
     return;
   }
 
@@ -760,11 +747,10 @@ void IngredientOrderScreen::update_held_button_repeat() {
 
   if (button_held_frames_ >= REPEAT_DELAY &&
       (button_held_frames_ - REPEAT_DELAY) % REPEAT_RATE_SINGLE == 0) {
-    auto& batch = ingredients_.at(button_held_index_);
+    auto& batch = ingredients_.at(*button_held_index_);
     auto& c = batch.count;
 
-    // Continue in the direction set by the first button pressed
-    if (increment_direction_) {
+    if (hold_direction_ == HoldDirection::Increment) {
       int max_count;
       if (mode_ == IngredientScreenMode::CENTRAL_DEPOT_SELL) {
         max_count = batch.current_stock;

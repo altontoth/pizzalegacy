@@ -188,7 +188,7 @@ bool SupplierConversation::advance_proposal(bool agree) {
   }
   if (agree) {
     auto player_id = state_.active_player()->id();
-    auto& rel = const_cast<FoodSupplier*>(supplier_)->relationship(player_id);
+    auto& rel = supplier_->relationship(player_id);
 
     // Build the active contract from negotiated terms
     ActiveContract contract;
@@ -255,7 +255,7 @@ void SupplierConversation::handle_demand(SupplierLine demand) {
   }
   if (repeat_count >= 3) {
     auto player_id = state_.active_player()->id();
-    auto& rel = const_cast<FoodSupplier*>(supplier_)->relationship(player_id);
+    auto& rel = supplier_->relationship(player_id);
     rel.frustration = std::min<int>(rel.frustration + 3, 255);
     current_line(SupplierLine::KEEP_REPEATING_TAKE_ME_FOR_A_RIDE);
     return;
@@ -280,7 +280,7 @@ void SupplierConversation::handle_demand(SupplierLine demand) {
     // Too many discount demands relative to customer size
     if (demand_count * 2 > spending_rank_) {
       auto player_id = state_.active_player()->id();
-      auto& rel = const_cast<FoodSupplier*>(supplier_)->relationship(player_id);
+      auto& rel = supplier_->relationship(player_id);
       rel.frustration = std::min<int>(rel.frustration + 1, 255);
       current_line(SupplierLine::NO_REASON_FOR_SPECIAL_CONDITIONS);
       return;
@@ -342,7 +342,7 @@ void SupplierConversation::handle_demand(SupplierLine demand) {
     // If no charge exists, punish for complaining about nothing
     if (contract_.charge == 0_usd) {
       auto player_id = state_.active_player()->id();
-      auto& rel = const_cast<FoodSupplier*>(supplier_)->relationship(player_id);
+      auto& rel = supplier_->relationship(player_id);
       rel.frustration = std::min<int>(rel.frustration + 5, 255);
       contract_.charge = 100_usd;
       current_line(SupplierLine::THERE_WERE_NO_FEES_INCLUDED_BUT_IF_YOU_WANT);

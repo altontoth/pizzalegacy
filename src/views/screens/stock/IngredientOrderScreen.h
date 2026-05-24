@@ -44,6 +44,8 @@ protected:
 private:
   Money
   calculate_ingredient_price(core::food::IngredientType ingredient_type) const;
+  Money calculate_total_cost() const;
+  bool check_depot_quality(const IngredientBatch& batch) const;
 
   // Button hold handling helpers
   void handle_button_press(size_t ingredient_index, bool is_left_button);
@@ -57,11 +59,12 @@ private:
   std::vector<IngredientBatch> ingredients_;
 
   // For hover and continuous clicking
-  int hovered_index_{-1};
-  int button_held_index_{-1};
+  std::optional<size_t> hovered_index_;
+  std::optional<size_t> button_held_index_;
   bool left_button_held_{false};
   bool right_button_held_{false};
-  bool increment_direction_{true}; // True = increment, false = decrement
+  enum class HoldDirection { Increment, Decrement };
+  HoldDirection hold_direction_{HoldDirection::Increment};
   int button_held_frames_{0};
   static constexpr int REPEAT_DELAY = 6;       // Frames before repeat starts
   static constexpr int REPEAT_RATE_SINGLE = 2; // Frames between repeats
