@@ -431,10 +431,6 @@ bool StaffEvents::check_persf(Staff& staff, const StaffEventData& base) {
     break;
   }
 
-  // Apply the world effect immediately at EOD, before any dialog. The player
-  // sees the excuse dialog later (next day), but the damage is already done.
-  apply_event_effect(type, staff, *restaurant_, *game_state_);
-
   auto event = base;
   event.type = type;
   pending_dialogs_.push_back(event);

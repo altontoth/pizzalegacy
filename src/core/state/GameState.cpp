@@ -23,6 +23,7 @@
 #include "core/restaurant/AIEconomy.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/restaurant/StaffEventDialogs.h"
+#include "core/restaurant/StaffEvents.h"
 #include "core/save/SaveGameManager.h"
 #include "core/util/ConfigManager.h"
 #include "core/util/GameContext.h"
@@ -1389,6 +1390,12 @@ void GameState::show_staff_event_dialog(
           on_done();
         }
       });
+
+  // Apply the world effect when showing the dialog
+  if (is_persf && initial_staff) {
+    core::restaurant::StaffEvents::apply_event_effect(
+        event.type, *initial_staff, *restaurant, *this);
+  }
 
   // Show excuse, then the options popup when dismissed.
   context_->popup->origin({28, 40});

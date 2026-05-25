@@ -268,13 +268,14 @@ std::vector<ConversationLine<MayorLine>> MayorConversation::lines() const {
   case MayorLine::HELLO_PIZZA_OF_THE_YEAR:
     return {make_terminal_line(current_line_)};
 
+  case MayorLine::ILL_LOOK_AGAIN_WHEN_I_CAN:
+    return {make_terminal_line(current_line_)};
   case MayorLine::NOT_BAD_FOR_A_START_FIRST_STAR:
   case MayorLine::CONGRATULATIONS_NEW_STAR:
   case MayorLine::RESTAURANT_CLOSED_FOR_A_WEEK:
   case MayorLine::QUALITY_FALLEN_STAR_REMOVED:
   case MayorLine::QUALITY_NOT_CHANGED:
   case MayorLine::YOU_NEED_TO_WORK_ON_YOUR_QUALITY_NO_STAR:
-  case MayorLine::ILL_LOOK_AGAIN_WHEN_I_CAN:
   case MayorLine::VERY_BUSY_MAN_HARDLY_TIME_FOR_PIZZA:
   case MayorLine::HELLO_MOST_BEAUTIFUL_RESTAURANT_IN_TOWN:
   case MayorLine::WE_HAVE_A_WINNER_MASTER_CHEF_IS:
