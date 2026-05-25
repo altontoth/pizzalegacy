@@ -16,7 +16,9 @@
 #include "core/character/Actor.h"
 #include "core/city/City.h"
 #include "engine/Fatal.h"
+#include "engine/FormatCompat.h"
 
+#include <magic_enum/magic_enum.hpp>
 #include <memory>
 
 std::unique_ptr<MainPanelView>
@@ -64,7 +66,8 @@ ActorViewFactory::create(GameContext& context, GameState& game_state,
     break;
   }
   default:
-    fatal("Unhandled ActorType in ActorViewFactory");
+    fatal(compat::format("Unhandled ActorType in ActorViewFactory: {}",
+                         magic_enum::enum_name(ats.type)));
     break;
   }
 
