@@ -178,25 +178,31 @@ struct PoliceState {
 struct StockMainState {};
 struct ContractsViewState {};
 
-enum class IngredientScreenMode {
-  RESTAURANT,
-  CENTRAL_DEPOT,
-  CENTRAL_DEPOT_SELL
-};
+enum class IngredientScreenMode { CENTRAL_DEPOT_BUY, CENTRAL_DEPOT_SELL };
 
 struct IngredientSupplierListState {
   IngredientCategory category;
-  IngredientScreenMode mode = IngredientScreenMode::RESTAURANT;
 };
 struct IngredientOrderState {
   uint8_t supplier_id;
   IngredientCategory category;
-  IngredientScreenMode mode = IngredientScreenMode::RESTAURANT;
   std::optional<std::vector<IngredientBatch>> saved_ingredients = std::nullopt;
 };
 struct IngredientCategoryViewState {
   IngredientCategory category;
-  IngredientScreenMode mode = IngredientScreenMode::RESTAURANT;
+};
+struct DepotIngredientCategoryViewState {
+  IngredientCategory category;
+};
+struct DepotIngredientSupplierListState {
+  IngredientCategory category;
+  IngredientScreenMode mode = IngredientScreenMode::CENTRAL_DEPOT_BUY;
+};
+struct DepotIngredientOrderState {
+  uint8_t supplier_id;
+  IngredientCategory category;
+  IngredientScreenMode mode = IngredientScreenMode::CENTRAL_DEPOT_BUY;
+  std::optional<std::vector<IngredientBatch>> saved_ingredients = std::nullopt;
 };
 // Central Depot:
 struct DepotMainState {
@@ -252,11 +258,12 @@ using UIState = std::variant<
     FurnitureListState, CategoryOverviewState, SupplierListState,
     PizzaDesignState, RestaurantMenuState, RestaurantStatsState,
     WeeksTakingsState, AnimatedStatsState, IngredientCategoryViewState,
-    StockMainState, ContractsViewState, DepotMainState, DepotExportState,
-    IngredientSupplierListState, IngredientOrderState,
-    DepotWeaponInterfaceState, TerminalState, SupplierContractState,
-    PlayerTurnCardState, FullscreenStatusState, WinSequenceState,
-    MafiaMissionViewState, MarketResearchState, StatsRestaurantsState,
-    PlayerProfileState, GameOverState,
+    DepotIngredientCategoryViewState, StockMainState, ContractsViewState,
+    DepotMainState, DepotExportState, IngredientSupplierListState,
+    DepotIngredientSupplierListState, IngredientOrderState,
+    DepotIngredientOrderState, DepotWeaponInterfaceState, TerminalState,
+    SupplierContractState, PlayerTurnCardState, FullscreenStatusState,
+    WinSequenceState, MafiaMissionViewState, MarketResearchState,
+    StatsRestaurantsState, PlayerProfileState, GameOverState,
     // nothing on screen:
     std::monostate>;

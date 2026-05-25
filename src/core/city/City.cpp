@@ -401,6 +401,16 @@ std::vector<const FoodSupplier*> City::food_suppliers(ActorType type) const {
   return supplier_list;
 }
 
+std::vector<FoodSupplier*> City::food_suppliers(ActorType type) {
+  std::vector<FoodSupplier*> supplier_list{};
+  for (auto& supplier : suppliers_) {
+    if (supplier->actor_type() == type) {
+      supplier_list.push_back(supplier.get());
+    }
+  }
+  return supplier_list;
+}
+
 void City::data_length(int length) { data_length_ = length; }
 
 void City::map_data(const std::vector<unsigned char>& d) {

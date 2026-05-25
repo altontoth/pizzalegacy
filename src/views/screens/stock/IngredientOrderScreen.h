@@ -7,9 +7,7 @@
 #pragma once
 
 #include "core/finance/Money.h"
-#include "core/food/Ingredient.h"
 #include "core/food/IngredientCategoryType.h"
-#include "core/state/UIState.h"
 #include "core/supply/IngredientBatch.h"
 #include "views/screens/stock/StockMain.h"
 
@@ -20,12 +18,10 @@ class FoodSupplier;
 
 class IngredientOrderScreen : public views::screens::stock::StockMain {
 public:
-  IngredientOrderScreen(
-      GameContext& context, GameState& state, uint8_t supplier_id,
-      IngredientCategory category,
-      IngredientScreenMode mode = IngredientScreenMode::RESTAURANT,
-      std::optional<std::vector<IngredientBatch>> saved_ingredients =
-          std::nullopt);
+  IngredientOrderScreen(GameContext& context, GameState& state,
+                        uint8_t supplier_id, IngredientCategory category,
+                        std::optional<std::vector<IngredientBatch>>
+                            saved_ingredients = std::nullopt);
   void tick() override;
   void render(const RenderContext& ctx) override;
   bool on_action(const input::ActionEvent& ev) override;
@@ -35,8 +31,6 @@ protected:
   void draw_page_header(const RenderContext& ctx);
   void draw_page_screen(const RenderContext& ctx);
   void draw_ingredient_list(const RenderContext& ctx);
-  void draw_depot_ingredient_list(const RenderContext& ctx);
-  void draw_restaurant_ingredient_list(const RenderContext& ctx);
   void register_ingredient_row(ViewRect row_rect, size_t i);
   void set_up_input_panel() override;
   void place_order();
@@ -45,7 +39,6 @@ private:
   Money
   calculate_ingredient_price(core::food::IngredientType ingredient_type) const;
   Money calculate_total_cost() const;
-  bool check_depot_quality(const IngredientBatch& batch) const;
 
   // Button hold handling helpers
   void handle_button_press(size_t ingredient_index, bool is_left_button);
@@ -54,8 +47,7 @@ private:
   void handle_scroll(size_t ingredient_index, int delta);
 
   IngredientCategory category_;
-  IngredientScreenMode mode_;
-  const FoodSupplier* supplier_{nullptr};
+  FoodSupplier* supplier_{nullptr};
   std::vector<IngredientBatch> ingredients_;
 
   // For hover and continuous clicking
@@ -69,4 +61,5 @@ private:
   static constexpr int REPEAT_DELAY = 6;       // Frames before repeat starts
   static constexpr int REPEAT_RATE_SINGLE = 2; // Frames between repeats
   static constexpr int FAST_STEP = 5;          // Step when Shift or dual-button
+  static constexpr int NORMAL_STEP = 1;        // Normal step size
 };

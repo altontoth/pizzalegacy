@@ -37,9 +37,8 @@ ActorType category_to_actor_type(IngredientCategory category) {
 
 IngredientSupplierList::IngredientSupplierList(GameContext& context,
                                                GameState& state,
-                                               IngredientCategory category,
-                                               IngredientScreenMode mode)
-    : StockMain(context, state), category_(category), mode_(mode) {
+                                               IngredientCategory category)
+    : StockMain(context, state), category_(category) {
 
   // Set up category titles
   category_titles_[IngredientCategory::VEGETABLES] = "Vegetables";
@@ -48,8 +47,8 @@ IngredientSupplierList::IngredientSupplierList(GameContext& context,
   category_titles_[IngredientCategory::CHEESE] = "Cheese & Spices";
 
   // Get and sort suppliers by quality (ascending - lowest quality first)
-  auto suppliers =
-      state.active_city()->food_suppliers(category_to_actor_type(category));
+  const City* city = state.active_city();
+  auto suppliers = city->food_suppliers(category_to_actor_type(category));
   std::sort(suppliers.begin(), suppliers.end(),
             [](const FoodSupplier* a, const FoodSupplier* b) {
               return a->quality() < b->quality();
@@ -60,8 +59,7 @@ IngredientSupplierList::IngredientSupplierList(GameContext& context,
       std::move(suppliers),
       // Click callback - navigate to ingredient order screen
       [this](const FoodSupplier* supplier) {
-        state_.ui().push<IngredientOrderState>(supplier->id(), category_,
-                                               mode_);
+        state_.ui().push<IngredientOrderState>(supplier->id(), category_);
       },
       // Extra info renderer - display "SO FAR" spending
       [this](Surface& surface, const FoodSupplier* supplier, ViewPoint pos) {
@@ -93,11 +91,6 @@ void IngredientSupplierList::draw_page_header(const RenderContext& ctx) {
   gfx::blit::blit_raw_with_palette(*ctx.surface,
                                    context_.vga->get("gfx/back9"));
 
-  if (mode_ != IngredientScreenMode::RESTAURANT) {
-    draw_icon(ctx);
-  }
-
-  // Title with category name
   std::string title = category_titles_[category_] + " suppliers";
   context_.font->render_text_onto(*ctx.surface, title, ViewPoint{40, 16},
                                   FontFace::PIZ_NUMB, 8, AlignX::Center);

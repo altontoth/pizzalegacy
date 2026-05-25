@@ -7,7 +7,6 @@
 #pragma once
 
 #include "core/food/IngredientCategoryType.h"
-#include "core/state/UIState.h"
 #include "views/helpers/SupplierListRenderer.h"
 #include "views/screens/stock/StockMain.h"
 
@@ -19,9 +18,8 @@ class FoodSupplier;
 
 class IngredientSupplierList : public views::screens::stock::StockMain {
 public:
-  IngredientSupplierList(
-      GameContext& context, GameState& state, IngredientCategory category,
-      IngredientScreenMode mode = IngredientScreenMode::RESTAURANT);
+  IngredientSupplierList(GameContext& context, GameState& state,
+                         IngredientCategory category);
   void tick() override;
   void render(const RenderContext& ctx) override;
 
@@ -33,7 +31,6 @@ protected:
 
 private:
   IngredientCategory category_;
-  IngredientScreenMode mode_;
   std::map<IngredientCategory, std::string> category_titles_;
   std::optional<SupplierListRenderer<FoodSupplier>> renderer_;
   std::size_t current_page_{0};

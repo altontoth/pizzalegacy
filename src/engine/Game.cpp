@@ -93,6 +93,9 @@
 #include "views/screens/restaurant/RestaurantView.h"
 #include "views/screens/restaurant/WeeksTakings.h"
 #include "views/screens/stock/Contracts.h"
+#include "views/screens/stock/DepotIngredientCategoryView.h"
+#include "views/screens/stock/DepotIngredientOrderScreen.h"
+#include "views/screens/stock/DepotIngredientSupplierList.h"
 #include "views/screens/stock/IngredientCategoryView.h"
 #include "views/screens/stock/IngredientOrderScreen.h"
 #include "views/screens/stock/IngredientSupplierList.h"
@@ -738,7 +741,11 @@ Renderable* Game::change_state(GameState& gs, LoopState& /*loop*/) {
           },
           [&](const IngredientCategoryViewState& is) {
             current_view_ = std::make_unique<IngredientCategoryView>(
-                context, gs, is.category, is.mode);
+                context, gs, is.category);
+          },
+          [&](const DepotIngredientCategoryViewState& ds) {
+            current_view_ = std::make_unique<DepotIngredientCategoryView>(
+                context, gs, ds.category);
           },
           [&](const DepotMainState& dms) {
             current_view_ = std::make_unique<views::screens::depot::DepotMain>(
@@ -763,12 +770,20 @@ Renderable* Game::change_state(GameState& gs, LoopState& /*loop*/) {
           },
           [&](const IngredientSupplierListState& isls) {
             current_view_ = std::make_unique<IngredientSupplierList>(
-                context, gs, isls.category, isls.mode);
+                context, gs, isls.category);
+          },
+          [&](const DepotIngredientSupplierListState& ds) {
+            current_view_ = std::make_unique<DepotIngredientSupplierList>(
+                context, gs, ds.category, ds.mode);
           },
           [&](const IngredientOrderState& ios) {
             current_view_ = std::make_unique<IngredientOrderScreen>(
-                context, gs, ios.supplier_id, ios.category, ios.mode,
+                context, gs, ios.supplier_id, ios.category,
                 ios.saved_ingredients);
+          },
+          [&](const DepotIngredientOrderState& ds) {
+            current_view_ =
+                std::make_unique<DepotIngredientOrderScreen>(context, gs, ds);
           },
           [&](const SupplierContractState& scs) {
             // Find the supplier from the city

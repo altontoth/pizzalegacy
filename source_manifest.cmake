@@ -164,6 +164,9 @@ set(GAME_PLEGACY_SOURCES
     src/views/screens/restaurant/SeatedCharacterRenderer.cpp
     src/views/screens/restaurant/WeeksTakings.cpp
     src/views/screens/stock/Contracts.cpp
+    src/views/screens/stock/DepotIngredientCategoryView.cpp
+    src/views/screens/stock/DepotIngredientOrderScreen.cpp
+    src/views/screens/stock/DepotIngredientSupplierList.cpp
     src/views/screens/stock/IngredientCategoryView.cpp
     src/views/screens/stock/IngredientOrderScreen.cpp
     src/views/screens/stock/IngredientSupplierList.cpp
@@ -592,6 +595,9 @@ set(PLEGACY_HEADERS
     src/views/screens/restaurant/SeatedCharacterRenderer.h
     src/views/screens/restaurant/WeeksTakings.h
     src/views/screens/stock/Contracts.h
+    src/views/screens/stock/DepotIngredientCategoryView.h
+    src/views/screens/stock/DepotIngredientOrderScreen.h
+    src/views/screens/stock/DepotIngredientSupplierList.h
     src/views/screens/stock/IngredientCategoryView.h
     src/views/screens/stock/IngredientOrderScreen.h
     src/views/screens/stock/IngredientSupplierList.h

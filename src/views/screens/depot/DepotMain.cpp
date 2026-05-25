@@ -79,30 +79,29 @@ void DepotMain::set_up_input_panel() {
   input_panel_->add_button(
       Icon::VEGETABLE, ButtonType::Square, ButtonPosition::TopLeft,
       "Vegetables", [this]() {
-        state_.ui().replace_top<IngredientCategoryViewState>(
-            IngredientCategory::VEGETABLES,
-            IngredientScreenMode::CENTRAL_DEPOT);
+        state_.ui().replace_top<DepotIngredientCategoryViewState>(
+            IngredientCategory::VEGETABLES);
       });
 
   input_panel_->add_button(
       Icon::MEAT, ButtonType::Square, ButtonPosition::TopCenter, "Meat",
       [this]() {
-        state_.ui().replace_top<IngredientCategoryViewState>(
-            IngredientCategory::MEAT, IngredientScreenMode::CENTRAL_DEPOT);
+        state_.ui().replace_top<DepotIngredientCategoryViewState>(
+            IngredientCategory::MEAT);
       });
 
   input_panel_->add_button(
       Icon::FRUIT, ButtonType::Square, ButtonPosition::MiddleLeft, "Fruit",
       [this]() {
-        state_.ui().replace_top<IngredientCategoryViewState>(
-            IngredientCategory::FRUIT, IngredientScreenMode::CENTRAL_DEPOT);
+        state_.ui().replace_top<DepotIngredientCategoryViewState>(
+            IngredientCategory::FRUIT);
       });
 
   input_panel_->add_button(
       Icon::CHEESE, ButtonType::Square, ButtonPosition::MiddleCenter, "Cheese",
       [this]() {
-        state_.ui().replace_top<IngredientCategoryViewState>(
-            IngredientCategory::CHEESE, IngredientScreenMode::CENTRAL_DEPOT);
+        state_.ui().replace_top<DepotIngredientCategoryViewState>(
+            IngredientCategory::CHEESE);
       });
 
   input_panel_->add_button(Icon::BOMB, ButtonType::Horizontal,

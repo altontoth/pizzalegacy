@@ -141,6 +141,7 @@ public:
 
   std::vector<const Actor*> actors(ActorType type) const;
   std::vector<const FoodSupplier*> food_suppliers(ActorType type) const;
+  std::vector<FoodSupplier*> food_suppliers(ActorType type);
   const std::vector<std::unique_ptr<FoodSupplier>>& suppliers() const {
     return suppliers_;
   }
