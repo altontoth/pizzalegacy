@@ -99,7 +99,8 @@ void ManagerRoutine::report_previous_day_shortages() {
 
   auto filled_in_as = restaurant_.manager_filled_in_as();
   if (filled_in_as != JobRole::NONE) {
-    const char* role = (filled_in_as == JobRole::CHEF) ? "cooks" : "waiters";
+    const std::string_view role =
+        (filled_in_as == JobRole::CHEF) ? "cooks" : "waiters";
     queue_alert(compat::format("Boss! Yesterday in restaurant {} I had to help "
                                "out our {} with their work!",
                                restaurant_.name(), role));
@@ -108,7 +109,8 @@ void ManagerRoutine::report_previous_day_shortages() {
 
   auto shortage = restaurant_.manager_staff_shortage();
   if (shortage != JobRole::NONE) {
-    const char* role = (shortage == JobRole::CHEF) ? "cooks" : "waiters";
+    const std::string_view role =
+        (shortage == JobRole::CHEF) ? "cooks" : "waiters";
     queue_alert(
         compat::format("Boss! In restaurant {} we haven't got enough {}!",
                        restaurant_.name(), role));
