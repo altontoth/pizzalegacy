@@ -76,6 +76,8 @@ static std::string probe_for_dos_game(const std::string& base) {
   add("game");
   add("Pizza Connection");
   add("Pizza Connection/game");
+  add("steamapps/common/Pizza Connection");
+  add("steamapps/common/Pizza Connection/game");
 
 #ifdef __APPLE__
   add("Pizza Connection.app/Contents/Resources/game");
@@ -105,8 +107,9 @@ static constexpr const char* k_location_hint =
     "Select the folder containing your original Pizza Tycoon / Pizza "
     "Connection game files.\n\n"
     "Steam users: you can point to your Steam directory, your "
-    "steamapps\\common "
-    "folder, or directly to the Pizza Connection folder.";
+    "steamapps\\common folder, or directly to the Pizza Connection folder.\n\n"
+    "GOG users: point to your GOG Galaxy directory or directly to the Pizza "
+    "Connection folder.";
 #else
 static constexpr const char* k_location_hint =
     "Select the folder containing your original Pizza Tycoon / Pizza "
