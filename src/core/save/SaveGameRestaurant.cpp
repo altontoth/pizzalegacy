@@ -423,7 +423,7 @@ std::unique_ptr<Restaurant> json_to_restaurant(const json& j,
 
   // Restore open state
   if (j.contains("wants_open")) {
-    restaurant->wants_open(j["wants_open"].get<bool>());
+    RestaurantLoader::set_wants_open(*restaurant, j["wants_open"].get<bool>());
     int forced = j.value("forced_days_remaining", 0);
     if (forced > 0) {
       restaurant->force_close(forced);
@@ -433,7 +433,7 @@ std::unique_ptr<Restaurant> json_to_restaurant(const json& j,
   else if (j.contains("open_status")) {
     int status = j["open_status"].get<int>();
     // 0=Open, 1=ClosedOutOfHours, 2=ClosedManually, 3=ClosedForced
-    restaurant->wants_open(status == 0 || status == 1);
+    RestaurantLoader::set_wants_open(*restaurant, status == 0 || status == 1);
     if (status == 3) {
       restaurant->force_close(j.value("forced_days_closed", 1));
     }

@@ -92,7 +92,7 @@ RestaurantView::RestaurantView(GameContext& context, GameState& state,
       }
     }
     if (!kitchen_view_ && restaurant_->wants_open()) {
-      restaurant_->wants_open(false);
+      restaurant_->close_for_business();
       restaurant_->add_reputation_damage(-16, 16);
       closed_for_placement_ = true;
       post_waiting_customers_msg = true;
@@ -100,7 +100,7 @@ RestaurantView::RestaurantView(GameContext& context, GameState& state,
   }
 
   if (r_state.reopen_restaurant) {
-    restaurant_->wants_open(true);
+    restaurant_->open_for_business(state_);
   }
 
   set_up_buttons();
@@ -333,7 +333,7 @@ void RestaurantView::set_up_buttons() {
               "Close restaurant?", [this](bool close) {
                 Logger::debug("Closing restaurant: {}", close ? "Yes" : "No");
                 if (close) {
-                  restaurant_->wants_open(false);
+                  restaurant_->close_for_business();
                   restaurant_->add_reputation_damage(-16, 16);
                   update_restaurant_noise();
                 }
@@ -385,7 +385,7 @@ void RestaurantView::set_up_buttons() {
               "Open restaurant?", [this](bool open) {
                 Logger::debug("Opening restaurant: {}", open ? "Yes" : "No");
                 if (open) {
-                  restaurant_->wants_open(true);
+                  restaurant_->open_for_business(state_);
                   update_restaurant_noise();
                   if (auto* player = state_.active_player()) {
                     state_.check_restaurant_milestones(*player);

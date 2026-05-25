@@ -1629,17 +1629,7 @@ void Restaurant::start_of_day(GameState& game_state) {
 
   decrement_protection_timer();
 
-  if (auto* player = game_state.active_player()) {
-    if (player->is_human_controlled()) {
-      const auto& city = property_.city();
-      const auto& district = property_.district();
-
-      calculate_popularity(*player, city, district);
-      economy_.total_popularity(popularity_.total());
-
-      update_demographics(player->recipes());
-    }
-  }
+  recalculate_economy_metrics(game_state);
 
   if (wants_open_ && forced_days_remaining_ == 0) {
     int total_customers = 0;
@@ -1668,12 +1658,91 @@ int Restaurant::get_predicted_daily_orders(core::RecipeId recipe_id) const {
   return 0;
 }
 
+void Restaurant::update_menu_factor(const core::food::PlayerRecipes& recipes,
+                                    const City& city,
+                                    const District& district) {
+  const auto& menu_entries = menu_.entries();
+  const int pizza_count = static_cast<int>(menu_entries.size());
+
+  if (pizza_count == 0) {
+    for (auto demo : ALL_CONSUMER_TYPES) {
+      economy_.menu_factor()[demo] = 1;
+    }
+    return;
+  }
+
+  int total_serving_quality = 0;
+  int waiter_count = 0;
+  for (const auto& waiter : waiters_) {
+    if (waiter.has_value() && !waiter->is_away()) {
+      total_serving_quality += waiter->character().serving();
+      waiter_count++;
+    }
+  }
+  int avg_serving_quality =
+      waiter_count > 0 ? total_serving_quality / waiter_count : 0;
+
+  for (int demographic = 0; demographic < 6; demographic++) {
+    ConsumerType demo_type = static_cast<ConsumerType>(demographic);
+
+    std::vector<float> pizza_demand_scores(pizza_count + 1, 0.0f);
+    std::vector<bool> already_picked(pizza_count + 1, false);
+
+    for (int pizza_idx = 0; pizza_idx < pizza_count; pizza_idx++) {
+      const auto& entry = menu_entries[pizza_idx];
+      int demand = core::restaurant::PizzaDemand::calculate(
+          entry, recipes, city, district, demo_type);
+      pizza_demand_scores[pizza_idx] = static_cast<float>(demand);
+      already_picked[pizza_idx] = false;
+    }
+    pizza_demand_scores[pizza_count] = 0.0f;
+
+    int top5_sum = 0;
+    for (int pick_iteration = 0; pick_iteration < 5; pick_iteration++) {
+      int best_idx = pizza_count;
+      for (int search_idx = 0; search_idx < pizza_count; search_idx++) {
+        if (pizza_demand_scores[search_idx] > pizza_demand_scores[best_idx] &&
+            !already_picked[search_idx]) {
+          best_idx = search_idx;
+        }
+      }
+      top5_sum += static_cast<int>(pizza_demand_scores[best_idx]);
+      already_picked[best_idx] = true;
+    }
+
+    int avg_top5 = top5_sum / 5;
+    int serving_bonus = avg_serving_quality >> 3;
+    economy_.menu_factor()[demo_type] =
+        std::clamp(avg_top5 + serving_bonus, 1, 255);
+  }
+}
+
+void Restaurant::recalculate_economy_metrics(GameState& game_state) {
+  auto* player = game_state.active_player();
+  if (!player || !player->is_human_controlled()) {
+    return;
+  }
+  const auto& city = property_.city();
+  const auto& district = property_.district();
+  calculate_popularity(*player, city, district);
+  economy_.total_popularity(popularity_.total());
+  update_demographics(player->recipes());
+}
+
+void Restaurant::open_for_business(GameState& game_state) {
+  auto* player = game_state.active_player();
+  if (player && player->is_human_controlled()) {
+    update_menu_factor(player->recipes(), property_.city(),
+                       property_.district());
+  }
+  wants_open(true);
+  recalculate_economy_metrics(game_state);
+}
+
+void Restaurant::close_for_business() { wants_open(false); }
+
 void Restaurant::calculate_daily_pizza_sales_distribution(
     GameState& game_state) {
-  // Per demographic: score each pizza's demand, find top 5 (scan-based, not
-  // sort), compute menu_factor, then distribute customers proportionally.
-  // Final per-pizza sales are capped at 250 + random(0-4).
-
   auto* player = game_state.active_player();
   if (!player) {
     return;
@@ -1693,16 +1762,7 @@ void Restaurant::calculate_daily_pizza_sales_distribution(
   const City& city = property_.city();
   const District& district = property_.district();
 
-  int total_serving_quality = 0;
-  int waiter_count = 0;
-  for (const auto& waiter : waiters_) {
-    if (waiter.has_value() && !waiter->is_away()) {
-      total_serving_quality += waiter->character().serving();
-      waiter_count++;
-    }
-  }
-  int avg_serving_quality =
-      waiter_count > 0 ? total_serving_quality / waiter_count : 0;
+  update_menu_factor(recipes, city, district);
 
   std::vector<float> pizza_total_sales(pizza_count, 0.0f);
   predicted_daily_orders_.clear();
@@ -1713,7 +1773,6 @@ void Restaurant::calculate_daily_pizza_sales_distribution(
     std::vector<float> pizza_demand_scores(pizza_count + 1,
                                            0.0f); // +1 sentinel
     float total_demand = 0.0f;
-    std::vector<bool> already_picked(pizza_count + 1, false);
 
     for (int pizza_idx = 0; pizza_idx < pizza_count; pizza_idx++) {
       const auto& entry = menu_entries[pizza_idx];
@@ -1723,36 +1782,7 @@ void Restaurant::calculate_daily_pizza_sales_distribution(
 
       pizza_demand_scores[pizza_idx] = static_cast<float>(demand);
       total_demand += static_cast<float>(demand);
-      already_picked[pizza_idx] = false;
     }
-
-    // Sentinel at end for when there are fewer than 5 pizzas
-    pizza_demand_scores[pizza_count] = 0.0f;
-
-    // Find top 5 by repeated scan (NOT sort -- ties resolve differently)
-    // If fewer than 5 pizzas, the sentinel (value=0) gets selected.
-    int top5_sum = 0;
-
-    for (int pick_iteration = 0; pick_iteration < 5; pick_iteration++) {
-      int best_idx = pizza_count; // sentinel
-
-      for (int search_idx = 0; search_idx < pizza_count; search_idx++) {
-        if (pizza_demand_scores[search_idx] > pizza_demand_scores[best_idx] &&
-            !already_picked[search_idx]) {
-          best_idx = search_idx;
-        }
-      }
-
-      top5_sum += static_cast<int>(pizza_demand_scores[best_idx]);
-      already_picked[best_idx] = true;
-    }
-
-    // ALWAYS divide by 5, even if fewer pizzas
-    int avg_top5 = top5_sum / 5;
-
-    int serving_bonus = avg_serving_quality >> 3;
-    int menu_stat = avg_top5 + serving_bonus;
-    economy_.menu_factor()[demo_type] = std::clamp(menu_stat, 1, 255);
 
     // Distribute customers proportionally by pizza demand
     if (total_demand > 0.0f) {

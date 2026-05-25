@@ -6,6 +6,10 @@
 
 #pragma once
 
+namespace save {
+struct RestaurantLoader;
+}
+
 #include <memory>
 #include <utility>
 #include <vector>
@@ -169,7 +173,6 @@ public:
 
   // Player intent
   bool wants_open() const { return wants_open_; }
-  void wants_open(bool wants);
   bool ever_opened() const { return ever_opened_; }
   void set_ever_opened() { ever_opened_ = true; } // for save/load
 
@@ -247,6 +250,12 @@ public:
   // Recalculate furniture appeal and competitive strength.
   // Call when menu or furniture changes outside the daily pipeline.
   void update_demographics(const core::food::PlayerRecipes& recipes);
+
+  void recalculate_economy_metrics(class GameState& game_state);
+
+  // open restaurant and recalculate economy metrics
+  void open_for_business(class GameState& game_state);
+  void close_for_business();
 
   Popularity
   calculate_menu_popularity(const core::food::PlayerRecipes& recipes) const;
@@ -439,10 +448,15 @@ public:
   }
 
 private:
+  friend struct save::RestaurantLoader;
+  void wants_open(bool wants);
   int calculate_average_cook_quality() const;
   int calculate_average_oven_quality() const;
   int calculate_ingredient_quality_for_pizza(
       const core::food::Pizza& pizza) const;
+  void update_menu_factor(const core::food::PlayerRecipes& recipes,
+                          const class City& city,
+                          const class District& district);
   Property& property_;
   bool wants_open_{false};
   bool ever_opened_{false};

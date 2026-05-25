@@ -18,6 +18,11 @@ namespace save {
 
 using json = nlohmann::json;
 
+// Attorney for private Restaurant access
+struct RestaurantLoader {
+  static void set_wants_open(Restaurant& r, bool v) { r.wants_open(v); }
+};
+
 json staff_to_json(const Staff& staff);
 Staff json_to_staff(const json& j);
 

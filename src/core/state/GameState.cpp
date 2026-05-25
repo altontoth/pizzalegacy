@@ -2873,7 +2873,7 @@ Restaurant* GameState::create_ai_starting_restaurant(Player& player,
     const int layout_id = big ? ((idx4 * 2) + 1) : ((idx4 * 2) + 2);
     auto* rest = create_restaurant_with_layout(player, city, layout_id, big);
     if (rest) {
-      rest->wants_open(true);
+      rest->open_for_business(*this);
     }
     return rest;
   }

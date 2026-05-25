@@ -691,7 +691,7 @@ Examples:
           result.add_message("Restaurant is force-closed, cannot open");
         }
         else {
-          restaurant->wants_open(true);
+          restaurant->open_for_business(ctx.state);
           result.add_message("Restaurant opened successfully");
         }
 

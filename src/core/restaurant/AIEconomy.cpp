@@ -83,7 +83,7 @@ bool check_bankruptcy(Restaurant& restaurant, Player& player,
   auto& property = restaurant.property();
   std::string district_name = property.district().name();
 
-  restaurant.wants_open(false);
+  restaurant.close_for_business();
   game_state.end_property_lease(property, player);
 
   Logger::info("[AI] {} closes a restaurant in {}", player.name(),
