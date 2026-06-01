@@ -1452,7 +1452,6 @@ void PizzaDesign::on_design_finished() {
     return;
   }
 
-  // If this is a canonical pizza, load the reference and score it
   if (bake_->canonical_id) {
     auto get_bob_size =
         make_ingredient_bob_size_fn<Bob, core::food::Topping>(zutaten_bob_);
@@ -1461,20 +1460,17 @@ void PizzaDesign::on_design_finished() {
         pizza_index, get_bob_size, state_.customer_taste_profiles());
 
     if (canonical_pizza) {
-      bake_->working.set_scores_from_canonical(*canonical_pizza);
+      bake_->working.finalize_against(*canonical_pizza,
+                                      state_.customer_taste_profiles());
     }
     else {
       Logger::warn("Failed to load canonical pizza {}", pizza_index);
     }
   }
-
-  // Finalize the pizza but don't set name yet for NewUser
-  if (bake_->kind == BakeKind::NewUser) {
-    bake_->working.finalize(state_.customer_taste_profiles(),
-                            "recipe"); // temporary name
-  }
   else {
-    bake_->working.finalize(state_.customer_taste_profiles());
+    // Finalize the pizza but don't set name yet for NewUser
+    std::string tmp = (bake_->kind == BakeKind::NewUser) ? "recipe" : "";
+    bake_->working.finalize(state_.customer_taste_profiles(), tmp);
   }
 
   post_bake();
@@ -2001,10 +1997,10 @@ void PizzaDesign::on_competition_design_finished() {
     return;
   }
   state_.advance_time_blocks(5);
-  bake_->working.set_scores_from_canonical(*competition_->canonical_pizza);
+  bake_->working.finalize_against(*competition_->canonical_pizza,
+                                  state_.customer_taste_profiles(),
+                                  "competition pizza");
   auto imitation_scores = bake_->working.scores();
-  bake_->working.finalize(state_.customer_taste_profiles(),
-                          "competition pizza");
 
   auto bake_ptr = std::make_shared<core::food::BakeSession>(std::move(*bake_));
   bake_.reset();

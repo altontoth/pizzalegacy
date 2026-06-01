@@ -51,9 +51,11 @@ public:
   const std::array<int, NUMBER_OF_JUDGES>& scores() const;
   void finalize(const CustomerTasteProfiles& taste_profiles,
                 const std::string& name = "");
+  void finalize_against(const Pizza& reference,
+                        const CustomerTasteProfiles& taste_profiles,
+                        const std::string& name = "");
   bool is_finalized() const noexcept { return finalized_; }
   int compare_to_other_pizza(const Pizza& other) const;
-  void set_scores_from_canonical(const Pizza& canonical);
   static int topping_comparison_score(const Topping& ref_topping,
                                       const Topping& user_topping);
   const std::string& name() const { return name_; }
@@ -80,6 +82,7 @@ public:
   calculate_demographic_scores(const CustomerTasteProfiles& taste_profiles);
 
 private:
+  void compute_physical_stats();
   [[nodiscard]] Flavors calculate_flavor_percentages() const;
   int calculate_calories();
 
@@ -102,7 +105,7 @@ private:
   std::vector<std::unique_ptr<Topping>> toppings_{};
   std::string name_{};
   std::array<int, NUMBER_OF_JUDGES> scores_{};
-  Popularity popularity_{0, 100, 20, 40, 60, 80};
+  Popularity popularity_{0, 0, 0, 0, 0, 0};
   Origin origin_{Origin::User};
   bool finalized_{false};
   int calories_{0};

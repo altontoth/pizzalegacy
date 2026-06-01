@@ -79,17 +79,36 @@ std::unique_ptr<Topping> Pizza::remove_latest_topping() {
   return nullptr;
 }
 
-void Pizza::set_scores_from_canonical(const Pizza& canonical) {
-  // Compare this pizza to the canonical one
-  int mismatch = compare_to_other_pizza(canonical);
+void Pizza::finalize(const CustomerTasteProfiles& taste_profiles,
+                     const std::string& name) {
+  if (name != "") {
+    name_ = name;
+  }
+  update_stats(taste_profiles);
+  finalized_ = true;
+}
+
+void Pizza::finalize_against(const Pizza& reference,
+                             const CustomerTasteProfiles& taste_profiles,
+                             const std::string& name) {
+  if (name != "") {
+    name_ = name;
+  }
+  compute_physical_stats();
+
+  // Compare this pizza to the reference one
+  int mismatch = compare_to_other_pizza(reference);
 
   // Convert mismatch to a score (0 = perfect match, 100 = worst)
   // Higher mismatch means lower score
   int total_score = MAX_SCORE - mismatch;
   total_score = std::clamp(total_score, 0, MAX_SCORE);
 
-  // Set imitation percentage (how well this pizza matches the canonical)
+  // Set imitation percentage (how well this pizza matches the reference)
   imitation_ = total_score;
+  // For competitions this is not really true but the pizza is not saved anyway,
+  // so we just leave it:
+  origin_ = Origin::Canonical;
 
   // Distribute the score across judges using integer division
   // Example: 93 / 5 = 18 remainder 3
@@ -97,7 +116,6 @@ void Pizza::set_scores_from_canonical(const Pizza& canonical) {
   int base_score = total_score / NUMBER_OF_JUDGES;
   int remainder = total_score % NUMBER_OF_JUDGES;
   int num_lower = NUMBER_OF_JUDGES - remainder;
-  int num_higher = remainder;
 
   // First num_lower judges get base_score, then num_higher get base_score+1
   for (int i = 0; i < NUMBER_OF_JUDGES; ++i) {
@@ -108,20 +126,12 @@ void Pizza::set_scores_from_canonical(const Pizza& canonical) {
       scores_[i] = base_score + 1;
     }
   }
-}
 
-void Pizza::finalize(const CustomerTasteProfiles& taste_profiles,
-                     const std::string& name) {
-  if (name != "") {
-    name_ = name;
-  }
-  // Calculate flavor percentages, calories, and all scores
-  update_stats(taste_profiles);
-
+  calculate_demographic_scores(taste_profiles);
   finalized_ = true;
 }
 
-void Pizza::update_stats(const CustomerTasteProfiles& taste_profiles) {
+void Pizza::compute_physical_stats() {
   flavors_ = calculate_flavor_percentages();
 
   float calories_sum = 0;
@@ -134,9 +144,11 @@ void Pizza::update_stats(const CustomerTasteProfiles& taste_profiles) {
   refinement_ = calculate_refinement();
   normality_ = calculate_normality();
   herb_score_ = calculate_herb_score();
+}
 
+void Pizza::update_stats(const CustomerTasteProfiles& taste_profiles) {
+  compute_physical_stats();
   calculate_judge_scores();
-
   calculate_demographic_scores(taste_profiles);
 }
 
