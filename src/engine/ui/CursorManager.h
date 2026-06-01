@@ -25,6 +25,7 @@ public:
   void show_cursor();
   bool is_custom_cursor_active() const;
   bool is_cursor_hidden() const;
+  void display_height(int display_height);
   void update_scaled_cursor(int new_window_width, int new_window_height);
   void update_palette(gfx::PaletteHandle palette);
 
@@ -43,4 +44,5 @@ private:
   float last_scale_x_{1.0f};
   float last_scale_y_{1.0f};
   bool custom_cursor_centered_{false};
+  int display_height_{DisplayConstants::LOGICAL_HEIGHT};
 };

@@ -418,6 +418,7 @@ void Game::run() {
                                display_height_);
       renderer.set_display_height(display_height_);
       interaction_manager_->set_display_height(display_height_);
+      cursor_manager_->display_height(display_height_);
       auto [w, h] =
           resolution_window_size(state.options().resolution, display_height_);
       apply_window_size(w, h);
@@ -525,7 +526,7 @@ void Game::handle_events(LoopState& loop_state) {
     }
 
     if (event.type == SDL_WINDOWEVENT) {
-      if (event.window.event == SDL_WINDOWEVENT_RESIZED) {
+      if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
         handle_resize_event(event, loop_state);
       }
     }
@@ -544,7 +545,7 @@ void Game::handle_resize_event(const SDL_Event& event, LoopState& loop_state) {
   // ratio enforcement is not possible or needed.
   if (!loop_state.fullscreen) {
     if (!enforce_aspect_ratio(sdl_.window, new_width, new_height)) {
-      // Skip further handling as a new SDL_WINDOWEVENT_RESIZED will be
+      // Skip further handling as a new SDL_WINDOWEVENT_SIZE_CHANGED will be
       // triggered
       return;
     }

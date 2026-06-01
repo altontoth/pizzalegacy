@@ -4,11 +4,12 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #include "engine/ui/CursorManager.h"
+
+#include <algorithm>
 #include "engine/DisplayConstants.h"
 #include "engine/Renderer.h"
 #include "gfx/Surface.h"
 
-using DisplayConstants::SCREEN_HEIGHT;
 using DisplayConstants::SCREEN_WIDTH;
 using gfx::Surface;
 
@@ -37,8 +38,9 @@ gfx::Surface create_cursor_surface() {
 }
 } // namespace
 
-CursorManager::CursorManager(VgaManager* /*vga*/, int /*display_height*/)
-    : cursor_surface_(create_cursor_surface()) {}
+CursorManager::CursorManager(VgaManager* /*vga*/, int display_height)
+    : cursor_surface_(create_cursor_surface()),
+      display_height_(display_height) {}
 
 void CursorManager::base_cursor_mode(CursorMode mode) {
   base_mode_ = mode;
@@ -98,15 +100,26 @@ bool CursorManager::is_custom_cursor_active() const {
 
 bool CursorManager::is_cursor_hidden() const { return cursor_hidden_; }
 
+void CursorManager::display_height(int display_height) {
+  display_height_ = display_height;
+}
+
 void CursorManager::update_scaled_cursor(int new_window_width,
                                          int new_window_height) {
-  // The cursor needs to match the content's aspect ratio:
-  // - Content is rendered at 640x400, displayed at window_width x window_height
-  // - In CRT mode, window is 640x480, giving 1.2x vertical stretch
-  // - Scaling against LOGICAL_HEIGHT (400) gives us this stretch
-  float scale_x = static_cast<float>(new_window_width) / SCREEN_WIDTH;
-  float scale_y =
-      static_cast<float>(new_window_height) / DisplayConstants::LOGICAL_HEIGHT;
+  // SDL gives us the window width and height, including any black bars SDL
+  // might have added to preserve the aspect ratio. The cursor must match the
+  // scale of the actual game inside the black bars, so we need to compensate
+  // for this.
+  //
+  // CRT mode applies the additional vertical stretch (640x400 -> 640x480) so we
+  // apply that factor on top at the end.
+  float content_scale =
+      std::min(static_cast<float>(new_window_width) / SCREEN_WIDTH,
+               static_cast<float>(new_window_height) /
+                   static_cast<float>(display_height_));
+  float scale_x = content_scale;
+  float scale_y = content_scale * (static_cast<float>(display_height_) /
+                                   DisplayConstants::LOGICAL_HEIGHT);
 
   // If scale hasn't changed meaningfully, do nothing.
   if (std::fabs(scale_x - last_scale_x_) < 0.01f &&
