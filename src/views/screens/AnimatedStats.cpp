@@ -8,9 +8,7 @@
 
 #include <algorithm>
 #include "core/Demographics.h"
-#include "core/restaurant/Furniture.h"
 #include "core/restaurant/Restaurant.h"
-#include "core/restaurant/RestaurantLayout.h"
 #include "core/state/AnimatedStatsScreen.h"
 #include "core/state/GameState.h"
 #include "core/state/UIState.h"
@@ -1064,49 +1062,13 @@ void AnimatedStats::navigate_to_restaurant(core::RestaurantId new_id) {
 }
 
 void AnimatedStats::calculate_capacity_stats() {
-  // Get service time data for capacity calculations
-  auto service_data = restaurant_->calculate_service_time_data();
-  const auto& stats = restaurant_->stats();
-  int seating_capacity = restaurant_->calculate_seating_capacity(&service_data);
-
-  // Chef capacity: sum of pizzas_per_day for all chefs
-  int chef_capacity = service_data.total_chef_speed;
-
-  // Oven capacity: sum(capacity x 720 / bake_time) for all ovens
-  int oven_capacity = 0;
-  if (restaurant_->layout()) {
-    for (const auto& pf : restaurant_->layout()->placed_kitchen_furniture()) {
-      if (pf && pf->furniture()->category() == FurnitureCategory::KITCHENWARE) {
-        int bake_time = pf->furniture()->bake_time();
-        int capacity = pf->furniture()->capacity();
-        if (bake_time > 0) {
-          oven_capacity += (capacity * 720) / bake_time;
-        }
-      }
-    }
-  }
-
-  // Waiter capacity: sum of pizzas_per_day for all waiters
-  int waiter_capacity = service_data.total_waiter_speed;
-
-  // Stock capacity: max pizzas that can be made with current ingredient stock
   const auto& recipes = state_.active_player()->recipes();
-  int stock_capacity = restaurant_->calculate_stock_capacity(recipes);
+  auto service_data = restaurant_->calculate_service_time_data();
+  auto analysis =
+      restaurant_->calculate_capacity_analysis(recipes, service_data);
 
   Logger::debug("[AnimatedStats Capacity] Stock capacity (raw): {}",
-                stock_capacity);
-
-  const auto& appeal = restaurant_->economy();
-  // Demand value: use yesterday's orders generated
-  int demand_raw = stats.yesterday.orders_generated;
-  if (demand_raw == 0) {
-    // Fallback: estimate from customer counts
-    int demand_sum = 0;
-    for (const auto& factor : appeal.customer_counts()) {
-      demand_sum += factor;
-    }
-    demand_raw = demand_sum;
-  }
+                analysis.stock_cap);
 
   // Scale values to bar range
   auto scale_to_bar = [](int value) {
@@ -1115,12 +1077,12 @@ void AnimatedStats::calculate_capacity_stats() {
     return std::min(scaled, 139);
   };
 
-  capacity_demand_value_ = scale_to_bar(demand_raw);
-  capacity_category_values_[0] = scale_to_bar(seating_capacity); // Seating
-  capacity_category_values_[1] = scale_to_bar(stock_capacity);   // Stock
-  capacity_category_values_[2] = scale_to_bar(chef_capacity);    // Chefs
-  capacity_category_values_[3] = scale_to_bar(oven_capacity);    // Ovens
-  capacity_category_values_[4] = scale_to_bar(waiter_capacity);  // Waiters
+  capacity_demand_value_ = scale_to_bar(analysis.demand);
+  capacity_category_values_[0] = scale_to_bar(analysis.seating_cap);
+  capacity_category_values_[1] = scale_to_bar(analysis.stock_cap);
+  capacity_category_values_[2] = scale_to_bar(analysis.chef_cap);
+  capacity_category_values_[3] = scale_to_bar(analysis.oven_cap);
+  capacity_category_values_[4] = scale_to_bar(analysis.waiter_cap);
 
   // Calculate final capacity (min of demand and all category values)
   capacity_final_value_ = capacity_demand_value_;

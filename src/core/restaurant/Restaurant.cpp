@@ -448,37 +448,29 @@ Restaurant::Occupancy Restaurant::guest_occupancy() const {
   return {.guests = guests, .seats = seat_count};
 }
 
-ProductionScreenData Restaurant::get_production_screen_data(
-    const core::food::PlayerRecipes& recipes) const {
-  ProductionScreenData data;
+CapacityAnalysis Restaurant::calculate_capacity_analysis(
+    const core::food::PlayerRecipes& recipes,
+    const ServiceTimeData& service_data) const {
+  CapacityAnalysis c;
 
-  int demand_sum = 0;
+  // demand is current per demographic customer counts
   for (const auto& count : economy_.customer_counts()) {
-    demand_sum += count;
+    c.demand += count;
   }
 
-  auto service_data = calculate_service_time_data();
+  c.seating_cap = calculate_seating_capacity(&service_data);
+  c.stock_cap = calculate_stock_capacity(recipes);
+  c.chef_cap = calculate_daily_chef_throughput();
+  c.oven_cap = calculate_daily_oven_throughput();
+  c.waiter_cap = calculate_daily_waiter_throughput();
 
-  // Money box (bills): demand * avg_seating_time / 720, cap 20.
-  if (service_data.avg_seating_time > 0.0f) {
-    float raw =
-        static_cast<float>(demand_sum) * service_data.avg_seating_time / 720.0f;
-    data.bill_count = std::min(static_cast<int>(raw), 20);
-  }
+  // Cascade: each stage limits the next.
+  c.d_seating = std::min(c.demand, c.seating_cap);
+  c.d_stock = std::min(c.d_seating, c.stock_cap);
+  c.d_chef = std::min(c.d_stock, c.chef_cap);
+  c.d_oven = std::min(c.d_chef, c.oven_cap);
 
-  // Demand cascade where each stage limits the next;
-  // utilization = demand_at_stage / cap_at_stage.
-  int seating_cap = calculate_seating_capacity(&service_data);
-  int stock_cap = calculate_stock_capacity(recipes);
-  int chef_cap = calculate_daily_chef_throughput();
-  int oven_cap = calculate_daily_oven_throughput();
-  int waiter_cap = calculate_daily_waiter_throughput();
-
-  int d_seating = std::min(demand_sum, seating_cap);
-  int d_stock = std::min(d_seating, stock_cap);
-  int d_chef = std::min(d_stock, chef_cap);
-  int d_oven = std::min(d_chef, oven_cap);
-
+  // Utilization is each stage's incoming demand divided by its capacity.
   auto util_pct = [](int numerator, int denominator) -> int {
     if (denominator <= 0) {
       return 0;
@@ -486,38 +478,56 @@ ProductionScreenData Restaurant::get_production_screen_data(
     return std::clamp((numerator * 100) / denominator, 0, 100);
   };
 
-  int stock_util = util_pct(d_seating, stock_cap);
-  int chef_util = util_pct(d_stock, chef_cap);
-  data.oven_util = util_pct(d_chef, oven_cap);
-  int waiter_work = util_pct(d_oven, waiter_cap);
+  c.seating_util = util_pct(c.demand, c.seating_cap);
+  c.stock_util = util_pct(c.d_seating, c.stock_cap);
+  c.chef_util = util_pct(c.d_stock, c.chef_cap);
+  c.oven_util = util_pct(c.d_chef, c.oven_cap);
+  c.waiter_work = util_pct(c.d_oven, c.waiter_cap);
 
-  // South box (delivered pizzas)
-  int base_baked = (d_oven < 160) ? d_oven / 16 : 10;
-  data.baked_pizza_count = (base_baked * waiter_work) / 100;
+  return c;
+}
 
-  // North box (order papers): seating-limited demand / 16 (cap 10),
-  // scaled by max(stock_util, chef_util)^2 / 10000 + 1.
-  int base_slips = (d_seating < 160) ? d_seating / 16 : 10;
-  int max_util = std::max(stock_util, chef_util);
+ProductionScreenData Restaurant::get_production_screen_data(
+    const core::food::PlayerRecipes& recipes) const {
+  ProductionScreenData data;
+
+  auto service_data = calculate_service_time_data();
+  auto analysis = calculate_capacity_analysis(recipes, service_data);
+
+  // Money box (bills): demand * avg_seating_time / 720, cap 20.
+  if (service_data.avg_seating_time > 0.0f) {
+    float raw = static_cast<float>(analysis.demand) *
+                service_data.avg_seating_time / 720.0f;
+    data.bill_count = std::min(static_cast<int>(raw), 20);
+  }
+
+  data.oven_util = analysis.oven_util;
+
+  // South (delivered pizzas)
+  int base_baked = (analysis.d_oven < 160) ? analysis.d_oven / 16 : 10;
+  data.baked_pizza_count = (base_baked * analysis.waiter_work) / 100;
+
+  // North (order slips)
+  int base_slips = (analysis.d_seating < 160) ? analysis.d_seating / 16 : 10;
+  int max_util = std::max(analysis.stock_util, analysis.chef_util);
   data.order_count =
-      std::min(((base_slips * max_util * max_util) / 10000) + 1, 10);
+      std::min(((base_slips * max_util * max_util) / 10000) + 1, 11);
 
-  // East box (ovens + pizza stacks): max 4 ovens, pizza count per oven
-  // scaled by oven_util
+  // East (ovens + pizza stacks)
   if (layout_) {
     int oven_count = 0;
     for (const auto& pf : layout_->placed_kitchen_furniture()) {
       if (pf && pf->furniture()->category() == FurnitureCategory::KITCHENWARE) {
         int capacity = pf->furniture()->capacity();
         int scaled_capacity;
-        if (data.oven_util > 90) {
+        if (analysis.oven_util > 90) {
           scaled_capacity = capacity;
         }
-        else if (data.oven_util == 0) {
+        else if (analysis.oven_util == 0) {
           scaled_capacity = 0;
         }
         else {
-          scaled_capacity = (capacity * data.oven_util) / 100;
+          scaled_capacity = (capacity * analysis.oven_util) / 100;
         }
         data.oven_capacities.push_back(scaled_capacity);
         oven_count++;

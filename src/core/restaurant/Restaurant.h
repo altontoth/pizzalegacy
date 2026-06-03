@@ -71,12 +71,33 @@ enum class ManagerBehavior {
   Warmly,
 };
 
+struct CapacityAnalysis {
+  int demand{0};
+
+  int seating_cap{0};
+  int stock_cap{0};
+  int chef_cap{0};
+  int oven_cap{0};
+  int waiter_cap{0};
+
+  int d_seating{0};
+  int d_stock{0};
+  int d_chef{0};
+  int d_oven{0};
+
+  int seating_util{0};
+  int stock_util{0};
+  int chef_util{0};
+  int oven_util{0};
+  int waiter_work{0};
+};
+
 struct ProductionScreenData {
   int order_count{0};               // North: order slips
   std::vector<int> oven_capacities; // East: pizzas per oven column
-  int oven_util{0}; // East: oven utilization % (demand_chef_limited / oven_cap)
-  int baked_pizza_count{0}; // South: baked pizza symbols
-  int bill_count{0};        // West: money bills
+  int oven_util{0};                 // East: oven utilization
+  int baked_pizza_count{0};         // South: baked pizza boxes
+  int bill_count{0};                // West: money
 };
 
 struct ManagerSettings {
@@ -317,6 +338,12 @@ public:
   };
   // How many guests are concurrently seated vs total linked seats
   Occupancy guest_occupancy() const;
+
+  // Live demand/capacity analysis. Serves both capacity and production
+  // AnimatedStats screens
+  CapacityAnalysis
+  calculate_capacity_analysis(const core::food::PlayerRecipes& recipes,
+                              const ServiceTimeData& service_data) const;
 
   ProductionScreenData
   get_production_screen_data(const core::food::PlayerRecipes& recipes) const;
