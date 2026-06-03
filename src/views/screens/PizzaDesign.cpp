@@ -1883,6 +1883,9 @@ void PizzaDesign::handle_post_judging() {
         [this](std::string input) { this->finish_new_user(std::move(input)); });
   }
   else {
+    const bool poor_imitation =
+        bake_->canonical_id && bake_->working.imitation() < 10;
+
     // Commit recipe now that judging is done
     if (bake_->kind == BakeKind::InstantiateCanonical) {
       state_.active_player()->recipes().create_from_canonical(
@@ -1892,6 +1895,21 @@ void PizzaDesign::handle_post_judging() {
     else if (bake_->kind == BakeKind::RecreateExisting) {
       finish_recreate_existing();
     }
+
+    if (poor_imitation) {
+      int canonical_id = static_cast<int>(*bake_->canonical_id);
+      constexpr int cookbook_page_offset = 9;
+      int page = (canonical_id + cookbook_page_offset) / 2;
+      bake_.reset();
+      // Replace OwnPizzaJudging so dismissing the reminder returns to Recipes.
+      state_.ui().replace_top<PizzaDesignState>(PizzaDesignState{
+          .initial_mode = PizzaDesignMode::Recipes,
+          .active_key = active_key_,
+      });
+      state_.ui().push<CookbookReminderState>(CookbookReminderState{page});
+      return;
+    }
+
     change_mode(PizzaDesignMode::Recipes);
     bake_.reset();
   }

@@ -51,6 +51,7 @@
 #include "views/screens/ActorView.h"
 #include "views/screens/Advertising.h"
 #include "views/screens/AnimatedStats.h"
+#include "views/screens/CookbookReminder.h"
 #include "views/screens/EuroMap.h"
 #include "views/screens/FullscreenStatus.h"
 #include "views/screens/GameOver.h"
@@ -892,6 +893,10 @@ Renderable* Game::change_state(GameState& gs, LoopState& /*loop*/) {
 
           [&](const GameOverState& gos) {
             current_view_ = std::make_unique<GameOver>(context, gs, gos);
+          },
+          [&](const CookbookReminderState& pps) {
+            current_view_ =
+                std::make_unique<CookbookReminder>(context, gs, pps);
           },
           [&](const ViewerState& v) {
             cursor_manager_->base_cursor_mode(CursorMode::MENU);

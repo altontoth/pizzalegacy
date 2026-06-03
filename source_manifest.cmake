@@ -117,6 +117,7 @@ set(GAME_PLEGACY_SOURCES
     src/views/layers/PauseLayer.cpp
     src/views/screens/Advertising.cpp
     src/views/screens/AnimatedStats.cpp
+    src/views/screens/CookbookReminder.cpp
     src/views/screens/EuroMap.cpp
     src/views/screens/FullscreenStatus.cpp
     src/views/screens/GameOver.cpp
@@ -542,6 +543,7 @@ set(PLEGACY_HEADERS
     src/views/screens/ActorView.inl
     src/views/screens/Advertising.h
     src/views/screens/AnimatedStats.h
+    src/views/screens/CookbookReminder.h
     src/views/screens/EuroMap.h
     src/views/screens/FullscreenStatus.h
     src/views/screens/GameOver.h
