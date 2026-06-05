@@ -12,6 +12,8 @@
 #include "core/time/GameDate.h"
 #include "core/time/GameTime.h"
 
+#include <cstdio>
+
 using namespace debug::command;
 
 namespace debug::commands {
@@ -216,6 +218,66 @@ static CommandDef make_game_date() {
       .add_subcommand(make_game_date_set());
 }
 
+static CommandDef make_game_time_set() {
+  return CommandDef{
+      .name = "set",
+      .description = "Set the time of day",
+      .help_text = R"(Usage: game time set <hh:mm>
+
+Sets the time of day, preserving the current date. Time advances in
+10-minute blocks, so minutes are rounded down to the nearest 10.
+
+Example:
+  game time set 09:00
+)",
+      .args =
+          {
+              ArgSpec{
+                  .name = "time",
+                  .type = ArgType::String,
+                  .optional = false,
+                  .default_provider = DefaultProvider::None,
+                  .description = "Time in hh:mm format",
+              },
+          },
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        std::string time_str = ctx.string_arg(0);
+
+        int hour = 0;
+        int minute = 0;
+        if (sscanf(time_str.c_str(), "%d:%d", &hour, &minute) != 2) {
+          return CommandResult::error("Invalid time format, use hh:mm");
+        }
+        if (hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+          return CommandResult::error("Invalid time values");
+        }
+
+        auto time = ctx.state.time();
+        time.set_time_of_day(hour, minute);
+        ctx.state.set_time(time);
+
+        return CommandResult::success().add_message(
+            compat::format("Time set to {:02d}:{:02d}", time.current_hour(),
+                           time.current_minute()));
+      },
+      .category = "game"};
+}
+
+static CommandDef make_game_time() {
+  return CommandDef{
+      .name = "time",
+      .description = "Time of day management",
+      .help_text = "View or change the time of day",
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        auto& time = ctx.state.time();
+        return CommandResult::success().add_message(compat::format(
+            "{:02d}:{:02d}", time.current_hour(), time.current_minute()));
+      },
+      .category = "game",
+  }
+      .add_subcommand(make_game_time_set());
+}
+
 static CommandDef make_game_competition_monthly() {
   return CommandDef{.name = "monthly",
                     .description = "Trigger the monthly pizza competition",
@@ -325,6 +387,7 @@ CommandDef make_game_commands() {
       .add_subcommand(make_game_load())
       .add_subcommand(make_game_exit())
       .add_subcommand(make_game_date())
+      .add_subcommand(make_game_time())
       .add_subcommand(make_game_competition())
       .add_subcommand(make_game_end());
 }

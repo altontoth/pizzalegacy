@@ -691,12 +691,10 @@ bool GameState::is_player_day_over() const {
 
 void GameState::advance_time_blocks(int n) {
   for (int i = 0; i < n; ++i) {
-    advance_game_time();
-
-    if (is_player_day_over()) {
-      // stop advancing at day end
+    if (is_past_player_end_of_day()) {
       return;
     }
+    advance_game_time();
   }
 }
 
