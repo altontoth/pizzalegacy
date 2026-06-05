@@ -12,9 +12,11 @@
 #include "engine/input/ListenerToken.h"
 #include "engine/input/TextSession.h"
 
+#include "engine/input/backend/SDLGamepad.h"
 #include "engine/input/backend/SDLKeymap.h"
 
 #include <algorithm>
+#include <cmath>
 #include <iostream>
 #include <utility>
 #include "engine/SDL_include.h"
@@ -55,6 +57,10 @@ InputManager::InputManager() {}
 InputManager::~InputManager() {
   if (text_active_) {
     end_text_input();
+  }
+  if (gamepad_) {
+    SDL_GameControllerClose(static_cast<SDL_GameController*>(gamepad_));
+    gamepad_ = nullptr;
   }
 }
 
@@ -145,11 +151,67 @@ void InputManager::process(const SDL_Event& ev) {
     break;
   }
 
-  case SDL_CONTROLLERAXISMOTION:
-  case SDL_CONTROLLERBUTTONDOWN:
-  case SDL_CONTROLLERBUTTONUP:
-    // TODO: when we wire gamepad support, update axes_ / actions_ here
+  case SDL_CONTROLLERDEVICEADDED: {
+    // Open the first controller that connects; ignore the rest for now
+    // TODO: add options for this?
+    if (!gamepad_) {
+      gamepad_ = SDL_GameControllerOpen(ev.cdevice.which);
+    }
     break;
+  }
+
+  case SDL_CONTROLLERDEVICEREMOVED: {
+    if (gamepad_) {
+      SDL_GameControllerClose(static_cast<SDL_GameController*>(gamepad_));
+      gamepad_ = nullptr;
+      // Release any stick-driven axes so movement stops on disconnect
+      for (auto& [action, vec] : gamepad_axes_) {
+        vec = {0.f, 0.f};
+      }
+    }
+    break;
+  }
+
+  case SDL_CONTROLLERAXISMOTION: {
+    // SDL fires one event per axis, but a stick is two axes. Re-sample every
+    // bound stick from the controller so each entry holds a consistent {x, y}.
+    if (gamepad_) {
+      auto* pad = static_cast<SDL_GameController*>(gamepad_);
+      constexpr float AXIS_MAX = 32767.f;
+      // TODO: Maybe have an option for configuring the deadzone?
+      constexpr float DEAD_ZONE = 4000.f / AXIS_MAX;
+      const auto sample = [&](GamepadAxis a) -> float {
+        const SDL_GameControllerAxis sdl_axis = backend::axis_to_sdl(a);
+        if (sdl_axis == SDL_CONTROLLER_AXIS_INVALID) {
+          return 0.f;
+        }
+        const float v =
+            static_cast<float>(SDL_GameControllerGetAxis(pad, sdl_axis)) /
+            AXIS_MAX;
+        return (std::abs(v) < DEAD_ZONE) ? 0.f : v;
+      };
+      for (const auto& [action, stick] : gamepad_stick_bindings_) {
+        gamepad_axes_[action] = {sample(stick.x), sample(stick.y)};
+      }
+    }
+    break;
+  }
+
+  case SDL_CONTROLLERBUTTONDOWN:
+  case SDL_CONTROLLERBUTTONUP: {
+    const GamepadButton b = backend::button_from_sdl(
+        static_cast<SDL_GameControllerButton>(ev.cbutton.button));
+    if (auto it = gamepad_button_bindings_.find(b);
+        it != gamepad_button_bindings_.end()) {
+      if (ev.type == SDL_CONTROLLERBUTTONDOWN) {
+        dispatch_action_press(it->second);
+      }
+      else {
+        dispatch_action_release(it->second);
+      }
+    }
+    break;
+  }
 
   default:
     break;
@@ -280,7 +342,20 @@ void InputManager::rebuild_axes() {
     }
     axes_[act] = compute_axis_from_keys(kv);
   }
-  // TODO: merge in gamepad analog sticks here (deadzone, normalize)
+  // Keyboard and gamepad can both contribute to the same action. For each
+  // component, keep whichever input is farther from zero.
+  for (const auto& [act, gv] : gamepad_axes_) {
+    if (text_active_ && !is_vec2_action(act)) {
+      continue;
+    }
+    auto& dst = axes_[act];
+    if (std::abs(gv.first) > std::abs(dst.first)) {
+      dst.first = gv.first;
+    }
+    if (std::abs(gv.second) > std::abs(dst.second)) {
+      dst.second = gv.second;
+    }
+  }
 }
 
 void InputManager::debug_dump_bindings(std::ostream& os) const {
@@ -376,9 +451,20 @@ void InputManager::bind_axis_keys(Action a, Key up, Key down, Key left,
       a, KeyVec2{.up = up, .down = down, .left = left, .right = right});
 }
 
+void InputManager::bind_gamepad_button(GamepadButton b, Action a) {
+  gamepad_button_bindings_[b] = a;
+}
+
+void InputManager::bind_gamepad_stick(Action a, GamepadAxis x_axis,
+                                      GamepadAxis y_axis) {
+  gamepad_stick_bindings_[a] = AxisVec2{.x = x_axis, .y = y_axis};
+}
+
 void InputManager::clear_bindings() {
   button_bindings_.clear();
   axis_key_bindings_.clear();
+  gamepad_button_bindings_.clear();
+  gamepad_stick_bindings_.clear();
 }
 
 } // namespace input

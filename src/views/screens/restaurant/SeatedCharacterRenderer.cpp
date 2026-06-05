@@ -82,7 +82,7 @@ ViewPoint SeatedCharacterRenderer::pos_for(Part part, ViewPoint torso_anchor,
 }
 
 void SeatedCharacterRenderer::render_parts(
-    const RenderContext& ctx, ViewPoint torso_anchor_on_screen,
+    Surface& surface, ViewPoint torso_anchor_on_screen,
     const CharacterPose& pose, std::span<const Part> draw_order) const {
   for (Part part : draw_order) {
     // Only draw the arm matching arm_state (0..3 select Arm1..Arm4)
@@ -96,23 +96,21 @@ void SeatedCharacterRenderer::render_parts(
     }
     const Surface img = frame_for(part, pose);
     const ViewPoint dst = pos_for(part, torso_anchor_on_screen, pose, img);
-    ctx.surface->blit_masked(img, dst);
+    surface.blit_masked(img, dst);
   }
 }
 
 void SeatedCharacterRenderer::render_lower_body(
-    const RenderContext& ctx, ViewPoint torso_anchor,
-    const CharacterPose& pose) const {
+    Surface& surface, ViewPoint torso_anchor, const CharacterPose& pose) const {
   const Part order[] = {Part::Legs};
-  render_parts(ctx, torso_anchor, pose, order);
+  render_parts(surface, torso_anchor, pose, order);
 }
 
 void SeatedCharacterRenderer::render_upper_body(
-    const RenderContext& ctx, ViewPoint torso_anchor,
-    const CharacterPose& pose) const {
+    Surface& surface, ViewPoint torso_anchor, const CharacterPose& pose) const {
   const Part order[] = {Part::Torso, Part::Head, Part::Arm1,
                         Part::Arm2,  Part::Arm3, Part::Arm4};
-  render_parts(ctx, torso_anchor, pose, order);
+  render_parts(surface, torso_anchor, pose, order);
 }
 
 void SeatedCharacterRenderer::load_seeds() {

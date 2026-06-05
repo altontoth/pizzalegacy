@@ -242,11 +242,13 @@ set(ENGINE_PLEGACY_SOURCES
     src/engine/audio/VocDecoder.cpp
     src/engine/geom/Camera.cpp
     src/engine/input/DefaultBindings.cpp
+    src/engine/input/Gamepad.cpp
     src/engine/input/GlobalActionHandler.cpp
     src/engine/input/InputManager.cpp
     src/engine/input/Key.cpp
     src/engine/input/ListenerToken.cpp
     src/engine/input/TextSession.cpp
+    src/engine/input/backend/SDLGamepad.cpp
     src/engine/input/backend/SDLKeymap.cpp
     src/engine/ui/CursorManager.cpp
     src/engine/ui/InteractionManager.cpp
@@ -455,12 +457,14 @@ set(PLEGACY_HEADERS
     src/engine/geom/TypedRect.h
     src/engine/geom/ViewportTransform.h
     src/engine/input/Action.h
+    src/engine/input/Gamepad.h
     src/engine/input/GlobalActionHandler.h
     src/engine/input/InputListener.h
     src/engine/input/InputManager.h
     src/engine/input/Key.h
     src/engine/input/ListenerToken.h
     src/engine/input/TextSession.h
+    src/engine/input/backend/SDLGamepad.h
     src/engine/input/backend/SDLKeymap.h
     src/engine/ui/Alignment.h
     src/engine/ui/CursorManager.h

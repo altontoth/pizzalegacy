@@ -6,8 +6,14 @@
 
 #pragma once
 
+#include <functional>
 #include <memory>
+#include <span>
+#include <string_view>
+#include <unordered_map>
+#include <vector>
 
+#include "core/Demographics.h"
 #include "core/item/Item.h"
 #include "core/restaurant/FurnitureBatch.h"
 #include "core/restaurant/Restaurant.h"
@@ -42,6 +48,52 @@ struct GuestRenderItem {
   core::FurnitureId chair_id;
   bool interacted_before{false};
   int face_index{0};
+};
+
+struct WalkingGuest {
+  enum class Orientation { S = 0, W = 1, N = 2, E = 3 };
+  enum class WalkerKind {
+    GUEST,
+    GUEST_DEPARTING,
+    WAITER_DELIVERING,
+    WAITER_RETURNING,
+    WAITER_RETURNING_WITH_PIZZA
+  };
+  WorldPoint position;
+  Orientation direction{Orientation::N};
+  WalkerKind kind{WalkerKind::GUEST};
+  // Seats the arrived guest with this demographic. Unused for waiters (whose
+  // guest_type is the waiter sprite set), so they keep the default.
+  ConsumerType demographic{ConsumerType::Children};
+  int walk_cycle{0};
+  int anim_tick{0};
+  WorldPoint destination;
+  core::FurnitureId destination_chair_id;
+  // 0-11 = guest sprite sets, 12 = waiter; selects walk{n}.bob
+  int guest_type{0};
+  int face_index{0};
+  std::vector<Orientation> path;
+  int path_index{0};
+  int sprite_blit_offset_x{0};
+  int sprite_blit_offset_y{0};
+  // true when no chair was reachable; walker exits instead of seating
+  bool walking_out{false};
+#ifndef NDEBUG
+  std::vector<bool> dbg_blocked;
+  int dbg_grid_w{0};
+  int dbg_grid_h{0};
+#endif
+};
+
+struct AttackSprite {
+  WorldPoint position;
+  WalkingGuest::Orientation direction{WalkingGuest::Orientation::N};
+  int walk_cycle{0};
+  int move_gate{0};
+  int sprite_blit_offset_x{0};
+  int sprite_blit_offset_y{0};
+  bool is_defender{false};
+  // TODO(attack): health, weapon type, weapon_frame and combat state
 };
 
 class RestaurantView : public MainPanelView,
@@ -92,7 +144,14 @@ private:
   void render_scene_passes();
 
   void render_sabotage(const RenderContext& ctx);
+  void render_weapon_select(const RenderContext& ctx);
+  // weapon and sabotage item picker
+  void render_item_picker(const RenderContext& ctx, std::string_view title,
+                          std::span<const core::item::Item> items,
+                          const std::function<void(core::item::Item)>& on_pick);
   void execute_sabotage_attack(core::item::Item item);
+  void render_walking_guest();
+  void render_attackers();
 
   void draw_floor_tiles(ViewRect interior);
 
@@ -109,7 +168,7 @@ private:
   bool decor_conflicts_on_table(const WorldRect& candidate_map,
                                 const WorldRect& table_map_rect) const;
 
-  std::span<const GuestRenderItem> visible_guests() const;
+  void rebuild_guest_cache();
   void init_active_batch_if_needed();
   [[nodiscard]] FurnitureBatch* current_batch();
   void set_active_batch(size_t idx);
@@ -128,6 +187,8 @@ private:
                                     const PlacedFurniture*& nearest_table_out,
                                     WorldRect& nearest_table_rect_out) const;
   static ViewPoint center_of(const ViewRect& r);
+  static int walk_frame_for(const WalkingGuest& g);
+  static int walk_frame_for(WalkingGuest::Orientation dir, int walk_cycle);
 
   static Rotation rotation_towards(const WorldRect& from, const WorldRect& to);
   void
@@ -145,6 +206,9 @@ private:
                                                       const Camera& camera);
   void render_top_wall_and_floor();
   void render_side_and_bottom_walls();
+#ifndef NDEBUG
+  void render_debug_full_grid();
+#endif
 
   void render_furniture_ghost();
   WorldPoint clamp_furniture_to_interior(WorldPoint mouse_world) const;
@@ -152,6 +216,33 @@ private:
   void zoom_out_of_restaurant_view();
   void update_status_display(const PlacedFurniture* pf);
   void update_restaurant_noise();
+  void spawn_guest();
+  void spawn_guest_departure();
+  void spawn_waiter();
+  void walking_tick();
+  void waiter_delivered();
+  void begin_attack(core::item::Item weapon);
+  void attack_tick();
+  const PlacedFurniture* get_guest_destination_chair();
+  const PlacedFurniture* find_unserved_guest_chair();
+  struct NavGrid {
+    std::vector<bool> blocked;
+    int w{0};
+    int h{0};
+  };
+  struct WalkingPath {
+    std::vector<WalkingGuest::Orientation> steps;
+    std::vector<bool> blocked;
+    int grid_w{0};
+    int grid_h{0};
+  };
+  [[nodiscard]] NavGrid build_navigation_grid() const;
+  [[nodiscard]] WalkingPath compute_walking_path(WorldPoint from, WorldPoint to,
+                                                 WorldPoint dest_origin,
+                                                 Size dest_size) const;
+
+  void record_walk_debug_destination(WorldPoint destination);
+  void snapshot_walk_debug_grid(WalkingGuest& walker, WalkingPath& wp);
 
   const Surface& k0_;
   bool kitchen_view_ = false;
@@ -172,46 +263,61 @@ private:
   Camera camera_;
 
   // Furniture ghost rendering state (when holding furniture)
-  std::optional<WorldPoint>
-      ghost_furniture_topleft_;       // Clamped position for ghost
-  bool show_furniture_cursor_{false}; // Whether custom cursor is visible
+  std::optional<WorldPoint> ghost_furniture_topleft_;
+  bool show_furniture_cursor_{false};
   CameraController camctrl_;
   ScrollEdges scroll_edges_{camctrl_, wood_edge_rects(panel_origin_)};
-  // In RestaurantView.h (private:)
   views::screens::restaurant::SeatedCharacterRenderer guest_renderer_{context_};
+  std::vector<GuestRenderItem> guests_cache_;
+  std::vector<const PlacedFurniture*> shuffled_chairs_;
 
-  // Guest list cache (populated by visible_guests())
-  mutable std::vector<GuestRenderItem> guests_cache_;
-
-  // Shuffled linked chairs, rebuilt on each open->close transition
-  mutable std::vector<const PlacedFurniture*> shuffled_chairs_;
-
-  // Returns the index into visible_guests() for the guest on this chair, or
-  // nullopt if the chair is unoccupied.  Toggles selection state.
+  // Returns the index into guests_cache_ for the guest on this chair, or
+  // nullopt if the chair is unoccupied. Toggles selection state.
   std::optional<int> click_guest(core::FurnitureId chair_id);
 
-  // Tracks which chairs have already been talked to this session
   std::unordered_map<core::FurnitureId, bool, core::FurnitureId::Hasher>
       guest_talked_to_;
 
   // Guest animation controllers (one per chair, keyed by furniture ID)
-  mutable std::unordered_map<core::FurnitureId,
-                             views::screens::restaurant::CharacterController,
-                             core::FurnitureId::Hasher>
+  std::unordered_map<core::FurnitureId,
+                     views::screens::restaurant::CharacterController,
+                     core::FurnitureId::Hasher>
       guest_controllers_;
 
-  // Helper for passes; keeps interaction ids stable across passes
   int furniture_draw_counter_{0};
   int interior_end_row_{0};
   int top_rows_consumed_{0};
   int interior_start_row_{0};
   std::vector<FurnitureBatch>& furniture_placement_;
-  std::optional<size_t> active_batch_index_; // index into furniture_placement_
-  std::optional<SupplierType>
-      return_to_supplier_type_; // Where to navigate after placement complete
+  // index into furniture_placement_:
+  std::optional<size_t> active_batch_index_;
+  // Where to navigate after placement complete:
+  std::optional<SupplierType> return_to_supplier_type_;
   std::optional<audio::SoundId> current_restaurant_noise_;
   StatusController status_controller_;
   input::ListenerToken listener_;
-  std::optional<core::item::Item> hovered_sabotage_item_;
+  // For weapon and sabotage picker:
+  std::optional<core::item::Item> hovered_item_;
   RmbDragScroller rmb_drag_scroller_;
+
+  void seat_arrived_guest();
+
+  std::optional<WalkingGuest> walking_guest_;
+  std::optional<core::FurnitureId> departing_chair_id_;
+  int spawn_anim_gate_{0};
+  int guest_occupancy_delta_{0};
+#ifndef NDEBUG
+  bool show_walk_debug_{false};
+  // 0=grid+path, 1=grid only, 2=path only, 3=full nav grid
+  int dbg_walk_mode_{3};
+  std::optional<WorldPoint> dbg_walk_destination_; // last attempted destination
+#endif
+
+  // For attacking competitors
+  std::optional<AttackSprite> attacker_;
+  // Only if player 2 is a human
+  std::optional<AttackSprite> defender_;
+  bool attack_active_{false};
+  // Weapon for attacking (TODO: consume on use when we actually implement that)
+  core::item::Item attack_weapon_{};
 };

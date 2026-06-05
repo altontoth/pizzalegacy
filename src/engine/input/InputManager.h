@@ -7,6 +7,7 @@
 #pragma once
 
 #include "engine/input/Action.h"
+#include "engine/input/Gamepad.h"
 #include "engine/input/InputListener.h"
 #include "engine/input/Key.h"
 #include "engine/input/ListenerToken.h"
@@ -79,6 +80,9 @@ public:
   // Bindings
   void bind_button(Binding chord, Action a);
   void bind_axis_keys(Action a, Key up, Key down, Key left, Key right);
+  void bind_gamepad_button(GamepadButton b, Action a);
+  // For binding with a vec2 action:
+  void bind_gamepad_stick(Action a, GamepadAxis x_axis, GamepadAxis y_axis);
   void clear_bindings();
 
 private:
@@ -102,6 +106,13 @@ private:
   // Axis state: aggregated per action, normalized to [-1, +1]
   std::unordered_map<Action, std::pair<float, float>> axes_{};
 
+  // Gamepad analog-stick state, merged into axes_ by rebuild_axes(). Keyed by
+  // action, populated from gamepad_stick_bindings_ on controller axis events.
+  std::unordered_map<Action, std::pair<float, float>> gamepad_axes_{};
+  // Connected game controller (SDL_GameController*), or nullptr if none.
+  // Stored as void* to keep SDL out of this header.
+  void* gamepad_{nullptr};
+
   // Binding tables
   struct BindingHash {
     std::size_t operator()(const Binding& b) const noexcept {
@@ -122,6 +133,12 @@ private:
     Key up{}, down{}, left{}, right{};
   };
   std::unordered_multimap<Action, KeyVec2> axis_key_bindings_;
+
+  std::unordered_map<GamepadButton, Action> gamepad_button_bindings_;
+  struct AxisVec2 {
+    GamepadAxis x{GamepadAxis::Unknown}, y{GamepadAxis::Unknown};
+  };
+  std::unordered_map<Action, AxisVec2> gamepad_stick_bindings_;
 
   // Key state updates from backend
   void key_down(Key k, Mod mods);

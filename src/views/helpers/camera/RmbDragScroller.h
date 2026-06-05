@@ -40,7 +40,7 @@ public:
   using OnClick = std::function<void(ViewPoint abs_pos)>;
   using CursorLockFn = std::function<void(bool enable)>;
 
-  // How far the oversized interaction rect reaches from centre (see
+  // How far the oversized interaction rect reaches from center (see
   // add_interaction). Game.cpp clamps the virtual cursor to stay inside it.
   static constexpr int DRAG_REACH = 30000;
 

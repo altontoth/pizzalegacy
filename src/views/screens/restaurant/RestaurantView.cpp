@@ -9,9 +9,9 @@
 #include <algorithm>
 #include <cassert>
 #include <cmath>
+#include <cstddef>
 
 #include "core/Demographics.h"
-#include "core/character/Character.h"
 #include "core/city/District.h"
 #include "core/city/Property.h"
 #include "core/finance/Ledger.h"
@@ -32,6 +32,7 @@
 #include "engine/ui/InteractionEvent.h"
 #include "factories/PizzaFactory.h"
 #include "gfx/Blit.h"
+#include "gfx/Draw.h"
 #include "resources/BobSizeFn.h"
 #include "views/base/BobRenderer.h"
 #include "views/base/ViewDefs.h"
@@ -46,6 +47,36 @@
 
 using namespace views::base;
 using namespace LegacyConstants;
+
+static constexpr int WALK_CELL_SIZE = 12;
+// Walker advances one cell every WALKER_MOVE_INTERVAL render frames
+static constexpr int WALKER_MOVE_INTERVAL = 4;
+// Order of WalkingGuest::Orientation:
+static constexpr std::array<int, 4> WALK_DX = {0, -1, 0, 1};
+static constexpr std::array<int, 4> WALK_DY = {1, 0, -1, 0};
+
+// Maps the 4-phase walk cycle onto the 3 sprite frames per direction:
+// neutral, left-step, neutral, right-step.
+static constexpr std::array<int, 4> WALK_CYCLE_TO_FRAME = {0, 1, 0, 2};
+
+namespace {
+constexpr int walk_dx(WalkingGuest::Orientation o) {
+  return WALK_DX[static_cast<int>(o)];
+}
+constexpr int walk_dy(WalkingGuest::Orientation o) {
+  return WALK_DY[static_cast<int>(o)];
+}
+
+// Advance a walker one grid cell in the given direction and bump its
+// animation phase. Shared by the path-following guest/waiter walker and the
+// input-driven attack sprites.
+void step_one_cell(WorldPoint& position, int& walk_cycle,
+                   WalkingGuest::Orientation dir) {
+  position.x += walk_dx(dir) * WALK_CELL_SIZE;
+  position.y += walk_dy(dir) * WALK_CELL_SIZE;
+  walk_cycle = (walk_cycle + 1) % 4;
+}
+} // namespace
 
 RestaurantView::RestaurantView(GameContext& context, GameState& state,
                                RestaurantViewState r_state)
@@ -101,6 +132,11 @@ RestaurantView::RestaurantView(GameContext& context, GameState& state,
 
   if (r_state.reopen_restaurant) {
     restaurant_->open_for_business(state_);
+  }
+
+  if (view_mode_ == RestaurantViewMode::OPPONENT_VIEW &&
+      !restaurant_->is_within_business_hours(state_.time().time_of_day())) {
+    view_mode_ = RestaurantViewMode::WEAPON_SELECT;
   }
 
   set_up_buttons();
@@ -282,6 +318,13 @@ bool RestaurantView::on_action(const input::ActionEvent& ev) {
     }
     return true;
   }
+#ifndef NDEBUG
+  case input::Action::Backspace: {
+    show_walk_debug_ = !show_walk_debug_;
+    mark_dirty();
+    return true;
+  }
+#endif
   default: {
     break;
   }
@@ -317,7 +360,8 @@ void RestaurantView::set_up_buttons() {
 
     return;
   }
-  if (view_mode_ == RestaurantViewMode::SABOTAGE) {
+  if (view_mode_ == RestaurantViewMode::SABOTAGE ||
+      view_mode_ == RestaurantViewMode::WEAPON_SELECT) {
     input_panel_->add_button(Icon::ARROW_BACK, ButtonType::Square,
                              ButtonPosition::BottomRight, "Back",
                              [this]() { state_.ui().pop(); });
@@ -675,12 +719,46 @@ void RestaurantView::tick() {
     mark_dirty();
   }
 
+  if (attack_active_) {
+    attack_tick();
+    return;
+  }
+
   // Tick guest animations
   if (restaurant_->is_open(state_.time().time_of_day()) && !kitchen_view_) {
     for (auto& [chair_id, controller] : guest_controllers_) {
       controller.tick();
     }
     mark_dirty();
+  }
+  if (walking_guest_) {
+    walking_tick();
+  }
+  else if (restaurant_->is_open(state_.time().time_of_day()) &&
+           !kitchen_view_) {
+    // Only roll once per animation frame (every WALKER_MOVE_INTERVAL renders)
+    // so the effective spawn rate matches the original
+    ++spawn_anim_gate_;
+    if (spawn_anim_gate_ < WALKER_MOVE_INTERVAL) {
+      return;
+    }
+    spawn_anim_gate_ = 0;
+    // Two independent 10% rolls each tick -> ~1% spawn chance per tick.
+    const bool roll1 = engine::random::rand_percentage_chance(10);
+    const bool roll2 = engine::random::rand_percentage_chance(10);
+    if (roll1 && roll2) {
+      const int mode = engine::random::rand_max_n(3) + 1;
+
+      if (mode == 1) {
+        spawn_guest();
+      }
+      else if (mode == 2) {
+        spawn_guest_departure();
+      }
+      else {
+        spawn_waiter();
+      }
+    }
   }
 }
 
@@ -820,6 +898,8 @@ void RestaurantView::draw_floor_tiles(ViewRect interior) {
 void RestaurantView::render_scene_passes() {
   furniture_draw_counter_ = 0;
 
+  rebuild_guest_cache();
+
   // Seats first
   render_placement_layer(PlacementLayer::Seating);
 
@@ -829,11 +909,11 @@ void RestaurantView::render_scene_passes() {
   // Then the tables (can be glass/transparent)
   render_placement_layer(PlacementLayer::Tables);
 
-  // Guest upper body/arms
-  render_guest_upper();
-
   // Pizzas on tables
   render_guest_pizzas();
+
+  // Guest upper body/arms
+  render_guest_upper();
 
   // Rest of the furniture and stuff
   render_placement_layer(PlacementLayer::Top);
@@ -1012,49 +1092,25 @@ void RestaurantView::render_placement_layer(PlacementLayer placement) {
 }
 
 void RestaurantView::render_guest_legs() {
-  const auto guests = visible_guests();
-  if (guests.empty()) {
-    return;
-  }
-
-  // Draw onto background_
-  RenderContext guest_ctx{.surface = &background_};
-
-  for (const auto& g : guests) {
-    // Render lower body - behind tables
+  for (const auto& g : guests_cache_) {
     ViewPoint anchor_view{g.torso_anchor_map.x, g.torso_anchor_map.y};
-    guest_renderer_.render_lower_body(guest_ctx, anchor_view, g.pose);
+    guest_renderer_.render_lower_body(background_, anchor_view, g.pose);
   }
 }
 
 void RestaurantView::render_guest_upper() {
-  const auto guests = visible_guests();
-  if (guests.empty()) {
-    return;
-  }
-
-  RenderContext guest_ctx{.surface = &background_}; // adapt as needed
-
-  for (const auto& g : guests) {
-    // Render upper body - on top of tables
+  for (const auto& g : guests_cache_) {
     ViewPoint anchor_view{g.torso_anchor_map.x, g.torso_anchor_map.y};
-    guest_renderer_.render_upper_body(guest_ctx, anchor_view, g.pose);
+    guest_renderer_.render_upper_body(background_, anchor_view, g.pose);
   }
 }
 
 void RestaurantView::render_guest_pizzas() {
-  const auto guests = visible_guests();
-  if (guests.empty()) {
-    return;
-  }
+  // Pizza offsets original but at our 2x scale
+  constexpr std::array<int, 4> pizza_offset_x = {4, -24, 2, 10};
+  constexpr std::array<int, 4> pizza_offset_y = {6, 0, -28, 0};
 
-  RenderContext guest_ctx{.surface = &background_};
-
-  // Pizza offsets from x_offsets_pizza_maybe/y_offsets_pizza_maybe at 2x
-  constexpr int8_t pizza_offset_x[4] = {4, -24, 2, 10};
-  constexpr int8_t pizza_offset_y[4] = {6, 0, -28, 0};
-
-  for (const auto& g : guests) {
+  for (const auto& g : guests_cache_) {
     // Only render pizza if guest is eating
     if (!g.pose.eating) {
       continue;
@@ -1066,22 +1122,56 @@ void RestaurantView::render_guest_pizzas() {
 
     // Render pizza sprite (frame 0x154 from moebel.bob)
     Surface pizza_sprite = pizza_bob_.frame(0x154);
-    guest_ctx.surface->blit_masked(pizza_sprite, pizza_pos);
+    background_.blit_masked(pizza_sprite, pizza_pos);
   }
 }
 
-std::span<const GuestRenderItem> RestaurantView::visible_guests() const {
+namespace {
+
+ConsumerType pick_weighted_demographic(const CustomerCounts& counts) {
+  int total = 0;
+  for (auto ct : ALL_CONSUMER_TYPES) {
+    total += counts[ct];
+  }
+  if (total == 0) {
+    constexpr int DEMO_COUNT = static_cast<int>(ConsumerType::Count);
+    return static_cast<ConsumerType>(engine::random::rand_max_n(DEMO_COUNT));
+  }
+  int roll = engine::random::rand_max_n(total);
+  for (ConsumerType ct : ALL_CONSUMER_TYPES) {
+    roll -= counts[ct];
+    if (roll < 0) {
+      return ct;
+    }
+  }
+  return ALL_CONSUMER_TYPES.back();
+}
+
+int pick_guest_type(ConsumerType demo) {
+  return static_cast<int>(demo) + (engine::random::coin_flip() ? 6 : 0);
+}
+
+int pick_face_index(int guest_type) {
+  return (guest_type * 2) + (engine::random::coin_flip() ? 1 : 0);
+}
+
+} // namespace
+
+void RestaurantView::rebuild_guest_cache() {
   guests_cache_.clear();
 
   // Only show guests in restaurant view (not kitchen) and when open
   if (kitchen_view_ || !restaurant_->is_open(state_.time().time_of_day())) {
     shuffled_chairs_.clear();
-    return guests_cache_;
+    guest_occupancy_delta_ = 0;
+    return;
   }
 
   const auto [guests_to_show, seat_count] = restaurant_->guest_occupancy();
-  if (guests_to_show <= 0) {
-    return guests_cache_;
+  int effective_guests =
+      std::min(guests_to_show + guest_occupancy_delta_, seat_count);
+  if (effective_guests <= 0) {
+    return;
   }
 
   // Build shuffled chair list once per open period
@@ -1099,140 +1189,111 @@ std::span<const GuestRenderItem> RestaurantView::visible_guests() const {
   }
 
   if (shuffled_chairs_.empty()) {
-    return guests_cache_;
+    return;
   }
 
-  // Compute demographic fractions for guest appearance distribution
-  constexpr int DEMO_COUNT = static_cast<int>(ConsumerType::Count);
-  const auto& customer_counts = restaurant_->economy().customer_counts();
-
-  int total_daily = 0;
-  for (auto ct : ALL_CONSUMER_TYPES) {
-    total_daily += customer_counts[ct];
-  }
-
-  std::array<float, DEMO_COUNT> demo_fractions{};
-  if (total_daily > 0) {
-    for (int i = 0; i < DEMO_COUNT; ++i) {
-      demo_fractions[i] =
-          static_cast<float>(customer_counts[static_cast<ConsumerType>(i)]) /
-          total_daily;
-    }
-  }
-
-  // Distribute guests across demographics (largest-remainder)
-
-  std::array<int, DEMO_COUNT> demo_guests{};
-  {
-    int assigned = 0;
-    for (int i = 0; i < DEMO_COUNT; ++i) {
-      demo_guests[i] = static_cast<int>(demo_fractions[i] * guests_to_show);
-      assigned += demo_guests[i];
-    }
-    int remainder = guests_to_show - assigned;
-    for (int i = 0; i < DEMO_COUNT && remainder > 0; ++i) {
-      if (demo_fractions[i] > 0.0f) {
-        demo_guests[i]++;
-        --remainder;
+  // Exclude a chair whose guest is currently walking out
+  if (departing_chair_id_) {
+    for (int i = 0; i < effective_guests && i < (int)shuffled_chairs_.size();
+         ++i) {
+      if (shuffled_chairs_[i]->id() == *departing_chair_id_) {
+        --effective_guests;
+        break;
       }
     }
+    if (effective_guests <= 0) {
+      return;
+    }
   }
 
-  // Assign guests to chairs grouped by demographic (but since the chairs are
-  // shuffled this distributes demographics randomly across the restaurant)
+  const auto& customer_counts = restaurant_->economy().customer_counts();
+
+  // Fill seats from the shuffled chair list.
 
   using namespace views::screens::restaurant;
 
-  constexpr int8_t seating_offset_x[4] = {-4, -3, -3, 4};
-  constexpr int8_t seating_offset_y[4] = {2, -5, -6, -9};
+  constexpr std::array<int, 4> seating_offset_x = {-4, -3, -3, 4};
+  constexpr std::array<int, 4> seating_offset_y = {2, -5, -6, -9};
 
-  int chair_idx = 0;
-  for (int demo_i = 0; demo_i < DEMO_COUNT && chair_idx < guests_to_show;
-       ++demo_i) {
-    for (int g = 0; g < demo_guests[demo_i] && chair_idx < guests_to_show;
-         ++g, ++chair_idx) {
-      const PlacedFurniture* pf = shuffled_chairs_[chair_idx];
-      const core::FurnitureId chair_id = pf->id();
-
-      // Guest sprite and portrait asset mapping:
-      //
-      // gaeste.bob contains 12 seated guest types
-      // Each type has 4 facing directions, so the frame index for any part is
-      // `frame = base_index_for(part) + guest_type * 4 + facing`
-      //
-      // The 12 types are organised as two options per demographic, first we
-      // have demographic 0 to 5 for the first option, then 6 to 11 for the
-      // second option per demographic (so 0 and 6 are two options for the first
-      // demographic, etc).
-      //
-      // Portrait files are gfx/g0.vga through g23.vga, two per guest type:
-      // face_index = guest_type * 2 + (0 or 1) (chosen randomly at spawn)
-      //
-      // We determine guest_type and face_index when a guest is spawned
-      // and store it on the controller so sprite and portrait always match.
-
-      auto it = guest_controllers_.find(chair_id);
-      if (it == guest_controllers_.end()) {
-        CharacterController controller;
-        const ConsumerType demo = static_cast<ConsumerType>(demo_i);
-        controller.set_customer_type(demo);
-        controller.set_eating((chair_id.value % 2) == 0);
-        const int guest_type = demo_i + (engine::random::coin_flip() ? 6 : 0);
-        controller.set_guest_type(guest_type);
-        controller.set_face_index(guest_type * 2 +
-                                  (engine::random::coin_flip() ? 1 : 0));
-        it = guest_controllers_.emplace(chair_id, std::move(controller)).first;
-      }
-      else {
-        const ConsumerType new_demo = static_cast<ConsumerType>(demo_i);
-        if (it->second.pose().customer_type != new_demo) {
-          it->second.set_customer_type(new_demo);
-          const int guest_type = demo_i + (engine::random::coin_flip() ? 6 : 0);
-          it->second.set_guest_type(guest_type);
-          it->second.set_face_index(guest_type * 2 +
-                                    (engine::random::coin_flip() ? 1 : 0));
-        }
-      }
-
-      const int rotation = pf->bob_state() % 4;
-      Facing guest_facing;
-      switch (rotation) {
-      case 0:
-        guest_facing = Facing::Up;
-        break;
-      case 1:
-        guest_facing = Facing::Right;
-        break;
-      case 2:
-        guest_facing = Facing::Down;
-        break;
-      case 3:
-        guest_facing = Facing::Left;
-        break;
-      default:
-        guest_facing = Facing::Up;
-      }
-
-      const WorldPoint chair_pos = pf->origin();
-      const Size furniture_size = furniture_renderer_.size(*pf);
-      const WorldPoint guest_pos{chair_pos.x + (furniture_size.w / 2) +
-                                     (seating_offset_x[rotation] * 2),
-                                 chair_pos.y + (furniture_size.h / 2) +
-                                     (seating_offset_y[rotation] * 2)};
-
-      CharacterPose pose = it->second.pose();
-      pose.facing = guest_facing;
-      guests_cache_.push_back(GuestRenderItem{
-          .torso_anchor_map = guest_pos,
-          .pose = pose,
-          .chair_id = chair_id,
-          .interacted_before = false,
-          .face_index = it->second.face_index(),
-      });
+  int chair_it = 0; // raw index into shuffled_chairs_
+  for (int placed = 0;
+       placed < effective_guests && chair_it < (int)shuffled_chairs_.size();) {
+    const PlacedFurniture* pf = shuffled_chairs_[chair_it++];
+    // Skip the chair whose guest is currently walking out; it is drawn by the
+    // walker system rather than as a seated guest, and effective_guests was
+    // already decremented above to leave its slot empty.
+    if (departing_chair_id_ && pf->id() == *departing_chair_id_) {
+      continue;
     }
-  }
+    ++placed;
+    const core::FurnitureId chair_id = pf->id();
 
-  return guests_cache_;
+    // gaeste.bob contains 12 seated guest types
+    // Each type has 4 facing directions, so the frame index for any part is
+    // `frame = base_index_for(part) + guest_type * 4 + facing`
+    //
+    // The 12 types have two options per demographic, first we
+    // have demographic 0 to 5 for the first option, then 6 to 11 for the
+    // second option per demographic (so 0 and 6 are two options for the first
+    // demographic, etc).
+    //
+    // Portrait files are gfx/g0.vga through g23.vga, two per guest type:
+    // face_index = guest_type * 2 + (0 or 1) (chosen randomly at spawn)
+    //
+    // We determine guest_type and face_index when a guest is spawned
+    // and store it on the controller so sprite and portrait always match.
+    //
+    // Create a controller lazily and keep it for the duration of the seating.
+    // Walker arrivals already have a controller, so they fall straight through
+    // to rendering; only chairs we seat directly are filled in here.
+    auto it = guest_controllers_.find(chair_id);
+    if (it == guest_controllers_.end()) {
+      const ConsumerType demo = pick_weighted_demographic(customer_counts);
+      CharacterController controller;
+      controller.set_customer_type(demo);
+      controller.set_eating(false); // waiter delivers pizza to start eating
+      const int gt = pick_guest_type(demo);
+      controller.set_guest_type(gt);
+      controller.set_face_index(pick_face_index(gt));
+      it = guest_controllers_.emplace(chair_id, controller).first;
+    }
+
+    const int rotation = pf->bob_state() % 4;
+    Facing guest_facing;
+    switch (rotation) {
+    case 0:
+      guest_facing = Facing::Up;
+      break;
+    case 1:
+      guest_facing = Facing::Right;
+      break;
+    case 2:
+      guest_facing = Facing::Down;
+      break;
+    case 3:
+      guest_facing = Facing::Left;
+      break;
+    default:
+      guest_facing = Facing::Up;
+    }
+
+    const WorldPoint chair_pos = pf->origin();
+    const Size furniture_size = furniture_renderer_.size(*pf);
+    const WorldPoint guest_pos{chair_pos.x + (furniture_size.w / 2) +
+                                   (seating_offset_x[rotation] * 2),
+                               chair_pos.y + (furniture_size.h / 2) +
+                                   (seating_offset_y[rotation] * 2)};
+
+    CharacterPose pose = it->second.pose();
+    pose.facing = guest_facing;
+    guests_cache_.push_back(GuestRenderItem{
+        .torso_anchor_map = guest_pos,
+        .pose = pose,
+        .chair_id = chair_id,
+        .interacted_before = false,
+        .face_index = it->second.face_index(),
+    });
+  }
 }
 
 std::optional<int> RestaurantView::click_guest(core::FurnitureId chair_id) {
@@ -1529,6 +1590,15 @@ Rotation RestaurantView::rotation_towards(const WorldRect& from,
   return (wd.dy >= 0) ? Rotation::SOUTH : Rotation::NORTH;
 }
 
+int RestaurantView::walk_frame_for(WalkingGuest::Orientation dir,
+                                   int walk_cycle) {
+  return (static_cast<int>(dir) * 3) + WALK_CYCLE_TO_FRAME[walk_cycle];
+}
+
+int RestaurantView::walk_frame_for(const WalkingGuest& g) {
+  return walk_frame_for(g.direction, g.walk_cycle);
+}
+
 void RestaurantView::face_chair_towards_nearest_table_if_any(
     const WorldRect& candidate, const PlacedFurniture* nearest_table,
     const WorldRect& table_rect) {
@@ -1607,6 +1677,11 @@ void RestaurantView::render(const RenderContext& ctx) {
     return;
   }
 
+  if (view_mode_ == RestaurantViewMode::WEAPON_SELECT) {
+    render_weapon_select(ctx);
+    return;
+  }
+
   calculate_background_dimensions();
   prepare_background();
 
@@ -1622,6 +1697,13 @@ void RestaurantView::render(const RenderContext& ctx) {
   // illegal positions, e.g. one of the walls is placed into the wall in one of
   // the on disk restaurant layouts)
   render_side_and_bottom_walls();
+#ifndef NDEBUG
+  if (show_walk_debug_ && dbg_walk_mode_ == 3 && !kitchen_view_) {
+    render_debug_full_grid();
+  }
+#endif
+  render_walking_guest();
+  render_attackers();
 
   // Blit the visible portion of background_ to screen.
   // background_ is rendered at 1:1, so world coords are pixel indices into it.
@@ -1767,8 +1849,10 @@ void RestaurantView::render_side_and_bottom_walls() {
     background_.blit(k0_, tile, ViewPoint{x, bottom_y});
   }
 
-  // Render the customer entrance door
-  if (!kitchen_view_ && entrance_offset >= 0) {
+  // Render the customer entrance door. During an attack we leave the doorway as
+  // bare background tiles (no door sprite) so the attacker can walk through it.
+  if (!kitchen_view_ && entrance_offset >= 0 &&
+      view_mode_ != RestaurantViewMode::OPPONENT_ATTACK) {
     Bob& door_bob = context_.bob->get("bob/moebel.bob");
 
     // frame 59 = closed door, frame 60 = open door
@@ -1829,9 +1913,24 @@ void RestaurantView::render_side_and_bottom_walls() {
   }
 }
 
-// =============================================================================
-// FURNITURE GHOST RENDERING (when holding furniture)
-// =============================================================================
+#ifndef NDEBUG
+void RestaurantView::render_debug_full_grid() {
+  static constexpr gfx::ColorIndex FREE_COLOR = 80;
+  static constexpr gfx::ColorIndex BLOCKED_COLOR = 68;
+  static constexpr int C = WALK_CELL_SIZE;
+
+  const auto [blocked, grid_w, grid_h] = build_navigation_grid();
+
+  for (int gy = 0; gy < grid_h; ++gy) {
+    for (int gx = 0; gx < grid_w; ++gx) {
+      const gfx::ColorIndex col =
+          blocked[(gy * grid_w) + gx] ? BLOCKED_COLOR : FREE_COLOR;
+      gfx::draw::box(background_, ViewPoint{gx * C, gy * C},
+                     ViewPoint{(gx * C) + C - 1, (gy * C) + C - 1}, col, 1);
+    }
+  }
+}
+#endif
 
 WorldPoint
 RestaurantView::clamp_furniture_to_interior(WorldPoint mouse_world) const {
@@ -1847,8 +1946,8 @@ RestaurantView::clamp_furniture_to_interior(WorldPoint mouse_world) const {
   // so that bottom-right doesn't exceed the interior
   const int interior_min_x = tile_w;
   const int interior_min_y = tile_h;
-  const int interior_max_x = (room_size.w + 1) * tile_w - sz.w;
-  const int interior_max_y = (room_size.h + 1) * tile_h - sz.h;
+  const int interior_max_x = ((room_size.w + 1) * tile_w) - sz.w;
+  const int interior_max_y = ((room_size.h + 1) * tile_h) - sz.h;
 
   // Get the visible world rect from the camera
   const WorldRect visible = camera_.visible_world_rect();
@@ -1942,7 +2041,9 @@ void RestaurantView::handle_move_elsewhere() {
   if (batch && batch->furniture) {
     // Move one item from current batch to global queue
     // Preserve rotation if it was stored
-    FurnitureBatch move_batch{batch->furniture, 1, batch->bob_state};
+    FurnitureBatch move_batch{.furniture = batch->furniture,
+                              .count = 1,
+                              .bob_state = batch->bob_state};
     state_.restaurant_placement().push_back(move_batch);
 
     // Decrement current batch without auto-advancing
@@ -2132,28 +2233,30 @@ void RestaurantView::update_status_display(const PlacedFurniture* pf) {
   hub.post_direct(msg);
 }
 
-void RestaurantView::render_sabotage(const RenderContext& ctx) {
+void RestaurantView::render_item_picker(
+    const RenderContext& ctx, std::string_view title,
+    std::span<const core::item::Item> items,
+    const std::function<void(core::item::Item)>& on_pick) {
   gfx::blit::blit_raw_with_palette(*ctx.surface,
                                    context_.vga->get("gfx/back14"));
 
   const int text_color = 240;
-  const ViewPoint which_action_pos{148, 134};
-  context_.font->render_text_onto(*ctx.surface, "which action?",
-                                  which_action_pos, FontFace::PIZ_NUMB,
-                                  text_color);
+  const ViewPoint title_pos{148, 134};
+  context_.font->render_text_onto(*ctx.surface, title, title_pos,
+                                  FontFace::PIZ_NUMB, text_color);
 
   auto* player = state_.active_player();
   auto& inventory = player->inventory();
 
   int y_position = 164;
-  for (auto item : core::item::sabotage_list) {
+  for (auto item : items) {
     auto bag_count = inventory.count(item);
 
     // Create hover box at current y_position (relative to text_box)
     ViewRect hover_box{122, y_position, 128, 18};
 
-    // Draw background ONLY if this weapon is hovered
-    if (hovered_sabotage_item_ && hovered_sabotage_item_ == item) {
+    // Draw background on hover
+    if (hovered_item_ && hovered_item_ == item) {
       ctx.surface->fill_rect(hover_box, {15});
     }
 
@@ -2168,24 +2271,35 @@ void RestaurantView::render_sabotage(const RenderContext& ctx) {
 
     interactions_.create_frame_item(
         hover_box, name,
-        [this, item, bag_count](views::ui::InteractionEvent ev) {
+        [this, item, bag_count, on_pick](views::ui::InteractionEvent ev) {
           if (ev.type == views::ui::InteractionEvent::Type::Enter) {
-            hovered_sabotage_item_ = item;
+            hovered_item_ = item;
             mark_dirty();
           }
           else if (ev.type == views::ui::InteractionEvent::Type::Leave) {
-            hovered_sabotage_item_ = std::nullopt;
+            hovered_item_ = std::nullopt;
             mark_dirty();
           }
           else if (ev.type == views::ui::InteractionEvent::Type::Click) {
             if (ev.button == views::ui::MouseButton::Left && bag_count > 0) {
-              execute_sabotage_attack(item);
+              on_pick(item);
             }
           }
         });
 
     y_position += 20;
   }
+}
+
+void RestaurantView::render_sabotage(const RenderContext& ctx) {
+  render_item_picker(
+      ctx, "which action?", core::item::sabotage_list,
+      [this](core::item::Item item) { execute_sabotage_attack(item); });
+}
+
+void RestaurantView::render_weapon_select(const RenderContext& ctx) {
+  render_item_picker(ctx, "which weapon?", core::item::attack_weapon_list,
+                     [this](core::item::Item item) { begin_attack(item); });
 }
 
 void RestaurantView::execute_sabotage_attack(core::item::Item item) {
@@ -2280,8 +2394,8 @@ void RestaurantView::challenge_ask_speed(CompetitionFlow flow) {
 void RestaurantView::challenge_start(CompetitionFlow flow) {
   int comp_count = state_.competition_count();
   // early game: lower IDs (starting at 20) then increasing with comp_count
-  int pizza_index = std::min(static_cast<int>(comp_count), 40) +
-                    engine::random::rand_max_n(10) + 20;
+  int pizza_index =
+      std::min(comp_count, 40) + engine::random::rand_max_n(10) + 20;
 
   auto& zutaten_bob = context_.bob->get("bob/zutaten.bob");
   auto get_bob_size =
@@ -2317,4 +2431,969 @@ void RestaurantView::challenge_start(CompetitionFlow flow) {
   state_.ui().push<PizzaDesignState>(PizzaDesignMode::CompetitorChallenge,
                                      std::nullopt, nullptr, std::nullopt,
                                      session);
+}
+
+void RestaurantView::record_walk_debug_destination(WorldPoint destination) {
+#ifndef NDEBUG
+  dbg_walk_destination_ = destination;
+#else
+  (void)destination;
+#endif
+}
+
+void RestaurantView::snapshot_walk_debug_grid(WalkingGuest& walker,
+                                              WalkingPath& wp) {
+#ifndef NDEBUG
+  walker.dbg_blocked = std::move(wp.blocked);
+  walker.dbg_grid_w = wp.grid_w;
+  walker.dbg_grid_h = wp.grid_h;
+#else
+  (void)walker;
+  (void)wp;
+#endif
+}
+
+void RestaurantView::render_walking_guest() {
+  if (!walking_guest_ || kitchen_view_) {
+    return;
+  }
+  const auto& walker = walking_guest_.value();
+
+  if (!camera_.visible_world_rect().contains(walker.position)) {
+    return;
+  }
+
+#ifndef NDEBUG
+  if (show_walk_debug_) {
+    static constexpr gfx::ColorIndex BLOCKED_COLOR = 71;
+    static constexpr gfx::ColorIndex ANCHOR_COLOR = 15;
+    static constexpr gfx::ColorIndex DEST_COLOR = 9;
+    static constexpr gfx::ColorIndex AHEAD_COLOR = 104;
+    static constexpr gfx::ColorIndex PAST_COLOR = 72;
+    static constexpr int C = WALK_CELL_SIZE;
+    static constexpr int H = C / 2;
+
+    // mode 3 = full nav grid (drawn before this) + path overlay on top
+    const bool show_grid = (dbg_walk_mode_ == 0 || dbg_walk_mode_ == 1);
+    const bool show_path = (dbg_walk_mode_ != 1);
+    constexpr int line_width = 1;
+
+    // Blocked cells
+    if (show_grid) {
+      for (int gy = 0; gy < walker.dbg_grid_h; ++gy) {
+        for (int gx = 0; gx < walker.dbg_grid_w; ++gx) {
+          if (walker.dbg_blocked[(gy * walker.dbg_grid_w) + gx]) {
+            gfx::draw::box(background_, ViewPoint{gx * C, gy * C},
+                           ViewPoint{(gx * C) + C - 1, (gy * C) + C - 1},
+                           BLOCKED_COLOR, line_width);
+          }
+        }
+      }
+    }
+
+    if (show_path && !walker.path.empty()) {
+      // Get starting cell center by rewinding path_index steps.
+      int px = ((walker.position.x / C) * C) + H;
+      int py = ((walker.position.y / C) * C) + H;
+      for (int i = walker.path_index - 1; i >= 0; --i) {
+        const WalkingGuest::Orientation d = walker.path[i];
+        px -= walk_dx(d) * C;
+        py -= walk_dy(d) * C;
+      }
+
+      for (int i = 0; i < static_cast<int>(walker.path.size()); ++i) {
+        const gfx::ColorIndex col =
+            (i >= walker.path_index) ? AHEAD_COLOR : PAST_COLOR;
+        const WalkingGuest::Orientation d = walker.path[i];
+        const int nx = px + (walk_dx(d) * C);
+        const int ny = py + (walk_dy(d) * C);
+
+        gfx::draw::box(background_, ViewPoint{px - H, py - H},
+                       ViewPoint{px + H - 1, py + H - 1}, col, line_width);
+
+        // Direction arrow:
+        const int perp_x = -walk_dy(d);
+        const int perp_y = walk_dx(d);
+        const ViewPoint tip{px + (walk_dx(d) * 5), py + (walk_dy(d) * 5)};
+        const int bx = px - (walk_dx(d) * 2);
+        const int by = py - (walk_dy(d) * 2);
+        gfx::draw::line(background_,
+                        ViewPoint{bx + (perp_x * 3), by + (perp_y * 3)}, tip,
+                        col, line_width);
+        gfx::draw::line(background_,
+                        ViewPoint{bx - (perp_x * 3), by - (perp_y * 3)}, tip,
+                        col, line_width);
+
+        gfx::draw::line(background_, ViewPoint{px, py}, ViewPoint{nx, ny}, col,
+                        line_width);
+
+        px = nx;
+        py = ny;
+      }
+
+      // Final cell outline (path end)
+      gfx::draw::box(background_, ViewPoint{px - H, py - H},
+                     ViewPoint{px + H - 1, py + H - 1}, AHEAD_COLOR,
+                     line_width);
+
+      // Walker anchor crosshair
+      const int ax = walker.position.x;
+      const int ay = walker.position.y;
+      gfx::draw::line(background_, ViewPoint{ax - 5, ay}, ViewPoint{ax + 5, ay},
+                      ANCHOR_COLOR, line_width);
+      gfx::draw::line(background_, ViewPoint{ax, ay - 5}, ViewPoint{ax, ay + 5},
+                      ANCHOR_COLOR, line_width);
+    }
+
+    // Draw an X for the destination
+    if (dbg_walk_destination_) {
+      const int dx = dbg_walk_destination_->x;
+      const int dy = dbg_walk_destination_->y;
+      gfx::draw::line(background_, ViewPoint{dx - 5, dy - 5},
+                      ViewPoint{dx + 5, dy + 5}, DEST_COLOR, line_width);
+      gfx::draw::line(background_, ViewPoint{dx + 5, dy - 5},
+                      ViewPoint{dx - 5, dy + 5}, DEST_COLOR, line_width);
+    }
+  }
+#endif
+  const auto& guest_bob =
+      context_.bob->get(compat::format("bob/walk{}.bob", walker.guest_type));
+  const ViewPoint blit_pos{walker.position.x - walker.sprite_blit_offset_x,
+                           walker.position.y - walker.sprite_blit_offset_y};
+  background_.blit_masked(guest_bob.frame(walk_frame_for(walker)), blit_pos);
+
+  if (walker.kind == WalkingGuest::WalkerKind::WAITER_DELIVERING ||
+      walker.kind == WalkingGuest::WalkerKind::WAITER_RETURNING_WITH_PIZZA) {
+    // In order of WalkingGuest::Orientation
+    static constexpr std::array<std::array<int, 3>, 4> pizza_dx = {{
+        {2, 1, 2},
+        {5, 6, 1},
+        {18, 17, 15},
+        {15, 24, 18},
+    }};
+    static constexpr std::array<std::array<int, 3>, 4> pizza_dy = {{
+        {6, 9, 3},
+        {0, 0, 0},
+        {-6, -7, -13},
+        {7, 8, 9},
+    }};
+
+    const int dir = static_cast<int>(walker.direction);
+    const int frm = WALK_CYCLE_TO_FRAME[walker.walk_cycle];
+    const int x_off = pizza_dx[dir][frm];
+    const int y_off = pizza_dy[dir][frm];
+
+    const Surface pizza = pizza_bob_.frame(340);
+    background_.blit_masked(pizza, ViewPoint{
+                                       blit_pos.x + (x_off * 2),
+                                       blit_pos.y + ((y_off + 8) * 2),
+                                   });
+  }
+}
+
+namespace {
+
+constexpr int WALK_MAX_OPS = 300;
+constexpr int WALK_MAX_DEPTH = 100;
+
+bool walk_dfs(int cx, int cy, int dest_x, int dest_y, int grid_w, int grid_h,
+              const std::vector<bool>& blocked, std::vector<bool>& visited,
+              std::vector<WalkingGuest::Orientation>& path, int& ops_remaining,
+              int depth) {
+  if (cx == dest_x && cy == dest_y) {
+    return true;
+  }
+  if (ops_remaining <= 0 || depth >= WALK_MAX_DEPTH) {
+    return false;
+  }
+  --ops_remaining;
+  visited[(cy * grid_w) + cx] = true;
+
+  using O = WalkingGuest::Orientation;
+
+  // Score each direction by the signed displacement toward the destination
+  // along that axis. Higher orientation value wins ties
+  auto dir_score = [&](O dir) -> int {
+    switch (dir) {
+    case O::S:
+      return dest_y - cy;
+    case O::W:
+      return cx - dest_x;
+    case O::N:
+      return cy - dest_y;
+    case O::E:
+      return dest_x - cx;
+    }
+    return 0;
+  };
+
+  std::array<O, 4> dirs = {O::S, O::W, O::N, O::E};
+  std::ranges::sort(dirs, [&](O a, O b) {
+    const int sa = dir_score(a);
+    const int sb = dir_score(b);
+    if (sa != sb) {
+      return sa > sb;
+    }
+    return a > b;
+  });
+
+  for (O dir : dirs) {
+    const int nx = cx + walk_dx(dir);
+    const int ny = cy + walk_dy(dir);
+    if (nx < 0 || nx >= grid_w || ny < 0 || ny >= grid_h) {
+      continue;
+    }
+    const int idx = (ny * grid_w) + nx;
+    if (blocked[idx] || visited[idx]) {
+      continue;
+    }
+    path.push_back(dir);
+    if (walk_dfs(nx, ny, dest_x, dest_y, grid_w, grid_h, blocked, visited, path,
+                 ops_remaining, depth + 1)) {
+      return true;
+    }
+    path.pop_back();
+  }
+  return false;
+}
+
+// Collapse runs into L-shapes; the DFS produces staircases that look bad.
+bool seg_clear(int x0, int y0, int x1, int y1, int grid_w, int grid_h,
+               const std::vector<bool>& blocked) {
+  const int dx = (x1 > x0) ? 1 : (x1 < x0) ? -1 : 0;
+  const int dy = (y1 > y0) ? 1 : (y1 < y0) ? -1 : 0;
+  int x = x0;
+  int y = y0;
+  while (x != x1 || y != y1) {
+    if (x < 0 || x >= grid_w || y < 0 || y >= grid_h ||
+        blocked[(y * grid_w) + x]) {
+      return false;
+    }
+    x += dx;
+    y += dy;
+  }
+  return x >= 0 && x < grid_w && y >= 0 && y < grid_h &&
+         !blocked[(y * grid_w) + x];
+}
+
+std::vector<WalkingGuest::Orientation>
+straighten_path(int from_x, int from_y,
+                const std::vector<WalkingGuest::Orientation>& path, int grid_w,
+                int grid_h, const std::vector<bool>& blocked) {
+  using O = WalkingGuest::Orientation;
+
+  if (path.size() <= 1) {
+    return path;
+  }
+
+  std::vector<std::pair<int, int>> pos;
+  pos.reserve(path.size() + 1);
+  pos.emplace_back(from_x, from_y);
+  for (auto d : path) {
+    pos.emplace_back(pos.back().first + walk_dx(d),
+                     pos.back().second + walk_dy(d));
+  }
+
+  std::vector<O> result;
+  result.reserve(path.size());
+  int from_idx = 0;
+
+  while (from_idx < static_cast<int>(path.size())) {
+    const auto [fx, fy] = pos[from_idx];
+    bool jumped = false;
+
+    // Scan backwards: find the furthest pos[to] reachable via an L-path.
+    for (int to = static_cast<int>(pos.size()) - 1; to > from_idx + 1; --to) {
+      const auto [tx, ty] = pos[to];
+
+      if (seg_clear(fx, fy, tx, fy, grid_w, grid_h, blocked) &&
+          seg_clear(tx, fy, tx, ty, grid_w, grid_h, blocked)) {
+        if (tx != fx) {
+          const O h_dir = (tx > fx) ? O::E : O::W;
+          for (int k = 0; k < std::abs(tx - fx); ++k) {
+            result.push_back(h_dir);
+          }
+        }
+        if (ty != fy) {
+          const O v_dir = (ty > fy) ? O::S : O::N;
+          for (int k = 0; k < std::abs(ty - fy); ++k) {
+            result.push_back(v_dir);
+          }
+        }
+        from_idx = to;
+        jumped = true;
+        break;
+      }
+
+      if (seg_clear(fx, fy, fx, ty, grid_w, grid_h, blocked) &&
+          seg_clear(fx, ty, tx, ty, grid_w, grid_h, blocked)) {
+        if (ty != fy) {
+          const O v_dir = (ty > fy) ? O::S : O::N;
+          for (int k = 0; k < std::abs(ty - fy); ++k) {
+            result.push_back(v_dir);
+          }
+        }
+        if (tx != fx) {
+          const O h_dir = (tx > fx) ? O::E : O::W;
+          for (int k = 0; k < std::abs(tx - fx); ++k) {
+            result.push_back(h_dir);
+          }
+        }
+        from_idx = to;
+        jumped = true;
+        break;
+      }
+    }
+
+    if (!jumped) {
+      result.push_back(path[from_idx]);
+      ++from_idx;
+    }
+  }
+
+  return result;
+}
+
+} // namespace
+
+void RestaurantView::walking_tick() {
+  auto& walker = *walking_guest_;
+
+  // Walkers move one whole cell every WALKER_MOVE_INTERVAL render frames.
+  ++walker.anim_tick;
+  if (walker.anim_tick < WALKER_MOVE_INTERVAL) {
+    return;
+  }
+  walker.anim_tick = 0;
+
+  if (walker.path_index >= static_cast<int>(walker.path.size())) {
+    switch (walker.kind) {
+    case WalkingGuest::WalkerKind::GUEST:
+      if (walker.walking_out) {
+        const core::FurnitureId failed_id = walker.destination_chair_id;
+        auto it = std::ranges::find_if(
+            shuffled_chairs_,
+            [&](const PlacedFurniture* pf) { return pf->id() == failed_id; });
+        if (it != shuffled_chairs_.end()) {
+          std::rotate(it, it + 1, shuffled_chairs_.end());
+        }
+        walking_guest_.reset();
+      }
+      else {
+        seat_arrived_guest();
+      }
+      break;
+    case WalkingGuest::WalkerKind::GUEST_DEPARTING:
+      departing_chair_id_.reset();
+      walking_guest_.reset();
+      break;
+    case WalkingGuest::WalkerKind::WAITER_DELIVERING:
+      waiter_delivered();
+      break;
+    case WalkingGuest::WalkerKind::WAITER_RETURNING:
+    case WalkingGuest::WalkerKind::WAITER_RETURNING_WITH_PIZZA:
+      walking_guest_.reset();
+      break;
+    }
+    mark_dirty();
+    return;
+  }
+
+  walker.direction = walker.path[walker.path_index++];
+  step_one_cell(walker.position, walker.walk_cycle, walker.direction);
+  mark_dirty();
+}
+
+void RestaurantView::seat_arrived_guest() {
+  const auto& walker = *walking_guest_;
+  views::screens::restaurant::CharacterController ctrl;
+  ctrl.set_customer_type(walker.demographic);
+  ctrl.set_eating(false);
+  ctrl.set_guest_type(walker.guest_type);
+  ctrl.set_face_index(walker.face_index);
+  guest_controllers_[walker.destination_chair_id] = ctrl;
+  ++guest_occupancy_delta_;
+  walking_guest_.reset();
+  mark_dirty();
+}
+
+void RestaurantView::spawn_guest_departure() {
+  if (guest_controllers_.empty()) {
+    return;
+  }
+
+  auto it = guest_controllers_.begin();
+  const core::FurnitureId chair_id = it->first;
+  const auto& ctrl = it->second;
+
+  const PlacedFurniture* chair =
+      restaurant_->layout()->find_by_id(chair_id, false);
+  if (!chair) {
+    guest_controllers_.erase(it);
+    return;
+  }
+
+  const Size chair_sz = bob_renderer_for(*chair).size(*chair);
+  const WorldPoint from_pos{chair->origin().x + (chair_sz.w / 2),
+                            chair->origin().y + (chair_sz.h / 2)};
+
+  constexpr int tile_w = RESTAURANT_TILE_WIDTH;
+  constexpr int tile_h = RESTAURANT_TILE_HEIGHT;
+  const auto room_size = restaurant_->size();
+  const int entrance_offset = restaurant_->layout()->entrance_offset();
+  const int logical_x = (entrance_offset * tile_w) + (3 * tile_w / 2);
+  const int entry_y = (room_size.h - 1) * tile_h;
+  const int entry_cells =
+      (background_height_ - entry_y + WALK_CELL_SIZE - 1) / WALK_CELL_SIZE;
+
+  const ConsumerType demographic = ctrl.pose().customer_type;
+  const int guest_type = ctrl.guest_type();
+  const int face_index = ctrl.face_index();
+
+  const auto& walk_bob =
+      context_.bob->get(compat::format("bob/walk{}.bob", guest_type));
+  const int blit_offset_x = (walk_bob.width(0) / 2) + 10;
+  const int blit_offset_y = (walk_bob.height(0) / 2) + 16;
+
+  const WorldPoint exit_pos{logical_x, entry_y};
+  auto wp = compute_walking_path(from_pos, exit_pos, chair->origin(), chair_sz);
+
+  std::vector<WalkingGuest::Orientation> path = std::move(wp.steps);
+  path.insert(path.end(), entry_cells, WalkingGuest::Orientation::S);
+
+  // Remove from seated state before the walker starts moving (matches
+  // original).
+  --guest_occupancy_delta_;
+  guest_controllers_.erase(it);
+
+  // Rotate the departing chair to the back so it falls outside the occupied
+  // range (0..effective_guests-1) immediately.
+  {
+    auto sit =
+        std::ranges::find_if(shuffled_chairs_, [&](const PlacedFurniture* pf) {
+          return pf->id() == chair_id;
+        });
+    if (sit != shuffled_chairs_.end()) {
+      std::rotate(sit, sit + 1, shuffled_chairs_.end());
+    }
+  }
+
+  departing_chair_id_ = chair_id;
+
+  record_walk_debug_destination(exit_pos);
+  walking_guest_ = WalkingGuest{
+      .position = from_pos,
+      .kind = WalkingGuest::WalkerKind::GUEST_DEPARTING,
+      .demographic = demographic,
+      .destination = exit_pos,
+      .destination_chair_id = chair_id,
+      .guest_type = guest_type,
+      .face_index = face_index,
+      .path = std::move(path),
+      .sprite_blit_offset_x = blit_offset_x,
+      .sprite_blit_offset_y = blit_offset_y,
+  };
+  snapshot_walk_debug_grid(*walking_guest_, wp);
+
+  mark_dirty();
+}
+
+void RestaurantView::spawn_guest() {
+  const PlacedFurniture* chair = get_guest_destination_chair();
+  if (!chair) {
+    return;
+  }
+
+  constexpr int tile_w = RESTAURANT_TILE_WIDTH;
+  constexpr int tile_h = RESTAURANT_TILE_HEIGHT;
+  const auto room_size = restaurant_->size();
+  const int entrance_offset = restaurant_->layout()->entrance_offset();
+  const int logical_x = (entrance_offset * tile_w) + (3 * tile_w / 2);
+  const int entry_y = (room_size.h - 1) * tile_h;
+  const int entry_cells =
+      (background_height_ - entry_y + WALK_CELL_SIZE - 1) / WALK_CELL_SIZE;
+  const int spawn_y = entry_y + (entry_cells * WALK_CELL_SIZE);
+
+  const ConsumerType demographic =
+      pick_weighted_demographic(restaurant_->economy().customer_counts());
+  const int guest_type = pick_guest_type(demographic);
+
+  // World pos = sprite_center + (5, 8) (from original, then 2x)
+  const auto& walk_bob =
+      context_.bob->get(compat::format("bob/walk{}.bob", guest_type));
+  const int blit_offset_x = (walk_bob.width(0) / 2) + 10;
+  const int blit_offset_y = (walk_bob.height(0) / 2) + 16;
+
+  const Size chair_sz = bob_renderer_for(*chair).size(*chair);
+  const WorldPoint destination{chair->origin().x + (chair_sz.w / 2),
+                               chair->origin().y + (chair_sz.h / 2)};
+  const core::FurnitureId chair_id = chair->id();
+  const int face_index = pick_face_index(guest_type);
+
+  std::vector<WalkingGuest::Orientation> path(entry_cells,
+                                              WalkingGuest::Orientation::N);
+
+  record_walk_debug_destination(destination);
+  auto wp = compute_walking_path(WorldPoint{logical_x, entry_y}, destination,
+                                 chair->origin(), chair_sz);
+
+  bool walking_out = false;
+  if (wp.steps.empty()) {
+    // No path to chair: append exit steps (south) so the guest walks back out.
+    path.insert(path.end(), entry_cells, WalkingGuest::Orientation::S);
+    walking_out = true;
+  }
+  else {
+    path.insert(path.end(), wp.steps.begin(), wp.steps.end());
+  }
+
+  walking_guest_ = WalkingGuest{
+      .position = {logical_x, spawn_y},
+      .demographic = demographic,
+      .destination = destination,
+      .destination_chair_id = chair_id,
+      .guest_type = guest_type,
+      .face_index = face_index,
+      .path = std::move(path),
+      .sprite_blit_offset_x = blit_offset_x,
+      .sprite_blit_offset_y = blit_offset_y,
+      .walking_out = walking_out,
+  };
+  snapshot_walk_debug_grid(*walking_guest_, wp);
+}
+
+RestaurantView::NavGrid RestaurantView::build_navigation_grid() const {
+  const auto room_size = restaurant_->size();
+
+  // The navigation grid covers the entire rendered restaurant, including the
+  // walls. Furniture coordinates already include this border offset, so world
+  // coordinates map directly to grid cells.
+  const int grid_w =
+      ((room_size.w + 2) * RESTAURANT_TILE_WIDTH + WALK_CELL_SIZE - 1) /
+      WALK_CELL_SIZE;
+  const int grid_h =
+      ((room_size.h + 2) * RESTAURANT_TILE_HEIGHT + WALK_CELL_SIZE - 1) /
+      WALK_CELL_SIZE;
+
+  std::vector<bool> blocked(static_cast<size_t>(grid_w * grid_h), false);
+
+  // WALK_CELL_SIZE (12) does not divide evenly into the room height measured
+  // in pixels (22-pixel tiles). Near the bottom edge, a navigation cell can
+  // partially overlap the wall border: treat those cells as blocked if their
+  // lower edge extends into the wall, rather than testing only the top left of
+  // the cell.
+  for (int gy = 0; gy < grid_h; ++gy) {
+    for (int gx = 0; gx < grid_w; ++gx) {
+      const int wx = gx * WALK_CELL_SIZE;
+      const int wy = gy * WALK_CELL_SIZE;
+      const bool left_wall = wx < RESTAURANT_TILE_WIDTH;
+      const bool right_wall = wx >= (room_size.w + 1) * RESTAURANT_TILE_WIDTH;
+      const bool top_wall = wy < RESTAURANT_TILE_HEIGHT;
+      const bool bottom_wall = (gy + 1) * WALK_CELL_SIZE >
+                               (room_size.h + 1) * RESTAURANT_TILE_HEIGHT;
+      if (left_wall || right_wall || top_wall || bottom_wall) {
+        blocked[(gy * grid_w) + gx] = true;
+      }
+    }
+  }
+
+  // A cell is blocked only if its center point lies within the furniture
+  // bounds. This prevents furniture from claiming neighbouring cells that are
+  // touched only by its outer pixels.
+  const int half = WALK_CELL_SIZE / 2;
+  for (const auto& pf : restaurant_->layout()->placed_furniture()) {
+    if (!pf) {
+      continue;
+    }
+    const Size sz = bob_renderer_for(*pf).size(*pf);
+    const int ox = pf->origin().x;
+    const int oy = pf->origin().y;
+    const int x0 = (ox + half - 1) / WALK_CELL_SIZE;
+    const int y0 = (oy + half - 1) / WALK_CELL_SIZE;
+    const int x1 = (ox + sz.w - half - 1) / WALK_CELL_SIZE;
+    const int y1 = (oy + sz.h - half - 1) / WALK_CELL_SIZE;
+    for (int y = std::max(0, y0); y <= std::min(grid_h - 1, y1); ++y) {
+      for (int x = std::max(0, x0); x <= std::min(grid_w - 1, x1); ++x) {
+        blocked[(y * grid_w) + x] = true;
+      }
+    }
+  }
+
+  // Carve the customer entrance through the bottom wall so characters can walk
+  // in and out through the doorway. The opening is 3 tiles wide at the entrance
+  // offset (matching the brown-tile gap drawn by render_side_and_bottom_walls).
+  // Done last so it overrides both the wall and any furniture in the doorway.
+  const int entrance_offset = restaurant_->layout()->entrance_offset();
+  const int ent_wx0 = entrance_offset * RESTAURANT_TILE_WIDTH;
+  const int ent_wx1 =
+      (entrance_offset + 3) * RESTAURANT_TILE_WIDTH; // exclusive
+  for (int gy = 0; gy < grid_h; ++gy) {
+    const bool bottom_wall =
+        (gy + 1) * WALK_CELL_SIZE > (room_size.h + 1) * RESTAURANT_TILE_HEIGHT;
+    if (!bottom_wall) {
+      continue;
+    }
+    for (int gx = 0; gx < grid_w; ++gx) {
+      const int wx = gx * WALK_CELL_SIZE;
+      // Unblock any cell that overlaps the doorway opening.
+      if (wx + WALK_CELL_SIZE > ent_wx0 && wx < ent_wx1) {
+        blocked[(gy * grid_w) + gx] = false;
+      }
+    }
+  }
+
+  return {.blocked = std::move(blocked), .w = grid_w, .h = grid_h};
+}
+
+RestaurantView::WalkingPath
+RestaurantView::compute_walking_path(WorldPoint from, WorldPoint to,
+                                     WorldPoint dest_origin,
+                                     Size dest_size) const {
+  auto [blocked, grid_w, grid_h] = build_navigation_grid();
+
+  // Clamp to grid bounds
+  const auto clamp_cell = [&](int v, int hi) {
+    return std::clamp(v, 0, hi - 1);
+  };
+
+  // Unblock the destination chair so DFS can enter from any exposed edge
+  const int dest_gx = clamp_cell(to.x / WALK_CELL_SIZE, grid_w);
+  const int dest_gy = clamp_cell(to.y / WALK_CELL_SIZE, grid_h);
+  {
+    const int ux0 = dest_origin.x / WALK_CELL_SIZE;
+    const int uy0 = dest_origin.y / WALK_CELL_SIZE;
+    const int ux1 = (dest_origin.x + dest_size.w - 1) / WALK_CELL_SIZE;
+    const int uy1 = (dest_origin.y + dest_size.h - 1) / WALK_CELL_SIZE;
+    for (int y = std::max(0, uy0); y <= std::min(grid_h - 1, uy1); ++y) {
+      for (int x = std::max(0, ux0); x <= std::min(grid_w - 1, ux1); ++x) {
+        blocked[(y * grid_w) + x] = false;
+      }
+    }
+  }
+
+  const int from_gx = clamp_cell(from.x / WALK_CELL_SIZE, grid_w);
+  const int from_gy = clamp_cell(from.y / WALK_CELL_SIZE, grid_h);
+
+  std::vector<WalkingGuest::Orientation> path;
+  std::vector<bool> visited(static_cast<size_t>(grid_w * grid_h), false);
+  int ops = WALK_MAX_OPS;
+  walk_dfs(from_gx, from_gy, dest_gx, dest_gy, grid_w, grid_h, blocked, visited,
+           path, ops, 0);
+  path = straighten_path(from_gx, from_gy, path, grid_w, grid_h, blocked);
+  return {.steps = std::move(path),
+          .blocked = std::move(blocked),
+          .grid_w = grid_w,
+          .grid_h = grid_h};
+}
+
+const PlacedFurniture* RestaurantView::get_guest_destination_chair() {
+  // Occupied seats occupy the first guests_to_show + guest_occupancy_delta_
+  // slots.
+  if (shuffled_chairs_.empty()) {
+    return nullptr;
+  }
+  const int first_empty =
+      restaurant_->guest_occupancy().guests + guest_occupancy_delta_;
+  if (first_empty < 0 ||
+      first_empty >= static_cast<int>(shuffled_chairs_.size())) {
+    return nullptr;
+  }
+  return shuffled_chairs_[first_empty];
+}
+
+const PlacedFurniture* RestaurantView::find_unserved_guest_chair() {
+  for (const auto& [chair_id, ctrl] : guest_controllers_) {
+    if (!ctrl.pose().eating) {
+      const auto* pf = restaurant_->layout()->find_by_id(chair_id, false);
+      if (pf) {
+        return pf;
+      }
+    }
+  }
+  return nullptr;
+}
+
+void RestaurantView::spawn_waiter() {
+  const PlacedFurniture* chair = find_unserved_guest_chair();
+  if (!chair) {
+    return;
+  }
+
+  constexpr int tile_w = RESTAURANT_TILE_WIDTH;
+  constexpr int tile_h = RESTAURANT_TILE_HEIGHT;
+
+  // +1 skips the top wall tile; KITCHEN_ENTRANCE_ROWS/2 picks the middle row.
+  const int entrance_row = restaurant_->layout()->kitchen_entry_offset();
+  const int kitchen_y =
+      ((entrance_row + 1 + KITCHEN_ENTRANCE_ROWS / 2) * tile_h) + (tile_h / 2);
+
+  constexpr int entry_x = tile_w;
+  constexpr int entry_cells = entry_x / WALK_CELL_SIZE;
+
+  constexpr int waiter_bob_index = 12;
+  const auto& walk_bob =
+      context_.bob->get(compat::format("bob/walk{}.bob", waiter_bob_index));
+  // World pos = sprite_center + (5, 8) (from original); at 2x: +10, +16.
+  const int blit_offset_x = (walk_bob.width(0) / 2) + 10;
+  const int blit_offset_y = (walk_bob.height(0) / 2) + 16;
+
+  const Size chair_sz = bob_renderer_for(*chair).size(*chair);
+  const WorldPoint destination{chair->origin().x + (chair_sz.w / 2),
+                               chair->origin().y + (chair_sz.h / 2)};
+  const core::FurnitureId chair_id = chair->id();
+
+  std::vector<WalkingGuest::Orientation> path(entry_cells,
+                                              WalkingGuest::Orientation::E);
+
+  record_walk_debug_destination(destination);
+  auto wp = compute_walking_path(WorldPoint{entry_x, kitchen_y}, destination,
+                                 chair->origin(), chair_sz);
+  if (wp.steps.empty()) {
+    // No route: walk out a few steps then immediately return.
+    constexpr int turn_steps = 3;
+    std::vector<WalkingGuest::Orientation> fail_path(
+        entry_cells + turn_steps, WalkingGuest::Orientation::E);
+    fail_path.insert(fail_path.end(), entry_cells + turn_steps,
+                     WalkingGuest::Orientation::W);
+
+    walking_guest_ = WalkingGuest{
+        .position = {0, kitchen_y},
+        .kind = WalkingGuest::WalkerKind::WAITER_RETURNING_WITH_PIZZA,
+        .guest_type = waiter_bob_index,
+        .path = std::move(fail_path),
+        .sprite_blit_offset_x = blit_offset_x,
+        .sprite_blit_offset_y = blit_offset_y,
+    };
+    return;
+  }
+  path.insert(path.end(), wp.steps.begin(), wp.steps.end());
+
+  walking_guest_ = WalkingGuest{
+      .position = {0, kitchen_y},
+      .kind = WalkingGuest::WalkerKind::WAITER_DELIVERING,
+      .destination = destination,
+      .destination_chair_id = chair_id,
+      .guest_type = waiter_bob_index,
+      .path = std::move(path),
+      .sprite_blit_offset_x = blit_offset_x,
+      .sprite_blit_offset_y = blit_offset_y,
+  };
+  snapshot_walk_debug_grid(*walking_guest_, wp);
+}
+
+void RestaurantView::waiter_delivered() {
+  auto& walker = *walking_guest_;
+
+  auto it = guest_controllers_.find(walker.destination_chair_id);
+  if (it != guest_controllers_.end()) {
+    it->second.set_eating(true);
+  }
+  mark_dirty();
+
+  constexpr int tile_w = RESTAURANT_TILE_WIDTH;
+  constexpr int tile_h = RESTAURANT_TILE_HEIGHT;
+  const int entrance_row = restaurant_->layout()->kitchen_entry_offset();
+  const int kitchen_y =
+      ((entrance_row + 1 + KITCHEN_ENTRANCE_ROWS / 2) * tile_h) + (tile_h / 2);
+  constexpr int entry_x = tile_w;
+  constexpr int exit_cells = entry_x / WALK_CELL_SIZE;
+
+  // Unblock the served chair so the return path can start from inside it.
+  const auto* chair =
+      restaurant_->layout()->find_by_id(walker.destination_chair_id, false);
+  WorldPoint unblock_origin = walker.destination;
+  Size unblock_size{WALK_CELL_SIZE, WALK_CELL_SIZE};
+  if (chair) {
+    unblock_origin = chair->origin();
+    unblock_size = bob_renderer_for(*chair).size(*chair);
+  }
+
+  auto wp =
+      compute_walking_path(walker.destination, WorldPoint{entry_x, kitchen_y},
+                           unblock_origin, unblock_size);
+
+  std::vector<WalkingGuest::Orientation> path = std::move(wp.steps);
+  for (int i = 0; i < exit_cells; ++i) {
+    path.push_back(WalkingGuest::Orientation::W);
+  }
+
+  walker.kind = WalkingGuest::WalkerKind::WAITER_RETURNING;
+  walker.path = std::move(path);
+  walker.path_index = 0;
+  walker.anim_tick = 0;
+  snapshot_walk_debug_grid(walker, wp);
+}
+
+namespace {
+
+// Figure out where to go based on keyboard/controller input
+std::optional<WalkingGuest::Orientation> orientation_from_axis(float ax,
+                                                               float ay) {
+  // This is the gameplay threshold for how far the stick must be pushed
+  // before it counts as a committed directional command.
+  constexpr float DIRECTION_COMMIT_THRESHOLD = 0.5f;
+  if (std::abs(ax) < DIRECTION_COMMIT_THRESHOLD &&
+      std::abs(ay) < DIRECTION_COMMIT_THRESHOLD) {
+    return std::nullopt;
+  }
+  if (std::abs(ax) > std::abs(ay)) {
+    return (ax > 0) ? WalkingGuest::Orientation::E
+                    : WalkingGuest::Orientation::W;
+  }
+  return (ay > 0) ? WalkingGuest::Orientation::S : WalkingGuest::Orientation::N;
+}
+
+} // namespace
+
+void RestaurantView::begin_attack(core::item::Item weapon) {
+  constexpr int tile_w = RESTAURANT_TILE_WIDTH;
+  constexpr int tile_h = RESTAURANT_TILE_HEIGHT;
+  const auto room_size = restaurant_->size();
+
+  attack_weapon_ = weapon;
+
+  const auto& body = context_.bob->get("bob/nightp.bob");
+  // offsets from original
+  const int blit_off_x = (body.width(0) / 2) + 10;
+  const int blit_off_y = (body.height(0) / 2) + 16;
+
+  // Attacker spawns just inside the doorway, facing into the room.
+  // They leave by walking back south across the bottom wall and
+  // out through the entrance gap
+  const int entrance_offset = restaurant_->layout()->entrance_offset();
+  const int logical_x = (entrance_offset * tile_w) + (3 * tile_w / 2);
+  const int spawn_y = (room_size.h * tile_h) + (tile_h / 2);
+  attacker_ = AttackSprite{
+      .position = {logical_x, spawn_y},
+      .direction = WalkingGuest::Orientation::N,
+      .sprite_blit_offset_x = blit_off_x,
+      .sprite_blit_offset_y = blit_off_y,
+      .is_defender = false,
+  };
+
+  // Defender (if human): spawned at the kitchen entrance, just like the waiter.
+  defender_.reset();
+  if (auto owner = restaurant_->property().owner_or_tenant()) {
+    auto* victim = state_.player(*owner);
+    if (victim && victim->is_human_controlled()) {
+      const int entrance_row = restaurant_->layout()->kitchen_entry_offset();
+      const int kitchen_y =
+          ((entrance_row + 1 + KITCHEN_ENTRANCE_ROWS / 2) * tile_h) +
+          (tile_h / 2);
+      defender_ = AttackSprite{
+          .position = {tile_w, kitchen_y},
+          .direction = WalkingGuest::Orientation::E,
+          .sprite_blit_offset_x = blit_off_x,
+          .sprite_blit_offset_y = blit_off_y,
+          .is_defender = true,
+      };
+    }
+  }
+
+  walking_guest_.reset();
+  attack_active_ = true;
+  view_mode_ = RestaurantViewMode::OPPONENT_ATTACK;
+  set_up_buttons();
+  mark_dirty();
+}
+
+void RestaurantView::attack_tick() {
+  if (!attacker_) {
+    return;
+  }
+
+  // One collision grid for the whole tick, shared by both characters.
+  const auto [blocked, grid_w, grid_h] = build_navigation_grid();
+
+  // Returns true if the sprite walked out of the restaurant (attacker only),
+  // in which case the caller must stop touching this view -- it is being
+  // popped.
+  const auto step_sprite = [&](AttackSprite& s, input::Action move_act,
+                               input::Action fire_act) -> bool {
+    if (context_.input->just_pressed(fire_act)) {
+      // TODO: attack
+      // weapon/projectile/damage systems are not implemented yet.
+    }
+
+    // Move one whole cell every WALKER_MOVE_INTERVAL frames
+    if (++s.move_gate < WALKER_MOVE_INTERVAL) {
+      return false;
+    }
+    s.move_gate = 0;
+
+    const auto [ax, ay] = context_.input->axis(move_act);
+    const auto dir = orientation_from_axis(ax, ay);
+    if (!dir) {
+      return false; // dead zone: keep facing, stay put
+    }
+    s.direction = *dir;
+
+    const int nx = (s.position.x / WALK_CELL_SIZE) + walk_dx(*dir);
+    const int ny = (s.position.y / WALK_CELL_SIZE) + walk_dy(*dir);
+
+    // The attacker leaves by walking south through the doorway and off the
+    // bottom edge of the grid.
+    // TODO: Do the 'end of attack' stuff here
+    if (!s.is_defender && *dir == WalkingGuest::Orientation::S &&
+        ny >= grid_h) {
+      state_.ui().pop();
+      return true;
+    }
+
+    if (nx < 0 || nx >= grid_w || ny < 0 || ny >= grid_h ||
+        blocked[(ny * grid_w) + nx]) {
+      return false;
+    }
+    step_one_cell(s.position, s.walk_cycle, *dir);
+    return false;
+  };
+
+  if (step_sprite(*attacker_, input::Action::MoveVec2, input::Action::Fire)) {
+    return;
+  }
+  if (defender_) {
+    step_sprite(*defender_, input::Action::P2_MoveVec2, input::Action::P2_Fire);
+  }
+  mark_dirty();
+}
+
+void RestaurantView::render_attackers() {
+  if (!attack_active_ || kitchen_view_) {
+    return;
+  }
+  // NIGHTP frames: 0-11 attacker, 12-23 defender, each 3 walk frames with
+  // 4 directions (direction*3 + walk_cycle) Then there is one head frame per
+  // direction, index 24-27 for the attacker, 28-31 for the defender.
+  const auto& body = context_.bob->get("bob/nightp.bob");
+
+  // Order of WalkingGuest::Orientation:
+  static constexpr std::array<int, 4> attacker_head_dx = {7, 11, 8, 12};
+  static constexpr std::array<int, 4> attacker_head_dy = {-3, -3, -5, 0};
+  static constexpr std::array<int, 4> defender_head_dx = {13, 12, 12, 13};
+  static constexpr std::array<int, 4> defender_head_dy = {-7, -8, -7, -8};
+
+  const auto draw = [&](const AttackSprite& s) {
+    const int dir = static_cast<int>(s.direction);
+    const int body_base = s.is_defender ? 12 : 0;
+    const int frame = body_base + walk_frame_for(s.direction, s.walk_cycle);
+    const ViewPoint blit_pos{s.position.x - s.sprite_blit_offset_x,
+                             s.position.y - s.sprite_blit_offset_y};
+    background_.blit_masked(body.frame(frame), blit_pos);
+
+    const int head_base = s.is_defender ? 28 : 24;
+    const int head_dx =
+        (s.is_defender ? defender_head_dx : attacker_head_dx)[dir];
+    const int head_dy =
+        (s.is_defender ? defender_head_dy : attacker_head_dy)[dir];
+    background_.blit_masked(
+        body.frame(head_base + dir),
+        ViewPoint{blit_pos.x + (head_dx * 2), blit_pos.y + (head_dy * 2)});
+  };
+
+  if (attacker_) {
+    draw(*attacker_);
+  }
+  if (defender_) {
+    draw(*defender_);
+  }
 }

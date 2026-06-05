@@ -8,6 +8,7 @@
 #include "engine/Fatal.h"
 #include "engine/FormatCompat.h"
 #include "engine/input/Action.h"
+#include "engine/input/Gamepad.h"
 #include "engine/input/InputManager.h"
 #include "engine/input/Key.h"
 
@@ -87,6 +88,10 @@ void configure_default_bindings(InputManager& in) {
   in.bind_button(chord("Y"), Action::ConfirmYes);
   in.bind_button(chord("Enter"), Action::ConfirmYes);
   in.bind_button(chord("N"), Action::ConfirmNo);
+
+  in.bind_gamepad_stick(Action::P2_MoveVec2, GamepadAxis::LeftX,
+                        GamepadAxis::LeftY);
+  in.bind_gamepad_button(GamepadButton::A, Action::P2_Fire);
 }
 
 } // namespace input

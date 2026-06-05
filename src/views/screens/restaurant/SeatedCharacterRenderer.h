@@ -8,7 +8,7 @@
 
 #include <array>
 #include "core/util/GameContext.h"
-#include "engine/RenderContext.h"
+#include "gfx/Surface.h"
 #include "views/screens/restaurant/CharacterController.h"
 
 namespace views::screens::restaurant {
@@ -24,14 +24,14 @@ public:
   explicit SeatedCharacterRenderer(GameContext& ctx);
 
   // Draw a subset of parts, in the given order (for layering with furniture).
-  void render_parts(const RenderContext& ctx, ViewPoint torso_anchor_on_screen,
+  void render_parts(Surface& surface, ViewPoint torso_anchor_on_screen,
                     const struct CharacterPose& pose,
                     std::span<const Part> draw_order) const;
 
   // Convenience methods with lists of body parts already:
-  void render_lower_body(const RenderContext& ctx, ViewPoint torso_anchor,
+  void render_lower_body(Surface& surface, ViewPoint torso_anchor,
                          const CharacterPose& pose) const;
-  void render_upper_body(const RenderContext& ctx, ViewPoint torso_anchor,
+  void render_upper_body(Surface& surface, ViewPoint torso_anchor,
                          const CharacterPose& pose) const;
 
 private:

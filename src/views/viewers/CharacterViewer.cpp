@@ -146,7 +146,7 @@ void CharacterViewer::render(const RenderContext& ctx) {
   if (part_visible_[2]) { // Legs
     ViewPoint anchor = base_anchor + part_debug_offsets_[2];
     const Part order[] = {Part::Legs};
-    guest_renderer_->render_parts(ctx, anchor, pose, order);
+    guest_renderer_->render_parts(*ctx.surface, anchor, pose, order);
   }
 
   // Front half: Torso, Head, Arms
@@ -154,7 +154,7 @@ void CharacterViewer::render(const RenderContext& ctx) {
     if (part_visible_[part_idx]) {
       ViewPoint anchor = base_anchor + part_debug_offsets_[part_idx];
       const Part order[] = {part};
-      guest_renderer_->render_parts(ctx, anchor, pose, order);
+      guest_renderer_->render_parts(*ctx.surface, anchor, pose, order);
     }
   };
 

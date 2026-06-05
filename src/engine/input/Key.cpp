@@ -9,12 +9,12 @@
 #include <algorithm>
 
 namespace input {
-namespace { // anonymous
+namespace {
 
 inline std::string lower(std::string_view sv) {
   std::string s(sv);
-  std::transform(s.begin(), s.end(), s.begin(),
-                 [](unsigned char c) { return std::tolower(c); });
+  std::ranges::transform(s, s.begin(),
+                         [](unsigned char c) { return std::tolower(c); });
   return s;
 }
 
@@ -22,7 +22,7 @@ struct KeyAlias {
   std::string_view name;
   Key key;
 };
-static constexpr KeyAlias k_key_names[] = {
+constexpr KeyAlias k_key_names[] = {
     // letters
     {"a", Key::A},
     {"b", Key::B},
@@ -145,7 +145,7 @@ struct ModAlias {
   std::string_view name;
   Mod mod;
 };
-static constexpr ModAlias k_mod_names[] = {
+constexpr ModAlias k_mod_names[] = {
     {"shift", Mod::Shift}, {"ctrl", Mod::Ctrl}, {"control", Mod::Ctrl},
     {"alt", Mod::Alt},     {"gui", Mod::Meta},  {"meta", Mod::Meta},
     {"cmd", Mod::Meta},    {"super", Mod::Meta}};
@@ -193,7 +193,7 @@ std::optional<Key> key_from_string(std::string_view sv) {
 }
 
 std::string_view key_to_string(Key k) {
-  for (auto& a : k_key_names) {
+  for (const auto& a : k_key_names) {
     if (a.key == k) {
       return a.name; // returns lower-case
     }
@@ -231,7 +231,7 @@ std::optional<std::pair<Mod, Key>> chord_split(std::string_view s) {
 
 std::optional<Binding> parse_chord(std::string_view s) {
   if (auto mk = chord_split(s)) {
-    return Binding{mk->first, mk->second};
+    return Binding{.mods = mk->first, .key = mk->second};
   }
   return std::nullopt;
 }

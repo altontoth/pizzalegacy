@@ -178,4 +178,5 @@ enum class RestaurantViewMode {
   OPPONENT_VIEW,
   OPPONENT_ATTACK,
   SABOTAGE,
+  WEAPON_SELECT,
 };

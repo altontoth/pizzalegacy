@@ -19,7 +19,7 @@ enum class Item : std::size_t {
   FlameThrower, // Vanilla
   Chemicals,    // Chocolate
   Bazooka,      // Strawberry
-  Bomb,         // Lemon,
+  Bomb,         // Lemon
   Count,
 };
 constexpr std::size_t item_count = static_cast<std::size_t>(Item::Count);
@@ -34,6 +34,13 @@ constexpr std::array<Item, 4> sabotage_list = {
     Item::Laxatives,
     Item::Rats,
     Item::StinkBomb,
+};
+
+constexpr std::array<Item, 4> attack_weapon_list = {
+    Item::FlameThrower,
+    Item::Chemicals,
+    Item::Bazooka,
+    Item::Bomb,
 };
 
 constexpr std::string_view to_string(Item i) noexcept {
