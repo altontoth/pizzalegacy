@@ -169,7 +169,7 @@ enum class FurnitureType {
   HYPER_OVEN = 159,
   BLACK_BOX = 160,
   SUPER_TOASTER = 161,
-  ASHES_UNKNOWN = 162,
+  ASHES_KITCHEN = 162,
 };
 
 enum class RestaurantViewMode {

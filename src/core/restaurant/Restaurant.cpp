@@ -1015,7 +1015,8 @@ void Restaurant::end_of_day(GameState& game_state) {
   const auto& date = game_state.time().current_date();
 
   // Pay monthly rent on the last day of the month
-  if (date.is_end_of_month() && property_.is_rented()) {
+  if (player->is_human_controlled() && date.is_end_of_month() &&
+      property_.is_rented()) {
     Money monthly_rent = property_.get_monthly_rent();
 
     if (monthly_rent.cents > 0) {
@@ -1042,7 +1043,7 @@ void Restaurant::end_of_day(GameState& game_state) {
 
     economy_.calculate_demand_with_competition(*this, game_state);
 
-    ai::process_restaurant_revenue(*this, *player, date);
+    ai::process_restaurant_revenue(*this, *player);
     return;
   }
 
@@ -1632,9 +1633,12 @@ void Restaurant::start_of_day(GameState& game_state) {
     });
   }
 
-  // Tick down forced closures
+  // Tick down forced closures. On re-open you get the reputation hit.
   if (forced_days_remaining_ > 0) {
     --forced_days_remaining_;
+    if (forced_days_remaining_ == 0) {
+      add_reputation_damage(-30, 15);
+    }
   }
 
   decrement_protection_timer();

@@ -24,4 +24,5 @@ struct GameOptions {
   bool auto_save = true;
   bool rmb_drag_inverted = false;
   bool scroll_zoom_inverted = false;
+  bool software_cursor = true;
 };

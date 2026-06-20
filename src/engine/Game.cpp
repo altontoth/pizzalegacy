@@ -43,7 +43,6 @@
 #include "views/base/PaneledView.h"
 #include "views/base/View.h"
 #include "views/factories/ActorViewFactory.h"
-#include "views/helpers/camera/RmbDragScroller.h"
 #include "views/layers/ConsoleLayer.h"
 #include "views/layers/DebugLayer.h"
 #include "views/layers/PauseLayer.h"
@@ -351,6 +350,8 @@ void Game::run() {
   }
 
   Renderer renderer(sdl_, display_height_);
+  renderer.set_cursor_manager(cursor_manager_.get());
+  cursor_manager_->software_mode(state.options().software_cursor);
   renderer.add_layers(change_state(state, loop_state));
   std::ranges::for_each(overlays.renderables(),
                         [&](Renderable* r) { renderer.add_layers(r); });
@@ -365,6 +366,8 @@ void Game::run() {
       Logger::warn("Current view is nullptr!");
       std::exit(1);
     }
+
+    handle_events(loop_state);
 
     // Ticks:
     input_manager_->tick();
@@ -474,10 +477,9 @@ void Game::run() {
       }
     }
 
+    // For software cursor:
+    cursor_manager_->cursor_position(last_mouse_pos_);
     renderer.render();
-
-    // Event handling:
-    handle_events(loop_state);
 
     SDL_SetWindowTitle(
         sdl_.window,
@@ -501,17 +503,12 @@ void Game::handle_events(LoopState& loop_state) {
       break;
     }
     if (event.type == SDL_MOUSEMOTION) {
-      if (SDL_GetRelativeMouseMode()) {
+      if (cursor_manager_->relative_mouse_mode()) {
         // In relative mode the cursor is locked; accumulate relative deltas so
         // the interaction system keeps receiving hover events at a virtual
         // position that moves with the physical mouse.
         last_mouse_pos_.x += event.motion.xrel;
         last_mouse_pos_.y += event.motion.yrel;
-        // Clamp to stay inside the huge interaction rect registered in
-        // RmbDragScroller::add_interaction, so hover events keep firing.
-        constexpr int lim = RmbDragScroller::DRAG_REACH - 1;
-        last_mouse_pos_.x = std::clamp(last_mouse_pos_.x, -lim, lim);
-        last_mouse_pos_.y = std::clamp(last_mouse_pos_.y, -lim, lim);
       }
       else {
         last_mouse_pos_ = ScreenPoint{event.motion.x, event.motion.y};
@@ -530,12 +527,29 @@ void Game::handle_events(LoopState& loop_state) {
       if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
         handle_resize_event(event, loop_state);
       }
+      else if (event.window.event == SDL_WINDOWEVENT_FOCUS_LOST) {
+        // If focus is lost mid-drag we won't get a ButtonUp, so
+        // end any active drag now.
+        interaction_manager_->end_active_drag();
+      }
     }
   }
-  // For hovering we only care about the final state as not to confuse
-  // the whole enter/leave/hover states which happens if you process
-  // every single event. Just the final state is enough:
+  // A drag that ended this frame unlocked the pointer during event processing
+  // above. Restore the position to the one before we entered relative mouse
+  // mode, so that when the cursor becomes visible it appears in the same
+  // position from before the relative mode.
+  if (!cursor_manager_->relative_mouse_mode() && prev_relative_mouse_mode_) {
+    last_mouse_pos_ = pre_relative_mouse_pos_;
+  }
+
   interaction_manager_->update_mouse(last_mouse_pos_);
+
+  // If relative mouse mode just got turned on, remember where we are.
+  const bool now_relative = cursor_manager_->relative_mouse_mode();
+  if (now_relative && !prev_relative_mouse_mode_) {
+    pre_relative_mouse_pos_ = last_mouse_pos_;
+  }
+  prev_relative_mouse_mode_ = now_relative;
 }
 
 void Game::handle_resize_event(const SDL_Event& event, LoopState& loop_state) {
@@ -609,6 +623,10 @@ bool Game::init(int display_height, ConfigManager& config_manager) {
                               &sdl_.renderer);
   SDL_SetWindowPosition(sdl_.window, SDL_WINDOWPOS_CENTERED,
                         SDL_WINDOWPOS_CENTERED);
+
+  // Bring the window to the foreground; when I launch the game from
+  // Terminal.app it stays in the background otherwise.
+  SDL_RaiseWindow(sdl_.window);
 
   // Set up the screen
   Logger::debug("Creating screen: w: {}, h: {}, bpp: {}",
@@ -847,8 +865,10 @@ Renderable* Game::change_state(GameState& gs, LoopState& /*loop*/) {
             auto* actor = gs.active_city()->actor_by_id(ps.id);
             auto conversation =
                 std::make_unique<PoliceConversation>(gs, actor, ps.reason);
-            current_view_ = std::make_unique<ActorView<PoliceLine>>(
+            auto view = std::make_unique<ActorView<PoliceLine>>(
                 context, gs, actor, std::move(conversation));
+            view->set_on_complete(ps.on_complete);
+            current_view_ = std::move(view);
           },
           [&](const MafiaState& ms) {
             auto* actor = gs.active_city()->actor_by_id(ms.id);

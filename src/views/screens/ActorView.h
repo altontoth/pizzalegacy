@@ -32,6 +32,10 @@ public:
 
   void tick() override;
   void on_phase_finished();
+
+  void set_on_complete(std::function<void()> cb) {
+    on_complete_ = std::move(cb);
+  }
   bool update_conversation();
   bool update_face_animations();
   bool update_idle_animations();
@@ -68,6 +72,7 @@ private:
 
   // During emoting, we freeze the previous dialog text
   std::vector<ConversationLine<LineEnum>> frozen_lines_;
+  std::function<void()> on_complete_;
 };
 
 #include "views/screens/ActorView.inl"

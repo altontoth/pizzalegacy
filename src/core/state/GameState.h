@@ -268,7 +268,8 @@ public:
   RankChange adjust_social_score(Player& player, int delta);
 
   // Game Events
-  void initiate_arrest(ArrestReason);
+  void initiate_arrest(ArrestReason,
+                       std::function<void()> on_complete = nullptr);
   void check_police_events();
   void bootstrap_minimal_playable_world(GameContext& context);
 

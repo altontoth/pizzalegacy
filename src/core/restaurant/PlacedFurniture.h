@@ -33,9 +33,16 @@ public:
   int bob_state() const;
   void bob_state(int bob_state);
 
-  // Access to the associated Furniture object
   const Furniture* furniture() const;
+  void change_to_ashes();
   const std::vector<int>& bobs() const;
+
+  // from original: 30 initially, decremented by 2 per frame by flamethrower
+  static constexpr int INITIAL_DURABILITY = 30;
+  int durability() const;
+  void damage(int amount = 1);
+  bool is_ashes() const;
+
   core::FurnitureId id() const;
   void id(core::FurnitureId id);
   std::optional<core::FurnitureId> linked_furniture_id() const;
@@ -50,4 +57,5 @@ private:
   WorldPoint origin_;
   std::optional<core::FurnitureId> linked_furniture_id_;
   int bob_state_;
+  int durability_{INITIAL_DURABILITY};
 };

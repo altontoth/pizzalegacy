@@ -11,6 +11,7 @@
 #include <deque>
 #include <functional>
 #include <iostream>
+#include <optional>
 #include <string>
 #include <string_view>
 
@@ -64,10 +65,6 @@ public:
       : tt_mgr_(tt_mgr), display_height_(display_height) {}
   void update_mouse(ScreenPoint sp);
   void set_display_height(int height) { display_height_ = height; }
-  // Enable or disable SDL relative mouse mode for cursor locking during drag.
-  // On enable the current global cursor position is saved; on disable SDL
-  // relative mode is turned off and the cursor is explicitly warped back
-  void set_relative_mouse_mode(bool enable);
   void clear() {
     items_.clear();
     current_hover_ = 0;
@@ -122,15 +119,20 @@ public:
     InteractionToken
     create(ViewRect r, std::string_view id_str, Callback cb,
            TooltipCb tooltip_cb = {},
-           InteractionLayer layer_type = InteractionLayer::Normal) const {
+           InteractionLayer layer_type = InteractionLayer::Normal,
+           std::optional<MouseButton> drag_button = std::nullopt) const {
       return mgr_->create_item(r, id_str, std::move(cb), id_, tooltip_cb,
-                               layer_type);
+                               layer_type, drag_button);
     }
 
     [[nodiscard]] LayerID id() const noexcept { return id_; }
 
   private:
     friend class InteractionManager;
+    // InteractionLayers need to be able to forward drag-control calls to the
+    // manager.
+    friend class InteractionLayers;
+    [[nodiscard]] InteractionManager* manager() const noexcept { return mgr_; }
     LayerHandle(InteractionManager* m, LayerID id) : mgr_{m}, id_{id} {}
 
     InteractionManager* mgr_{nullptr};
@@ -146,6 +148,19 @@ public:
     on_hot_changed_ = std::move(cb);
   }
 
+  bool is_dragging() const { return drag_active_; }
+
+  void cancel_drag() {
+    drag_active_ = false;
+    drag_source_ = 0;
+  }
+
+  void end_active_drag() {
+    if (drag_active_) {
+      finish_drag(drag_last_pos_);
+    }
+  }
+
 private:
   friend class ::DebugLayer;
   friend void register_debug_commands(DebugConsole&, GameState&, GameContext&);
@@ -158,6 +173,8 @@ private:
     Callback callback;
     TooltipCb tooltip_cb = {};
     InteractionLayer layer_type = InteractionLayer::Normal;
+    // Which button is allowed to start a drag (if any):
+    std::optional<MouseButton> drag_button;
 
     bool hovered = false;
     bool hovered_prev = false;
@@ -173,7 +190,8 @@ private:
   InteractionToken
   create_item(ViewRect r, std::string_view id_str, Callback cb, LayerID layer,
               InteractionManager::TooltipCb tt = {},
-              InteractionLayer layer_type = InteractionLayer::Normal) {
+              InteractionLayer layer_type = InteractionLayer::Normal,
+              std::optional<MouseButton> drag_button = std::nullopt) {
     ItemID id = static_cast<ItemID>(std::hash<std::string_view>{}(id_str));
 #ifdef DEBUG
     for (const auto& item : items_) {
@@ -185,7 +203,7 @@ private:
     }
 #endif
     items_.push_front({id, layer, r, std::string{id_str}, std::move(cb),
-                       std::move(tt), layer_type});
+                       std::move(tt), layer_type, drag_button});
     // This prevents a "Leave" from firing when you create an exclusive
     // layer (e.g. popup) while hovering something, the popup has items that you
     // can hover over, and that caused the Leave to fire, which would call
@@ -213,7 +231,8 @@ private:
   [[nodiscard]] static MouseButton to_button(const SDL_Event& e) noexcept;
   void handle_tooltip(const InteractionItem& it, const InteractionEvent& ev);
   void dispatch(const InteractionItem& item, InteractionEvent::Type type,
-                MouseButton btn, ViewPoint p) const;
+                MouseButton btn, ViewPoint p, ViewPoint delta = {}) const;
+  void finish_drag(ViewPoint p);
   const std::deque<InteractionItem>& items() const { return items_; }
   void dispatch_hover_enter_leave(InteractionItem& it, ViewPoint p);
   InteractionItem* lookup_item(ItemID id) {
@@ -230,15 +249,18 @@ private:
   TooltipManager& tt_mgr_;
   std::deque<InteractionItem> items_;
   LayerID next_layer_id_{1};
-  ItemID next_item_id_{1};
   ItemID current_hover_{0};
   std::string hot_item_name_;
   std::function<void()> on_hot_changed_;
   int display_height_{DisplayConstants::LOGICAL_HEIGHT};
   ViewPoint last_logical_mouse_pos_;
-  // Saved global cursor position for restoring after relative mouse mode.
-  int relative_mode_origin_x_{0};
-  int relative_mode_origin_y_{0};
+
+  static constexpr int DRAG_THRESHOLD = 4;
+  ItemID drag_source_{0};
+  MouseButton drag_button_{MouseButton::Left};
+  bool drag_active_{false};
+  ViewPoint drag_start_pos_;
+  ViewPoint drag_last_pos_;
 };
 
 } // namespace views::ui

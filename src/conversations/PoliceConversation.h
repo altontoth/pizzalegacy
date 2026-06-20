@@ -24,9 +24,10 @@ public:
   Emotion emotion() const override;
   std::vector<ConversationLine<PoliceLine>> lines() const override;
   bool advance() override;
-  bool advance_line_choice(PoliceLine) override;
-  bool advance_proposal(bool) override;
+  bool advance_line_choice(PoliceLine choice) override;
+  bool advance_proposal(bool agree) override;
   bool has_ended() const override;
+  bool back_allowed() const override { return !arrest_reason_.has_value(); }
 
 private:
   static PoliceLine compute_start_line(const GameState& state, const Actor*,

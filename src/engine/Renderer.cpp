@@ -13,6 +13,7 @@
 #include "engine/Renderable.h"
 #include "engine/SDL_include.h"
 #include "engine/adapters/SDLRectAdapter.h"
+#include "engine/ui/CursorManager.h"
 #include "gfx/Surface.h"
 
 using gfx::Surface;
@@ -98,15 +99,44 @@ void Renderer::render() {
   }
 
   force_recompose_ = false;
-  if (!frame_changed) {
+
+  // Software cursor: the cursor can move while no layer changed, so we
+  // have to re-present in that case. Also if the cursor just
+  // disappeared we need one more present to erase it.
+  const Surface* cursor_sprite =
+      cursor_ ? cursor_->software_cursor_sprite() : nullptr;
+  const ScreenPoint cursor_pos =
+      cursor_ ? cursor_->cursor_position() : ScreenPoint{};
+  const bool cursor_changed =
+      (cursor_sprite != last_cursor_sprite_) ||
+      (cursor_sprite && (cursor_pos.x != last_cursor_pos_.x ||
+                         cursor_pos.y != last_cursor_pos_.y));
+
+  if (!frame_changed && !cursor_changed) {
     return;
   }
 
-  SDL_Surface* final_surface = backbuffer_.get();
+  // Composite the cursor onto a copy so the persistent backbuffer stays
+  // cursor-free.
+  SDL_Surface* composited = backbuffer_.get();
+  if (cursor_sprite) {
+    ensure_present_surface(backbuffer_->w, backbuffer_->h);
+    SDL_SetSurfaceBlendMode(backbuffer_.get(), SDL_BLENDMODE_NONE);
+    SDL_BlitSurface(backbuffer_.get(), nullptr, frame_with_cursor_.get(),
+                    nullptr);
+    SDL_SetSurfaceBlendMode(backbuffer_.get(), SDL_BLENDMODE_BLEND);
+    draw_software_cursor(frame_with_cursor_.get(), *cursor_sprite, cursor_pos,
+                         cursor_->software_cursor_centered());
+    composited = frame_with_cursor_.get();
+  }
+  last_cursor_sprite_ = cursor_sprite;
+  last_cursor_pos_ = cursor_pos;
+
+  SDL_Surface* final_surface = composited;
   SDL_Surface_unique_ptr scaled_surface;
 
   if (display_height_ == DisplayConstants::CRT_DISPLAY_HEIGHT) {
-    scaled_surface = apply_crt_scaling(backbuffer_.get());
+    scaled_surface = apply_crt_scaling(composited);
     final_surface = scaled_surface.get();
   }
 
@@ -115,6 +145,35 @@ void Renderer::render() {
   SDL_RenderClear(sdl_.renderer);
   SDL_RenderCopy(sdl_.renderer, sdl_.texture, nullptr, nullptr);
   SDL_RenderPresent(sdl_.renderer);
+}
+
+void Renderer::ensure_present_surface(int w, int h) {
+  if (frame_with_cursor_ && frame_with_cursor_->w == w &&
+      frame_with_cursor_->h == h) {
+    return;
+  }
+  frame_with_cursor_.reset(
+      SDL_CreateRGBSurfaceWithFormat(0, w, h, 32, SDL_PIXELFORMAT_RGBA8888));
+  if (!frame_with_cursor_) {
+    fatal(SDL_GetError());
+  }
+}
+
+void Renderer::draw_software_cursor(SDL_Surface* dst, const Surface& sprite,
+                                    ScreenPoint pos, bool centered) const {
+  SDL_Surface_unique_ptr sdl_sprite = to_sdl_surface(sprite);
+
+  // The logical display height may differ from SCREEN_HEIGHT due to CRT
+  // correction, so just the y coord has to be rescaled.
+  int x = pos.x;
+  int y = pos.y * DisplayConstants::SCREEN_HEIGHT / display_height_;
+  if (centered) {
+    x -= sdl_sprite->w / 2;
+    y -= sdl_sprite->h / 2;
+  }
+
+  SDL_Rect dest = {x, y, sdl_sprite->w, sdl_sprite->h};
+  SDL_BlitSurface(sdl_sprite.get(), nullptr, dst, &dest);
 }
 
 void Renderer::clear_layers() {

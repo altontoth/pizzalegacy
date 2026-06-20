@@ -7,6 +7,7 @@
 #include "engine/ui/InteractionManager.h"
 
 #include <algorithm>
+#include <cstdlib>
 
 #include "engine/DisplayConstants.h"
 #include "engine/SDL_include.h"
@@ -73,6 +74,32 @@ void InteractionManager::process(const SDL_Event& e) {
         }
       }
     }
+
+    // Arm a drag if the item registered itself as draggable with this mouse
+    // button. The drag starts once the pointer moves past DRAG_THRESHOLD, until
+    // then a release is a normal click.
+    if (drag_source_ == 0) {
+      ItemID drag_id = 0;
+      if (normal_id != 0) {
+        if (auto* it = lookup_item(normal_id); it && it->drag_button == btn) {
+          drag_id = normal_id;
+        }
+      }
+      if (drag_id == 0 && !is_exclusive) {
+        for (ItemID id : background_ids) {
+          if (auto* it = lookup_item(id); it && it->drag_button == btn) {
+            drag_id = id;
+            break;
+          }
+        }
+      }
+      if (drag_id != 0) {
+        drag_source_ = drag_id;
+        drag_button_ = btn;
+        drag_start_pos_ = p;
+        drag_active_ = false;
+      }
+    }
     break;
   }
 
@@ -81,6 +108,18 @@ void InteractionManager::process(const SDL_Event& e) {
     ViewPoint p = screen_to_view_point(sp);
     MouseButton btn = to_button(e);
     const uint8_t clicks = e.button.clicks;
+
+    // If a drag was in progress on this button, finish it and suppress the
+    // click flow (a completed drag is not a click).
+    if (drag_active_ && btn == drag_button_) {
+      finish_drag(p);
+      break;
+    }
+    // A press that never crossed the threshold: disarm it; the click flow below
+    // delivers the normal Click.
+    if (drag_source_ != 0 && btn == drag_button_) {
+      drag_source_ = 0;
+    }
 
     const ItemID normal_pressed_id =
         (btn == MouseButton::Left) ? pressed_left_id_ : pressed_right_id_;
@@ -269,6 +308,41 @@ void InteractionManager::update_mouse(ScreenPoint sp) {
     }
   }
 
+  // If the drag source vanished, abandon the drag
+  if (drag_source_ != 0 && lookup_item(drag_source_) == nullptr) {
+    drag_active_ = false;
+    drag_source_ = 0;
+  }
+
+  // Drag session: a press on a draggable item armed drag_source_.
+  // This becomes an active drag once the pointer moves past the threshold.
+  if (drag_source_ != 0 && !drag_active_) {
+    const int moved =
+        std::abs(p.x - drag_start_pos_.x) + std::abs(p.y - drag_start_pos_.y);
+    if (moved > DRAG_THRESHOLD) {
+      drag_active_ = true;
+      drag_last_pos_ = p;
+      if (auto* src = lookup_item(drag_source_)) {
+        dispatch(*src, InteractionEvent::Type::DragStart, drag_button_, p);
+      }
+    }
+  }
+
+  // While a drag is active, suppress hover/enter/leave on every other item.
+  // Forcing found_normal to 0 also fires a Leave on whatever was last hovered.
+  if (drag_active_) {
+    if (p.x != drag_last_pos_.x || p.y != drag_last_pos_.y) {
+      if (auto* src = lookup_item(drag_source_)) {
+        const ViewPoint delta{p.x - drag_last_pos_.x, p.y - drag_last_pos_.y};
+        dispatch(*src, InteractionEvent::Type::DragMove, drag_button_, p,
+                 delta);
+      }
+      drag_last_pos_ = p;
+    }
+    found_normal = 0;
+    is_exclusive = false;
+  }
+
   if (found_normal != current_hover_) {
     if (current_hover_ != 0) {
       if (auto* old = lookup_item(current_hover_)) {
@@ -353,7 +427,7 @@ MouseButton InteractionManager::to_button(const SDL_Event& e) noexcept {
 
 void InteractionManager::dispatch(const InteractionItem& item,
                                   InteractionEvent::Type type, MouseButton btn,
-                                  ViewPoint p) const {
+                                  ViewPoint p, ViewPoint delta) const {
 
   // Copy callback before dispatching since the callback may destroy the item.
   const auto cb = item.callback;
@@ -361,11 +435,29 @@ void InteractionManager::dispatch(const InteractionItem& item,
   const InteractionEvent ev{.type = type,
                             .button = btn,
                             .pos = p,
-                            .local = ViewPoint{local_pos.dx, local_pos.dy}};
+                            .local = ViewPoint{local_pos.dx, local_pos.dy},
+                            .delta = delta};
 
   const_cast<InteractionManager*>(this)->handle_tooltip(item, ev);
 
   cb(ev);
+}
+
+void InteractionManager::finish_drag(ViewPoint p) {
+  if (auto* src = lookup_item(drag_source_)) {
+    dispatch(*src, InteractionEvent::Type::DragEnd, drag_button_, p);
+  }
+  // Clear press/active state for the drag button so nothing stays stuck
+  // highlighted or pressed. We have to loop through them all because a single
+  // press can activate several items (background items as well).
+  for (auto& item : items_) {
+    (drag_button_ == MouseButton::Left ? item.active_left : item.active_right) =
+        false;
+  }
+  (drag_button_ == MouseButton::Left ? pressed_left_id_ : pressed_right_id_) =
+      0;
+  drag_active_ = false;
+  drag_source_ = 0;
 }
 
 ViewPoint InteractionManager::screen_to_view_point(ScreenPoint sp) const {
@@ -375,19 +467,6 @@ ViewPoint InteractionManager::screen_to_view_point(ScreenPoint sp) const {
   }
   return ViewPoint{sp.x,
                    (sp.y * DisplayConstants::LOGICAL_HEIGHT) / display_height_};
-}
-
-void InteractionManager::set_relative_mouse_mode(bool enable) {
-  if (enable) {
-    // Store cursor position before locking.
-    SDL_GetGlobalMouseState(&relative_mode_origin_x_, &relative_mode_origin_y_);
-    SDL_SetRelativeMouseMode(SDL_TRUE);
-  }
-  else {
-    // Restore the cursor to its pre-drag position when leaving relative mode.
-    SDL_SetRelativeMouseMode(SDL_FALSE);
-    SDL_WarpMouseGlobal(relative_mode_origin_x_, relative_mode_origin_y_);
-  }
 }
 
 } // namespace views::ui

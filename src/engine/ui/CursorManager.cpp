@@ -52,7 +52,7 @@ void CursorManager::base_cursor_mode(CursorMode mode) {
   cursor_surface_.palette(palette);
 
   if (!custom_cursor_active_) {
-    rebuild_base_cursor();
+    sync_hardware_cursor();
   }
 }
 
@@ -62,8 +62,9 @@ void CursorManager::custom_cursor(const Surface& surface, bool centered) {
   custom_cursor_surface_.emplace(surface.clone());
   custom_cursor_active_ = true;
   custom_cursor_centered_ = centered;
-  // Rebuild with current scale factor if needed
-  apply_cursor(*custom_cursor_surface_, centered);
+  // Installing a custom cursor makes it visible.
+  cursor_hidden_ = false;
+  sync_hardware_cursor();
 }
 
 void CursorManager::clear_custom_cursor() {
@@ -75,23 +76,17 @@ void CursorManager::clear_custom_cursor() {
   custom_cursor_surface_.reset();
   scaled_custom_surface_.reset();
 
-  if (!cursor_hidden_) {
-    rebuild_base_cursor();
-  }
+  sync_hardware_cursor();
 }
 
 void CursorManager::hide_cursor() {
   cursor_hidden_ = true;
-  SDL_ShowCursor(SDL_DISABLE);
+  sync_hardware_cursor();
 }
 
 void CursorManager::show_cursor() {
   cursor_hidden_ = false;
-  SDL_ShowCursor(SDL_ENABLE);
-
-  if (active_cursor_) {
-    SDL_SetCursor(active_cursor_.get());
-  }
+  sync_hardware_cursor();
 }
 
 bool CursorManager::is_custom_cursor_active() const {
@@ -106,6 +101,11 @@ void CursorManager::display_height(int display_height) {
 
 void CursorManager::update_scaled_cursor(int new_window_width,
                                          int new_window_height) {
+  // Cursor scaling only matters for the SDL cursor; in software mode the
+  // renderer scales the sprite to the current window itself.
+  if (software_mode_) {
+    return;
+  }
   // SDL gives us the window width and height, including any black bars SDL
   // might have added to preserve the aspect ratio. The cursor must match the
   // scale of the actual game inside the black bars, so we need to compensate
@@ -130,17 +130,10 @@ void CursorManager::update_scaled_cursor(int new_window_width,
   last_scale_x_ = scale_x;
   last_scale_y_ = scale_y;
 
-  if (!cursor_hidden_) {
-    if (custom_cursor_active_ && custom_cursor_surface_) {
-      apply_cursor(*custom_cursor_surface_, custom_cursor_centered_);
-    }
-    else {
-      rebuild_base_cursor();
-    }
-  }
+  sync_hardware_cursor();
 }
 
-void CursorManager::free_active_cursor() {
+void CursorManager::hw_free_cursor() {
   if (active_cursor_) {
     // SDL keeps using the currently set cursor internally, so detach it
     // before destroying the object to avoid SDL referencing freed memory.
@@ -150,20 +143,39 @@ void CursorManager::free_active_cursor() {
   }
 }
 
-void CursorManager::rebuild_base_cursor() {
-  free_active_cursor();
-  apply_cursor(cursor_surface_, /*centered=*/false);
+void CursorManager::sync_hardware_cursor() {
+  if (software_mode_) {
+    // the renderer draws the cursor
+    return;
+  }
+  if (cursor_hidden_) {
+    SDL_ShowCursor(SDL_DISABLE);
+    return;
+  }
+  if (custom_cursor_active_) {
+    hw_apply_cursor(*custom_cursor_surface_, custom_cursor_centered_);
+  }
+  else {
+    hw_rebuild_base_cursor();
+  }
+}
+
+void CursorManager::hw_rebuild_base_cursor() {
+  hw_free_cursor();
+  // only custom cursors can be centered:
+  hw_apply_cursor(cursor_surface_, false);
 }
 
 void CursorManager::update_palette(gfx::PaletteHandle palette) {
   cursor_surface_.palette(palette);
-  if (!custom_cursor_active_ && !cursor_hidden_) {
-    rebuild_base_cursor();
+  if (!custom_cursor_active_) {
+    sync_hardware_cursor();
   }
 }
 
-void CursorManager::apply_cursor(const Surface& source_surface, bool centered) {
-  free_active_cursor();
+void CursorManager::hw_apply_cursor(const Surface& source_surface,
+                                    bool centered) {
+  hw_free_cursor();
 
   float scale_x = last_scale_x_;
   float scale_y = last_scale_y_;
@@ -194,6 +206,55 @@ void CursorManager::apply_cursor(const Surface& source_surface, bool centered) {
   if (active_cursor_) {
     SDL_SetCursor(active_cursor_.get());
     SDL_ShowCursor(SDL_ENABLE);
-    cursor_hidden_ = false;
+  }
+}
+
+void CursorManager::software_mode(bool enable) {
+  if (software_mode_ == enable) {
+    return;
+  }
+  software_mode_ = enable;
+
+  if (enable) {
+    // Our own renderer takes over, drop any installed SDL cursor
+    // and hide the OS pointer.
+    hw_free_cursor();
+    SDL_ShowCursor(SDL_DISABLE);
+  }
+  else {
+    // Go back to the hardware cursor and rebuild whatever cursor should
+    // currently be showing.
+    sync_hardware_cursor();
+  }
+}
+
+const gfx::Surface* CursorManager::software_cursor_sprite() const {
+  if (!software_mode_ || cursor_hidden_) {
+    return nullptr;
+  }
+  if (relative_mouse_mode_) {
+    return nullptr;
+  }
+  if (custom_cursor_active_) {
+    return &*custom_cursor_surface_;
+  }
+  return &cursor_surface_;
+}
+
+bool CursorManager::software_cursor_centered() const {
+  return custom_cursor_active_ ? custom_cursor_centered_ : false;
+}
+
+void CursorManager::set_relative_mouse_mode(bool enable) {
+  relative_mouse_mode_ = enable;
+  if (enable) {
+    // Store cursor position before locking.
+    SDL_GetGlobalMouseState(&relative_mode_origin_x_, &relative_mode_origin_y_);
+    SDL_SetRelativeMouseMode(SDL_TRUE);
+  }
+  else {
+    // Restore the cursor to its pre-drag position when leaving relative mode.
+    SDL_SetRelativeMouseMode(SDL_FALSE);
+    SDL_WarpMouseGlobal(relative_mode_origin_x_, relative_mode_origin_y_);
   }
 }

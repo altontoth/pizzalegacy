@@ -41,6 +41,39 @@ static inline Mod mods_from_sdl(Uint16 sdl_mod) noexcept {
   return m;
 }
 
+// The modifier bit a key contributes by being held down. Pressing Left Ctrl
+// sets KMOD_CTRL, so the keydown for the modifier key itself arrives with its
+// own bit already in the mask.
+static inline Mod contributed_mod_bit(Key k) noexcept {
+  switch (k) {
+  case Key::LShift:
+  case Key::RShift:
+    return Mod::Shift;
+  case Key::LCtrl:
+  case Key::RCtrl:
+    return Mod::Ctrl;
+  case Key::LAlt:
+  case Key::RAlt:
+    return Mod::Alt;
+  case Key::LMeta:
+  case Key::RMeta:
+    return Mod::Meta;
+  default:
+    return Mod::None;
+  }
+}
+
+static inline Mod without(Mod m, Mod bit) noexcept {
+  return static_cast<Mod>(static_cast<uint8_t>(m) & ~static_cast<uint8_t>(bit));
+}
+
+// Build the binding key to look up for a physical key event. For a modifier
+// key we drop its own contributed bit so a standalone binding (e.g. "LCtrl")
+// matches.
+static inline Binding lookup_binding(Key k, Mod mods) noexcept {
+  return Binding{without(mods, contributed_mod_bit(k)), k};
+}
+
 static inline bool is_vec2_action(Action a) noexcept {
   switch (a) {
   case Action::MoveVec2:
@@ -232,7 +265,7 @@ void InputManager::key_up(Key k, Mod mods) {
 }
 
 void InputManager::evaluate_bindings_for_key_down(Key k, Mod mods) {
-  Binding b{mods, k};
+  Binding b = lookup_binding(k, mods);
 
   auto range = button_bindings_.equal_range(b);
   for (auto it = range.first; it != range.second; ++it) {
@@ -251,7 +284,7 @@ void InputManager::evaluate_bindings_for_key_down(Key k, Mod mods) {
 }
 
 void InputManager::evaluate_bindings_for_key_up(Key k, Mod mods) {
-  Binding b{mods, k};
+  Binding b = lookup_binding(k, mods);
 
   auto range = button_bindings_.equal_range(b);
   for (auto it = range.first; it != range.second; ++it) {

@@ -100,6 +100,8 @@ private:
   SDL_Surface_unique_ptr screen_;
   Surface surface_;
   ScreenPoint last_mouse_pos_;
+  bool prev_relative_mouse_mode_ = false;
+  ScreenPoint pre_relative_mouse_pos_;
   std::string filename_;
   std::string config_path_;
   std::optional<std::string> game_path_override_;

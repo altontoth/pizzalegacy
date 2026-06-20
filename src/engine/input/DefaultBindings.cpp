@@ -52,14 +52,16 @@ void configure_default_bindings(InputManager& in) {
   in.bind_button(chord("Up"), Action::MoveUp);
   in.bind_button(chord("Down"), Action::MoveDown);
 
-  // Opponent (P2) movement, keypad support todo
-  in.bind_axis_keys(Action::P2_MoveVec2, Key::W, Key::A, Key::S, Key::D);
+  in.bind_axis_keys(Action::P2_MoveVec2, Key::W, Key::S, Key::A, Key::D);
+  in.bind_button(chord("LCtrl"), Action::P2_Fire);
+  in.bind_gamepad_stick(Action::P2_MoveVec2, GamepadAxis::LeftX,
+                        GamepadAxis::LeftY);
+  in.bind_gamepad_button(GamepadButton::A, Action::P2_Fire);
 
   in.bind_axis_keys(Action::ScrollVec2, Key::Up, Key::Down, Key::Left,
                     Key::Right);
 
   in.bind_button(chord("Space"), Action::Fire);
-  in.bind_button(chord("LCtrl"), Action::P2_Fire);
 
   // Debug tooling:
   in.bind_button(chord("Left"), Action::CycleBackward);
@@ -88,10 +90,6 @@ void configure_default_bindings(InputManager& in) {
   in.bind_button(chord("Y"), Action::ConfirmYes);
   in.bind_button(chord("Enter"), Action::ConfirmYes);
   in.bind_button(chord("N"), Action::ConfirmNo);
-
-  in.bind_gamepad_stick(Action::P2_MoveVec2, GamepadAxis::LeftX,
-                        GamepadAxis::LeftY);
-  in.bind_gamepad_button(GamepadButton::A, Action::P2_Fire);
 }
 
 } // namespace input

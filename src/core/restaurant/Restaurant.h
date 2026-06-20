@@ -10,6 +10,7 @@ namespace save {
 struct RestaurantLoader;
 }
 
+#include <algorithm>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -254,6 +255,11 @@ public:
   int sabotage_contamination() const { return sabotage_contamination_; }
   void set_sabotage_contamination(int val) { sabotage_contamination_ = val; }
 
+  int contamination() const { return contamination_; }
+  void add_contamination(int amount) {
+    contamination_ = std::clamp(contamination_ + amount, 0, 100);
+  }
+
   // Direct access to reputation damage slots for save/load
   std::array<int, 4>& event_reputation_penalties() {
     return event_reputation_penalties_;
@@ -378,7 +384,8 @@ public:
   int ai_tier() const { return ai_tier_; }
   int ai_capacity_target() const { return ai_capacity_target_; }
   int ai_profit_days() const { return ai_profit_days_; }
-  void ai_increment_profit_days() { ai_profit_days_++; }
+  void ai_adjust_profit_days(int delta) { ai_profit_days_ += delta; }
+  void ai_increment_profit_days() { ai_adjust_profit_days(1); }
 
   void start_of_day(class GameState& game_state);
   void end_of_day(class GameState& game_state);
@@ -517,6 +524,7 @@ private:
   // Divided by 4 to produce the contamination quality factor.
   // Original game bug: never decays. We fix this when fix_legacy_bugs is on.
   int sabotage_contamination_{0};
+  int contamination_{0};
 
   // Top ingredient per category (veg, meat, fruit, cheese)
   std::array<std::optional<int>, NUM_INGREDIENT_CATEGORIES> top_ingredients_{

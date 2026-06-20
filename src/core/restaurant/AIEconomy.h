@@ -9,7 +9,6 @@
 class Restaurant;
 class Player;
 class GameState;
-class GameDate;
 
 namespace ai {
 
@@ -25,8 +24,7 @@ void update_ai_menu(Player& player, int restaurant_count);
 // AI restaurants don't go through the full order fulfillment pipeline;
 // instead they earn revenue proportional to customer demand and their
 // competitive strength (the original game's dual-economy model).
-void process_restaurant_revenue(Restaurant& restaurant, Player& player,
-                                const GameDate& date);
+void process_restaurant_revenue(Restaurant& restaurant, Player& player);
 
 // Original aiEvaluateSingleRestaurant bankruptcy check:
 // If profit_days < -50 AND competitor_count > 3 AND two courage rolls pass,

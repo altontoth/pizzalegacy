@@ -14,21 +14,24 @@
 #include "views/helpers/camera/CameraController.h"
 
 /*
- * RmbDragScroller adds RMB drag-to-scroll to a viewport interaction
+ * RmbDragScroller adds RMB drag-to-scroll to a viewport interaction.
+ *
+ * Registers a single Background interaction item over the viewport, made
+ * draggable on the right mouse button.
  *
  * View-specific behaviour is injected via callbacks:
  *
  *   can_drag:
- *   returns true when a drag should start (e.g. !on_cursor_)
+ *   returns true when an RMB interaction is allowed right now (e.g. QoL option
+ *   on, no zoom selector open). When false, both drag and click do nothing.
  *
  *   is_inverted:
  *   returns true for drag-map style (content follows finger);
  *   false for swipe style (view follows drag direction)
  *
  *   on_click:
- *   called with the ButtonDown absolute position when the button
- *   is released without significant movement; we can use this to
- *   trigger the original RMB click action (zoom_out, etc.)
+ *   called with the click position when the button is released without a drag;
+ *   used to trigger the original RMB click action (zoom_out)
  *
  *   cursor_lock_fn:
  *   called with true at drag start to lock and hide the cursor, and with
@@ -40,14 +43,10 @@ public:
   using OnClick = std::function<void(ViewPoint abs_pos)>;
   using CursorLockFn = std::function<void(bool enable)>;
 
-  // How far the oversized interaction rect reaches from center (see
-  // add_interaction). Game.cpp clamps the virtual cursor to stay inside it.
-  static constexpr int DRAG_REACH = 30000;
-
   RmbDragScroller() = default;
   ~RmbDragScroller();
 
-  bool is_active() const { return active_; }
+  bool is_active() const { return dragging_; }
 
   // Call once before add_interaction.
   void init(CameraController& cc, Predicate can_drag, Predicate is_inverted,
@@ -57,12 +56,11 @@ public:
                        std::function<void()> mark_dirty);
 
 private:
-  static constexpr int CLICK_THRESHOLD = 4;
-
   void on_event(const views::ui::InteractionEvent& ev);
-  void on_button_down(const views::ui::InteractionEvent& ev);
-  void on_hover(const views::ui::InteractionEvent& ev);
-  void on_button_up(const views::ui::InteractionEvent& ev);
+  void on_drag_start(const views::ui::InteractionEvent& ev);
+  void on_drag_move(const views::ui::InteractionEvent& ev);
+  void on_drag_end(const views::ui::InteractionEvent& ev);
+  void on_click(const views::ui::InteractionEvent& ev);
 
   CameraController* cc_ = nullptr;
   Predicate can_drag_;
@@ -70,13 +68,8 @@ private:
   OnClick on_click_;
   CursorLockFn cursor_lock_fn_;
 
-  ViewRect viewport_;
+  views::ui::InteractionLayers* layers_ = nullptr;
   std::function<void()> mark_dirty_;
 
-  bool active_ = false;
-  bool cursor_locked_ = false;
-  bool any_scroll_ = false;
-  ViewPoint start_abs_pos_;
-  ViewPoint last_pos_;
-  int total_moved_ = 0;
+  bool dragging_ = false;
 };

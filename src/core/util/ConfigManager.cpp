@@ -194,6 +194,7 @@ void ConfigManager::save_options(const GameOptions& opts) {
   save_bool("qol_improvements", opts.qol_improvements);
   save_bool("rmb_drag_inverted", opts.rmb_drag_inverted);
   save_bool("scroll_zoom_inverted", opts.scroll_zoom_inverted);
+  save_bool("software_cursor", opts.software_cursor);
 
   config_["active_asset_format"] =
       (opts.asset_format == platform::AssetFormat::GERMAN) ? "german"
@@ -223,6 +224,7 @@ GameOptions ConfigManager::load_options() const {
   load_bool("qol_improvements", opts.qol_improvements);
   load_bool("rmb_drag_inverted", opts.rmb_drag_inverted);
   load_bool("scroll_zoom_inverted", opts.scroll_zoom_inverted);
+  load_bool("software_cursor", opts.software_cursor);
 
   auto it = config_.find("active_asset_format");
   if (it != config_.end()) {

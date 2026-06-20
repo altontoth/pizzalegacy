@@ -176,6 +176,7 @@ struct MafiaState {
 struct PoliceState {
   ActorId id;
   std::optional<ArrestReason> reason;
+  std::function<void()> on_complete;
 };
 // Restaurant stock:
 struct StockMainState {};

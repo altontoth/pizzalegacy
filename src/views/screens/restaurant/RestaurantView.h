@@ -8,6 +8,7 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 #include <span>
 #include <string_view>
 #include <unordered_map>
@@ -26,8 +27,10 @@
 #include "views/helpers/camera/CameraController.h"
 #include "views/helpers/camera/RmbDragScroller.h"
 #include "views/helpers/camera/ScrollEdges.h"
+#include "views/screens/restaurant/AttackScene.h"
 #include "views/screens/restaurant/CharacterController.h"
 #include "views/screens/restaurant/SeatedCharacterRenderer.h"
+#include "views/screens/restaurant/Walk.h"
 #include "views/ui/status/StatusController.h"
 
 // Offsets within the graphics file
@@ -51,7 +54,7 @@ struct GuestRenderItem {
 };
 
 struct WalkingGuest {
-  enum class Orientation { S = 0, W = 1, N = 2, E = 3 };
+  using Orientation = views::screens::restaurant::Orientation;
   enum class WalkerKind {
     GUEST,
     GUEST_DEPARTING,
@@ -76,24 +79,13 @@ struct WalkingGuest {
   int path_index{0};
   int sprite_blit_offset_x{0};
   int sprite_blit_offset_y{0};
-  // true when no chair was reachable; walker exits instead of seating
+  // true when no chair was reachable; exit instead of seating
   bool walking_out{false};
 #ifndef NDEBUG
   std::vector<bool> dbg_blocked;
   int dbg_grid_w{0};
   int dbg_grid_h{0};
 #endif
-};
-
-struct AttackSprite {
-  WorldPoint position;
-  WalkingGuest::Orientation direction{WalkingGuest::Orientation::N};
-  int walk_cycle{0};
-  int move_gate{0};
-  int sprite_blit_offset_x{0};
-  int sprite_blit_offset_y{0};
-  bool is_defender{false};
-  // TODO(attack): health, weapon type, weapon_frame and combat state
 };
 
 class RestaurantView : public MainPanelView,
@@ -109,6 +101,11 @@ public:
 
 private:
   void handle_mouse_click(WorldPoint map_point);
+  // True only when viewing the player's own restaurant
+  bool in_player_mode() const {
+    return view_mode_ == RestaurantViewMode::PLAYER_DEFAULT ||
+           view_mode_ == RestaurantViewMode::PLAYER_NEW_FURNITURE;
+  }
   void toggle_kitchen_view();
   void calculate_background_dimensions();
   void set_up_buttons();
@@ -151,7 +148,6 @@ private:
                           const std::function<void(core::item::Item)>& on_pick);
   void execute_sabotage_attack(core::item::Item item);
   void render_walking_guest();
-  void render_attackers();
 
   void draw_floor_tiles(ViewRect interior);
 
@@ -221,8 +217,6 @@ private:
   void spawn_waiter();
   void walking_tick();
   void waiter_delivered();
-  void begin_attack(core::item::Item weapon);
-  void attack_tick();
   const PlacedFurniture* get_guest_destination_chair();
   const PlacedFurniture* find_unserved_guest_chair();
   struct NavGrid {
@@ -237,6 +231,8 @@ private:
     int grid_h{0};
   };
   [[nodiscard]] NavGrid build_navigation_grid() const;
+  [[nodiscard]] const NavGrid& navigation_grid() const;
+  void invalidate_nav_grid() { nav_grid_cache_.reset(); }
   [[nodiscard]] WalkingPath compute_walking_path(WorldPoint from, WorldPoint to,
                                                  WorldPoint dest_origin,
                                                  Size dest_size) const;
@@ -247,14 +243,14 @@ private:
   const Surface& k0_;
   bool kitchen_view_ = false;
   bool closed_for_placement_ = false;
+  mutable std::optional<NavGrid> nav_grid_cache_;
   int background_width_ = 0;
   int background_height_ = 0;
   int furniture_offset_x_ = 0; // for kitchen
-  int furniture_offset_y_ = 0; // for restaurants smaller than viewport
+  int furniture_offset_y_ = 0; // for restaurants
   const BobRenderer furniture_renderer_;
   const BobRenderer oven_renderer_;
-  const BobRenderer pizza_renderer_; // moebel.bob for pizza sprites
-  Bob& pizza_bob_; // Direct reference for accessing individual frames
+  Bob& pizza_bob_;
   Restaurant* restaurant_;
   Surface background_;
   std::optional<core::FurnitureId> last_clicked_furniture_index_;
@@ -313,11 +309,7 @@ private:
   std::optional<WorldPoint> dbg_walk_destination_; // last attempted destination
 #endif
 
-  // For attacking competitors
-  std::optional<AttackSprite> attacker_;
-  // Only if player 2 is a human
-  std::optional<AttackSprite> defender_;
-  bool attack_active_{false};
-  // Weapon for attacking (TODO: consume on use when we actually implement that)
-  core::item::Item attack_weapon_{};
+  // Friend AttackScene so it can acces things like the furniture list, etc.
+  friend class views::screens::restaurant::AttackScene;
+  views::screens::restaurant::AttackScene attack_{*this, context_, state_};
 };

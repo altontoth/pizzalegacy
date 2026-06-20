@@ -2752,7 +2752,8 @@ RankChange GameState::adjust_social_score(Player& player, int delta) {
   return rc;
 }
 
-void GameState::initiate_arrest(ArrestReason reason) {
+void GameState::initiate_arrest(ArrestReason reason,
+                                std::function<void()> on_complete) {
   auto* city = active_city();
   if (!city) {
     return;
@@ -2761,8 +2762,9 @@ void GameState::initiate_arrest(ArrestReason reason) {
   if (police_actors.empty()) {
     return;
   }
-  ui_.push<PoliceState>(
-      PoliceState{.id = police_actors[0]->id(), .reason = reason});
+  ui_.push<PoliceState>(PoliceState{.id = police_actors[0]->id(),
+                                    .reason = reason,
+                                    .on_complete = std::move(on_complete)});
 }
 
 void GameState::check_police_events() {
@@ -2929,13 +2931,15 @@ Restaurant* GameState::create_restaurant_with_layout(Player& player, City& city,
                                /*free=*/true);
 
   if (rest) {
-    // Apply financial transactions for furniture and ovens
-    player.financials().transfer(
-        time().current_date(), Account::Capital, Account::Furniture,
-        layout->furniture_value() / 2, AccountingScope::Capital);
-    player.financials().transfer(time().current_date(), Account::Capital,
-                                 Account::Machines, layout->oven_value() / 2,
-                                 AccountingScope::Capital);
+    if (player.is_human_controlled()) {
+      // Apply financial transactions for furniture and ovens
+      player.financials().transfer(
+          time().current_date(), Account::Capital, Account::Furniture,
+          layout->furniture_value() / 2, AccountingScope::Capital);
+      player.financials().transfer(time().current_date(), Account::Capital,
+                                   Account::Machines, layout->oven_value() / 2,
+                                   AccountingScope::Capital);
+    }
 
     rest->kitchen_size(layout->kitchen_size());
     rest->layout(std::move(layout));

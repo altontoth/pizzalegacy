@@ -16,8 +16,15 @@
 
 namespace ai {
 
-void process_restaurant_revenue(Restaurant& restaurant, Player& player,
-                                const GameDate& date) {
+void process_restaurant_revenue(Restaurant& restaurant, Player& player) {
+  // This is just +1 every day the restaurant is processed,
+  // unconditionally (the original computes today's profit here but discards it
+  // and always adds 1; profitability is not actually a factor). Sabotage is the
+  // only thing that pushes it down. We might consider "fixing" this, but it
+  // could have been a gameplay decision rather than a bug, so we'll have to
+  // see what this would mean for how often restaurants get closed.
+  restaurant.ai_increment_profit_days();
+
   const auto& counts = restaurant.economy().customer_counts();
   int total_customers = 0;
   for (auto ct : ALL_CONSUMER_TYPES) {
@@ -42,20 +49,6 @@ void process_restaurant_revenue(Restaurant& restaurant, Player& player,
   int64_t cost_cents = (static_cast<int64_t>(tier) * 50 +
                         static_cast<int64_t>(avg_menu) / 20 * total_customers) *
                        100;
-
-  if (revenue_cents > 0) {
-    player.financials().transfer(date, Account::Sales, Account::Cash,
-                                 Money{revenue_cents}, restaurant.id(),
-                                 AccountingScope::Operational);
-  }
-
-  if (cost_cents > 0) {
-    player.financials().transfer(date, Account::Cash, Account::Stock,
-                                 Money{cost_cents}, restaurant.id(),
-                                 AccountingScope::Operational);
-  }
-
-  restaurant.ai_increment_profit_days();
 
   Logger::info("[AI] {} ({}) - Revenue: {}, Costs: {}, Customers: {}",
                player.name(), restaurant.name(), Money{revenue_cents},

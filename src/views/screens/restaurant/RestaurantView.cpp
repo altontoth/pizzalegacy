@@ -10,8 +10,12 @@
 #include <cassert>
 #include <cmath>
 #include <cstddef>
+#include <cstdlib>
+#include <vector>
 
 #include "core/Demographics.h"
+#include "core/GameTypes.h"
+#include "core/character/Player.h"
 #include "core/city/District.h"
 #include "core/city/Property.h"
 #include "core/finance/Ledger.h"
@@ -46,48 +50,25 @@
 #include "views/ui/popups/TvPopup.h"
 
 using namespace views::base;
+using namespace views::screens::restaurant;
 using namespace LegacyConstants;
 
-static constexpr int WALK_CELL_SIZE = 12;
 // Walker advances one cell every WALKER_MOVE_INTERVAL render frames
 static constexpr int WALKER_MOVE_INTERVAL = 4;
-// Order of WalkingGuest::Orientation:
-static constexpr std::array<int, 4> WALK_DX = {0, -1, 0, 1};
-static constexpr std::array<int, 4> WALK_DY = {1, 0, -1, 0};
 
 // Maps the 4-phase walk cycle onto the 3 sprite frames per direction:
 // neutral, left-step, neutral, right-step.
 static constexpr std::array<int, 4> WALK_CYCLE_TO_FRAME = {0, 1, 0, 2};
-
-namespace {
-constexpr int walk_dx(WalkingGuest::Orientation o) {
-  return WALK_DX[static_cast<int>(o)];
-}
-constexpr int walk_dy(WalkingGuest::Orientation o) {
-  return WALK_DY[static_cast<int>(o)];
-}
-
-// Advance a walker one grid cell in the given direction and bump its
-// animation phase. Shared by the path-following guest/waiter walker and the
-// input-driven attack sprites.
-void step_one_cell(WorldPoint& position, int& walk_cycle,
-                   WalkingGuest::Orientation dir) {
-  position.x += walk_dx(dir) * WALK_CELL_SIZE;
-  position.y += walk_dy(dir) * WALK_CELL_SIZE;
-  walk_cycle = (walk_cycle + 1) % 4;
-}
-} // namespace
 
 RestaurantView::RestaurantView(GameContext& context, GameState& state,
                                RestaurantViewState r_state)
     : MainPanelView(context, state), k0_(context_.vga->get("gfx/k0")),
       furniture_renderer_(BobRenderer("bob/moebel.bob", context_.bob)),
       oven_renderer_(BobRenderer("bob/kuebobs.bob", context_.bob)),
-      pizza_renderer_(BobRenderer("bob/moebel.bob", context_.bob)),
       pizza_bob_(context_.bob->get("bob/moebel.bob")),
       restaurant_(state_.restaurant(r_state.id)),
-      background_{Size{
-          1, 1}}, // Minimal size; will be properly sized in prepare_background
+      // will be properly sized later
+      background_{Size{1, 1}},
       view_mode_(state_.restaurant_placement().empty()
                      ? r_state.mode
                      : RestaurantViewMode::PLAYER_NEW_FURNITURE),
@@ -107,10 +88,11 @@ RestaurantView::RestaurantView(GameContext& context, GameState& state,
   }
   else {
     state_.prevent_auto_end_of_turn(true);
-    state_.pause_time_advancement(); // only advance explicitly per item placed
+    // only advance explicitly per item placed
+    state_.pause_time_advancement();
   }
 
-  // Check if we're placing kitchenware (ovens) - if so, start in kitchen view
+  // Check if we're placing ovens. If so, start in kitchen view.
   // Also check if we're placing regular furniture while the restaurant is open,
   // in which case we need to close it temporarily.
   bool post_waiting_customers_msg = false;
@@ -161,9 +143,7 @@ RestaurantView::RestaurantView(GameContext& context, GameState& state,
           zoom_out_of_restaurant_view();
         }
       },
-      [this](bool lock) {
-        context_.interaction->set_relative_mouse_mode(lock);
-      });
+      [this](bool lock) { context_.cursor->set_relative_mouse_mode(lock); });
   register_interactions_viewport();
   if (view_mode_ == RestaurantViewMode::PLAYER_NEW_FURNITURE) {
     init_active_batch_if_needed();
@@ -205,9 +185,7 @@ RestaurantView::RestaurantView(GameContext& context, GameState& state,
   }
 
   if (const auto music = restaurant_->jukebox_music(); music > 0) {
-    if (context_.audio) {
-      context_.audio->play_music(static_cast<audio::MusicId>(music - 1));
-    }
+    context_.audio->play_music(static_cast<audio::MusicId>(music - 1));
   }
 
   update_restaurant_noise();
@@ -215,11 +193,10 @@ RestaurantView::RestaurantView(GameContext& context, GameState& state,
 
 RestaurantView::~RestaurantView() {
   state_.prevent_auto_end_of_turn(true);
-  if (context_.audio) {
-    context_.audio->stop_music();
-    if (current_restaurant_noise_) {
-      context_.audio->stop_sound(*current_restaurant_noise_);
-    }
+  attack_.finish_scene();
+  context_.audio->stop_music();
+  if (current_restaurant_noise_) {
+    context_.audio->stop_sound(*current_restaurant_noise_);
   }
 }
 
@@ -311,12 +288,25 @@ bool RestaurantView::on_action(const input::ActionEvent& ev) {
     return true;
   }
   case input::Action::ToggleRestaurantView: {
-    if (view_mode_ != RestaurantViewMode::OPPONENT_VIEW &&
-        view_mode_ != RestaurantViewMode::OPPONENT_ATTACK) {
+    if (in_player_mode()) {
       toggle_kitchen_view();
       mark_dirty();
     }
     return true;
+  }
+  case input::Action::Fire: {
+    if (attack_.active()) {
+      attack_.fire_attacker_weapon();
+      return true;
+    }
+    break;
+  }
+  case input::Action::P2_Fire: {
+    if (attack_.active() && attack_.has_defender()) {
+      attack_.fire_defender_weapon();
+      return true;
+    }
+    break;
   }
 #ifndef NDEBUG
   case input::Action::Backspace: {
@@ -715,13 +705,17 @@ void RestaurantView::calculate_background_dimensions() {
 }
 
 void RestaurantView::tick() {
-  if (camctrl_.tick()) {
-    mark_dirty();
+  if (attack_.active()) {
+    // In attack mode by default the arrow keys move the attacker, not the
+    // camera, so we have to skip camctrl_ here since it's bound to the same
+    // keys. The attack scene moves the camera when they get close to the edge
+    // so regardless of key bindings we just return after ticking the attack.
+    attack_.tick();
+    return;
   }
 
-  if (attack_active_) {
-    attack_tick();
-    return;
+  if (camctrl_.tick()) {
+    mark_dirty();
   }
 
   // Tick guest animations
@@ -770,6 +764,9 @@ void RestaurantView::handle_furniture_click(const PlacedFurniture* pf) {
     auto picked = restaurant_->layout()->remove_by_id(prop_id, kitchen_view_);
     assert(picked && "remove_by_id failed");
     assert(picked->id() == prop_id && "picked id changed unexpectedly");
+    if (!kitchen_view_) {
+      invalidate_nav_grid();
+    }
 
     // Create a batch with count=1 for this picked-up furniture
     FurnitureBatch batch{.furniture = picked->furniture(),
@@ -1625,6 +1622,7 @@ void RestaurantView::place_cursor_item(WorldPoint wp) {
   }
   else {
     restaurant_->layout()->place_furniture(std::move(on_cursor_));
+    invalidate_nav_grid();
   }
 
   state_.advance_time_blocks(1);
@@ -1703,7 +1701,7 @@ void RestaurantView::render(const RenderContext& ctx) {
   }
 #endif
   render_walking_guest();
-  render_attackers();
+  attack_.render();
 
   // Blit the visible portion of background_ to screen.
   // background_ is rendered at 1:1, so world coords are pixel indices into it.
@@ -1899,8 +1897,7 @@ void RestaurantView::render_side_and_bottom_walls() {
           if (ev.type != views::ui::InteractionEvent::Type::Click) {
             return;
           }
-          if (view_mode_ == RestaurantViewMode::OPPONENT_VIEW ||
-              view_mode_ == RestaurantViewMode::OPPONENT_ATTACK) {
+          if (!in_player_mode()) {
             return;
           }
           // Don't toggle kitchen view if holding furniture - let catchall place
@@ -1919,7 +1916,7 @@ void RestaurantView::render_debug_full_grid() {
   static constexpr gfx::ColorIndex BLOCKED_COLOR = 68;
   static constexpr int C = WALK_CELL_SIZE;
 
-  const auto [blocked, grid_w, grid_h] = build_navigation_grid();
+  const auto& [blocked, grid_w, grid_h] = navigation_grid();
 
   for (int gy = 0; gy < grid_h; ++gy) {
     for (int gx = 0; gx < grid_w; ++gx) {
@@ -2298,8 +2295,9 @@ void RestaurantView::render_sabotage(const RenderContext& ctx) {
 }
 
 void RestaurantView::render_weapon_select(const RenderContext& ctx) {
-  render_item_picker(ctx, "which weapon?", core::item::attack_weapon_list,
-                     [this](core::item::Item item) { begin_attack(item); });
+  render_item_picker(
+      ctx, "which weapon?", core::item::attack_weapon_list,
+      [this](core::item::Item item) { attack_.begin_attack(item); });
 }
 
 void RestaurantView::execute_sabotage_attack(core::item::Item item) {
@@ -2565,18 +2563,20 @@ void RestaurantView::render_walking_guest() {
   if (walker.kind == WalkingGuest::WalkerKind::WAITER_DELIVERING ||
       walker.kind == WalkingGuest::WalkerKind::WAITER_RETURNING_WITH_PIZZA) {
     // In order of WalkingGuest::Orientation
-    static constexpr std::array<std::array<int, 3>, 4> pizza_dx = {{
-        {2, 1, 2},
-        {5, 6, 1},
-        {18, 17, 15},
-        {15, 24, 18},
-    }};
-    static constexpr std::array<std::array<int, 3>, 4> pizza_dy = {{
-        {6, 9, 3},
-        {0, 0, 0},
-        {-6, -7, -13},
-        {7, 8, 9},
-    }};
+    static constexpr std::array<std::array<int, 3>, ORIENTATION_COUNT>
+        pizza_dx = {{
+            {2, 1, 2},
+            {5, 6, 1},
+            {18, 17, 15},
+            {15, 24, 18},
+        }};
+    static constexpr std::array<std::array<int, 3>, ORIENTATION_COUNT>
+        pizza_dy = {{
+            {6, 9, 3},
+            {0, 0, 0},
+            {-6, -7, -13},
+            {7, 8, 9},
+        }};
 
     const int dir = static_cast<int>(walker.direction);
     const int frm = WALK_CYCLE_TO_FRAME[walker.walk_cycle];
@@ -2627,7 +2627,7 @@ bool walk_dfs(int cx, int cy, int dest_x, int dest_y, int grid_w, int grid_h,
     return 0;
   };
 
-  std::array<O, 4> dirs = {O::S, O::W, O::N, O::E};
+  std::array<O, ORIENTATION_COUNT> dirs = {O::S, O::W, O::N, O::E};
   std::ranges::sort(dirs, [&](O a, O b) {
     const int sa = dir_score(a);
     const int sb = dir_score(b);
@@ -3045,11 +3045,20 @@ RestaurantView::NavGrid RestaurantView::build_navigation_grid() const {
   return {.blocked = std::move(blocked), .w = grid_w, .h = grid_h};
 }
 
+const RestaurantView::NavGrid& RestaurantView::navigation_grid() const {
+  if (!nav_grid_cache_) {
+    nav_grid_cache_ = build_navigation_grid();
+  }
+  return *nav_grid_cache_;
+}
+
 RestaurantView::WalkingPath
 RestaurantView::compute_walking_path(WorldPoint from, WorldPoint to,
                                      WorldPoint dest_origin,
                                      Size dest_size) const {
-  auto [blocked, grid_w, grid_h] = build_navigation_grid();
+  // Copy the cached grid so we can mutate it (unblock the destination
+  // chair).
+  auto [blocked, grid_w, grid_h] = navigation_grid();
 
   // Clamp to grid bounds
   const auto clamp_cell = [&](int v, int hi) {
@@ -3222,178 +3231,4 @@ void RestaurantView::waiter_delivered() {
   walker.path_index = 0;
   walker.anim_tick = 0;
   snapshot_walk_debug_grid(walker, wp);
-}
-
-namespace {
-
-// Figure out where to go based on keyboard/controller input
-std::optional<WalkingGuest::Orientation> orientation_from_axis(float ax,
-                                                               float ay) {
-  // This is the gameplay threshold for how far the stick must be pushed
-  // before it counts as a committed directional command.
-  constexpr float DIRECTION_COMMIT_THRESHOLD = 0.5f;
-  if (std::abs(ax) < DIRECTION_COMMIT_THRESHOLD &&
-      std::abs(ay) < DIRECTION_COMMIT_THRESHOLD) {
-    return std::nullopt;
-  }
-  if (std::abs(ax) > std::abs(ay)) {
-    return (ax > 0) ? WalkingGuest::Orientation::E
-                    : WalkingGuest::Orientation::W;
-  }
-  return (ay > 0) ? WalkingGuest::Orientation::S : WalkingGuest::Orientation::N;
-}
-
-} // namespace
-
-void RestaurantView::begin_attack(core::item::Item weapon) {
-  constexpr int tile_w = RESTAURANT_TILE_WIDTH;
-  constexpr int tile_h = RESTAURANT_TILE_HEIGHT;
-  const auto room_size = restaurant_->size();
-
-  attack_weapon_ = weapon;
-
-  const auto& body = context_.bob->get("bob/nightp.bob");
-  // offsets from original
-  const int blit_off_x = (body.width(0) / 2) + 10;
-  const int blit_off_y = (body.height(0) / 2) + 16;
-
-  // Attacker spawns just inside the doorway, facing into the room.
-  // They leave by walking back south across the bottom wall and
-  // out through the entrance gap
-  const int entrance_offset = restaurant_->layout()->entrance_offset();
-  const int logical_x = (entrance_offset * tile_w) + (3 * tile_w / 2);
-  const int spawn_y = (room_size.h * tile_h) + (tile_h / 2);
-  attacker_ = AttackSprite{
-      .position = {logical_x, spawn_y},
-      .direction = WalkingGuest::Orientation::N,
-      .sprite_blit_offset_x = blit_off_x,
-      .sprite_blit_offset_y = blit_off_y,
-      .is_defender = false,
-  };
-
-  // Defender (if human): spawned at the kitchen entrance, just like the waiter.
-  defender_.reset();
-  if (auto owner = restaurant_->property().owner_or_tenant()) {
-    auto* victim = state_.player(*owner);
-    if (victim && victim->is_human_controlled()) {
-      const int entrance_row = restaurant_->layout()->kitchen_entry_offset();
-      const int kitchen_y =
-          ((entrance_row + 1 + KITCHEN_ENTRANCE_ROWS / 2) * tile_h) +
-          (tile_h / 2);
-      defender_ = AttackSprite{
-          .position = {tile_w, kitchen_y},
-          .direction = WalkingGuest::Orientation::E,
-          .sprite_blit_offset_x = blit_off_x,
-          .sprite_blit_offset_y = blit_off_y,
-          .is_defender = true,
-      };
-    }
-  }
-
-  walking_guest_.reset();
-  attack_active_ = true;
-  view_mode_ = RestaurantViewMode::OPPONENT_ATTACK;
-  set_up_buttons();
-  mark_dirty();
-}
-
-void RestaurantView::attack_tick() {
-  if (!attacker_) {
-    return;
-  }
-
-  // One collision grid for the whole tick, shared by both characters.
-  const auto [blocked, grid_w, grid_h] = build_navigation_grid();
-
-  // Returns true if the sprite walked out of the restaurant (attacker only),
-  // in which case the caller must stop touching this view -- it is being
-  // popped.
-  const auto step_sprite = [&](AttackSprite& s, input::Action move_act,
-                               input::Action fire_act) -> bool {
-    if (context_.input->just_pressed(fire_act)) {
-      // TODO: attack
-      // weapon/projectile/damage systems are not implemented yet.
-    }
-
-    // Move one whole cell every WALKER_MOVE_INTERVAL frames
-    if (++s.move_gate < WALKER_MOVE_INTERVAL) {
-      return false;
-    }
-    s.move_gate = 0;
-
-    const auto [ax, ay] = context_.input->axis(move_act);
-    const auto dir = orientation_from_axis(ax, ay);
-    if (!dir) {
-      return false; // dead zone: keep facing, stay put
-    }
-    s.direction = *dir;
-
-    const int nx = (s.position.x / WALK_CELL_SIZE) + walk_dx(*dir);
-    const int ny = (s.position.y / WALK_CELL_SIZE) + walk_dy(*dir);
-
-    // The attacker leaves by walking south through the doorway and off the
-    // bottom edge of the grid.
-    // TODO: Do the 'end of attack' stuff here
-    if (!s.is_defender && *dir == WalkingGuest::Orientation::S &&
-        ny >= grid_h) {
-      state_.ui().pop();
-      return true;
-    }
-
-    if (nx < 0 || nx >= grid_w || ny < 0 || ny >= grid_h ||
-        blocked[(ny * grid_w) + nx]) {
-      return false;
-    }
-    step_one_cell(s.position, s.walk_cycle, *dir);
-    return false;
-  };
-
-  if (step_sprite(*attacker_, input::Action::MoveVec2, input::Action::Fire)) {
-    return;
-  }
-  if (defender_) {
-    step_sprite(*defender_, input::Action::P2_MoveVec2, input::Action::P2_Fire);
-  }
-  mark_dirty();
-}
-
-void RestaurantView::render_attackers() {
-  if (!attack_active_ || kitchen_view_) {
-    return;
-  }
-  // NIGHTP frames: 0-11 attacker, 12-23 defender, each 3 walk frames with
-  // 4 directions (direction*3 + walk_cycle) Then there is one head frame per
-  // direction, index 24-27 for the attacker, 28-31 for the defender.
-  const auto& body = context_.bob->get("bob/nightp.bob");
-
-  // Order of WalkingGuest::Orientation:
-  static constexpr std::array<int, 4> attacker_head_dx = {7, 11, 8, 12};
-  static constexpr std::array<int, 4> attacker_head_dy = {-3, -3, -5, 0};
-  static constexpr std::array<int, 4> defender_head_dx = {13, 12, 12, 13};
-  static constexpr std::array<int, 4> defender_head_dy = {-7, -8, -7, -8};
-
-  const auto draw = [&](const AttackSprite& s) {
-    const int dir = static_cast<int>(s.direction);
-    const int body_base = s.is_defender ? 12 : 0;
-    const int frame = body_base + walk_frame_for(s.direction, s.walk_cycle);
-    const ViewPoint blit_pos{s.position.x - s.sprite_blit_offset_x,
-                             s.position.y - s.sprite_blit_offset_y};
-    background_.blit_masked(body.frame(frame), blit_pos);
-
-    const int head_base = s.is_defender ? 28 : 24;
-    const int head_dx =
-        (s.is_defender ? defender_head_dx : attacker_head_dx)[dir];
-    const int head_dy =
-        (s.is_defender ? defender_head_dy : attacker_head_dy)[dir];
-    background_.blit_masked(
-        body.frame(head_base + dir),
-        ViewPoint{blit_pos.x + (head_dx * 2), blit_pos.y + (head_dy * 2)});
-  };
-
-  if (attacker_) {
-    draw(*attacker_);
-  }
-  if (defender_) {
-    draw(*defender_);
-  }
 }

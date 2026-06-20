@@ -192,6 +192,9 @@ template <typename LineEnum> void ActorView<LineEnum>::on_phase_finished() {
     if (conversation_->on_end_) {
       conversation_->on_end_();
     }
+    if (on_complete_) {
+      on_complete_();
+    }
     break;
   default:
     break;

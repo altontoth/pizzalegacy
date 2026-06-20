@@ -156,9 +156,7 @@ CityView::CityView(GameContext& context, GameState& state, core::CityId id)
           zoom_out(vp);
         }
       },
-      [this](bool lock) {
-        context_.interaction->set_relative_mouse_mode(lock);
-      });
+      [this](bool lock) { context_.cursor->set_relative_mouse_mode(lock); });
   rmb_drag_scroller_.add_interaction(interactions_, panel,
                                      [this] { mark_dirty(); });
 

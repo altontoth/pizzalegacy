@@ -41,6 +41,8 @@ struct ICursorManager {
   virtual void update_scaled_cursor(int new_window_width,
                                     int new_window_height) = 0;
   virtual void update_palette(gfx::PaletteHandle palette) = 0;
+
+  virtual void set_relative_mouse_mode(bool enable) = 0;
 };
 
 // Factory is declared here but implemented in the SDL-enabled engine.

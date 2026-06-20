@@ -157,6 +157,7 @@ set(GAME_PLEGACY_SOURCES
     src/views/screens/purchasing/FurnitureListView.cpp
     src/views/screens/purchasing/PurchasingMain.cpp
     src/views/screens/purchasing/SupplierList.cpp
+    src/views/screens/restaurant/AttackScene.cpp
     src/views/screens/restaurant/CharacterController.cpp
     src/views/screens/restaurant/CharacterRenderer.cpp
     src/views/screens/restaurant/RestaurantMenu.cpp
@@ -592,6 +593,7 @@ set(PLEGACY_HEADERS
     src/views/screens/purchasing/FurnitureListView.h
     src/views/screens/purchasing/PurchasingMain.h
     src/views/screens/purchasing/SupplierList.h
+    src/views/screens/restaurant/AttackScene.h
     src/views/screens/restaurant/CharacterController.h
     src/views/screens/restaurant/CharacterRenderer.h
     src/views/screens/restaurant/RecipeListRow.h
@@ -599,6 +601,7 @@ set(PLEGACY_HEADERS
     src/views/screens/restaurant/RestaurantStats.h
     src/views/screens/restaurant/RestaurantView.h
     src/views/screens/restaurant/SeatedCharacterRenderer.h
+    src/views/screens/restaurant/Walk.h
     src/views/screens/restaurant/WeeksTakings.h
     src/views/screens/stock/Contracts.h
     src/views/screens/stock/DepotIngredientCategoryView.h

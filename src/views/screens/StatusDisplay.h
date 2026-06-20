@@ -22,9 +22,17 @@ public:
   void capture_state();
   void release_state();
 
+  // Attack mode
+  void set_attack_status(std::optional<int> attacker_energy,
+                         std::optional<int> defender_energy);
+  void clear_attack_status();
+  void set_police_coming();
+  void set_attack_contamination(std::optional<int> contamination_pct);
+
 private:
   void clear(const RenderContext& ctx);
   void render_header_info(const RenderContext& ctx);
+  void render_attack_bars(const RenderContext& ctx);
   void recipe(StatusDisplayRecipe r);
   void render_recipe(const StatusDisplayRecipe& recipe,
                      const RenderContext& ctx);
@@ -40,4 +48,10 @@ private:
   std::string frozen_date_;
   std::string frozen_time_;
   std::string frozen_money_;
+
+  bool attack_mode_{false};
+  std::optional<int> attack_attacker_energy_;
+  std::optional<int> attack_defender_energy_;
+  std::optional<int> attack_contamination_;
+  bool police_coming_{false};
 };

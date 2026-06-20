@@ -16,7 +16,7 @@ std::vector<const Furniture*> FurnitureFactory::all_furniture() {
 
   std::vector<const Furniture*> list;
   for (int i = static_cast<int>(FurnitureType::TRADITIO_ROMANO);
-       i <= static_cast<int>(FurnitureType::ASHES_UNKNOWN); i++) {
+       i <= static_cast<int>(FurnitureType::ASHES_KITCHEN); i++) {
     list.push_back(create_furniture(static_cast<FurnitureType>(i)));
   }
 
@@ -3137,9 +3137,9 @@ FurnitureFactory::create_furniture(FurnitureType furniture_type) {
     );
     break;
 
-  case FurnitureType::ASHES_UNKNOWN:
+  case FurnitureType::ASHES_KITCHEN:
     furniture = std::make_unique<Furniture>(
-        FurnitureType::ASHES_UNKNOWN,
+        FurnitureType::ASHES_KITCHEN,
         3,                                    // type
         0,                                    // q
         99,                                   // supplier

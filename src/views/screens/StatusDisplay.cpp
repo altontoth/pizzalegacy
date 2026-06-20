@@ -6,6 +6,8 @@
 
 #include "views/screens/StatusDisplay.h"
 
+#include <algorithm>
+
 #include "core/character/Player.h"
 #include "core/state/GameState.h"
 #include "engine/geom/Spaces.h"
@@ -62,6 +64,11 @@ void StatusDisplay::tick() {
 
 void StatusDisplay::render(const RenderContext& ctx) {
   clear(ctx);
+
+  if (attack_mode_) {
+    render_attack_bars(ctx);
+    return;
+  }
 
   // Render fixed elements (date, time, money)
   render_header_info(ctx);
@@ -166,6 +173,99 @@ void StatusDisplay::render_header_info(const RenderContext& ctx) {
                                     ViewPoint{money_x_offset, money_y_offset},
                                     FontFace::SUPERSMA, ts);
   }
+}
+
+void StatusDisplay::render_attack_bars(const RenderContext& ctx) {
+  constexpr int bar_w = 50;
+  constexpr int bar_max_h = 140;
+  constexpr int bar_bottom = 160;
+  constexpr int attacker_x = 30;
+  constexpr int defender_x = 90;
+  constexpr int empty_color = 240;
+  constexpr int attacker_color = 0x15;
+  constexpr int defender_color = 0x1B;
+
+  const auto draw_bar = [&](int x, int energy, int color) {
+    const int fill_h = std::clamp(energy * bar_max_h / 100, 0, bar_max_h);
+    ctx.surface->fill_rect(
+        ViewRect{x, bar_bottom - bar_max_h, bar_w, bar_max_h}, empty_color);
+    if (fill_h > 0) {
+      ctx.surface->fill_rect(ViewRect{x, bar_bottom - fill_h, bar_w, fill_h},
+                             color);
+    }
+  };
+
+  if (attack_attacker_energy_) {
+    draw_bar(attacker_x, *attack_attacker_energy_, attacker_color);
+  }
+  if (attack_defender_energy_) {
+    draw_bar(defender_x, *attack_defender_energy_, defender_color);
+  }
+
+  if (attack_contamination_) {
+    constexpr int contamination_text_y = 162;
+    constexpr int contamination_color = 14; // white
+    const TextStyle ts{
+        .color = contamination_color,
+        .align = AlignX::CenterPoint,
+    };
+    context_.font->render_line_onto(
+        *ctx.surface,
+        compat::format("Contamination: {}%", *attack_contamination_),
+        ViewPoint{ctx.surface->width() / 2, contamination_text_y},
+        FontFace::SUPERSMA, ts);
+  }
+
+  if (police_coming_) {
+    constexpr int police_text_color = 18;
+    constexpr int police_text_y = 4;
+    const TextStyle ts{
+        .color = police_text_color,
+        .align = AlignX::CenterPoint,
+    };
+    context_.font->render_line_onto(
+        *ctx.surface, "POLICE COMING!",
+        ViewPoint{ctx.surface->width() / 2, police_text_y}, FontFace::SUPERSMA,
+        ts);
+  }
+}
+
+void StatusDisplay::set_attack_status(std::optional<int> attacker_energy,
+                                      std::optional<int> defender_energy) {
+  if (attack_mode_ && attack_attacker_energy_ == attacker_energy &&
+      attack_defender_energy_ == defender_energy) {
+    return;
+  }
+  attack_mode_ = true;
+  attack_attacker_energy_ = attacker_energy;
+  attack_defender_energy_ = defender_energy;
+  mark_dirty();
+}
+
+void StatusDisplay::set_police_coming() {
+  police_coming_ = true;
+  mark_dirty();
+}
+
+void StatusDisplay::set_attack_contamination(
+    std::optional<int> contamination_pct) {
+  if (attack_contamination_ == contamination_pct) {
+    return;
+  }
+  attack_contamination_ = contamination_pct;
+  mark_dirty();
+}
+
+void StatusDisplay::clear_attack_status() {
+  if (!attack_mode_) {
+    return;
+  }
+  attack_mode_ = false;
+  attack_attacker_energy_.reset();
+  attack_defender_energy_.reset();
+  attack_contamination_.reset();
+  police_coming_ = false;
+  mark_dirty();
 }
 
 void StatusDisplay::clear(const RenderContext& ctx) { ctx.surface->fill(240); }

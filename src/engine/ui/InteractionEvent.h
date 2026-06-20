@@ -24,14 +24,20 @@ struct InteractionEvent {
     Cancelled,   // up outside rect after down inside
     DoubleClick, // up twice on the same point(-ish)
     Scroll,      // mouse wheel scrolled inside rect
+
+    DragStart, // movement crossed the drag threshold after a press
+    DragMove,  // pointer moved during the drag
+    DragEnd,   // drag finished
   };
 
   Type type;
   MouseButton button;
   ViewPoint pos;
   ViewPoint local;
-  int scroll_delta =
-      0; // For Scroll events: positive = up/away, negative = down/toward
+  // For Scroll events: positive = up/away, negative = down/toward:
+  int scroll_delta = 0;
+  // For DragMove: pointer movement since the previous frame:
+  ViewPoint delta;
 };
 
 } // namespace views::ui

@@ -26,7 +26,6 @@
 #include "engine/Fatal.h"
 #include "engine/FormatCompat.h"
 #include "engine/Random.h"
-#include "factories/FurnitureFactory.h"
 
 using engine::random::coin_flip;
 using engine::random::rand_between;
@@ -418,25 +417,11 @@ bool MafiaConversation::advance_proposal(bool agree) {
             int idx =
                 rand_max_n(static_cast<int>(layout.placed_furniture().size()));
             auto* pf = layout.placed_furniture()[idx].get();
-            if (!pf || !pf->furniture()) {
+            if (!pf || !pf->furniture() || pf->is_ashes()) {
               continue;
             }
             total_damage = total_damage + pf->furniture()->price();
-            bool is_table =
-                pf->furniture()->category() == FurnitureCategory::TABLE;
-            auto pos = pf->origin();
-            auto fid = pf->id();
-            layout.remove_by_id(fid);
-
-            auto ash_type = is_table ? FurnitureType::ASHES_LARGE
-                                     : FurnitureType::ASHES_SMALL;
-            const auto* ash_furn = FurnitureFactory::create_furniture(ash_type);
-            if (ash_furn) {
-              auto ash = std::make_unique<PlacedFurniture>(
-                  ash_furn, layout.next_furniture_id(), pos,
-                  core::FurnitureId{UNLINKED_FURNITURE}, 0);
-              layout.place_furniture(std::move(ash));
-            }
+            pf->change_to_ashes();
           }
 
           if (total_damage.cents > 0) {

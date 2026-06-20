@@ -5,7 +5,11 @@
  */
 
 #include "core/restaurant/PlacedFurniture.h"
+#include "core/restaurant/Furniture.h"
 #include "engine/geom/Spaces.h"
+#include "factories/FurnitureFactory.h"
+
+#include <algorithm>
 
 constexpr int NUMBER_OF_ROTATIONS = 4;
 
@@ -49,8 +53,44 @@ void PlacedFurniture::bob_state(int bob_state) { bob_state_ = bob_state; }
 
 const Furniture* PlacedFurniture::furniture() const { return furniture_; }
 
+void PlacedFurniture::change_to_ashes() {
+  if (is_ashes()) {
+    return;
+  }
+  const auto type = furniture_->type();
+  FurnitureType ashes = FurnitureType::ASHES_LARGE;
+  if (furniture_->category() == FurnitureCategory::KITCHENWARE) {
+    ashes = FurnitureType::ASHES_KITCHEN;
+  }
+  else {
+    const auto layer = furniture_->placement_layer();
+    ashes = (layer == PlacementLayer::Seating || layer == PlacementLayer::Top)
+                ? FurnitureType::ASHES_SMALL
+                : FurnitureType::ASHES_LARGE;
+  }
+  furniture_ = FurnitureFactory::create_furniture(ashes);
+  bob_state_ = 0;
+}
+
 const std::vector<int>& PlacedFurniture::bobs() const {
   return furniture_->bobs();
+}
+
+int PlacedFurniture::durability() const { return durability_; }
+
+void PlacedFurniture::damage(int amount) {
+  durability_ = std::max(0, durability_ - amount);
+}
+
+bool PlacedFurniture::is_ashes() const {
+  switch (furniture_->type()) {
+  case FurnitureType::ASHES_LARGE:
+  case FurnitureType::ASHES_SMALL:
+  case FurnitureType::ASHES_KITCHEN:
+    return true;
+  default:
+    return false;
+  }
 }
 
 void PlacedFurniture::rotate(Rotation r) {
