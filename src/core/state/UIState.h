@@ -61,8 +61,13 @@ enum class ActorType;
 enum class RestaurantViewMode;
 using ActorId = int;
 
+enum class OptionsScreen { Audio, Graphics, Controls, Gameplay };
+
 struct CityViewState {
   core::CityId city_id;
+};
+struct OptionsMenuState {
+  OptionsScreen screen;
 };
 struct RestaurantMenuState {
   core::RestaurantId id;
@@ -269,6 +274,6 @@ using UIState = std::variant<
     SupplierContractState, PlayerTurnCardState, FullscreenStatusState,
     WinSequenceState, MafiaMissionViewState, MarketResearchState,
     StatsRestaurantsState, PlayerProfileState, GameOverState,
-    CookbookReminderState,
+    CookbookReminderState, OptionsMenuState,
     // nothing on screen:
     std::monostate>;

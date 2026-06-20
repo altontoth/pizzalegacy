@@ -923,6 +923,11 @@ Renderable* Game::change_state(GameState& gs, LoopState& /*loop*/) {
             // Use the viewer type stored in the ViewerState
             handle_viewer_state(gs, v.filename, v.type);
           },
+          [&](const OptionsMenuState& oms) {
+            cursor_manager_->base_cursor_mode(CursorMode::MENU);
+            current_view_ =
+                std::make_unique<MenuOptions>(context, gs, oms.screen);
+          },
           [&](const RestaurantMenuState& rms) {
             current_view_ =
                 std::make_unique<RestaurantMenu>(context, gs, rms.id);
