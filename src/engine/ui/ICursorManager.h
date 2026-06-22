@@ -43,6 +43,7 @@ struct ICursorManager {
   virtual void update_palette(gfx::PaletteHandle palette) = 0;
 
   virtual void set_relative_mouse_mode(bool enable) = 0;
+  virtual void software_mode(bool enable) = 0;
 };
 
 // Factory is declared here but implemented in the SDL-enabled engine.

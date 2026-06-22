@@ -30,7 +30,7 @@ public:
                             int new_window_height) override;
   void update_palette(gfx::PaletteHandle palette) override;
 
-  void software_mode(bool enable);
+  void software_mode(bool enable) override;
   bool software_mode() const { return software_mode_; }
 
   void set_relative_mouse_mode(bool enable) override;

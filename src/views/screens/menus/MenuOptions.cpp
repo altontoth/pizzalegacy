@@ -157,6 +157,13 @@ void MenuOptions::build_controls(GameState& state) {
             !state.options().scroll_zoom_inverted;
         mark_dirty();
       }));
+  add_menu_item(std::make_unique<ToggleMenuItem>(
+      context_, "Use software cursor", state.options().software_cursor,
+      [&state, this] {
+        state.options().software_cursor = !state.options().software_cursor;
+        context_.cursor->software_mode(state.options().software_cursor);
+        mark_dirty();
+      }));
 }
 
 void MenuOptions::add_save_and_back(GameState& state) {
