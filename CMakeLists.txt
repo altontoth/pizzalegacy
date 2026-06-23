@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 cmake_minimum_required(VERSION 3.25)
-project(plegacy VERSION 0.1.0 LANGUAGES C CXX)
+project(plegacy VERSION 0.2.0 LANGUAGES C CXX)
 
 # Generate Version.h from the project version
 configure_file(
@@ -122,8 +122,6 @@ elseif(MSVC)
     add_link_options(
         $<$<CONFIG:Debug>:/DEBUG>
     )
-else()
-    # Non-GNU/Clang/MSVC compilers still get warnings below (if any).
 endif()
 
 # ---------------------------------------------------------
@@ -156,36 +154,13 @@ endif()
 add_compile_definitions(HAS_STD_FORMAT=${HAS_STD_FORMAT_VALUE})
 
 # ---------------------------------------------------------
-#  SDL2 - not much happening without that
+#  SDL3 - not much happening without that
+#  Requires >= 3.4.0 for native SDL_SavePNG
 # -----------------------------------------------------
-if(WIN32)
-    find_package(SDL2 CONFIG REQUIRED)
-    set(SDL2_LIBS SDL2::SDL2 SDL2::SDL2main)
-    set(SDL2_CFLAGS "")
-else()
-    find_package(PkgConfig REQUIRED)
-    pkg_check_modules(SDL2 REQUIRED sdl2>=2.0.16)
-    set(SDL2_LIB_DIRS ${SDL2_LIBRARY_DIRS})
-    set(SDL2_LIBS   ${SDL2_LIBRARIES})
-    set(SDL2_CFLAGS ${SDL2_CFLAGS_OTHER})
-endif()
+find_package(SDL3 3.4.0 REQUIRED CONFIG COMPONENTS SDL3)
 
-# ---------------------------------------------------------
-#  libpng - for PNG screenshots
-# -----------------------------------------------------
-if(WIN32)
-    find_package(PNG CONFIG REQUIRED)
-    set(PNG_LIBS PNG::PNG)
-    set(PNG_CFLAGS "")
-    message(STATUS "libpng: found (system CONFIG package)")
-else()
-    if(NOT PkgConfig_FOUND)
-        find_package(PkgConfig REQUIRED)
-    endif()
-    pkg_check_modules(PNG REQUIRED libpng)
-    set(PNG_LIBS    ${PNG_LIBRARIES})
-    set(PNG_CFLAGS  ${PNG_CFLAGS_OTHER})
-    message(STATUS "libpng: found (pkg-config)")
+if(NOT WIN32)
+    find_package(PkgConfig REQUIRED)
 endif()
 
 # ---------------------------------------------------------
@@ -368,8 +343,7 @@ else()
     target_compile_definitions(plegacy PRIVATE HAS_STD_FORMAT=0)
 endif()
 
-target_link_directories(plegacy PRIVATE ${SDL2_LIB_DIRS})
-target_link_libraries(plegacy PRIVATE game_plegacy ${SDL2_LIBS} ${PNG_LIBS})
+target_link_libraries(plegacy PRIVATE game_plegacy SDL3::SDL3)
 
 # ---------------------------------------------------------
 # Link libADLMIDI to plegacy (AudioManager lives in ENGINE_PLEGACY_SOURCES)
@@ -392,7 +366,6 @@ if(PLEGACY_ENABLE_MUSIC)
   endif()
 endif()
 
-target_compile_options(plegacy PRIVATE ${SDL2_CFLAGS} ${PNG_CFLAGS})
 
 # ---------------------------------------------------------
 #  Developer convenience targets: "format" and "tags"
@@ -425,8 +398,6 @@ target_include_directories(plegacy PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 target_include_directories(plegacy SYSTEM PRIVATE
-    ${SDL2_INCLUDE_DIRS}
-    ${PNG_INCLUDE_DIRS}
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party
 )
 

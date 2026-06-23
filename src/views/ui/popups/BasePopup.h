@@ -6,11 +6,13 @@
 
 #pragma once
 
+#include <optional>
 #include <string>
 
 #include "core/util/GameContext.h"
 #include "engine/Size.h"
 #include "engine/ui/InteractionLayers.h"
+#include "gfx/PaletteHandle.h"
 #include "gfx/Surface.h"
 #include "resources/FontManager.h"
 #include "resources/VgaManager.h"
@@ -26,6 +28,12 @@ public:
   virtual void tick() {}
   virtual void render(Surface& surface, ViewPoint origin) = 0;
   virtual Size popup_size() const { return {}; }
+
+  // nullopt means we use current UI mode
+  virtual std::optional<gfx::PaletteHandle> palette_override() const {
+    return std::nullopt;
+  }
+
   bool is_finished() const { return finished_; };
   void finished() { finished_ = true; };
   virtual void add_interactions(views::ui::InteractionContext, ViewPoint) = 0;

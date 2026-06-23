@@ -53,8 +53,12 @@ void PopupManager::tick() {
 
 void PopupManager::render(const RenderContext& ctx) {
   interactions_.begin_frame();
-  ctx.surface->palette(palette_);
   if (active_popup_) {
+    auto mode_palette = (context_.ui_mode == UiMode::Menu) ? PaletteHandle{38}
+                                                           : PaletteHandle{0};
+    ctx.surface->palette(
+        active_popup_->palette_override().value_or(mode_palette));
+
     // Create backdrop first
     interactions_.create_frame_item(
         ViewRect{0, 0, DisplayConstants::SCREEN_WIDTH,
@@ -117,5 +121,3 @@ std::vector<LayerInfo> PopupManager::get_layers() {
   });
   return list;
 }
-
-void PopupManager::palette_handle(PaletteHandle p) { palette_ = p; }

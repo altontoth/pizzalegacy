@@ -240,7 +240,10 @@ void AttackScene::begin_attack(core::item::Item weapon) {
 
   view_.walking_guest_.reset();
   attack_active_ = true;
+  break_in_music_stopped_ = false;
   state_.pause_time_advancement();
+  context_.audio->play_music(audio::MusicId::BREAK_IN_MUSIC_1,
+                             audio::LoopMode::Loop);
   view_.view_mode_ = RestaurantViewMode::OPPONENT_ATTACK;
   update_status_display();
   view_.set_up_buttons();
@@ -261,7 +264,7 @@ void AttackScene::tick() {
                                input::Action fire_act) -> bool {
     // Holding the fire key keeps firing
     const bool fire_held = context_.input->is_pressed(fire_act);
-    fire_weapon(s, fire_held, false);
+    fire_weapon(s, fire_held);
     tick_weapon(s, advance_anim);
 
     s.move_gate += s.move_speed;
@@ -376,6 +379,7 @@ void AttackScene::tick() {
     }
   }
 
+  update_attack_sound();
   view_.mark_dirty();
 }
 
@@ -562,7 +566,8 @@ void AttackScene::police_coming() {
     return; // already counting down
   }
   police_window_ = 1;
-  context_.audio->play_sound(audio::SoundId::POLICE_SIREN);
+  // So our siren doesn't play over the music:
+  context_.audio->stop_music();
   if (auto* sd = state_.status_display(context_)) {
     sd->set_police_coming();
   }
@@ -613,6 +618,8 @@ void AttackScene::end_attack(AttackEndReason reason) {
 
 void AttackScene::finish_scene() {
   attack_active_ = false;
+  context_.audio->stop_current_indexed_sound();
+  context_.audio->stop_music();
   state_.resume_time_advancement();
   if (auto* sd = state_.status_display(context_)) {
     sd->clear_attack_status();
@@ -726,7 +733,7 @@ WorldPoint AttackScene::flame_probe_point(const AttackSprite& s) const {
   return WorldPoint{tl.x + (fsz.w / 2), tl.y + (fsz.h / 2)};
 }
 
-void AttackScene::fire_weapon(AttackSprite& s, bool held, bool edge) {
+void AttackScene::fire_weapon(AttackSprite& s, bool held) {
   using core::item::Item;
 
   const WorldPoint anchor{s.position.x - s.sprite_blit_offset_x,
@@ -739,9 +746,6 @@ void AttackScene::fire_weapon(AttackSprite& s, bool held, bool edge) {
       return;
     }
     s.fire_dir = s.direction;
-    if (edge) {
-      context_.audio->play_sound(audio::SoundId::WEAPON_1);
-    }
     break;
   }
   case Item::Chemicals: {
@@ -752,9 +756,6 @@ void AttackScene::fire_weapon(AttackSprite& s, bool held, bool edge) {
     s.fire_dir = s.direction;
     // Every fire tick raises contamination
     view_.restaurant_->add_contamination(1);
-    if (edge) {
-      context_.audio->play_sound(audio::SoundId::WEAPON_2);
-    }
     break;
   }
   case Item::Bazooka: {
@@ -792,7 +793,6 @@ void AttackScene::fire_weapon(AttackSprite& s, bool held, bool edge) {
     s.projectile_pos = launch;
     s.projectile_impact = impact;
     s.projectile_ctr = 0;
-    context_.audio->play_sound(audio::SoundId::WEAPON_3);
     break;
   }
   case Item::Bomb: {
@@ -803,7 +803,6 @@ void AttackScene::fire_weapon(AttackSprite& s, bool held, bool edge) {
     s.bomb_active = true;
     s.bomb_pos = anchor;
     s.bomb_fuse = BOMB_FUSE_TICKS;
-    context_.audio->play_sound(audio::SoundId::WEAPON_4);
     break;
   }
   default:
@@ -1095,15 +1094,56 @@ void AttackScene::render_weapon_effects(const AttackSprite& s) {
   }
 }
 
-void AttackScene::fire_attacker_weapon() {
-  if (attacker_) {
-    fire_weapon(*attacker_, true, true);
-  }
-}
+void AttackScene::update_attack_sound() {
+  using audio::LoopMode;
+  using audio::SoundId;
+  using core::item::Item;
 
-void AttackScene::fire_defender_weapon() {
-  if (defender_) {
-    fire_weapon(*defender_, true, true);
+  const auto explosion_active = [&](const AttackSprite& s) {
+    if (attack_weapon_ == Item::Bazooka) {
+      return s.weapon_frame >= 1;
+    }
+    if (attack_weapon_ == Item::Bomb) {
+      return s.bomb_active && s.bomb_fuse == 0;
+    }
+    return false;
+  };
+  // weapon_frame != 0 keeps the flame sounding through its fade frames.
+  const auto flame_active = [&](const AttackSprite& s) {
+    return attack_weapon_ == Item::FlameThrower && s.weapon_frame != 0;
+  };
+  // The launch fires once; the gate makes the rest of the flight silent.
+  const auto bazooka_flight = [&](const AttackSprite& s) {
+    return attack_weapon_ == Item::Bazooka && s.projectile_active &&
+           s.weapon_frame == 0;
+  };
+
+  const auto any = [&](auto&& pred) {
+    return (attacker_ && pred(*attacker_)) || (defender_ && pred(*defender_));
+  };
+
+  auto* a = context_.audio;
+
+  if (!break_in_music_stopped_ &&
+      (any(explosion_active) || any(flame_active) || any(bazooka_flight))) {
+    a->stop_music();
+    break_in_music_stopped_ = true;
+  }
+
+  if (police_window_ > 0) {
+    a->play_sound_if_changed(SoundId::POLICE_SIREN, LoopMode::Loop);
+  }
+  else if (any(explosion_active)) {
+    a->play_sound_if_changed(SoundId::WEAPON_4);
+  }
+  else if (any(flame_active)) {
+    a->play_sound_if_changed(SoundId::WEAPON_1, LoopMode::Loop);
+  }
+  else if (any(bazooka_flight)) {
+    a->play_sound_if_changed(SoundId::WEAPON_3);
+  }
+  else {
+    a->stop_current_indexed_sound();
   }
 }
 

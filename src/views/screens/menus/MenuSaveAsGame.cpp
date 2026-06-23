@@ -111,7 +111,6 @@ void MenuSaveAsGame::save_to_file(const std::string& filename) {
 }
 
 void MenuSaveAsGame::save_to_existing_file(const std::string& filename) {
-  context_.popup->palette_handle({38});
   context_.popup->origin(ViewPoint{26, 40});
   context_.popup->create<ConfirmPopup>(
       "Overwrite old file?", [this, filename](bool confirmed) {

@@ -11,7 +11,7 @@
 
 namespace input::backend {
 
-GamepadButton button_from_sdl(SDL_GameControllerButton b);
-SDL_GameControllerAxis axis_to_sdl(GamepadAxis a);
+GamepadButton button_from_sdl(SDL_GamepadButton b);
+SDL_GamepadAxis axis_to_sdl(GamepadAxis a);
 
 } // namespace input::backend

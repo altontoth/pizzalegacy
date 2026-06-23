@@ -57,7 +57,6 @@ public:
   ViewPoint origin() const;
 
   std::vector<LayerInfo> get_layers() override;
-  void palette_handle(PaletteHandle p);
 
 private:
   template <class Popup, class... Args> void do_create(Args&&... args) {
@@ -82,6 +81,5 @@ private:
   std::unique_ptr<BasePopup> active_popup_;
   ViewPoint active_origin_;
   std::queue<std::function<void()>> pending_creates_;
-  PaletteHandle palette_{0};
   views::ui::InteractionLayers interactions_;
 };

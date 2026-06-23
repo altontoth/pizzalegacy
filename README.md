@@ -120,7 +120,7 @@ game's data files.
 
 Binary releases are available for Windows, Linux, macOS, and Haiku. The engine
 is designed to be highly portable and should build on most modern desktop platforms
-with SDL2 support, including the BSDs and other Unix-like systems.
+with SDL3 support, including the BSDs and other Unix-like systems.
 
 Only the primary release platforms are regularly tested, so support for BSD and
 other secondary platforms is currently best-effort, but portability is a major
@@ -145,7 +145,7 @@ game. See docs/MODERNIZATIONS.md for a full list of intentional differences.
 - A C++20 compiler: **GCC 13+**, **Clang 17+**, or **MSVC 2022+**.
   GCC 12 works with the libfmt-dev library as a fallback for std::format; GCC
   11 and below are not supported.
-- SDL2 (>= 2.0.16)
+- SDL3 (>= 3.4.0)
 - libpng (for PNG screenshots)
 - zlib (save file compression)
 - [libADLMIDI](https://github.com/Wohlstand/libADLMIDI) for music support
@@ -156,8 +156,8 @@ game. See docs/MODERNIZATIONS.md for a full list of intentional differences.
 Platform-specific setup:
 
 - **Linux (Debian/Ubuntu):** `sudo apt-get install ninja-build libsdl2-dev libpng-dev pkg-config`
-- **macOS:** `brew install sdl2 libpng pkg-config ninja`
-- **Windows:** Install SDL2 and libpng via `vcpkg`
+- **macOS:** `brew install sdl3 pkg-config ninja`
+- **Windows:** Install SDL3 via `vcpkg`
 
 ### Compile
 
@@ -187,7 +187,7 @@ these years the project has gone through several technology migrations:
 
 - C++ standard: from pre-C++11 through C++11, C++17, and now C++20
 - Build system: from a hand-written Makefile to autotools to CMake
-- Graphics: from SDL 1.2 with 8-bit palettes to SDL2 with 32-bit
+- Graphics: from SDL 1.2 with 8-bit palettes to SDL2 with 32-bit, and now SDL3.
   surfaces, eventually replacing `SDL_Surface` with a custom Surface class
   and confining SDL to the engine layer
 - Pointers: from raw pointers and `auto_ptr` to `shared_ptr`, then

@@ -30,13 +30,9 @@ public:
   }
   // pop the top node
   void pop() {
-    if (stack_.empty()) {
-      static_assert("You popped while the stack was empty");
-    }
+    assert(!stack_.empty() && "You popped while the stack was empty");
     stack_.pop_back();
-    if (stack_.empty()) {
-      static_assert("You popped which made the stack empty");
-    }
+    assert(!stack_.empty() && "You popped the monostate root off the stack");
     changed_ = true;
   }
 

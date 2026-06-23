@@ -570,7 +570,8 @@ void Terminal::transition_to_phase(DialingPhase phase) {
     keypad_mode_ = false;
     setup_waiting_animation();
     // Start ring sound immediately when text starts appearing
-    context_.audio->play_sound(audio::SoundId::PHONE_RINGING, true);
+    context_.audio->play_sound(audio::SoundId::PHONE_RINGING,
+                               audio::LoopMode::Loop);
     // phase_timer_ is set by setup_waiting_animation()
     break;
 
@@ -597,7 +598,8 @@ void Terminal::transition_to_phase(DialingPhase phase) {
   case DialingPhase::ERROR:
     keypad_mode_ = false; // Exit keypad mode to show menu
     setup_error_animation();
-    context_.audio->play_sound(audio::SoundId::PHONE_RINGING, true);
+    context_.audio->play_sound(audio::SoundId::PHONE_RINGING,
+                               audio::LoopMode::Loop);
     break;
 
   case DialingPhase::ERROR_RINGING:

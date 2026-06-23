@@ -6,7 +6,7 @@
 
 #include "engine/PlatformPaths.h"
 
-#include <SDL2/SDL.h>
+#include <SDL3/SDL.h>
 #include <iostream>
 
 namespace platform_paths {

@@ -8,60 +8,60 @@
 
 namespace input::backend {
 
-GamepadButton button_from_sdl(SDL_GameControllerButton b) {
+GamepadButton button_from_sdl(SDL_GamepadButton b) {
   switch (b) {
-  case SDL_CONTROLLER_BUTTON_A:
+  case SDL_GAMEPAD_BUTTON_SOUTH:
     return GamepadButton::A;
-  case SDL_CONTROLLER_BUTTON_B:
+  case SDL_GAMEPAD_BUTTON_EAST:
     return GamepadButton::B;
-  case SDL_CONTROLLER_BUTTON_X:
+  case SDL_GAMEPAD_BUTTON_WEST:
     return GamepadButton::X;
-  case SDL_CONTROLLER_BUTTON_Y:
+  case SDL_GAMEPAD_BUTTON_NORTH:
     return GamepadButton::Y;
-  case SDL_CONTROLLER_BUTTON_BACK:
+  case SDL_GAMEPAD_BUTTON_BACK:
     return GamepadButton::Back;
-  case SDL_CONTROLLER_BUTTON_GUIDE:
+  case SDL_GAMEPAD_BUTTON_GUIDE:
     return GamepadButton::Guide;
-  case SDL_CONTROLLER_BUTTON_START:
+  case SDL_GAMEPAD_BUTTON_START:
     return GamepadButton::Start;
-  case SDL_CONTROLLER_BUTTON_LEFTSTICK:
+  case SDL_GAMEPAD_BUTTON_LEFT_STICK:
     return GamepadButton::LeftStick;
-  case SDL_CONTROLLER_BUTTON_RIGHTSTICK:
+  case SDL_GAMEPAD_BUTTON_RIGHT_STICK:
     return GamepadButton::RightStick;
-  case SDL_CONTROLLER_BUTTON_LEFTSHOULDER:
+  case SDL_GAMEPAD_BUTTON_LEFT_SHOULDER:
     return GamepadButton::LeftShoulder;
-  case SDL_CONTROLLER_BUTTON_RIGHTSHOULDER:
+  case SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER:
     return GamepadButton::RightShoulder;
-  case SDL_CONTROLLER_BUTTON_DPAD_UP:
+  case SDL_GAMEPAD_BUTTON_DPAD_UP:
     return GamepadButton::DpadUp;
-  case SDL_CONTROLLER_BUTTON_DPAD_DOWN:
+  case SDL_GAMEPAD_BUTTON_DPAD_DOWN:
     return GamepadButton::DpadDown;
-  case SDL_CONTROLLER_BUTTON_DPAD_LEFT:
+  case SDL_GAMEPAD_BUTTON_DPAD_LEFT:
     return GamepadButton::DpadLeft;
-  case SDL_CONTROLLER_BUTTON_DPAD_RIGHT:
+  case SDL_GAMEPAD_BUTTON_DPAD_RIGHT:
     return GamepadButton::DpadRight;
   default:
     return GamepadButton::Unknown;
   }
 }
 
-SDL_GameControllerAxis axis_to_sdl(GamepadAxis a) {
+SDL_GamepadAxis axis_to_sdl(GamepadAxis a) {
   switch (a) {
   case GamepadAxis::LeftX:
-    return SDL_CONTROLLER_AXIS_LEFTX;
+    return SDL_GAMEPAD_AXIS_LEFTX;
   case GamepadAxis::LeftY:
-    return SDL_CONTROLLER_AXIS_LEFTY;
+    return SDL_GAMEPAD_AXIS_LEFTY;
   case GamepadAxis::RightX:
-    return SDL_CONTROLLER_AXIS_RIGHTX;
+    return SDL_GAMEPAD_AXIS_RIGHTX;
   case GamepadAxis::RightY:
-    return SDL_CONTROLLER_AXIS_RIGHTY;
+    return SDL_GAMEPAD_AXIS_RIGHTY;
   case GamepadAxis::TriggerLeft:
-    return SDL_CONTROLLER_AXIS_TRIGGERLEFT;
+    return SDL_GAMEPAD_AXIS_LEFT_TRIGGER;
   case GamepadAxis::TriggerRight:
-    return SDL_CONTROLLER_AXIS_TRIGGERRIGHT;
+    return SDL_GAMEPAD_AXIS_RIGHT_TRIGGER;
   case GamepadAxis::Unknown:
   default:
-    return SDL_CONTROLLER_AXIS_INVALID;
+    return SDL_GAMEPAD_AXIS_INVALID;
   }
 }
 

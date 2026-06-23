@@ -6,6 +6,7 @@
 
 #include "core/util/ConfigManager.h"
 
+#include <charconv>
 #include <filesystem>
 #include <fstream>
 #include <tinyfiledialogs/tinyfiledialogs.h>
@@ -195,6 +196,9 @@ void ConfigManager::save_options(const GameOptions& opts) {
   save_bool("rmb_drag_inverted", opts.rmb_drag_inverted);
   save_bool("scroll_zoom_inverted", opts.scroll_zoom_inverted);
   save_bool("software_cursor", opts.software_cursor);
+  save_bool("vsync", opts.vsync);
+
+  config_["render_fps"] = std::to_string(static_cast<int>(opts.render_fps));
 
   config_["active_asset_format"] =
       (opts.asset_format == platform::AssetFormat::GERMAN) ? "german"
@@ -225,6 +229,25 @@ GameOptions ConfigManager::load_options() const {
   load_bool("rmb_drag_inverted", opts.rmb_drag_inverted);
   load_bool("scroll_zoom_inverted", opts.scroll_zoom_inverted);
   load_bool("software_cursor", opts.software_cursor);
+  load_bool("vsync", opts.vsync);
+
+  auto fps_it = config_.find("render_fps");
+  if (fps_it != config_.end()) {
+    const std::string& s = fps_it->second;
+    int fps = 0;
+    auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), fps);
+    if (ec == std::errc{}) {
+      if (fps == 30) {
+        opts.render_fps = FpsOption::Fps30;
+      }
+      else if (fps == 60) {
+        opts.render_fps = FpsOption::Fps60;
+      }
+      else if (fps == 120) {
+        opts.render_fps = FpsOption::Fps120;
+      }
+    }
+  }
 
   auto it = config_.find("active_asset_format");
   if (it != config_.end()) {

@@ -9,6 +9,7 @@
 #include <filesystem>
 #include <string>
 #include <unordered_map>
+#include "engine/SDLSession.h"
 #include "engine/SDL_include.h"
 
 #include "audio/AudioManager.h"
@@ -64,12 +65,13 @@ private:
 
   bool init(int display_height, ConfigManager& config_manager);
   Renderable* change_state(GameState& gs, LoopState& loop);
-  void cleanup();
   bool enforce_aspect_ratio(SDL_Window*, int, int);
   void create_some_players(GameState&);
   void load_assets();
   void handle_events(LoopState& loop_state);
   void handle_resize_event(const SDL_Event& event, LoopState& loop_state);
+  ScreenPoint resolve_motion_position(const SDL_MouseMotionEvent& motion) const;
+  ScreenPoint global_cursor_pos_clamped() const;
   void handle_viewer_state(GameState& state,
                            const std::filesystem::path& filename,
                            ViewerType type = ViewerType::Auto);
@@ -79,6 +81,9 @@ private:
   static std::string generate_screenshot_filename();
   static int get_display_height(bool crt_mode);
   SDL_Texture* create_display_texture(int display_height) const;
+
+  // SDLSession needs to be declared first so it's destroyed last:
+  SDLSession sdl_session_;
 
   std::unordered_map<std::string, std::string> config_;
   bool window_resizing_in_progress_{false};

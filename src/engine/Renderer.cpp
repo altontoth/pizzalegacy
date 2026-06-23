@@ -140,11 +140,11 @@ void Renderer::render() {
     final_surface = scaled_surface.get();
   }
 
-  SDL_UpdateTexture(sdl_.texture, nullptr, final_surface->pixels,
+  SDL_UpdateTexture(sdl_.texture.get(), nullptr, final_surface->pixels,
                     final_surface->pitch);
-  SDL_RenderClear(sdl_.renderer);
-  SDL_RenderCopy(sdl_.renderer, sdl_.texture, nullptr, nullptr);
-  SDL_RenderPresent(sdl_.renderer);
+  SDL_RenderClear(sdl_.renderer.get());
+  SDL_RenderTexture(sdl_.renderer.get(), sdl_.texture.get(), nullptr, nullptr);
+  SDL_RenderPresent(sdl_.renderer.get());
 }
 
 void Renderer::ensure_present_surface(int w, int h) {
@@ -152,8 +152,7 @@ void Renderer::ensure_present_surface(int w, int h) {
       frame_with_cursor_->h == h) {
     return;
   }
-  frame_with_cursor_.reset(
-      SDL_CreateRGBSurfaceWithFormat(0, w, h, 32, SDL_PIXELFORMAT_RGBA8888));
+  frame_with_cursor_.reset(SDL_CreateSurface(w, h, SDL_PIXELFORMAT_RGBA8888));
   if (!frame_with_cursor_) {
     fatal(SDL_GetError());
   }
@@ -181,8 +180,8 @@ void Renderer::clear_layers() {
   cache_.clear();
   force_recompose_ = true;
   if (backbuffer_) {
-    SDL_FillRect(backbuffer_.get(), nullptr,
-                 SDL_MapRGB(backbuffer_->format, 0, 0, 0));
+    SDL_FillSurfaceRect(backbuffer_.get(), nullptr,
+                        SDL_MapSurfaceRGB(backbuffer_.get(), 0, 0, 0));
   }
 }
 
@@ -201,8 +200,7 @@ void Renderer::ensure_backbuffer(int w, int h) {
     return;
   }
 
-  backbuffer_.reset(
-      SDL_CreateRGBSurfaceWithFormat(0, w, h, 32, SDL_PIXELFORMAT_RGBA8888));
+  backbuffer_.reset(SDL_CreateSurface(w, h, SDL_PIXELFORMAT_RGBA8888));
 
   if (!backbuffer_) {
     fatal(SDL_GetError());
@@ -214,9 +212,14 @@ SDL_Surface_unique_ptr Renderer::to_sdl_surface(const Surface& src,
   const int w = src.width();
   const int h = src.height();
 
-  SDL_Surface* index8 =
-      SDL_CreateRGBSurfaceWithFormat(0, w, h, 8, SDL_PIXELFORMAT_INDEX8);
+  SDL_Surface* index8 = SDL_CreateSurface(w, h, SDL_PIXELFORMAT_INDEX8);
   if (!index8) {
+    fatal(SDL_GetError());
+  }
+
+  // Create and attach a palette to the surface.
+  SDL_Palette* palette = SDL_CreateSurfacePalette(index8);
+  if (!palette) {
     fatal(SDL_GetError());
   }
 
@@ -230,9 +233,9 @@ SDL_Surface_unique_ptr Renderer::to_sdl_surface(const Surface& src,
                  SDL_ALPHA_OPAQUE};
   }
 
-  SDL_SetPaletteColors(index8->format->palette, sdlPal, 0, pal.size());
-  SDL_SetColorKey(index8, SDL_TRUE, 0);
-  SDL_SetSurfaceRLE(index8, 1);
+  SDL_SetPaletteColors(palette, sdlPal, 0, static_cast<int>(pal.size()));
+  SDL_SetSurfaceColorKey(index8, true, 0);
+  SDL_SetSurfaceRLE(index8, true);
 
   SDL_LockSurface(index8);
   uint8_t* dst = static_cast<uint8_t*>(index8->pixels);
@@ -244,9 +247,8 @@ SDL_Surface_unique_ptr Renderer::to_sdl_surface(const Surface& src,
   SDL_UnlockSurface(index8);
 
   // SDL does the palette to RGBA expansion
-  SDL_Surface* rgba =
-      SDL_ConvertSurfaceFormat(index8, SDL_PIXELFORMAT_RGBA8888, 0);
-  SDL_FreeSurface(index8);
+  SDL_Surface* rgba = SDL_ConvertSurface(index8, SDL_PIXELFORMAT_RGBA8888);
+  SDL_DestroySurface(index8);
 
   if (!rgba) {
     fatal(SDL_GetError());
@@ -274,8 +276,8 @@ SDL_Surface_unique_ptr Renderer::apply_crt_scaling(SDL_Surface* source) const {
   const int source_height = source->h;
 
   // Stage 1: nearest-neighbor 3x vertical upscale
-  SDL_Surface* intermediate = SDL_CreateRGBSurfaceWithFormat(
-      0, source_width, INTERMEDIATE_HEIGHT, 32, SDL_PIXELFORMAT_RGBA8888);
+  SDL_Surface* intermediate = SDL_CreateSurface(
+      source_width, INTERMEDIATE_HEIGHT, SDL_PIXELFORMAT_RGBA8888);
   if (!intermediate) {
     fatal(SDL_GetError());
   }
@@ -300,18 +302,19 @@ SDL_Surface_unique_ptr Renderer::apply_crt_scaling(SDL_Surface* source) const {
   SDL_UnlockSurface(source);
 
   // Stage 2: bilinear downscale to display height
-  SDL_Surface* final = SDL_CreateRGBSurfaceWithFormat(
-      0, source_width, display_height_, 32, SDL_PIXELFORMAT_RGBA8888);
+  SDL_Surface* final = SDL_CreateSurface(source_width, display_height_,
+                                         SDL_PIXELFORMAT_RGBA8888);
   if (!final) {
-    SDL_FreeSurface(intermediate);
+    SDL_DestroySurface(intermediate);
     fatal(SDL_GetError());
   }
 
   SDL_Rect int_rect = {0, 0, source_width, INTERMEDIATE_HEIGHT};
   SDL_Rect final_rect = {0, 0, source_width, display_height_};
-  SDL_SoftStretchLinear(intermediate, &int_rect, final, &final_rect);
+  SDL_StretchSurface(intermediate, &int_rect, final, &final_rect,
+                     SDL_SCALEMODE_LINEAR);
 
-  SDL_FreeSurface(intermediate);
+  SDL_DestroySurface(intermediate);
 
   return SDL_Surface_unique_ptr(final);
 }

@@ -53,7 +53,15 @@ cp "LICENSES/GPL-3.0-or-later.txt" "$RESOURCES/LICENSE.txt"
 # Strip quarantine
 xattr -cr "$APP"
 
-DIST_DIR="PizzaLegacy-${VERSION}-macOS-arm64"
+# Label artifact from binary architecture
+read -ra ARCHS <<< "$(lipo -archs "$BIN")"
+if (( ${#ARCHS[@]} > 1 )); then
+    ARCH_LABEL="universal"
+else
+    ARCH_LABEL="${ARCHS[0]}"
+fi
+
+DIST_DIR="PizzaLegacy-${VERSION}-macOS-${ARCH_LABEL}"
 
 mkdir -p "${DIST_DIR}"
 cp -r "$APP" "$DIST_DIR/"

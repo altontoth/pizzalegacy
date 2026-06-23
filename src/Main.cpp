@@ -13,6 +13,7 @@
 #include <string>
 
 #include "engine/Game.h"
+#include "engine/SDL_include.h"
 #include "engine/Version.h"
 
 namespace { // anonymous

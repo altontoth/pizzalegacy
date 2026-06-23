@@ -241,7 +241,7 @@ void RestaurantView::update_restaurant_noise() {
   }
 
   current_restaurant_noise_ = noise;
-  context_.audio->play_sound(noise, true);
+  context_.audio->play_sound(noise, audio::LoopMode::Loop);
 }
 
 bool RestaurantView::on_action(const input::ActionEvent& ev) {
@@ -295,15 +295,15 @@ bool RestaurantView::on_action(const input::ActionEvent& ev) {
     return true;
   }
   case input::Action::Fire: {
+    // Firing is handled per tick in AttackScene::tick(); but just consume the
+    // event here so it does not fall through
     if (attack_.active()) {
-      attack_.fire_attacker_weapon();
       return true;
     }
     break;
   }
   case input::Action::P2_Fire: {
     if (attack_.active() && attack_.has_defender()) {
-      attack_.fire_defender_weapon();
       return true;
     }
     break;

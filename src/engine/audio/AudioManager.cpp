@@ -33,8 +33,8 @@ AudioManager::AudioManager()
     : music_data_(static_cast<size_t>(MusicId::COUNT)) {}
 
 AudioManager::~AudioManager() {
-  if (audio_device_ != 0) {
-    SDL_CloseAudioDevice(audio_device_);
+  if (audio_stream_) {
+    SDL_DestroyAudioStream(audio_stream_);
   }
 }
 
@@ -59,38 +59,26 @@ void AudioManager::init() {
   adl_setNumChips(midi_player_.get(), 1);
 #endif
 
-  // Set up SDL audio specification
-  SDL_AudioSpec want;
-  SDL_AudioSpec have;
-  SDL_zero(want);
-  want.freq = SAMPLE_RATE;
-  want.format = AUDIO_S16SYS;
-  want.channels = CHANNELS;
-  want.samples = 2048;
-  want.callback = audio_callback;
-  want.userdata = this;
+  SDL_AudioSpec spec{
+      .format = SDL_AUDIO_S16,
+      .channels = CHANNELS,
+      .freq = SAMPLE_RATE,
+  };
 
-  // Open audio device
-  audio_device_ = SDL_OpenAudioDevice(nullptr, 0, &want, &have, 0);
-  if (audio_device_ == 0) {
+  audio_stream_ = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK,
+                                            &spec, audio_callback, this);
+  if (!audio_stream_) {
     Logger::warn("Failed to open SDL audio device: {}", SDL_GetError());
     audio_enabled_ = false;
     initialized_ = true;
     return;
   }
 
-  // Verify we got the format we wanted
-  if (have.format != AUDIO_S16SYS || have.channels != CHANNELS ||
-      have.freq != SAMPLE_RATE) {
-    Logger::warn("SDL audio format mismatch: got {}Hz, {}ch, format {}",
-                 have.freq, have.channels, have.format);
-  }
-
   audio_enabled_ = true;
   initialized_ = true;
 
-  // Start playback
-  SDL_PauseAudioDevice(audio_device_, 0);
+  // Device starts paused
+  SDL_ResumeAudioDevice(SDL_GetAudioStreamDevice(audio_stream_));
 
   Logger::info("AudioManager initialized: {}Hz, {} channels", SAMPLE_RATE,
                CHANNELS);
@@ -160,7 +148,7 @@ void AudioManager::load_m_container(const std::string& m_file_path) {
   }
 }
 
-void AudioManager::play_sound(SoundId id, bool loop) {
+void AudioManager::play_sound(SoundId id, LoopMode loop) {
   if (!audio_enabled_) {
     return;
   }
@@ -180,7 +168,7 @@ void AudioManager::play_sound(SoundId id, bool loop) {
   std::lock_guard<std::mutex> lock(sound_mutex_);
   sounds_[slot]->playback_position = sounds_[slot]->start_offset;
   sounds_[slot]->playing = true;
-  sounds_[slot]->loop = loop;
+  sounds_[slot]->loop = (loop == LoopMode::Loop);
 }
 
 void AudioManager::stop_sound(SoundId id) {
@@ -197,7 +185,25 @@ void AudioManager::stop_sound(SoundId id) {
   sounds_[slot]->playing = false;
 }
 
-void AudioManager::play_music(MusicId id, bool loop) {
+void AudioManager::play_sound_if_changed(SoundId id, LoopMode loop) {
+  if (current_indexed_sound_ == id) {
+    return;
+  }
+  if (current_indexed_sound_) {
+    stop_sound(*current_indexed_sound_);
+  }
+  play_sound(id, loop);
+  current_indexed_sound_ = id;
+}
+
+void AudioManager::stop_current_indexed_sound() {
+  if (current_indexed_sound_) {
+    stop_sound(*current_indexed_sound_);
+    current_indexed_sound_.reset();
+  }
+}
+
+void AudioManager::play_music(MusicId id, LoopMode loop) {
 #if PLEGACY_ENABLE_MUSIC
   if (!audio_enabled_) {
     return;
@@ -227,7 +233,7 @@ void AudioManager::play_music(MusicId id, bool loop) {
     music_state_ = MusicState::STOPPED;
   }
   else {
-    music_loop_ = loop;
+    music_loop_ = (loop == LoopMode::Loop);
     music_state_ = MusicState::PLAYING;
   }
 #else
@@ -280,17 +286,29 @@ bool AudioManager::is_playing() const {
   return false;
 }
 
-void AudioManager::audio_callback(void* userdata, uint8_t* stream, int len) {
+void AudioManager::audio_callback(void* userdata, SDL_AudioStream* stream,
+                                  int additional_amount, int /*total_amount*/) {
   auto* manager = static_cast<AudioManager*>(userdata);
-  if (!manager || !manager->audio_enabled_) {
-    std::memset(stream, 0, static_cast<size_t>(len));
+  if (additional_amount <= 0 || !manager || !manager->audio_enabled_) {
+    // No data results in silence
     return;
   }
 
-  auto* buffer = reinterpret_cast<int16_t*>(stream);
-  int sample_count = len / (sizeof(int16_t) * CHANNELS);
+  // additional_amount is in bytes; mix in whole interleaved sample frames.
+  const int sample_count =
+      additional_amount / static_cast<int>(sizeof(int16_t) * CHANNELS);
+  if (sample_count <= 0) {
+    return;
+  }
 
-  manager->fill_audio_buffer(buffer, sample_count);
+  const size_t total_samples = static_cast<size_t>(sample_count) * CHANNELS;
+  if (manager->output_buffer_.size() != total_samples) {
+    manager->output_buffer_.resize(total_samples);
+  }
+
+  manager->fill_audio_buffer(manager->output_buffer_.data(), sample_count);
+  SDL_PutAudioStreamData(stream, manager->output_buffer_.data(),
+                         static_cast<int>(total_samples * sizeof(int16_t)));
 }
 
 void AudioManager::fill_audio_buffer(int16_t* buffer, int sample_count) {

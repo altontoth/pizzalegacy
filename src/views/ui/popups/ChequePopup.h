@@ -7,11 +7,13 @@
 #pragma once
 
 #include <functional>
+#include <optional>
 #include <string>
 
 #include "engine/input/InputListener.h"
 #include "engine/input/ListenerToken.h"
 #include "engine/input/TextSession.h"
+#include "gfx/PaletteHandle.h"
 #include "views/ui/popups/BasePopup.h"
 
 class ChequePopup : public BasePopup, public input::InputListener {

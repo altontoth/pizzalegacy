@@ -23,7 +23,7 @@ struct GameClock {
   bool _initialized{false};
 
   // Call once per frame before tick/render/handle_events.
-  // Pass in a wall-clock timestamp in ms (e.g., SDL_GetTicks64()).
+  // Pass in a wall-clock timestamp in ms (e.g., SDL_GetTicks()).
   inline void begin_frame(uint64_t wall_ms) {
     if (!_initialized) {
       _last_ms = wall_ms;

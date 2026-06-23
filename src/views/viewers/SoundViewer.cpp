@@ -80,7 +80,7 @@ void SoundViewer::play_current() {
   else {
     // Play sound in a loop
     auto sound_id = static_cast<audio::SoundId>(asset.slot_index);
-    audio_->play_sound(sound_id, true);
+    audio_->play_sound(sound_id, audio::LoopMode::Loop);
     Logger::info("Playing sound slot {} (looping)", asset.slot_index);
   }
 

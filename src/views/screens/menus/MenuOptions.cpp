@@ -115,6 +115,15 @@ void MenuOptions::build_graphics(GameState& state) {
         mark_dirty();
       },
       face));
+  add_menu_item(std::make_unique<EnumMenuItem<FpsOption>>(
+      context_, "Render FPS", state.options().render_fps,
+      std::vector{FpsOption::Fps30, FpsOption::Fps60, FpsOption::Fps120},
+      [this] { mark_dirty(); }, face));
+  add_menu_item(std::make_unique<ToggleMenuItem>(
+      context_, "VSync", state.options().vsync, [&state, this] {
+        state.options().vsync = !state.options().vsync;
+        mark_dirty();
+      }));
 }
 
 void MenuOptions::build_gameplay(GameState& state) {

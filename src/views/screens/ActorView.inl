@@ -448,7 +448,6 @@ void ActorView<LineEnum>::advance_conversation(LineEnum choice) {
 
   if (conversation_->popup_request() ==
       BaseConversation<LineEnum>::PopupRequest::CHEQUE) {
-    context_.popup->palette_handle({37});
     context_.popup->origin(ViewPoint{LegacyConstants::WOOD_BORDER_WIDTH_LEFT,
                                      LegacyConstants::WOOD_BORDER_HEIGHT_TOP});
     context_.popup->create<ChequePopup>([this](int amount, int account) {

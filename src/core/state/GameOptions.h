@@ -6,8 +6,26 @@
 
 #pragma once
 
+#include <string>
+
 #include "engine/DisplayConstants.h"
 #include "resources/util/Platform.h"
+
+// FPS is decoupled from the 30Hz tick, so a higher rate only smooths
+// input/cursor/redraw.
+enum class FpsOption : int { Fps30 = 30, Fps60 = 60, Fps120 = 120 };
+
+inline std::string to_string(FpsOption fps) {
+  switch (fps) {
+  case FpsOption::Fps30:
+    return "30";
+  case FpsOption::Fps60:
+    return "60";
+  case FpsOption::Fps120:
+    return "120";
+  }
+  return "??";
+}
 
 struct GameOptions {
   bool map_fx = true;
@@ -25,4 +43,6 @@ struct GameOptions {
   bool rmb_drag_inverted = false;
   bool scroll_zoom_inverted = false;
   bool software_cursor = true;
+  FpsOption render_fps = FpsOption::Fps60;
+  bool vsync = true;
 };

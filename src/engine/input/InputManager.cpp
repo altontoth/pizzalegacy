@@ -26,24 +26,24 @@ namespace input {
 
 static inline Mod mods_from_sdl(Uint16 sdl_mod) noexcept {
   Mod m = Mod::None;
-  if (sdl_mod & KMOD_SHIFT) {
+  if (sdl_mod & SDL_KMOD_SHIFT) {
     m = m | Mod::Shift;
   }
-  if (sdl_mod & KMOD_CTRL) {
+  if (sdl_mod & SDL_KMOD_CTRL) {
     m = m | Mod::Ctrl;
   }
-  if (sdl_mod & KMOD_ALT) {
+  if (sdl_mod & SDL_KMOD_ALT) {
     m = m | Mod::Alt;
   }
-  if (sdl_mod & KMOD_GUI) {
+  if (sdl_mod & SDL_KMOD_GUI) {
     m = m | Mod::Meta;
   }
   return m;
 }
 
 // The modifier bit a key contributes by being held down. Pressing Left Ctrl
-// sets KMOD_CTRL, so the keydown for the modifier key itself arrives with its
-// own bit already in the mask.
+// sets SDL_KMOD_CTRL, so the keydown for the modifier key itself arrives with
+// its own bit already in the mask.
 static inline Mod contributed_mod_bit(Key k) noexcept {
   switch (k) {
   case Key::LShift:
@@ -92,7 +92,7 @@ InputManager::~InputManager() {
     end_text_input();
   }
   if (gamepad_) {
-    SDL_GameControllerClose(static_cast<SDL_GameController*>(gamepad_));
+    SDL_CloseGamepad(static_cast<SDL_Gamepad*>(gamepad_));
     gamepad_ = nullptr;
   }
 }
@@ -114,7 +114,7 @@ void InputManager::unregister_listener(InputListener& l) {
 [[nodiscard]] TextSession InputManager::start_text_input(InputListener& sink) {
   text_sink_ = &sink;
   text_active_ = true;
-  SDL_StartTextInput();
+  SDL_StartTextInput(window_);
   return TextSession{this};
 }
 
@@ -122,7 +122,7 @@ void InputManager::end_text_input() {
   if (!text_active_) {
     return;
   }
-  SDL_StopTextInput();
+  SDL_StopTextInput(window_);
   text_active_ = false;
   text_sink_ = nullptr;
 }
@@ -131,10 +131,6 @@ bool InputManager::text_input_active() const noexcept { return text_active_; }
 
 bool InputManager::is_pressed(Action a) const noexcept {
   return actions_down_.find(a) != actions_down_.end();
-}
-
-bool InputManager::just_pressed(Action a) const noexcept {
-  return actions_just_pressed_.find(a) != actions_just_pressed_.end();
 }
 
 std::pair<float, float> InputManager::axis(Action a) const noexcept {
@@ -146,17 +142,16 @@ std::pair<float, float> InputManager::axis(Action a) const noexcept {
 
 void InputManager::tick() {
   rebuild_axes();
-  actions_just_pressed_.clear();
   suppress_next_textinput_ = false;
 }
 
 void InputManager::process(const SDL_Event& ev) {
   switch (ev.type) {
-  case SDL_KEYDOWN:
-  case SDL_KEYUP: {
-    const bool down = (ev.type == SDL_KEYDOWN);
-    const Key k = backend::key_from_scancode(ev.key.keysym.scancode);
-    const Mod m = mods_from_sdl(ev.key.keysym.mod);
+  case SDL_EVENT_KEY_DOWN:
+  case SDL_EVENT_KEY_UP: {
+    const bool down = (ev.type == SDL_EVENT_KEY_DOWN);
+    const Key k = backend::key_from_scancode(ev.key.scancode);
+    const Mod m = mods_from_sdl(ev.key.mod);
 
     if (k == Key::Unknown) {
       return;
@@ -171,7 +166,7 @@ void InputManager::process(const SDL_Event& ev) {
     break;
   }
 
-  case SDL_TEXTINPUT: {
+  case SDL_EVENT_TEXT_INPUT: {
     if (!text_active_ || !text_sink_) {
       break;
     }
@@ -184,18 +179,18 @@ void InputManager::process(const SDL_Event& ev) {
     break;
   }
 
-  case SDL_CONTROLLERDEVICEADDED: {
+  case SDL_EVENT_GAMEPAD_ADDED: {
     // Open the first controller that connects; ignore the rest for now
     // TODO: add options for this?
     if (!gamepad_) {
-      gamepad_ = SDL_GameControllerOpen(ev.cdevice.which);
+      gamepad_ = SDL_OpenGamepad(ev.gdevice.which);
     }
     break;
   }
 
-  case SDL_CONTROLLERDEVICEREMOVED: {
+  case SDL_EVENT_GAMEPAD_REMOVED: {
     if (gamepad_) {
-      SDL_GameControllerClose(static_cast<SDL_GameController*>(gamepad_));
+      SDL_CloseGamepad(static_cast<SDL_Gamepad*>(gamepad_));
       gamepad_ = nullptr;
       // Release any stick-driven axes so movement stops on disconnect
       for (auto& [action, vec] : gamepad_axes_) {
@@ -205,22 +200,21 @@ void InputManager::process(const SDL_Event& ev) {
     break;
   }
 
-  case SDL_CONTROLLERAXISMOTION: {
+  case SDL_EVENT_GAMEPAD_AXIS_MOTION: {
     // SDL fires one event per axis, but a stick is two axes. Re-sample every
     // bound stick from the controller so each entry holds a consistent {x, y}.
     if (gamepad_) {
-      auto* pad = static_cast<SDL_GameController*>(gamepad_);
+      auto* pad = static_cast<SDL_Gamepad*>(gamepad_);
       constexpr float AXIS_MAX = 32767.f;
       // TODO: Maybe have an option for configuring the deadzone?
       constexpr float DEAD_ZONE = 4000.f / AXIS_MAX;
       const auto sample = [&](GamepadAxis a) -> float {
-        const SDL_GameControllerAxis sdl_axis = backend::axis_to_sdl(a);
-        if (sdl_axis == SDL_CONTROLLER_AXIS_INVALID) {
+        const SDL_GamepadAxis sdl_axis = backend::axis_to_sdl(a);
+        if (sdl_axis == SDL_GAMEPAD_AXIS_INVALID) {
           return 0.f;
         }
         const float v =
-            static_cast<float>(SDL_GameControllerGetAxis(pad, sdl_axis)) /
-            AXIS_MAX;
+            static_cast<float>(SDL_GetGamepadAxis(pad, sdl_axis)) / AXIS_MAX;
         return (std::abs(v) < DEAD_ZONE) ? 0.f : v;
       };
       for (const auto& [action, stick] : gamepad_stick_bindings_) {
@@ -230,13 +224,13 @@ void InputManager::process(const SDL_Event& ev) {
     break;
   }
 
-  case SDL_CONTROLLERBUTTONDOWN:
-  case SDL_CONTROLLERBUTTONUP: {
+  case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
+  case SDL_EVENT_GAMEPAD_BUTTON_UP: {
     const GamepadButton b = backend::button_from_sdl(
-        static_cast<SDL_GameControllerButton>(ev.cbutton.button));
+        static_cast<SDL_GamepadButton>(ev.gbutton.button));
     if (auto it = gamepad_button_bindings_.find(b);
         it != gamepad_button_bindings_.end()) {
-      if (ev.type == SDL_CONTROLLERBUTTONDOWN) {
+      if (ev.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN) {
         dispatch_action_press(it->second);
       }
       else {
@@ -303,8 +297,6 @@ bool InputManager::dispatch_action_press(Action a) {
   actions_down_.insert(a);
 
   if (!was_down) {
-    actions_just_pressed_.insert(a);
-
     ActionEvent ev{
         .action = a,
         .state = ActionState{.pressed = true, .released = false, .held = true}};
@@ -439,20 +431,6 @@ void InputManager::debug_dump_state(std::ostream& os) const {
   os << "[actions_down]\n  ";
   first = true;
   for (const auto& a : actions_down_) {
-    if (!first) {
-      os << ", ";
-    }
-    first = false;
-    os << std::string(magic_enum::enum_name(a));
-  }
-  if (first) {
-    os << "(none)";
-  }
-  os << "\n";
-
-  os << "[actions_just_pressed]\n  ";
-  first = true;
-  for (const auto& a : actions_just_pressed_) {
     if (!first) {
       os << ", ";
     }

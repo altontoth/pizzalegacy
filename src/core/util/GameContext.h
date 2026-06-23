@@ -9,6 +9,7 @@
 #include "core/util/ConfigManager.h"
 #include "engine/GameClock.h"
 #include "engine/ui/ICursorManager.h"
+#include "engine/ui/UiMode.h"
 #include "resources/BobManager.h"
 #include "resources/VgaManager.h"
 
@@ -39,4 +40,5 @@ public:
   input::InputManager* input{nullptr};
   ConfigManager* config{nullptr};
   audio::AudioManager* audio{nullptr};
+  UiMode ui_mode{UiMode::Game};
 };

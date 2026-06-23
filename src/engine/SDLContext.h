@@ -7,8 +7,10 @@
 #pragma once
 #include "engine/SDL_include.h"
 
+// These are declared in this order so reverse order destruction goes the
+// right way.
 struct SDLContext {
-  SDL_Window* window{nullptr};
-  SDL_Renderer* renderer{nullptr};
-  SDL_Texture* texture{nullptr};
+  SDL_Window_unique_ptr window;
+  SDL_Renderer_unique_ptr renderer;
+  SDL_Texture_unique_ptr texture;
 };

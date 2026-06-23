@@ -8,11 +8,11 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cstdlib>
 #include <filesystem>
 #include <numeric>
 
 #include <magic_enum/magic_enum.hpp>
-#include <savepng/savepng.h>
 #include "conversations/BankConversation.h"
 #include "conversations/MafiaConversation.h"
 #include "conversations/MafiaLine.h"
@@ -113,22 +113,17 @@ namespace {
 SDL_Surface* format_for_png_fixed(SDL_Surface* input) {
   // Create a surface with explicitly defined RGBA masks;
   // when using SDL_PNGFormatAlpha something was wrong with the colors
-  constexpr int bpp = 32;
-  SDL_Surface* output = SDL_CreateRGBSurface(0, input->w, input->h, bpp,
-                                             0x000000FF, // R
-                                             0x0000FF00, // G
-                                             0x00FF0000, // B
-                                             0xFF000000  // A
-  );
+  SDL_Surface* output =
+      SDL_CreateSurface(input->w, input->h, SDL_PIXELFORMAT_ABGR8888);
 
   if (!output) {
     Logger::warn("Failed to create RGB surface: {}", SDL_GetError());
     return nullptr;
   }
 
-  if (SDL_BlitSurface(input, nullptr, output, nullptr) != 0) {
+  if (!SDL_BlitSurface(input, nullptr, output, nullptr)) {
     Logger::warn("Failed to blit surface: {}", SDL_GetError());
-    SDL_FreeSurface(output);
+    SDL_DestroySurface(output);
     return nullptr;
   }
 
@@ -163,7 +158,7 @@ void save_screenshot(SDL_Surface* surface) {
     return;
   }
   SDL_Surface_unique_ptr png_surface(tmp);
-  if (SDL_SavePNG(png_surface.get(), full_filename.c_str()) != 0) {
+  if (!SDL_SavePNG(png_surface.get(), full_filename.c_str())) {
     Logger::warn("Failed to save PNG: {}", SDL_GetError());
   }
   else {
@@ -190,9 +185,8 @@ Game::~Game() = default;
 
 void Game::run() {
 
-  // Bootstrap SDL (no subsystems yet) so SDL_GetPrefPath works
-  if (SDL_Init(0) < 0) {
-    std::cerr << "SDL_Init(0) failed: " << SDL_GetError() << "\n";
+  if (!sdl_session_.initialized()) {
+    std::cerr << "SDL failed to init: " << SDL_GetError() << "\n";
     return;
   }
   platform_paths::init();
@@ -285,7 +279,7 @@ void Game::run() {
   {
     int ww;
     int wh;
-    SDL_GetWindowSize(sdl_.window, &ww, &wh);
+    SDL_GetWindowSize(sdl_.window.get(), &ww, &wh);
     state.window_size(ww, wh);
     context.cursor->update_scaled_cursor(ww, wh);
   }
@@ -337,8 +331,7 @@ void Game::run() {
       .toggle_fullscreen =
           [this, &loop_state] {
             loop_state.fullscreen = !loop_state.fullscreen;
-            SDL_SetWindowFullscreen(
-                sdl_.window, loop_state.fullscreen ? SDL_WINDOW_FULLSCREEN : 0);
+            SDL_SetWindowFullscreen(sdl_.window.get(), loop_state.fullscreen);
           }};
   global_actions_ =
       std::make_unique<GlobalActionHandler>(*input_manager_, std::move(cb));
@@ -352,15 +345,44 @@ void Game::run() {
   Renderer renderer(sdl_, display_height_);
   renderer.set_cursor_manager(cursor_manager_.get());
   cursor_manager_->software_mode(state.options().software_cursor);
+  SDL_SetRenderVSync(sdl_.renderer.get(),
+                     state.options().vsync ? 1 : SDL_RENDERER_VSYNC_DISABLED);
   renderer.add_layers(change_state(state, loop_state));
   std::ranges::for_each(overlays.renderables(),
                         [&](Renderable* r) { renderer.add_layers(r); });
 
-  FpsManager fps(FRAMES_PER_SECOND);
+  constexpr uint32_t TICK_MS = 1000 / FRAMES_PER_SECOND;
+  constexpr int MAX_TICKS_PER_FRAME = 5;
+
+  auto apply_window_size = [&](int target_w, int target_h) {
+    SDL_SetWindowSize(sdl_.window.get(), target_w, target_h);
+    int actual_w;
+    int actual_h;
+    SDL_GetWindowSize(sdl_.window.get(), &actual_w, &actual_h);
+    state.window_size(actual_w, actual_h);
+    loop_state.context.cursor->update_scaled_cursor(actual_w, actual_h);
+  };
+
+  int render_fps = static_cast<int>(state.options().render_fps);
+  bool vsync = state.options().vsync;
+  FpsManager fps(render_fps);
+  uint32_t tick_accumulator_ms = 0;
+
   while (!state.should_exit()) {
-    uint64_t wall_ms = SDL_GetTicks64();
+    uint64_t wall_ms = SDL_GetTicks();
     context.clock.begin_frame(wall_ms);
     fps.begin_frame(wall_ms);
+
+    // Apply changes in FPS from the options menu.
+    if (static_cast<int>(state.options().render_fps) != render_fps) {
+      render_fps = static_cast<int>(state.options().render_fps);
+      fps.set_target_fps(render_fps);
+    }
+    if (state.options().vsync != vsync) {
+      vsync = state.options().vsync;
+      SDL_SetRenderVSync(sdl_.renderer.get(),
+                         vsync ? 1 : SDL_RENDERER_VSYNC_DISABLED);
+    }
 
     if (!current_view_) {
       Logger::warn("Current view is nullptr!");
@@ -369,112 +391,118 @@ void Game::run() {
 
     handle_events(loop_state);
 
-    // Ticks:
-    input_manager_->tick();
+    // Logic runs independent of FPS
+    tick_accumulator_ms += context.clock.dt_ms;
+    int ticks_this_frame = 0;
+    while (tick_accumulator_ms >= TICK_MS &&
+           ticks_this_frame < MAX_TICKS_PER_FRAME) {
+      tick_accumulator_ms -= TICK_MS;
+      ++ticks_this_frame;
 
-    // Skip ticking view during fade-in to avoid missing animations/info
-    // bool should_skip_tick = loop_state.skip_tick_during_fade_in &&
-    bool should_skip_tick = renderer.is_fading();
+      input_manager_->tick();
 
-    if (!overlays.game_blocked() && !should_skip_tick) {
-      current_view_->tick();
+      // Skip ticking view during fade-in to avoid missing animations/info
+      bool should_skip_tick = renderer.is_fading();
+
+      if (!overlays.game_blocked() && !should_skip_tick) {
+        current_view_->tick();
+      }
+      overlays.tick_all();
+
+      state.update(TICK_MS);
+
+      // Handle fade transitions
+      bool fade_completed = renderer.tick_fade();
+
+      // Clear skip flag when fade completes
+      if (fade_completed && loop_state.skip_tick_during_fade_in) {
+        loop_state.skip_tick_during_fade_in = false;
+      }
+
+      // Check if resolution change was requested
+      if (auto res = state.pending_resolution_change()) {
+        state.clear_resolution_request();
+        auto [w, h] = resolution_window_size(*res, display_height_);
+        apply_window_size(w, h);
+      }
+
+      // Check if CRT aspect ratio change was requested
+      if (auto crt = state.pending_crt_change()) {
+        state.clear_crt_request();
+        display_height_ = get_display_height(*crt);
+        sdl_.texture.reset(create_display_texture(display_height_));
+        SDL_SetRenderLogicalPresentation(
+            sdl_.renderer.get(), DisplayConstants::SCREEN_WIDTH,
+            display_height_, SDL_LOGICAL_PRESENTATION_LETTERBOX);
+        renderer.set_display_height(display_height_);
+        interaction_manager_->set_display_height(display_height_);
+        cursor_manager_->display_height(display_height_);
+        auto [w, h] =
+            resolution_window_size(state.options().resolution, display_height_);
+        apply_window_size(w, h);
+      }
+
+      // Check if fade requested and not already fading
+      if (state.fade_requested() && !renderer.is_fading()) {
+        // Include pending_fade_midpoint: a UI push is about to happen at the
+        // midpoint (while black), so we must expect a transition even if the
+        // UI stack hasn't changed yet.
+        loop_state.fade_on_next_transition =
+            state.ui().ui_changed() || state.pending_fade_midpoint();
+        state.clear_fade_request();
+        renderer.start_fade_out(state.fade_duration_frames());
+      }
+
+      const bool fade_out_finished_and_pending =
+          renderer.fade_out_complete() && loop_state.fade_on_next_transition;
+
+      // Don't transition while a popup is active; the popup must be
+      // dismissed first so it shows on the current view, not the new one.
+      // game_blocked() before ui_changed() so short-circuit preserves the flag.
+      const bool normal_ui_transition = !renderer.is_fading() &&
+                                        !overlays.game_blocked() &&
+                                        state.ui().ui_changed();
+
+      if (fade_out_finished_and_pending || normal_ui_transition) {
+        interaction_manager_->clear();
+        tooltip_manager_->clear();
+
+        if (fade_out_finished_and_pending) {
+          // Fire midpoint callback while black so we can do the date advance
+          // then
+          state.on_fade_midpoint();
+        }
+
+        // Get new view and check if it wants to preserve background
+        auto* new_view = change_state(state, loop_state);
+        if (new_view && new_view->preserve_background()) {
+          renderer.clear_layers_preserve_backbuffer();
+        }
+        else {
+          renderer.clear_layers();
+        }
+        renderer.add_layers(new_view);
+        std::ranges::for_each(overlays.renderables(),
+                              [&](Renderable* r) { renderer.add_layers(r); });
+
+        if (fade_out_finished_and_pending) {
+          loop_state.fade_on_next_transition = false;
+          loop_state.skip_tick_during_fade_in = true;
+          renderer.start_fade_in(state.fade_duration_frames());
+        }
+      }
     }
-    overlays.tick_all();
 
-    state.update(context.clock.dt_ms);
+    // If we hit the catch-up cap, drop the backlog rather than replaying it
+    // forever.
+    if (tick_accumulator_ms >= TICK_MS) {
+      tick_accumulator_ms = 0;
+    }
+
     if (loop_state.screenshot_requested) {
       renderer.with_current_frame(
           [](SDL_Surface* surface) { ::save_screenshot(surface); });
       loop_state.screenshot_requested = false;
-    }
-
-    // Handle fade transitions
-    bool fade_completed = renderer.tick_fade();
-
-    // Clear skip flag when fade completes
-    if (fade_completed && loop_state.skip_tick_during_fade_in) {
-      loop_state.skip_tick_during_fade_in = false;
-    }
-
-    auto apply_window_size = [&](int target_w, int target_h) {
-      SDL_SetWindowSize(sdl_.window, target_w, target_h);
-      int actual_w;
-      int actual_h;
-      SDL_GetWindowSize(sdl_.window, &actual_w, &actual_h);
-      state.window_size(actual_w, actual_h);
-      loop_state.context.cursor->update_scaled_cursor(actual_w, actual_h);
-    };
-
-    // Check if resolution change was requested
-    if (auto res = state.pending_resolution_change()) {
-      state.clear_resolution_request();
-      auto [w, h] = resolution_window_size(*res, display_height_);
-      apply_window_size(w, h);
-    }
-
-    // Check if CRT aspect ratio change was requested
-    if (auto crt = state.pending_crt_change()) {
-      state.clear_crt_request();
-      display_height_ = get_display_height(*crt);
-      SDL_DestroyTexture(sdl_.texture);
-      sdl_.texture = create_display_texture(display_height_);
-      SDL_RenderSetLogicalSize(sdl_.renderer, DisplayConstants::SCREEN_WIDTH,
-                               display_height_);
-      renderer.set_display_height(display_height_);
-      interaction_manager_->set_display_height(display_height_);
-      cursor_manager_->display_height(display_height_);
-      auto [w, h] =
-          resolution_window_size(state.options().resolution, display_height_);
-      apply_window_size(w, h);
-    }
-
-    // Check if fade requested and not already fading
-    if (state.fade_requested() && !renderer.is_fading()) {
-      // Include pending_fade_midpoint: a UI push is about to happen at the
-      // midpoint (while black), so we must expect a transition even if the
-      // UI stack hasn't changed yet.
-      loop_state.fade_on_next_transition =
-          state.ui().ui_changed() || state.pending_fade_midpoint();
-      state.clear_fade_request();
-      renderer.start_fade_out(state.fade_duration_frames());
-    }
-
-    const bool fade_out_finished_and_pending =
-        renderer.fade_out_complete() && loop_state.fade_on_next_transition;
-
-    // Don't transition while a popup is active; the popup must be
-    // dismissed first so it shows on the current view, not the new one.
-    // game_blocked() before ui_changed() so short-circuit preserves the flag.
-    const bool normal_ui_transition = !renderer.is_fading() &&
-                                      !overlays.game_blocked() &&
-                                      state.ui().ui_changed();
-
-    if (fade_out_finished_and_pending || normal_ui_transition) {
-      interaction_manager_->clear();
-      tooltip_manager_->clear();
-
-      if (fade_out_finished_and_pending) {
-        // Fire midpoint callback while black so we can do the date advance then
-        state.on_fade_midpoint();
-      }
-
-      // Get new view and check if it wants to preserve background
-      auto* new_view = change_state(state, loop_state);
-      if (new_view && new_view->preserve_background()) {
-        renderer.clear_layers_preserve_backbuffer();
-      }
-      else {
-        renderer.clear_layers();
-      }
-      renderer.add_layers(new_view);
-      std::ranges::for_each(overlays.renderables(),
-                            [&](Renderable* r) { renderer.add_layers(r); });
-
-      if (fade_out_finished_and_pending) {
-        loop_state.fade_on_next_transition = false;
-        loop_state.skip_tick_during_fade_in = true;
-        renderer.start_fade_in(state.fade_duration_frames());
-      }
     }
 
     // For software cursor:
@@ -482,40 +510,88 @@ void Game::run() {
     renderer.render();
 
     SDL_SetWindowTitle(
-        sdl_.window,
+        sdl_.window.get(),
         std::string(compat::format("Pizza Legacy {} [{} fps]",
                                    game_meta::VERSION, fps.current_fps()))
             .c_str());
 
-    uint64_t end_wall_ms = SDL_GetTicks64();
+    uint64_t end_wall_ms = SDL_GetTicks();
     fps.end_frame_and_sleep(end_wall_ms);
   }
   // Make sure to reset view which might use GameState in their destructor:
   current_view_.reset();
-  cleanup();
+}
+
+ScreenPoint Game::global_cursor_pos_clamped() const {
+  // Source of truth for the software cursor position. We deliberately ignore
+  // the motion event's own position: on macOS/SDL3 a motion event during a
+  // window-boundary crossing sometimes has a garbage absolute position that
+  // teleports the cursor into the middle of the screen.
+  // SDL_GetGlobalMouseState is correct, so we map it through SDL's renderer
+  // transform and clamp it to the logical render area.
+  float global_x = 0.0f;
+  float global_y = 0.0f;
+  SDL_GetGlobalMouseState(&global_x, &global_y);
+
+  int win_x = 0;
+  int win_y = 0;
+  SDL_GetWindowPosition(sdl_.window.get(), &win_x, &win_y);
+
+  float render_x = 0.0f;
+  float render_y = 0.0f;
+  SDL_RenderCoordinatesFromWindow(
+      sdl_.renderer.get(), global_x - static_cast<float>(win_x),
+      global_y - static_cast<float>(win_y), &render_x, &render_y);
+
+  return ScreenPoint{
+      std::clamp(static_cast<int>(render_x), 0,
+                 DisplayConstants::SCREEN_WIDTH - 1),
+      std::clamp(static_cast<int>(render_y), 0, display_height_ - 1)};
+}
+
+// Only apply the workaround for that macOS bug on macOS
+#if defined(__APPLE__)
+constexpr bool USE_GLOBAL_CURSOR_POS = false;
+#else
+constexpr bool USE_GLOBAL_CURSOR_POS = false;
+#endif
+
+ScreenPoint
+Game::resolve_motion_position(const SDL_MouseMotionEvent& motion) const {
+  if constexpr (USE_GLOBAL_CURSOR_POS) {
+    return global_cursor_pos_clamped();
+  }
+  else {
+    return ScreenPoint{
+        std::clamp(static_cast<int>(motion.x), 0,
+                   DisplayConstants::SCREEN_WIDTH - 1),
+        std::clamp(static_cast<int>(motion.y), 0, display_height_ - 1)};
+  }
 }
 
 void Game::handle_events(LoopState& loop_state) {
   SDL_Event event;
-  while (SDL_PollEvent(&event) != 0) {
-    if (event.type == SDL_QUIT) {
+  while (SDL_PollEvent(&event)) {
+    SDL_ConvertEventToRenderCoordinates(sdl_.renderer.get(), &event);
+
+    if (event.type == SDL_EVENT_QUIT) {
       loop_state.game_state.request_exit();
       break;
     }
-    if (event.type == SDL_MOUSEMOTION) {
+    if (event.type == SDL_EVENT_MOUSE_MOTION) {
       if (cursor_manager_->relative_mouse_mode()) {
         // In relative mode the cursor is locked; accumulate relative deltas so
         // the interaction system keeps receiving hover events at a virtual
         // position that moves with the physical mouse.
-        last_mouse_pos_.x += event.motion.xrel;
-        last_mouse_pos_.y += event.motion.yrel;
+        last_mouse_pos_.x += static_cast<int>(event.motion.xrel);
+        last_mouse_pos_.y += static_cast<int>(event.motion.yrel);
       }
       else {
-        last_mouse_pos_ = ScreenPoint{event.motion.x, event.motion.y};
+        last_mouse_pos_ = resolve_motion_position(event.motion);
       }
     }
     else {
-      if (event.type == SDL_MOUSEWHEEL &&
+      if (event.type == SDL_EVENT_MOUSE_WHEEL &&
           loop_state.game_state.options().scroll_zoom_inverted) {
         event.wheel.y = -event.wheel.y;
       }
@@ -523,15 +599,13 @@ void Game::handle_events(LoopState& loop_state) {
       input_manager_->process(event);
     }
 
-    if (event.type == SDL_WINDOWEVENT) {
-      if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
-        handle_resize_event(event, loop_state);
-      }
-      else if (event.window.event == SDL_WINDOWEVENT_FOCUS_LOST) {
-        // If focus is lost mid-drag we won't get a ButtonUp, so
-        // end any active drag now.
-        interaction_manager_->end_active_drag();
-      }
+    if (event.type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) {
+      handle_resize_event(event, loop_state);
+    }
+    else if (event.type == SDL_EVENT_WINDOW_FOCUS_LOST) {
+      // If focus is lost mid-drag we won't get a ButtonUp, so
+      // end any active drag now.
+      interaction_manager_->end_active_drag();
     }
   }
   // A drag that ended this frame unlocked the pointer during event processing
@@ -556,12 +630,11 @@ void Game::handle_resize_event(const SDL_Event& event, LoopState& loop_state) {
   int new_width = event.window.data1;
   int new_height = event.window.data2;
 
-  // In fullscreen, SDL_RenderSetLogicalSize handles letterboxing so aspect
-  // ratio enforcement is not possible or needed.
+  // In fullscreen, aspect ratio enforcement is not needed due to letterboxing.
   if (!loop_state.fullscreen) {
-    if (!enforce_aspect_ratio(sdl_.window, new_width, new_height)) {
-      // Skip further handling as a new SDL_WINDOWEVENT_SIZE_CHANGED will be
-      // triggered
+    if (!enforce_aspect_ratio(sdl_.window.get(), new_width, new_height)) {
+      // Skip further handling as a new SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED will
+      // be triggered
       return;
     }
   }
@@ -607,8 +680,9 @@ bool Game::init(int display_height, ConfigManager& config_manager) {
   input_manager_ = std::make_unique<input::InputManager>();
   input::configure_default_bindings(*input_manager_);
 
-  // Initialize all SDL subsystems (SDL_Init(0) was already called in run())
-  if (SDL_InitSubSystem(SDL_INIT_EVERYTHING) < 0) {
+  // Initialize the SDL subsystems we use on top of the bootstrap.
+  if (!sdl_session_.init_subsystems(SDL_INIT_VIDEO | SDL_INIT_AUDIO |
+                                    SDL_INIT_GAMEPAD)) {
     return false;
   }
 
@@ -619,35 +693,42 @@ bool Game::init(int display_height, ConfigManager& config_manager) {
 
   auto [win_w, win_h] = resolution_window_size(
       config_manager.options().resolution, display_height);
-  SDL_CreateWindowAndRenderer(win_w, win_h, SDL_WINDOW_RESIZABLE, &sdl_.window,
-                              &sdl_.renderer);
-  SDL_SetWindowPosition(sdl_.window, SDL_WINDOWPOS_CENTERED,
+  SDL_Window* window = nullptr;
+  SDL_Renderer* renderer_handle = nullptr;
+  SDL_CreateWindowAndRenderer("Pizza Legacy", win_w, win_h,
+                              SDL_WINDOW_RESIZABLE, &window, &renderer_handle);
+  sdl_.window.reset(window);
+  sdl_.renderer.reset(renderer_handle);
+  SDL_SetWindowPosition(sdl_.window.get(), SDL_WINDOWPOS_CENTERED,
                         SDL_WINDOWPOS_CENTERED);
 
   // Bring the window to the foreground; when I launch the game from
   // Terminal.app it stays in the background otherwise.
-  SDL_RaiseWindow(sdl_.window);
+  SDL_RaiseWindow(sdl_.window.get());
+
+  input_manager_->window(sdl_.window.get());
+  cursor_manager_->window(sdl_.window.get());
 
   // Set up the screen
   Logger::debug("Creating screen: w: {}, h: {}, bpp: {}",
                 DisplayConstants::SCREEN_WIDTH, display_height,
                 DisplayConstants::BPP);
 
-  auto* main_surface = SDL_CreateRGBSurfaceWithFormat(
-      0, DisplayConstants::SCREEN_WIDTH, display_height, DisplayConstants::BPP,
-      SDL_PIXELFORMAT_RGBA8888);
+  auto* main_surface = SDL_CreateSurface(
+      DisplayConstants::SCREEN_WIDTH, display_height, SDL_PIXELFORMAT_RGBA8888);
 
   screen_.reset(main_surface);
 
-  sdl_.texture = create_display_texture(display_height);
+  sdl_.texture.reset(create_display_texture(display_height));
 
   if (!screen_ || sdl_.texture == nullptr || sdl_.renderer == nullptr) {
     return false;
   }
-  SDL_RenderSetLogicalSize(sdl_.renderer, DisplayConstants::SCREEN_WIDTH,
-                           display_height);
+  SDL_SetRenderLogicalPresentation(
+      sdl_.renderer.get(), DisplayConstants::SCREEN_WIDTH, display_height,
+      SDL_LOGICAL_PRESENTATION_LETTERBOX);
 
-  cursor_manager_->base_cursor_mode(CursorMode::MENU);
+  cursor_manager_->base_cursor_mode(UiMode::Menu);
 
   context.bob = bob_manager_.get();
   context.font = font_manager_.get();
@@ -661,64 +742,80 @@ bool Game::init(int display_height, ConfigManager& config_manager) {
   return true;
 }
 
+namespace {
+// To help figure out palette for popups and mouse cursor
+bool is_menu_screen(ScreenTag::Kind kind) {
+  using K = ScreenTag::Kind;
+  switch (kind) {
+  case K::Intro:
+  case K::MenuMain:
+  case K::MenuNewGame:
+  case K::MenuOptions:
+  case K::MenuQuickstart:
+  case K::MenuHighScores:
+  case K::CharacterSelection:
+  case K::DifficultySelection:
+  case K::DiskMenu:
+  case K::MenuGameLoad:
+  case K::MenuSave:
+  case K::MenuSaveAsGame:
+    return true;
+  default:
+    return false;
+  }
+}
+} // namespace
+
 Renderable* Game::change_state(GameState& gs, LoopState& /*loop*/) {
   current_view_.reset();
 
-  // Default to Game, let menu overwrite
-  cursor_manager_->base_cursor_mode(CursorMode::GAME);
+  // Default to game; menu screens below flip this. Applied to the cursor and
+  // popups once after we know which screen we are building.
+  UiMode ui_mode = UiMode::Game;
   std::visit(
       overloaded{
 
           [&](const ScreenTag& s) {
             using K = ScreenTag::Kind;
+            if (is_menu_screen(s.kind)) {
+              ui_mode = UiMode::Menu;
+            }
             switch (s.kind) {
             case K::Intro:
-              cursor_manager_->base_cursor_mode(CursorMode::MENU);
               current_view_ = std::make_unique<Intro>(context, gs);
               break;
             case K::MenuMain:
-              cursor_manager_->base_cursor_mode(CursorMode::MENU);
               current_view_ = std::make_unique<MenuMain>(context, gs);
               break;
             case K::MenuHighScores:
-              cursor_manager_->base_cursor_mode(CursorMode::MENU);
               current_view_ = std::make_unique<MenuHighScores>(context, gs);
               break;
             case K::MenuNewGame:
-              cursor_manager_->base_cursor_mode(CursorMode::MENU);
               current_view_ = std::make_unique<MenuNewGame>(context, gs);
               break;
             case K::MenuOptions:
-              cursor_manager_->base_cursor_mode(CursorMode::MENU);
               current_view_ = std::make_unique<MenuOptions>(context, gs);
               break;
             case K::MenuQuickstart:
-              cursor_manager_->base_cursor_mode(CursorMode::MENU);
               current_view_ = std::make_unique<MenuQuickstart>(context, gs);
               break;
             case K::CharacterSelection:
-              cursor_manager_->base_cursor_mode(CursorMode::MENU);
               current_view_ = std::make_unique<CharacterSelection>(context, gs);
               break;
             case K::DifficultySelection:
-              cursor_manager_->base_cursor_mode(CursorMode::MENU);
               current_view_ =
                   std::make_unique<DifficultySelection>(context, gs);
               break;
             case K::DiskMenu:
-              cursor_manager_->base_cursor_mode(CursorMode::MENU);
               current_view_ = std::make_unique<DiskMenu>(context, gs);
               break;
             case K::MenuGameLoad:
-              cursor_manager_->base_cursor_mode(CursorMode::MENU);
               current_view_ = std::make_unique<MenuGameLoad>(context, gs);
               break;
             case K::MenuSave:
-              cursor_manager_->base_cursor_mode(CursorMode::MENU);
               current_view_ = std::make_unique<MenuSave>(context, gs);
               break;
             case K::MenuSaveAsGame:
-              cursor_manager_->base_cursor_mode(CursorMode::MENU);
               current_view_ = std::make_unique<MenuSaveAsGame>(context, gs);
               break;
             case K::Advertising:
@@ -919,12 +1016,12 @@ Renderable* Game::change_state(GameState& gs, LoopState& /*loop*/) {
                 std::make_unique<CookbookReminder>(context, gs, pps);
           },
           [&](const ViewerState& v) {
-            cursor_manager_->base_cursor_mode(CursorMode::MENU);
+            ui_mode = UiMode::Menu;
             // Use the viewer type stored in the ViewerState
             handle_viewer_state(gs, v.filename, v.type);
           },
           [&](const OptionsMenuState& oms) {
-            cursor_manager_->base_cursor_mode(CursorMode::MENU);
+            ui_mode = UiMode::Menu;
             current_view_ =
                 std::make_unique<MenuOptions>(context, gs, oms.screen);
           },
@@ -980,6 +1077,10 @@ Renderable* Game::change_state(GameState& gs, LoopState& /*loop*/) {
 
       },
       gs.ui().top());
+
+  // Apply the resolved mode to everything that follows the menu/game look.
+  cursor_manager_->base_cursor_mode(ui_mode);
+  context.ui_mode = ui_mode;
 
   // Wrap in PaneledView if necessary
   if (current_view_ && !dynamic_cast<PaneledView*>(current_view_.get())) {
@@ -1083,13 +1184,6 @@ void Game::open_viewer(GameState& state, const std::filesystem::path& path,
   }
 }
 
-void Game::cleanup() {
-  SDL_DestroyTexture(sdl_.texture);
-  SDL_DestroyRenderer(sdl_.renderer);
-  SDL_DestroyWindow(sdl_.window);
-  SDL_Quit();
-}
-
 // Returns true if the window size was let through without issue,
 // and false when there will be another resize event coming
 bool Game::enforce_aspect_ratio(SDL_Window* window, int new_width,
@@ -1169,7 +1263,7 @@ int Game::get_display_height(bool crt_mode) {
 }
 
 SDL_Texture* Game::create_display_texture(int display_height) const {
-  return SDL_CreateTexture(sdl_.renderer, SDL_PIXELFORMAT_RGBA8888,
+  return SDL_CreateTexture(sdl_.renderer.get(), SDL_PIXELFORMAT_RGBA8888,
                            SDL_TEXTUREACCESS_STREAMING,
                            DisplayConstants::SCREEN_WIDTH, display_height);
 }

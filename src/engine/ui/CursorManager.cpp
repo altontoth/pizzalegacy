@@ -6,6 +6,8 @@
 #include "engine/ui/CursorManager.h"
 
 #include <algorithm>
+#include <cmath>
+
 #include "engine/DisplayConstants.h"
 #include "engine/Renderer.h"
 #include "gfx/Surface.h"
@@ -42,13 +44,13 @@ CursorManager::CursorManager(VgaManager* /*vga*/, int display_height)
     : cursor_surface_(create_cursor_surface()),
       display_height_(display_height) {}
 
-void CursorManager::base_cursor_mode(CursorMode mode) {
+void CursorManager::base_cursor_mode(UiMode mode) {
   base_mode_ = mode;
 
   // Update cursor palette based on mode
   // Menu mode uses palette 38 (red), Game mode uses palette 0 (yellow)
-  auto palette = (mode == CursorMode::MENU) ? gfx::PaletteHandle{38}
-                                            : gfx::PaletteHandle{0};
+  auto palette =
+      (mode == UiMode::Menu) ? gfx::PaletteHandle{38} : gfx::PaletteHandle{0};
   cursor_surface_.palette(palette);
 
   if (!custom_cursor_active_) {
@@ -56,7 +58,7 @@ void CursorManager::base_cursor_mode(CursorMode mode) {
   }
 }
 
-CursorMode CursorManager::base_cursor_mode() const { return base_mode_; }
+UiMode CursorManager::base_cursor_mode() const { return base_mode_; }
 
 void CursorManager::custom_cursor(const Surface& surface, bool centered) {
   custom_cursor_surface_.emplace(surface.clone());
@@ -122,8 +124,8 @@ void CursorManager::update_scaled_cursor(int new_window_width,
                                    DisplayConstants::LOGICAL_HEIGHT);
 
   // If scale hasn't changed meaningfully, do nothing.
-  if (std::fabs(scale_x - last_scale_x_) < 0.01f &&
-      std::fabs(scale_y - last_scale_y_) < 0.01f) {
+  if (std::abs(scale_x - last_scale_x_) < 0.01f &&
+      std::abs(scale_y - last_scale_y_) < 0.01f) {
     return;
   }
 
@@ -138,7 +140,7 @@ void CursorManager::hw_free_cursor() {
     // SDL keeps using the currently set cursor internally, so detach it
     // before destroying the object to avoid SDL referencing freed memory.
     SDL_SetCursor(nullptr);
-    // unique_ptr deleter calls SDL_FreeCursor().
+    // unique_ptr deleter calls SDL_DestroyCursor().
     active_cursor_.reset();
   }
 }
@@ -149,7 +151,7 @@ void CursorManager::sync_hardware_cursor() {
     return;
   }
   if (cursor_hidden_) {
-    SDL_ShowCursor(SDL_DISABLE);
+    SDL_HideCursor();
     return;
   }
   if (custom_cursor_active_) {
@@ -182,13 +184,13 @@ void CursorManager::hw_apply_cursor(const Surface& source_surface,
 
   SDL_Surface_unique_ptr sdl_src = Renderer::to_sdl_surface(source_surface);
   // Check if we need to scale
-  if (std::fabs(scale_x - 1.f) > 0.01f || std::fabs(scale_y - 1.f) > 0.01f) {
+  if (std::abs(scale_x - 1.f) > 0.01f || std::abs(scale_y - 1.f) > 0.01f) {
     int scaled_w = int(sdl_src->w * scale_x);
     int scaled_h = int(sdl_src->h * scale_y);
-    SDL_Surface_unique_ptr sdl_scaled{SDL_CreateRGBSurfaceWithFormat(
-        0, scaled_w, scaled_h, sdl_src->format->BitsPerPixel,
-        sdl_src->format->format)};
-    SDL_BlitScaled(sdl_src.get(), nullptr, sdl_scaled.get(), nullptr);
+    SDL_Surface_unique_ptr sdl_scaled{
+        SDL_CreateSurface(scaled_w, scaled_h, sdl_src->format)};
+    SDL_BlitSurfaceScaled(sdl_src.get(), nullptr, sdl_scaled.get(), nullptr,
+                          SDL_SCALEMODE_NEAREST);
 
     int hot_x = centered ? scaled_w / 2 : 0;
     int hot_y = centered ? scaled_h / 2 : 0;
@@ -205,7 +207,7 @@ void CursorManager::hw_apply_cursor(const Surface& source_surface,
 
   if (active_cursor_) {
     SDL_SetCursor(active_cursor_.get());
-    SDL_ShowCursor(SDL_ENABLE);
+    SDL_ShowCursor();
   }
 }
 
@@ -219,7 +221,7 @@ void CursorManager::software_mode(bool enable) {
     // Our own renderer takes over, drop any installed SDL cursor
     // and hide the OS pointer.
     hw_free_cursor();
-    SDL_ShowCursor(SDL_DISABLE);
+    SDL_HideCursor();
   }
   else {
     // Go back to the hardware cursor and rebuild whatever cursor should
@@ -250,11 +252,11 @@ void CursorManager::set_relative_mouse_mode(bool enable) {
   if (enable) {
     // Store cursor position before locking.
     SDL_GetGlobalMouseState(&relative_mode_origin_x_, &relative_mode_origin_y_);
-    SDL_SetRelativeMouseMode(SDL_TRUE);
+    SDL_SetWindowRelativeMouseMode(window_, true);
   }
   else {
     // Restore the cursor to its pre-drag position when leaving relative mode.
-    SDL_SetRelativeMouseMode(SDL_FALSE);
+    SDL_SetWindowRelativeMouseMode(window_, false);
     SDL_WarpMouseGlobal(relative_mode_origin_x_, relative_mode_origin_y_);
   }
 }

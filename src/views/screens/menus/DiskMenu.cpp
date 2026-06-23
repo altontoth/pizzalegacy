@@ -30,7 +30,6 @@ DiskMenu::DiskMenu(GameContext& context, GameState& state)
   add_menu_item(std::make_unique<TextMenuItem>(
       context, "Exit",
       [&state, &context] {
-        context.popup->palette_handle({38});
         context.popup->origin(ViewPoint{26, 40});
         context.popup->create<ConfirmPopup>("Are you sure?",
                                             [&state](bool sure) {

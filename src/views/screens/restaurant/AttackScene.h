@@ -69,9 +69,6 @@ public:
   bool active() const { return attack_active_; }
   bool has_defender() const { return defender_.has_value(); }
 
-  void fire_attacker_weapon();
-  void fire_defender_weapon();
-
   // Resume time, clear status, mark the scene ended.
   void finish_scene();
 
@@ -93,11 +90,9 @@ private:
   void destroy_furniture(PlacedFurniture& pf, bool refresh_view = true);
   // Centre of the flame sprite this frame
   WorldPoint flame_probe_point(const AttackSprite& s) const;
-  void fire_weapon(AttackSprite& s, bool held, bool edge);
+  void fire_weapon(AttackSprite& s, bool held);
+  void update_attack_sound();
   void tick_weapon(AttackSprite& s, bool advance_anim);
-  // Per-weapon tick handlers, dispatched from tick_weapon. Flame and chemicals
-  // tick_chemicals is static (only mutates the passed sprite); flame
-  // also probes furniture for damage, and bazooka/bomb touch the view/state.
   void tick_flamethrower(AttackSprite& s);
   static void tick_chemicals(AttackSprite& s);
   void tick_bazooka(AttackSprite& s, bool advance_anim);
@@ -116,6 +111,8 @@ private:
   // Police escape window, 0 = none. Counts up to the arrest once police_coming
   // fires, unless the attacker escapes out the door first.
   int police_window_{0};
+  // The original stops the break-in music as soon as a weapon first fires.
+  bool break_in_music_stopped_{false};
   int attack_elapsed_ticks_{0};
   core::item::Item attack_weapon_{};
   Money destroyed_furniture_value_;

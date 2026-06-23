@@ -17,8 +17,8 @@ public:
   CursorManager(VgaManager* vga,
                 int display_height = DisplayConstants::LOGICAL_HEIGHT);
 
-  void base_cursor_mode(CursorMode mode) override;
-  CursorMode base_cursor_mode() const override;
+  void base_cursor_mode(UiMode mode) override;
+  UiMode base_cursor_mode() const override;
   void custom_cursor(const Surface& surface, bool centered = true) override;
   void clear_custom_cursor() override;
   void hide_cursor() override;
@@ -35,6 +35,8 @@ public:
 
   void set_relative_mouse_mode(bool enable) override;
   bool relative_mouse_mode() const { return relative_mouse_mode_; }
+
+  void window(SDL_Window* window) { window_ = window; }
 
   void cursor_position(ScreenPoint p) { cursor_pos_ = p; }
   ScreenPoint cursor_position() const { return cursor_pos_; }
@@ -55,7 +57,7 @@ private:
   std::optional<gfx::Surface> custom_cursor_surface_;
   std::optional<gfx::Surface> scaled_custom_surface_;
   SDL_Cursor_unique_ptr active_cursor_;
-  CursorMode base_mode_{CursorMode::GAME};
+  UiMode base_mode_{UiMode::Game};
   bool cursor_hidden_{false};
   bool custom_cursor_active_{false};
   float last_scale_x_{1.0f};
@@ -66,6 +68,8 @@ private:
   ScreenPoint cursor_pos_;
   bool relative_mouse_mode_{false};
   // Saved cursor position for restoring after relative mouse mode.
-  int relative_mode_origin_x_{0};
-  int relative_mode_origin_y_{0};
+  float relative_mode_origin_x_{0.f};
+  float relative_mode_origin_y_{0.f};
+  // Window that relative mouse mode is scoped to
+  SDL_Window* window_{nullptr};
 };

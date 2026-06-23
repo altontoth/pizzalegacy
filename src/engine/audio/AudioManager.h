@@ -2,13 +2,14 @@
 #include <cstdint>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <vector>
 
 #if PLEGACY_ENABLE_MUSIC
 struct ADL_MIDIPlayer;
 #endif
 
-using SDL_AudioDeviceID = unsigned int;
+struct SDL_AudioStream;
 
 namespace audio {
 
@@ -73,6 +74,11 @@ enum class MusicId {
   COUNT
 };
 
+enum class LoopMode {
+  Once,
+  Loop,
+};
+
 struct SoundEffect {
   // Signed 16-bit stereo at 49716 Hz:
   std::vector<int16_t> samples;
@@ -90,8 +96,10 @@ public:
   AudioManager(const AudioManager&) = delete;
   AudioManager& operator=(const AudioManager&) = delete;
 
-  void play_sound(SoundId id, bool loop = false);
-  void play_music(MusicId id, bool loop = true);
+  void play_sound(SoundId id, LoopMode loop = LoopMode::Once);
+  void play_sound_if_changed(SoundId id, LoopMode loop = LoopMode::Once);
+  void stop_current_indexed_sound();
+  void play_music(MusicId id, LoopMode loop = LoopMode::Loop);
   void stop_music();
   void stop_sound(SoundId id);
 
@@ -110,7 +118,8 @@ public:
   bool is_playing() const;
 
 private:
-  static void audio_callback(void* userdata, uint8_t* stream, int len);
+  static void audio_callback(void* userdata, SDL_AudioStream* stream,
+                             int additional_amount, int total_amount);
   void fill_audio_buffer(int16_t* buffer, int sample_count);
   void mix_music(int16_t* buffer, int sample_count);
   void mix_sounds(int16_t* buffer, int sample_count);
@@ -128,8 +137,12 @@ private:
 
   std::vector<std::unique_ptr<SoundEffect>> sounds_;
   mutable std::mutex sound_mutex_;
+  // Selection for play_sound_if_changed.
+  std::optional<SoundId> current_indexed_sound_;
 
-  SDL_AudioDeviceID audio_device_{0};
+  SDL_AudioStream* audio_stream_{nullptr};
+  // Temporary buffer for mixing audio before submitting to SDL.
+  std::vector<int16_t> output_buffer_;
   static constexpr int SAMPLE_RATE = 44100;
   static constexpr int CHANNELS = 2;
 

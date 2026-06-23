@@ -19,6 +19,7 @@
 #include <vector>
 
 union SDL_Event;
+struct SDL_Window;
 
 namespace input {
 
@@ -58,6 +59,8 @@ public:
   void process(const SDL_Event& ev);
   void tick();
 
+  void window(SDL_Window* window) noexcept { window_ = window; }
+
   // Listener registration (delivered in order until consumed)
   [[nodiscard]] ListenerToken register_listener(InputListener& l);
   void unregister_listener(InputListener& l);
@@ -69,7 +72,6 @@ public:
 
   // Polling
   bool is_pressed(Action a) const noexcept;
-  bool just_pressed(Action a) const noexcept;
   Mod modifiers() const noexcept { return mods_down_; }
   bool modifier_down(Mod m) const noexcept { return has(mods_down_, m); }
   std::pair<float, float> axis(Action a) const noexcept;
@@ -100,9 +102,8 @@ private:
   std::unordered_set<Key> keys_down_{};
   Mod mods_down_{Mod::None};
 
-  // Action state (held + edge detection)
+  // Action state (held)
   std::unordered_set<Action> actions_down_{};
-  std::unordered_set<Action> actions_just_pressed_{};
 
   // Axis state: aggregated per action, normalized to [-1, +1]
   std::unordered_map<Action, std::pair<float, float>> axes_{};
@@ -110,9 +111,12 @@ private:
   // Gamepad analog-stick state, merged into axes_ by rebuild_axes(). Keyed by
   // action, populated from gamepad_stick_bindings_ on controller axis events.
   std::unordered_map<Action, std::pair<float, float>> gamepad_axes_{};
-  // Connected game controller (SDL_GameController*), or nullptr if none.
+  // Connected gamepad (SDL_Gamepad*), or nullptr if none.
   // Stored as void* to keep SDL out of this header.
   void* gamepad_{nullptr};
+
+  // The SDL_Window that owns text input focus
+  SDL_Window* window_{nullptr};
 
   // Binding tables
   struct BindingHash {

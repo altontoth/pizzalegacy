@@ -335,7 +335,7 @@ void CityView::update_city_sound() {
 
   stop_city_sound();
   current_city_sound_ = desired;
-  context_.audio->play_sound(desired, true);
+  context_.audio->play_sound(desired, audio::LoopMode::Loop);
 }
 
 void CityView::stop_city_sound() {

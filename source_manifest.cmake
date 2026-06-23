@@ -254,7 +254,6 @@ set(ENGINE_PLEGACY_SOURCES
     src/engine/ui/CursorManager.cpp
     src/engine/ui/InteractionManager.cpp
     src/Main.cpp
-    third_party/savepng/savepng.c
     third_party/tinyfiledialogs/tinyfiledialogs.c
 )
 set(PLEGACY_HEADERS
@@ -441,6 +440,7 @@ set(PLEGACY_HEADERS
     src/engine/Renderer.h
     src/engine/RendererManager.h
     src/engine/SDLContext.h
+    src/engine/SDLSession.h
     src/engine/SDL_include.h
     src/engine/Size.h
     src/engine/TypedPoint.h
@@ -475,6 +475,7 @@ set(PLEGACY_HEADERS
     src/engine/ui/InteractionManager.h
     src/engine/ui/TooltipManager.h
     src/engine/ui/TooltipRequest.h
+    src/engine/ui/UiMode.h
     src/factories/CharacterFactory.h
     src/factories/CityFactory.h
     src/factories/CommercialFactory.h
@@ -660,7 +661,6 @@ set(PLEGACY_HEADERS
     src/views/viewers/VgaViewer.h
     third_party/magic_enum/magic_enum.hpp
     third_party/nlohmann/json.hpp
-    third_party/savepng/savepng.h
     third_party/tinyfiledialogs/tinyfiledialogs.h
     third_party/utfcpp/utf8.h
     third_party/utfcpp/utf8/checked.h

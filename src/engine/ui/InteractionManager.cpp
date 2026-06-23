@@ -17,8 +17,8 @@ namespace views::ui {
 // Handles items_ being modified during iteration (callbacks can destroy items).
 void InteractionManager::process(const SDL_Event& e) {
   switch (e.type) {
-  case SDL_MOUSEBUTTONDOWN: {
-    ScreenPoint sp{e.button.x, e.button.y};
+  case SDL_EVENT_MOUSE_BUTTON_DOWN: {
+    ScreenPoint sp{static_cast<int>(e.button.x), static_cast<int>(e.button.y)};
     ViewPoint p = screen_to_view_point(sp);
     MouseButton btn = to_button(e);
 
@@ -103,8 +103,8 @@ void InteractionManager::process(const SDL_Event& e) {
     break;
   }
 
-  case SDL_MOUSEBUTTONUP: {
-    ScreenPoint sp{e.button.x, e.button.y};
+  case SDL_EVENT_MOUSE_BUTTON_UP: {
+    ScreenPoint sp{static_cast<int>(e.button.x), static_cast<int>(e.button.y)};
     ViewPoint p = screen_to_view_point(sp);
     MouseButton btn = to_button(e);
     const uint8_t clicks = e.button.clicks;
@@ -198,7 +198,7 @@ void InteractionManager::process(const SDL_Event& e) {
     break;
   }
 
-  case SDL_MOUSEWHEEL: {
+  case SDL_EVENT_MOUSE_WHEEL: {
     ViewPoint p = last_logical_mouse_pos_;
 
     ItemID normal_id = 0;
@@ -224,7 +224,7 @@ void InteractionManager::process(const SDL_Event& e) {
       }
     }
 
-    int scroll_delta = e.wheel.y;
+    int scroll_delta = static_cast<int>(e.wheel.y);
 
     if (normal_id != 0) {
       auto* item = lookup_item(normal_id);
