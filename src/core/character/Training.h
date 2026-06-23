@@ -8,15 +8,27 @@
 
 #include <stdint.h>
 #include <string>
+#include <string_view>
 #include <vector>
 #include "core/finance/Money.h"
 
 enum class SkillType { NONE, COOKING, SERVING, MANAGEMENT };
 
+struct TrainingData {
+  std::string_view name;
+  SkillType type;
+  int duration;  // days
+  int min_level; // score requirement
+  Money cost;
+  int score_increase; // skill bonus
+  int pizzas_day_increase;
+};
+
 class Training {
 public:
   Training(const std::string& name, SkillType type, int duration, int min_level,
            Money cost, int score_increase, int pizzas_day_increase);
+  explicit Training(const TrainingData& data);
 
   // Use the default copy semantics.
   Training(const Training&) = default;

@@ -6,22 +6,12 @@
 
 #include "core/restaurant/Furniture.h"
 
-Furniture::Furniture(
-    FurnitureType type, int u1, int quality, int supplier,
-    const std::string& name, int price, const std::vector<int>& bobs,
-    FurnitureCategory cat, int u2, int capacity, int bake_time,
-    PlacementLayer placement,
-    const std::array<int, static_cast<std::size_t>(ConsumerType::Count)>&
-        popularity)
-    : type_(type), u1_(u1), quality_(quality), supplier_(supplier), name_(name),
-      price_(price), bobs_(bobs), category_(cat), u2_(u2), capacity_(capacity),
-      bake_time_(bake_time), placement_layer_(placement),
-      popularity_(popularity) {
-
-  if (bobs_.size() != 4) {
-    throw std::invalid_argument("Bobs vector must contain exactly 4 elements.");
-  }
-}
+Furniture::Furniture(const FurnitureData& d)
+    : type_(d.type), u1_(d.u1), quality_(d.quality), supplier_(d.supplier),
+      name_(d.name), price_(d.price), bobs_(d.bobs.begin(), d.bobs.end()),
+      category_(d.category), u2_(d.u2), capacity_(d.capacity),
+      bake_time_(d.bake_time), placement_layer_(d.placement_layer),
+      popularity_(d.popularity) {}
 
 int Furniture::popularity(ConsumerType consumer) const {
   if (consumer >= ConsumerType::Count) {

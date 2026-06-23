@@ -22,6 +22,12 @@ Ingredient::Ingredient(IngredientType type, std::string_view name,
       calories_(calories), intensity_(intensity), fat_(fat), sweet_(sweet),
       salty_(salty), hot_(hot), category_(category), bobs_(std::move(bobs)) {}
 
+Ingredient::Ingredient(const IngredientData& d)
+    : Ingredient(d.type, to_string(d.type), d.weight_large, d.weight_medium,
+                 d.weight_small, d.calories, d.intensity, d.fat, d.sweet,
+                 d.salty, d.hot, d.category,
+                 std::vector<int>(d.bobs.begin(), d.bobs.end())) {}
+
 std::string Ingredient::name() const { return name_; }
 
 int Ingredient::bob_state(int state) const { return bobs_[state]; }

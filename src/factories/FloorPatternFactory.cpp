@@ -34,9 +34,9 @@ void FloorPatternFactory::preload_from_path(const std::string& path) {
 const std::vector<FloorPattern>& FloorPatternFactory::create(SupplierID sid) {
   ensure_loaded();
   auto it = by_supplier_.find(sid);
-  static const std::vector<FloorPattern> kEmpty;
+  static const std::vector<FloorPattern> empty;
   if (it == by_supplier_.end()) {
-    return kEmpty;
+    return empty;
   }
   return it->second;
 }

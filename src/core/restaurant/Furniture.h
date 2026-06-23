@@ -9,6 +9,7 @@
 #include <array>
 #include <cstdint>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "core/Demographics.h"
@@ -60,15 +61,25 @@ enum class PlacementLayer : uint8_t {
   Top = 3,
 };
 
+struct FurnitureData {
+  FurnitureType type;
+  int u1; // unknown
+  int quality;
+  int supplier;
+  std::string_view name;
+  int price;
+  std::array<int, 4> bobs;
+  FurnitureCategory category;
+  int u2; // unknown
+  int capacity;
+  int bake_time;
+  PlacementLayer placement_layer;
+  std::array<int, static_cast<std::size_t>(ConsumerType::Count)> popularity;
+};
+
 class Furniture {
 public:
-  // Constructor
-  Furniture(
-      FurnitureType type, int u1, int q, int supplier, const std::string& name,
-      int price, const std::vector<int>& bobs, FurnitureCategory cat, int u2,
-      int capacity, int bake_time, PlacementLayer placement_layer,
-      const std::array<int, static_cast<std::size_t>(ConsumerType::Count)>&
-          popularity);
+  explicit Furniture(const FurnitureData& data);
 
   FurnitureType type() const { return type_; }
   int u1() const { return u1_; }

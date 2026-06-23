@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <array>
 #include <cstddef>
 #include <string>
 #include <vector>
@@ -14,12 +15,28 @@
 
 namespace core::food {
 
+struct IngredientData {
+  IngredientType type;
+  int weight_large;
+  int weight_medium;
+  int weight_small;
+  int calories;
+  int intensity;
+  int fat;
+  int sweet;
+  int salty;
+  int hot;
+  IngredientCategory category;
+  std::array<int, 12> bobs;
+};
+
 class Ingredient {
 public:
   Ingredient(IngredientType type, std::string_view name, int weight_large,
              int weight_medium, int weight_small, int calories, int intensity,
              int fat, int sweet, int salty, int hot,
              IngredientCategory category, std::vector<int> bobs);
+  explicit Ingredient(const IngredientData& data);
   IngredientType type() const { return type_; }
   std::string name() const;
   bool can_be_chopped() const;

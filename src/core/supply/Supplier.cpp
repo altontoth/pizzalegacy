@@ -8,14 +8,11 @@
 
 #include <cstddef>
 
-Supplier::Supplier(SupplierID id, SupplierType type, uint8_t quality,
-                   std::string name, uint16_t price_per_tile,
-                   std::array<uint8_t, 6> customer_ratings,
-                   uint16_t introduction_year, uint8_t u2, uint8_t u3)
-    : id_(id), type_(type), quality_(quality), name_(name),
-      price_per_tile_(static_cast<int64_t>(price_per_tile * 100)),
-      customer_ratings_(customer_ratings),
-      introduction_year_(introduction_year), u2_(u2), u3_(u3) {}
+Supplier::Supplier(const SupplierData& d)
+    : id_(d.id), type_(d.type), quality_(d.quality), name_(d.name),
+      price_per_tile_(static_cast<int64_t>(d.price_per_tile * 100)),
+      customer_ratings_(d.customer_ratings),
+      introduction_year_(d.introduction_year), u2_(d.u2), u3_(d.u3) {}
 
 uint8_t Supplier::quality() const { return quality_; }
 

@@ -5,695 +5,834 @@
  */
 
 #include "factories/IngredientFactory.h"
-#include <memory>
+
+#include <array>
+
 #include "core/food/Ingredient.h"
 #include "engine/Fatal.h"
-#include "engine/Logger.h"
+#include "engine/FormatCompat.h"
 
 using namespace core::food;
+
+namespace {
+
+// bobs holds 4 orientations for each of the 3 sizes: the first row is the
+// largest size, the second medium, the third smallest. The number of distinct
+// frames per row reflects how many rotations that size actually has.
+constexpr auto ingredients = std::to_array<IngredientData>({
+    {.type = IngredientType::TOMATOES,
+     .weight_large = 20,
+     .weight_medium = 10,
+     .weight_small = 5,
+     .calories = 19,
+     .intensity = 3,
+     .fat = 1,
+     .sweet = 0,
+     .salty = 2,
+     .hot = 2,
+     .category = IngredientCategory::VEGETABLES,
+     .bobs = {0, 0, 0, 0, 1, 2, 3, 4, 5, 5, 5, 5}},
+    {.type = IngredientType::OLIVES,
+     .weight_large = 5,
+     .weight_medium = 5,
+     .weight_small = 5,
+     .calories = 34,
+     .intensity = 4,
+     .fat = 2,
+     .sweet = 0,
+     .salty = 9,
+     .hot = 4,
+     .category = IngredientCategory::VEGETABLES,
+     .bobs = {6, 7, 6, 7, 6, 7, 6, 7, 6, 7, 6, 7}},
+    {.type = IngredientType::PEPPERS,
+     .weight_large = 20,
+     .weight_medium = 10,
+     .weight_small = 5,
+     .calories = 28,
+     .intensity = 3,
+     .fat = 3,
+     .sweet = 0,
+     .salty = 5,
+     .hot = 3,
+     .category = IngredientCategory::VEGETABLES,
+     .bobs = {8, 8, 8, 8, 9, 10, 9, 10, 11, 11, 11, 11}},
+    {.type = IngredientType::ASPARAGUS,
+     .weight_large = 60,
+     .weight_medium = 20,
+     .weight_small = 5,
+     .calories = 20,
+     .intensity = 2,
+     .fat = 2,
+     .sweet = 0,
+     .salty = 3,
+     .hot = 2,
+     .category = IngredientCategory::VEGETABLES,
+     .bobs = {12, 15, 12, 15, 16, 17, 18, 19, 20, 20, 20, 20}},
+    {.type = IngredientType::COURGETTES,
+     .weight_large = 20,
+     .weight_medium = 10,
+     .weight_small = 5,
+     .calories = 28,
+     .intensity = 2,
+     .fat = 2,
+     .sweet = 0,
+     .salty = 4,
+     .hot = 2,
+     .category = IngredientCategory::VEGETABLES,
+     .bobs = {21, 21, 21, 21, 22, 23, 24, 25, 26, 26, 26, 26}},
+    {.type = IngredientType::CARROTS,
+     .weight_large = 40,
+     .weight_medium = 20,
+     .weight_small = 5,
+     .calories = 120,
+     .intensity = 2,
+     .fat = 1,
+     .sweet = 1,
+     .salty = 2,
+     .hot = 1,
+     .category = IngredientCategory::VEGETABLES,
+     .bobs = {27, 28, 29, 30, 31, 31, 31, 31, 32, 32, 32, 32}},
+    {.type = IngredientType::CUCUMBERS,
+     .weight_large = 70,
+     .weight_medium = 20,
+     .weight_small = 10,
+     .calories = 10,
+     .intensity = 5,
+     .fat = 0,
+     .sweet = 1,
+     .salty = 1,
+     .hot = 1,
+     .category = IngredientCategory::VEGETABLES,
+     .bobs = {33, 34, 35, 36, 37, 37, 37, 37, 38, 38, 38, 38}},
+    {.type = IngredientType::RADISHES,
+     .weight_large = 10,
+     .weight_medium = 5,
+     .weight_small = 8,
+     .calories = 90,
+     .intensity = 5,
+     .fat = 0,
+     .sweet = 0,
+     .salty = 2,
+     .hot = 1,
+     .category = IngredientCategory::VEGETABLES,
+     .bobs = {39, 40, 41, 42, 43, 43, 43, 43, 44, 44, 44, 44}},
+    {.type = IngredientType::PEAS,
+     .weight_large = 15,
+     .weight_medium = 10,
+     .weight_small = 5,
+     .calories = 93,
+     .intensity = 2,
+     .fat = 2,
+     .sweet = 0,
+     .salty = 2,
+     .hot = 2,
+     .category = IngredientCategory::VEGETABLES,
+     .bobs = {45, 46, 45, 46, 47, 47, 47, 47, 48, 48, 48, 48}},
+    {.type = IngredientType::BROCCOLI,
+     .weight_large = 10,
+     .weight_medium = 5,
+     .weight_small = 3,
+     .calories = 33,
+     .intensity = 2,
+     .fat = 1,
+     .sweet = 0,
+     .salty = 1,
+     .hot = 1,
+     .category = IngredientCategory::VEGETABLES,
+     .bobs = {49, 50, 51, 52, 53, 53, 53, 53, 54, 54, 54, 54}},
+    {.type = IngredientType::POTATOES,
+     .weight_large = 30,
+     .weight_medium = 10,
+     .weight_small = 5,
+     .calories = 85,
+     .intensity = 2,
+     .fat = 3,
+     .sweet = 0,
+     .salty = 3,
+     .hot = 1,
+     .category = IngredientCategory::VEGETABLES,
+     .bobs = {55, 56, 55, 56, 57, 58, 57, 58, 59, 59, 59, 59}},
+    {.type = IngredientType::CHILLIES,
+     .weight_large = 30,
+     .weight_medium = 5,
+     .weight_small = 2,
+     .calories = 32,
+     .intensity = 5,
+     .fat = 3,
+     .sweet = 0,
+     .salty = 5,
+     .hot = 7,
+     .category = IngredientCategory::VEGETABLES,
+     .bobs = {60, 61, 62, 63, 64, 64, 64, 64, 65, 65, 65, 65}},
+    {.type = IngredientType::SPINACH,
+     .weight_large = 10,
+     .weight_medium = 5,
+     .weight_small = 5,
+     .calories = 34,
+     .intensity = 4,
+     .fat = 2,
+     .sweet = 1,
+     .salty = 4,
+     .hot = 1,
+     .category = IngredientCategory::VEGETABLES,
+     .bobs = {66, 67, 68, 69, 70, 70, 70, 70, 71, 71, 71, 71}},
+    {.type = IngredientType::SALAD,
+     .weight_large = 6,
+     .weight_medium = 3,
+     .weight_small = 1,
+     .calories = 15,
+     .intensity = 2,
+     .fat = 0,
+     .sweet = 0,
+     .salty = 0,
+     .hot = 1,
+     .category = IngredientCategory::VEGETABLES,
+     .bobs = {72, 73, 74, 75, 76, 76, 76, 76, 77, 77, 77, 77}},
+    {.type = IngredientType::LEEKS,
+     .weight_large = 40,
+     .weight_medium = 10,
+     .weight_small = 5,
+     .calories = 22,
+     .intensity = 5,
+     .fat = 1,
+     .sweet = 0,
+     .salty = 1,
+     .hot = 1,
+     .category = IngredientCategory::VEGETABLES,
+     .bobs = {78, 79, 80, 81, 82, 82, 82, 82, 83, 83, 83, 83}},
+    {.type = IngredientType::ONIONS,
+     .weight_large = 30,
+     .weight_medium = 10,
+     .weight_small = 5,
+     .calories = 45,
+     .intensity = 6,
+     .fat = 1,
+     .sweet = 0,
+     .salty = 2,
+     .hot = 4,
+     .category = IngredientCategory::VEGETABLES,
+     .bobs = {84, 85, 86, 87, 88, 88, 88, 88, 89, 89, 89, 89}},
+    {.type = IngredientType::GARLIC,
+     .weight_large = 40,
+     .weight_medium = 10,
+     .weight_small = 5,
+     .calories = 140,
+     .intensity = 4,
+     .fat = 2,
+     .sweet = 0,
+     .salty = 4,
+     .hot = 6,
+     .category = IngredientCategory::VEGETABLES,
+     .bobs = {90, 91, 92, 93, 94, 94, 94, 94, 95, 95, 95, 95}},
+    {.type = IngredientType::SWEET_CORN,
+     .weight_large = 250,
+     .weight_medium = 20,
+     .weight_small = 5,
+     .calories = 107,
+     .intensity = 4,
+     .fat = 2,
+     .sweet = 0,
+     .salty = 5,
+     .hot = 7,
+     .category = IngredientCategory::VEGETABLES,
+     .bobs = {96, 97, 98, 99, 100, 101, 100, 101, 102, 102, 102, 102}},
+    {.type = IngredientType::CAULIFLOWER,
+     .weight_large = 30,
+     .weight_medium = 10,
+     .weight_small = 5,
+     .calories = 28,
+     .intensity = 2,
+     .fat = 3,
+     .sweet = 0,
+     .salty = 6,
+     .hot = 2,
+     .category = IngredientCategory::VEGETABLES,
+     .bobs = {103, 104, 105, 106, 107, 107, 107, 107, 108, 108, 108, 108}},
+    {.type = IngredientType::MUSHROOMS,
+     .weight_large = 20,
+     .weight_medium = 10,
+     .weight_small = 5,
+     .calories = 24,
+     .intensity = 4,
+     .fat = 2,
+     .sweet = 0,
+     .salty = 3,
+     .hot = 1,
+     .category = IngredientCategory::VEGETABLES,
+     .bobs = {127, 128, 129, 130, 113, 114, 115, 116, 117, 117, 117, 117}},
+    {.type = IngredientType::CHANTERELLES,
+     .weight_large = 15,
+     .weight_medium = 8,
+     .weight_small = 5,
+     .calories = 22,
+     .intensity = 4,
+     .fat = 2,
+     .sweet = 0,
+     .salty = 3,
+     .hot = 1,
+     .category = IngredientCategory::VEGETABLES,
+     .bobs = {118, 119, 120, 121, 122, 123, 124, 125, 126, 126, 126, 126}},
+    {.type = IngredientType::W_MUSHROOMS,
+     .weight_large = 30,
+     .weight_medium = 10,
+     .weight_small = 10,
+     .calories = 34,
+     .intensity = 4,
+     .fat = 2,
+     .sweet = 0,
+     .salty = 3,
+     .hot = 2,
+     .category = IngredientCategory::VEGETABLES,
+     .bobs = {109, 110, 111, 112, 113, 114, 115, 116, 117, 117, 117, 117}},
+    {.type = IngredientType::SALAMI,
+     .weight_large = 20,
+     .weight_medium = 6,
+     .weight_small = 3,
+     .calories = 180,
+     .intensity = 4,
+     .fat = 5,
+     .sweet = 0,
+     .salty = 3,
+     .hot = 3,
+     .category = IngredientCategory::MEAT,
+     .bobs = {131, 131, 131, 131, 132, 133, 132, 133, 134, 134, 134, 134}},
+    {.type = IngredientType::BACON,
+     .weight_large = 40,
+     .weight_medium = 20,
+     .weight_small = 5,
+     .calories = 168,
+     .intensity = 4,
+     .fat = 9,
+     .sweet = 0,
+     .salty = 1,
+     .hot = 3,
+     .category = IngredientCategory::MEAT,
+     .bobs = {135, 136, 135, 136, 137, 138, 137, 138, 139, 139, 139, 139}},
+    {.type = IngredientType::HAM,
+     .weight_large = 40,
+     .weight_medium = 20,
+     .weight_small = 10,
+     .calories = 234,
+     .intensity = 4,
+     .fat = 7,
+     .sweet = 0,
+     .salty = 1,
+     .hot = 2,
+     .category = IngredientCategory::MEAT,
+     .bobs = {140, 141, 140, 141, 142, 143, 142, 143, 144, 144, 144, 144}},
+    {.type = IngredientType::BEEF,
+     .weight_large = 60,
+     .weight_medium = 20,
+     .weight_small = 10,
+     .calories = 253,
+     .intensity = 4,
+     .fat = 6,
+     .sweet = 0,
+     .salty = 2,
+     .hot = 3,
+     .category = IngredientCategory::MEAT,
+     .bobs = {145, 146, 145, 146, 147, 147, 147, 147, 148, 148, 148, 148}},
+    {.type = IngredientType::PORK,
+     .weight_large = 60,
+     .weight_medium = 20,
+     .weight_small = 10,
+     .calories = 305,
+     .intensity = 4,
+     .fat = 6,
+     .sweet = 0,
+     .salty = 3,
+     .hot = 3,
+     .category = IngredientCategory::MEAT,
+     .bobs = {149, 150, 149, 150, 147, 147, 147, 147, 148, 148, 148, 148}},
+    {.type = IngredientType::CHICKEN,
+     .weight_large = 150,
+     .weight_medium = 20,
+     .weight_small = 10,
+     .calories = 144,
+     .intensity = 3,
+     .fat = 7,
+     .sweet = 0,
+     .salty = 1,
+     .hot = 2,
+     .category = IngredientCategory::MEAT,
+     .bobs = {151, 152, 153, 154, 155, 156, 155, 156, 320, 320, 320, 320}},
+    {.type = IngredientType::MINCEMEAT,
+     .weight_large = 40,
+     .weight_medium = 20,
+     .weight_small = 10,
+     .calories = 213,
+     .intensity = 2,
+     .fat = 7,
+     .sweet = 0,
+     .salty = 2,
+     .hot = 2,
+     .category = IngredientCategory::MEAT,
+     .bobs = {157, 157, 157, 157, 158, 158, 158, 158, 159, 159, 159, 159}},
+    {.type = IngredientType::SAUSAGE,
+     .weight_large = 50,
+     .weight_medium = 20,
+     .weight_small = 10,
+     .calories = 189,
+     .intensity = 6,
+     .fat = 7,
+     .sweet = 0,
+     .salty = 2,
+     .hot = 4,
+     .category = IngredientCategory::MEAT,
+     .bobs = {160, 161, 162, 163, 164, 164, 164, 164, 321, 321, 321, 321}},
+    {.type = IngredientType::SCAMPI,
+     .weight_large = 80,
+     .weight_medium = 30,
+     .weight_small = 10,
+     .calories = 90,
+     .intensity = 5,
+     .fat = 6,
+     .sweet = 0,
+     .salty = 4,
+     .hot = 3,
+     .category = IngredientCategory::MEAT,
+     .bobs = {165, 166, 167, 168, 169, 170, 171, 172, 173, 173, 173, 173}},
+    {.type = IngredientType::SHRIMPS,
+     .weight_large = 40,
+     .weight_medium = 20,
+     .weight_small = 10,
+     .calories = 103,
+     .intensity = 4,
+     .fat = 6,
+     .sweet = 0,
+     .salty = 6,
+     .hot = 2,
+     .category = IngredientCategory::MEAT,
+     .bobs = {174, 174, 174, 174, 175, 175, 175, 175, 173, 173, 173, 173}},
+    {.type = IngredientType::SQUID,
+     .weight_large = 80,
+     .weight_medium = 40,
+     .weight_small = 5,
+     .calories = 107,
+     .intensity = 4,
+     .fat = 6,
+     .sweet = 0,
+     .salty = 7,
+     .hot = 5,
+     .category = IngredientCategory::MEAT,
+     .bobs = {176, 177, 176, 177, 178, 178, 178, 178, 179, 179, 179, 179}},
+    {.type = IngredientType::ANCHOVY,
+     .weight_large = 100,
+     .weight_medium = 20,
+     .weight_small = 5,
+     .calories = 242,
+     .intensity = 5,
+     .fat = 7,
+     .sweet = 0,
+     .salty = 8,
+     .hot = 5,
+     .category = IngredientCategory::MEAT,
+     .bobs = {180, 181, 182, 183, 184, 185, 184, 185, 317, 317, 317, 317}},
+    {.type = IngredientType::SALMON,
+     .weight_large = 80,
+     .weight_medium = 20,
+     .weight_small = 10,
+     .calories = 108,
+     .intensity = 5,
+     .fat = 6,
+     .sweet = 0,
+     .salty = 8,
+     .hot = 4,
+     .category = IngredientCategory::MEAT,
+     .bobs = {195, 196, 195, 196, 197, 198, 197, 198, 318, 318, 318, 318}},
+    {.type = IngredientType::LOBSTER,
+     .weight_large = 250,
+     .weight_medium = 20,
+     .weight_small = 10,
+     .calories = 89,
+     .intensity = 4,
+     .fat = 4,
+     .sweet = 0,
+     .salty = 7,
+     .hot = 5,
+     .category = IngredientCategory::MEAT,
+     .bobs = {199, 199, 199, 199, 200, 201, 200, 201, 202, 203, 204, 205}},
+    {.type = IngredientType::CAVIAR,
+     .weight_large = 50,
+     .weight_medium = 20,
+     .weight_small = 10,
+     .calories = 253,
+     .intensity = 9,
+     .fat = 4,
+     .sweet = 0,
+     .salty = 9,
+     .hot = 5,
+     .category = IngredientCategory::MEAT,
+     .bobs = {206, 206, 206, 206, 207, 207, 207, 207, 208, 208, 208, 208}},
+    {.type = IngredientType::COCKLES,
+     .weight_large = 70,
+     .weight_medium = 40,
+     .weight_small = 20,
+     .calories = 72,
+     .intensity = 3,
+     .fat = 5,
+     .sweet = 0,
+     .salty = 6,
+     .hot = 3,
+     .category = IngredientCategory::MEAT,
+     .bobs = {213, 214, 215, 216, 217, 217, 217, 217, 212, 212, 212, 212}},
+    {.type = IngredientType::MUSSELS,
+     .weight_large = 60,
+     .weight_medium = 40,
+     .weight_small = 20,
+     .calories = 82,
+     .intensity = 3,
+     .fat = 5,
+     .sweet = 0,
+     .salty = 6,
+     .hot = 3,
+     .category = IngredientCategory::MEAT,
+     .bobs = {208, 209, 208, 209, 210, 211, 210, 211, 212, 212, 212, 212}},
+    {.type = IngredientType::APPLES,
+     .weight_large = 40,
+     .weight_medium = 10,
+     .weight_small = 5,
+     .calories = 52,
+     .intensity = 4,
+     .fat = 0,
+     .sweet = 4,
+     .salty = 0,
+     .hot = 1,
+     .category = IngredientCategory::FRUIT,
+     .bobs = {219, 220, 219, 220, 221, 221, 221, 221, 319, 319, 319, 319}},
+    {.type = IngredientType::PEARS,
+     .weight_large = 40,
+     .weight_medium = 10,
+     .weight_small = 5,
+     .calories = 59,
+     .intensity = 4,
+     .fat = 0,
+     .sweet = 5,
+     .salty = 0,
+     .hot = 0,
+     .category = IngredientCategory::FRUIT,
+     .bobs = {226, 227, 228, 229, 230, 230, 230, 230, 319, 319, 319, 319}},
+    {.type = IngredientType::MAN_ORANGES,
+     .weight_large = 40,
+     .weight_medium = 20,
+     .weight_small = 10,
+     .calories = 10,
+     .intensity = 5,
+     .fat = 0,
+     .sweet = 3,
+     .salty = 0,
+     .hot = 0,
+     .category = IngredientCategory::FRUIT,
+     .bobs = {237, 237, 237, 237, 238, 239, 240, 241, 236, 236, 236, 236}},
+    {.type = IngredientType::PLUMS,
+     .weight_large = 30,
+     .weight_medium = 20,
+     .weight_small = 10,
+     .calories = 53,
+     .intensity = 3,
+     .fat = 1,
+     .sweet = 3,
+     .salty = 0,
+     .hot = 0,
+     .category = IngredientCategory::FRUIT,
+     .bobs = {242, 243, 242, 243, 244, 245, 244, 245, 246, 246, 246, 246}},
+    {.type = IngredientType::CHERRIES,
+     .weight_large = 20,
+     .weight_medium = 10,
+     .weight_small = 10,
+     .calories = 64,
+     .intensity = 5,
+     .fat = 0,
+     .sweet = 3,
+     .salty = 0,
+     .hot = 1,
+     .category = IngredientCategory::FRUIT,
+     .bobs = {247, 247, 247, 247, 248, 248, 248, 248, 249, 249, 249, 249}},
+    {.type = IngredientType::BANANAS,
+     .weight_large = 100,
+     .weight_medium = 20,
+     .weight_small = 10,
+     .calories = 90,
+     .intensity = 4,
+     .fat = 2,
+     .sweet = 8,
+     .salty = 0,
+     .hot = 1,
+     .category = IngredientCategory::FRUIT,
+     .bobs = {250, 251, 252, 253, 254, 254, 254, 254, 255, 255, 255, 255}},
+    {.type = IngredientType::LEMONS,
+     .weight_large = 30,
+     .weight_medium = 10,
+     .weight_small = 10,
+     .calories = 30,
+     .intensity = 6,
+     .fat = 0,
+     .sweet = 250,
+     .salty = 0,
+     .hot = 2,
+     .category = IngredientCategory::FRUIT,
+     .bobs = {256, 256, 256, 256, 257, 258, 259, 260, 261, 261, 261, 261}},
+    {.type = IngredientType::PINEAPPLE,
+     .weight_large = 80,
+     .weight_medium = 30,
+     .weight_small = 10,
+     .calories = 57,
+     .intensity = 4,
+     .fat = 0,
+     .sweet = 7,
+     .salty = 0,
+     .hot = 1,
+     .category = IngredientCategory::FRUIT,
+     .bobs = {268, 268, 268, 268, 269, 270, 271, 272, 273, 273, 273, 273}},
+    {.type = IngredientType::KIWI,
+     .weight_large = 60,
+     .weight_medium = 20,
+     .weight_small = 10,
+     .calories = 60,
+     .intensity = 4,
+     .fat = 0,
+     .sweet = 6,
+     .salty = 0,
+     .hot = 1,
+     .category = IngredientCategory::FRUIT,
+     .bobs = {274, 274, 274, 274, 275, 276, 277, 278, 279, 279, 279, 279}},
+    {.type = IngredientType::STRAWBERRIES,
+     .weight_large = 20,
+     .weight_medium = 10,
+     .weight_small = 10,
+     .calories = 40,
+     .intensity = 3,
+     .fat = 0,
+     .sweet = 4,
+     .salty = 0,
+     .hot = 1,
+     .category = IngredientCategory::FRUIT,
+     .bobs = {280, 281, 282, 283, 284, 285, 286, 287, 288, 288, 288, 288}},
+    {.type = IngredientType::RASPBERRIES,
+     .weight_large = 20,
+     .weight_medium = 10,
+     .weight_small = 10,
+     .calories = 40,
+     .intensity = 2,
+     .fat = 0,
+     .sweet = 6,
+     .salty = 0,
+     .hot = 1,
+     .category = IngredientCategory::FRUIT,
+     .bobs = {289, 289, 289, 289, 288, 288, 288, 288, 288, 288, 288, 288}},
+    {.type = IngredientType::BLACKBERRIES,
+     .weight_large = 20,
+     .weight_medium = 10,
+     .weight_small = 10,
+     .calories = 44,
+     .intensity = 2,
+     .fat = 0,
+     .sweet = 2,
+     .salty = 0,
+     .hot = 0,
+     .category = IngredientCategory::FRUIT,
+     .bobs = {290, 290, 290, 290, 291, 291, 291, 291, 288, 288, 288, 288}},
+    {.type = IngredientType::GOOSEBERRIES,
+     .weight_large = 40,
+     .weight_medium = 10,
+     .weight_small = 10,
+     .calories = 74,
+     .intensity = 2,
+     .fat = 0,
+     .sweet = 7,
+     .salty = 0,
+     .hot = 0,
+     .category = IngredientCategory::FRUIT,
+     .bobs = {292, 293, 292, 293, 294, 294, 294, 294, 294, 294, 294, 294}},
+    {.type = IngredientType::EGG,
+     .weight_large = 60,
+     .weight_medium = 35,
+     .weight_small = 35,
+     .calories = 167,
+     .intensity = 2,
+     .fat = 2,
+     .sweet = 1,
+     .salty = 0,
+     .hot = 1,
+     .category = IngredientCategory::CHEESE,
+     .bobs = {295, 296, 295, 296, 297, 298, 297, 298, 316, 316, 316, 316}},
+    {.type = IngredientType::MOZZARELLA,
+     .weight_large = 80,
+     .weight_medium = 20,
+     .weight_small = 5,
+     .calories = 200,
+     .intensity = 3,
+     .fat = 6,
+     .sweet = 1,
+     .salty = 6,
+     .hot = 1,
+     .category = IngredientCategory::CHEESE,
+     .bobs = {299, 300, 299, 300, 301, 301, 301, 301, 305, 305, 305, 305}},
+    {.type = IngredientType::PROVOLONE,
+     .weight_large = 100,
+     .weight_medium = 20,
+     .weight_small = 5,
+     .calories = 200,
+     .intensity = 3,
+     .fat = 6,
+     .sweet = 1,
+     .salty = 4,
+     .hot = 1,
+     .category = IngredientCategory::CHEESE,
+     .bobs = {302, 303, 302, 303, 304, 304, 304, 304, 305, 305, 305, 305}},
+    {.type = IngredientType::BEL_PAESE,
+     .weight_large = 100,
+     .weight_medium = 20,
+     .weight_small = 5,
+     .calories = 200,
+     .intensity = 3,
+     .fat = 6,
+     .sweet = 1,
+     .salty = 4,
+     .hot = 1,
+     .category = IngredientCategory::CHEESE,
+     .bobs = {306, 307, 306, 307, 308, 308, 308, 308, 305, 305, 305, 305}},
+    {.type = IngredientType::GORGONZOLA,
+     .weight_large = 100,
+     .weight_medium = 20,
+     .weight_small = 5,
+     .calories = 200,
+     .intensity = 3,
+     .fat = 6,
+     .sweet = 1,
+     .salty = 6,
+     .hot = 3,
+     .category = IngredientCategory::CHEESE,
+     .bobs = {309, 309, 309, 309, 310, 311, 310, 311, 312, 312, 312, 312}},
+    {.type = IngredientType::PAMERINO,
+     .weight_large = 100,
+     .weight_medium = 20,
+     .weight_small = 5,
+     .calories = 200,
+     .intensity = 3,
+     .fat = 6,
+     .sweet = 1,
+     .salty = 6,
+     .hot = 1,
+     .category = IngredientCategory::CHEESE,
+     .bobs = {224, 224, 224, 224, 223, 223, 223, 223, 305, 305, 305, 305}},
+    {.type = IngredientType::PARMESAN,
+     .weight_large = 100,
+     .weight_medium = 20,
+     .weight_small = 5,
+     .calories = 306,
+     .intensity = 4,
+     .fat = 6,
+     .sweet = 1,
+     .salty = 6,
+     .hot = 1,
+     .category = IngredientCategory::CHEESE,
+     .bobs = {313, 314, 315, 225, 223, 223, 223, 223, 305, 305, 305, 305}},
+    {.type = IngredientType::GOATS_CHEESE,
+     .weight_large = 100,
+     .weight_medium = 20,
+     .weight_small = 5,
+     .calories = 170,
+     .intensity = 5,
+     .fat = 6,
+     .sweet = 1,
+     .salty = 6,
+     .hot = 1,
+     .category = IngredientCategory::CHEESE,
+     .bobs = {222, 222, 222, 222, 218, 218, 218, 218, 312, 312, 312, 312}},
+    {.type = IngredientType::PARSLEY,
+     .weight_large = 4,
+     .weight_medium = 2,
+     .weight_small = 1,
+     .calories = 61,
+     .intensity = 10,
+     .fat = 0,
+     .sweet = 1,
+     .salty = 2,
+     .hot = 1,
+     .category = IngredientCategory::CHEESE,
+     .bobs = {13, 14, 186, 187, 188, 188, 188, 188, 267, 267, 267, 267}},
+    {.type = IngredientType::LEMON_BALM,
+     .weight_large = 4,
+     .weight_medium = 2,
+     .weight_small = 1,
+     .calories = 1,
+     .intensity = 14,
+     .fat = 0,
+     .sweet = 1,
+     .salty = 2,
+     .hot = 1,
+     .category = IngredientCategory::CHEESE,
+     .bobs = {189, 190, 191, 192, 188, 188, 188, 188, 267, 267, 267, 267}},
+    {.type = IngredientType::SAGE,
+     .weight_large = 4,
+     .weight_medium = 2,
+     .weight_small = 1,
+     .calories = 46,
+     .intensity = 15,
+     .fat = 0,
+     .sweet = 1,
+     .salty = 1,
+     .hot = 1,
+     .category = IngredientCategory::CHEESE,
+     .bobs = {231, 232, 233, 234, 188, 188, 188, 188, 267, 267, 267, 267}},
+    {.type = IngredientType::GINGER,
+     .weight_large = 4,
+     .weight_medium = 2,
+     .weight_small = 1,
+     .calories = 66,
+     .intensity = 19,
+     .fat = 0,
+     .sweet = 1,
+     .salty = 2,
+     .hot = 1,
+     .category = IngredientCategory::CHEESE,
+     .bobs = {235, 262, 263, 264, 188, 188, 188, 188, 267, 267, 267, 267}},
+    {.type = IngredientType::OREGANO,
+     .weight_large = 4,
+     .weight_medium = 2,
+     .weight_small = 1,
+     .calories = 35,
+     .intensity = 20,
+     .fat = 0,
+     .sweet = 1,
+     .salty = 3,
+     .hot = 1,
+     .category = IngredientCategory::CHEESE,
+     .bobs = {265, 266, 265, 266, 188, 188, 188, 188, 267, 267, 267, 267}},
+});
+
+constexpr std::size_t expected_ingredient_count = [] {
+  std::size_t n = 0;
+  for (const auto& r : ingredient_ranges) {
+    n += static_cast<std::size_t>(r.last) - static_cast<std::size_t>(r.first) +
+         1;
+  }
+  return n;
+}();
+
+static_assert(ingredients.size() == expected_ingredient_count,
+              "ingredients table out of sync with IngredientType enum");
+
+} // namespace
 
 std::unordered_map<int, std::unique_ptr<Ingredient>>
     IngredientFactory::cache_{};
 
 Ingredient* IngredientFactory::create_ingredient(int ingredient_id) {
-  std::unique_ptr<Ingredient> i;
-
-  // Check if the ingredient is already in the cache
+  // Return the cached instance if we already built it.
   auto it = cache_.find(ingredient_id);
   if (it != cache_.end()) {
     return it->second.get();
   }
-  auto ingredient_type = static_cast<IngredientType>(ingredient_id);
 
-  // clang-format off
-  switch (ingredient_type) {
-  case IngredientType::TOMATOES: {
-    // The size of the bobs is expressed as x + y + z
-    // where x = number of rotations at largest size, then medium size then
-    // smallest size. So tomato biggest size is round so rotating doesn't do
-    // anything, then 4 rotations for the half slice, and 1 rotation for the
-    // small blob of tomato again.
-    i = std::make_unique<Ingredient>(IngredientType::TOMATOES, to_string(ingredient_type),
-                                     20, 10, 5, 19, 3, 1, 0, 2, 2,
-                                     IngredientCategory::VEGETABLES,
-                                     std::vector<int>{
-                                       0,0,0,0,
-                                       1,2,3,4,
-                                       5,5,5,5,
-                                     }
-                                   );
-    break;
-  }
-  case IngredientType::OLIVES: {
-    i = std::make_unique<Ingredient>(IngredientType::OLIVES, to_string(ingredient_type),
-                                     5, 5, 5, 34, 4, 2, 0, 9, 4,
-                                     IngredientCategory::VEGETABLES, std::vector<int>{
-                                      6, 7, 6, 7,
-                                      6, 7, 6, 7,
-                                      6, 7, 6, 7,
-                                    });
-    break;
-  }
-  case IngredientType::PEPPERS: {
-    i = std::make_unique<Ingredient>(IngredientType::PEPPERS, to_string(ingredient_type),
-                                     20, 10, 5, 28, 3, 3, 0, 5, 3,
-                                     IngredientCategory::VEGETABLES, std::vector<int>{
-                                      8,8,8,8,
-                                      9,10,9,10,
-                                      11,11,11,11,
-                                    });
-    break;
-  }
-  case IngredientType::ASPARAGUS: {
-    i = std::make_unique<Ingredient>(IngredientType::ASPARAGUS, to_string(ingredient_type),
-                                     60, 20, 5, 20, 2, 2, 0, 3, 2,
-                                     IngredientCategory::VEGETABLES, std::vector<int>{
-                                      12,15,12,15,
-                                      16,17,18,19,
-                                      20,20,20,20,
-                                    });
-    break;
-  }
-  case IngredientType::COURGETTES: {
-    i = std::make_unique<Ingredient>(IngredientType::COURGETTES, to_string(ingredient_type),
-                                     20, 10, 5, 28, 2, 2, 0, 4, 2,
-                                     IngredientCategory::VEGETABLES, std::vector<int>{
-                                      21,21,21,21,
-                                      22,23,24,25,
-                                      26,26,26,26,
-                                    });
-    break;
-  }
-  case IngredientType::CARROTS: {
-    i = std::make_unique<Ingredient>(IngredientType::CARROTS, to_string(ingredient_type),
-                                     40, 20, 5, 120, 2, 1, 1, 2, 1,
-                                     IngredientCategory::VEGETABLES, std::vector<int>{
-                                      27,28,29,30,
-                                      31,31,31,31,
-                                      32,32,32,32,
-                                     });
-    break;
-  }
-  case IngredientType::CUCUMBERS: {
-    i = std::make_unique<Ingredient>(IngredientType::CUCUMBERS, to_string(ingredient_type),
-                                     70, 20, 10, 10, 5, 0, 1, 1, 1,
-                                     IngredientCategory::VEGETABLES, std::vector<int>{
-                                      33,34,35,36,
-                                      37,37,37,37,
-                                      38,38,38,38,
-                                    });
-    break;
-  }
-  case IngredientType::RADISHES: {
-    i = std::make_unique<Ingredient>(IngredientType::RADISHES, to_string(ingredient_type),
-                                     10, 5, 8, 90, 5, 0, 0, 2, 1,
-                                     IngredientCategory::VEGETABLES, std::vector<int>{
-                                      39,40,41,42,
-                                      43,43,43,43,
-                                      44,44,44,44,
-                                    });
-    break;
-  }
-  case IngredientType::PEAS: {
-    i = std::make_unique<Ingredient>(IngredientType::PEAS, to_string(ingredient_type),
-                                     15, 10, 5, 93, 2, 2, 0, 2, 2,
-                                     IngredientCategory::VEGETABLES, std::vector<int>{
-                                      45,46,45,46,
-                                      47,47,47,47,
-                                      48,48,48,48,
-                                    });
-    break;
-  }
-  case IngredientType::BROCCOLI: {
-    i = std::make_unique<Ingredient>(IngredientType::BROCCOLI, to_string(ingredient_type),
-                                     10, 5, 3, 33, 2, 1, 0, 1, 1,
-                                     IngredientCategory::VEGETABLES, std::vector<int>{
-                                      49,50,51,52,
-                                      53,53,53,53,
-                                      54,54,54,54,
-                                    });
-    break;
-  }
-  case IngredientType::POTATOES: {
-    i = std::make_unique<Ingredient>(IngredientType::POTATOES, to_string(ingredient_type),
-                                     30, 10, 5, 85, 2, 3, 0, 3, 1,
-                                     IngredientCategory::VEGETABLES, std::vector<int>{
-                                      55,56,55,56,
-                                      57,58,57,58,
-                                      59,59,59,59,
-                                    });
-    break;
-  }
-  case IngredientType::CHILLIES: {
-    i = std::make_unique<Ingredient>(IngredientType::CHILLIES, to_string(ingredient_type),
-                                     30, 5, 2, 32, 5, 3, 0, 5, 7,
-                                     IngredientCategory::VEGETABLES, std::vector<int>{
-                                      60,61,62,63,
-                                      64,64,64,64,
-                                      65,65,65,65,
-                                    });
-    break;
-  }
-  case IngredientType::SPINACH: {
-    i = std::make_unique<Ingredient>(IngredientType::SPINACH, to_string(ingredient_type),
-                                     10, 5, 5, 34, 4, 2, 1, 4, 1,
-                                     IngredientCategory::VEGETABLES, std::vector<int>{
-                                      66,67,68,69,
-                                      70,70,70,70,
-                                      71,71,71,71,
-                                    });
-    break;
-  }
-  case IngredientType::SALAD: {
-    i = std::make_unique<Ingredient>(IngredientType::SALAD, to_string(ingredient_type),
-                                     6, 3, 1, 15, 2, 0, 0, 0, 1,
-                                     IngredientCategory::VEGETABLES, std::vector<int>{
-                                      72,73,74,75,
-                                      76,76,76,76,
-                                      77,77,77,77,
-                                    });
-    break;
-  }
-  case IngredientType::LEEKS: {
-    i = std::make_unique<Ingredient>(IngredientType::LEEKS, to_string(ingredient_type),
-                                     40, 10, 5, 22, 5, 1, 0, 1, 1,
-                                     IngredientCategory::VEGETABLES, std::vector<int>{
-                                      78,79,80,81,
-                                      82,82,82,82,
-                                      83,83,83,83,
-                                    });
-
-    break;
-  }
-  case IngredientType::ONIONS: {
-    i = std::make_unique<Ingredient>(IngredientType::ONIONS, to_string(ingredient_type),
-                                     30, 10, 5, 45, 6, 1, 0, 2, 4,
-                                     IngredientCategory::VEGETABLES, std::vector<int>{
-                                      84,85,86,87,
-                                      88,88,88,88,
-                                      89,89,89,89,
-                                    });
-    break;
-  }
-  case IngredientType::GARLIC: {
-    i = std::make_unique<Ingredient>(IngredientType::GARLIC, to_string(ingredient_type),
-                                     40, 10, 5, 140, 4, 2, 0, 4, 6,
-                                     IngredientCategory::VEGETABLES, std::vector<int>{
-                                      90,91,92,93,
-                                      94,94,94,94,
-                                      95,95,95,95,
-                                    });
-    break;
-  }
-  case IngredientType::SWEET_CORN: {
-    i = std::make_unique<Ingredient>(IngredientType::SWEET_CORN, to_string(ingredient_type),
-                                     250, 20, 5, 107, 4, 2, 0, 5,
-                                     7, IngredientCategory::VEGETABLES, std::vector<int>{
-                                      96,97,98,99,
-                                      100,101,100,101,
-                                      102,102,102,102,
-                                    });
-    break;
-  }
-  case IngredientType::CAULIFLOWER: {
-    i = std::make_unique<Ingredient>(IngredientType::CAULIFLOWER, to_string(ingredient_type),
-                                     30, 10, 5, 28, 2, 3, 0, 6,
-                                     2, IngredientCategory::VEGETABLES, std::vector<int>{
-                                      103,104,105,106,
-                                      107,107,107,107,
-                                      108,108,108,108,
-                                    });
-    break;
-  }
-  case IngredientType::MUSHROOMS: {
-    i = std::make_unique<Ingredient>(IngredientType::MUSHROOMS, to_string(ingredient_type),
-                                     20, 10, 5, 24, 4, 2, 0, 3, 1,
-                                     IngredientCategory::VEGETABLES, std::vector<int>{
-                                      127,128,129,130,
-                                      113,114,115,116,
-                                      117,117,117,117,
-                                    });
-    break;
-  }
-  case IngredientType::CHANTERELLES: {
-    i = std::make_unique<Ingredient>(IngredientType::CHANTERELLES, to_string(ingredient_type),
-                                     15, 8, 5, 22, 4, 2, 0, 3,
-                                     1, IngredientCategory::VEGETABLES, std::vector<int>{
-                                      118,119,120,121,
-                                      122,123,124,125,
-                                      126,126,126,126,
-                                    });
-    break;
-  }
-  case IngredientType::W_MUSHROOMS: {
-    i = std::make_unique<Ingredient>(IngredientType::W_MUSHROOMS, to_string(ingredient_type),
-                                     30, 10, 10, 34, 4, 2, 0, 3,
-                                     2, IngredientCategory::VEGETABLES, std::vector<int>{
-                                      109,110,111,112,
-                                      113,114,115,116,
-                                      117,117,117,117,
-                                    });
-    break;
-  }
-  case IngredientType::SALAMI: {
-    i = std::make_unique<Ingredient>(IngredientType::SALAMI, to_string(ingredient_type),
-                                     20, 6, 3, 180, 4, 5, 0, 3, 3,
-                                     IngredientCategory::MEAT, std::vector<int>{
-                                       131,131,131,131,
-                                       132,133,132,133,
-                                       134,134,134,134,
-                                      });
-    break;
-  }
-  case IngredientType::BACON: {
-    i = std::make_unique<Ingredient>(IngredientType::BACON, to_string(ingredient_type),
-                                     40, 20, 5, 168, 4, 9, 0, 1, 3,
-                                     IngredientCategory::MEAT, std::vector<int>{
-                                     135,136,135,136,
-                                     137,138,137,138,
-                                     139,139,139,139,
-                                    });
-    break;
-  }
-  case IngredientType::HAM: {
-    i = std::make_unique<Ingredient>(IngredientType::HAM, to_string(ingredient_type),
-                                     40, 20, 10, 234, 4, 7, 0, 1, 2,
-                                     IngredientCategory::MEAT, std::vector<int>{
-                                      140,141,140,141,
-                                      142,143,142,143,
-                                      144,144,144,144,
-                                    });
-    break;
-  }
-  case IngredientType::BEEF: {
-    i = std::make_unique<Ingredient>(IngredientType::BEEF, to_string(ingredient_type),
-                                     60, 20, 10, 253, 4, 6, 0, 2, 3,
-                                     IngredientCategory::MEAT, std::vector<int>{
-                                      145,146,145,146,
-                                      147,147,147,147,
-                                      148,148,148,148,
-                                    });
-    break;
-  }
-  case IngredientType::PORK: {
-    i = std::make_unique<Ingredient>(IngredientType::PORK, to_string(ingredient_type),
-                                     60, 20, 10, 305, 4, 6, 0, 3, 3,
-                                     IngredientCategory::MEAT, std::vector<int>{
-                                      149,150,149,150,
-                                      147,147,147,147,
-                                      148,148,148,148,
-                                    });
-    break;
-  }
-  case IngredientType::CHICKEN: {
-    i = std::make_unique<Ingredient>(IngredientType::CHICKEN, to_string(ingredient_type),
-                                     150, 20, 10, 144, 3, 7, 0, 1, 2,
-                                     IngredientCategory::MEAT, std::vector<int>{
-                                      151,152,153,154,
-                                      155,156,155,156,
-                                      320,320,320,320,
-                                    });
-    break;
-  }
-  case IngredientType::MINCEMEAT: {
-    i = std::make_unique<Ingredient>(IngredientType::MINCEMEAT, to_string(ingredient_type),
-                                     40, 20, 10, 213, 2, 7, 0, 2,
-                                     2, IngredientCategory::MEAT, std::vector<int>{
-                                      157,157,157,157,
-                                      158,158,158,158,
-                                      159,159,159,159,
-                                    });
-    break;
-  }
-  case IngredientType::SAUSAGE: {
-    i = std::make_unique<Ingredient>(IngredientType::SAUSAGE, to_string(ingredient_type),
-                                     50, 20, 10, 189, 6, 7, 0, 2, 4,
-                                     IngredientCategory::MEAT, std::vector<int>{
-                                      160,161,162,163,
-                                      164,164,164,164,
-                                      321,321,321,321,
-                                    });
-    break;
-  }
-  case IngredientType::SCAMPI: {
-    i = std::make_unique<Ingredient>(IngredientType::SCAMPI, to_string(ingredient_type),
-                                     80, 30, 10, 90, 5, 6, 0, 4, 3,
-                                     IngredientCategory::MEAT, std::vector<int>{
-                                      165,166,167,168,
-                                      169,170,171,172,
-                                      173,173,173,173,
-                                    });
-    break;
-  }
-  case IngredientType::SHRIMPS: {
-    i = std::make_unique<Ingredient>(IngredientType::SHRIMPS, to_string(ingredient_type),
-                                     40, 20, 10, 103, 4, 6, 0, 6, 2,
-                                     IngredientCategory::MEAT, std::vector<int>{
-                                      174,174,174,174,
-                                      175,175,175,175,
-                                      173,173,173,173,
-                                    });
-    break;
-  }
-  case IngredientType::SQUID: {
-    i = std::make_unique<Ingredient>(IngredientType::SQUID, to_string(ingredient_type),
-                                     80, 40, 5, 107, 4, 6, 0, 7, 5,
-                                     IngredientCategory::MEAT, std::vector<int>{
-                                      176,177,176,177,
-                                      178,178,178,178,
-                                      179,179,179,179,
-                                    });
-    break;
-  }
-  case IngredientType::ANCHOVY: {
-    i = std::make_unique<Ingredient>(IngredientType::ANCHOVY, to_string(ingredient_type),
-                                     100, 20, 5, 242, 5, 7, 0, 8, 5,
-                                     IngredientCategory::MEAT, std::vector<int>{
-                                      180,181,182,183,
-                                      184,185,184,185,
-                                      317,317,317,317,
-                                    });
-    break;
-  }
-  case IngredientType::SALMON: {
-    i = std::make_unique<Ingredient>(IngredientType::SALMON, to_string(ingredient_type),
-                                     80, 20, 10, 108, 5, 6, 0, 8, 4,
-                                     IngredientCategory::MEAT, std::vector<int>{
-                                       195,196,195,196,
-                                       197,198,197,198,
-                                       318,318,318,318,
-                                    });
-    break;
-  }
-  case IngredientType::LOBSTER: {
-    i = std::make_unique<Ingredient>(IngredientType::LOBSTER, to_string(ingredient_type),
-                                     250, 20, 10, 89, 4, 4, 0, 7, 5,
-                                     IngredientCategory::MEAT, std::vector<int>{
-                                      199,199,199,199,
-                                      200,201,200,201,
-                                      202,203,204,205,
-                                    });
-    break;
-  }
-  case IngredientType::CAVIAR: {
-    i = std::make_unique<Ingredient>(IngredientType::CAVIAR, to_string(ingredient_type),
-                                     50, 20, 10, 253, 9, 4, 0, 9, 5,
-                                     IngredientCategory::MEAT, std::vector<int>{
-                                     206,206,206,206,
-                                     207,207,207,207,
-                                     208,208,208,208,
-                                    });
-    break;
-  }
-  case IngredientType::COCKLES: {
-    i = std::make_unique<Ingredient>(IngredientType::COCKLES, to_string(ingredient_type),
-                                     70, 40, 20, 72, 3, 5, 0, 6, 3,
-                                     IngredientCategory::MEAT, std::vector<int>{
-                                      213,214,215,216,
-                                      217,217,217,217,
-                                      212,212,212,212,
-                                    });
-    break;
-  }
-  case IngredientType::MUSSELS: {
-    i = std::make_unique<Ingredient>(IngredientType::MUSSELS, to_string(ingredient_type),
-                                     60, 40, 20, 82, 3, 5, 0, 6, 3,
-                                     IngredientCategory::MEAT, std::vector<int>{
-                                      208,209,208,209,
-                                      210,211,210,211,
-                                      212,212,212,212,
-                                    });
-    break;
-  }
-  case IngredientType::APPLES: {
-    i = std::make_unique<Ingredient>(IngredientType::APPLES, to_string(ingredient_type),
-                                     40, 10, 5, 52, 4, 0, 4, 0, 1,
-                                     IngredientCategory::FRUIT, std::vector<int>{
-                                     219,220,219,220,
-                                     221,221,221,221,
-                                     319,319,319,319,
-                                    });
-    break;
-  }
-  case IngredientType::PEARS: {
-    i = std::make_unique<Ingredient>(IngredientType::PEARS, to_string(ingredient_type),
-                                     40, 10, 5, 59, 4, 0, 5, 0, 0,
-                                     IngredientCategory::FRUIT, std::vector<int>{
-                                      226,227,228,229,
-                                      230,230,230,230,
-                                      319,319,319,319,
-                                    });
-    break;
-  }
-  case IngredientType::MAN_ORANGES: {
-    i = std::make_unique<Ingredient>(IngredientType::MAN_ORANGES, to_string(ingredient_type),
-                                     40, 20, 10, 10, 5, 0, 3, 0,
-                                     0, IngredientCategory::FRUIT, std::vector<int>{
-                                      237,237,237,237,
-                                      238,239,240,241,
-                                      236,236,236,236,
-                                    });
-    break;
-  }
-  case IngredientType::PLUMS: {
-    i = std::make_unique<Ingredient>(IngredientType::PLUMS, to_string(ingredient_type),
-                                     30, 20, 10, 53, 3, 1, 3, 0, 0,
-                                     IngredientCategory::FRUIT, std::vector<int>{
-                                      242,243,242,243,
-                                      244,245,244,245,
-                                      246,246,246,246,
-                                    });
-    break;
-  }
-  case IngredientType::CHERRIES: {
-    i = std::make_unique<Ingredient>(IngredientType::CHERRIES, to_string(ingredient_type),
-                                     20, 10, 10, 64, 5, 0, 3, 0, 1,
-                                     IngredientCategory::FRUIT, std::vector<int>{
-                                      247,247,247,247,
-                                      248,248,248,248,
-                                      249,249,249,249,
-                                    });
-    break;
-  }
-  case IngredientType::BANANAS: {
-    i = std::make_unique<Ingredient>(IngredientType::BANANAS, to_string(ingredient_type),
-                                     100, 20, 10, 90, 4, 2, 8, 0, 1,
-                                     IngredientCategory::FRUIT, std::vector<int>{
-                                     250,251,252,253,
-                                     254,254,254,254,
-                                     255,255,255,255,
-                                    });
-    break;
-  }
-  case IngredientType::LEMONS: {
-    i = std::make_unique<Ingredient>(IngredientType::LEMONS, to_string(ingredient_type),
-                                     30, 10, 10, 30, 6, 0, 250, 0, 2,
-                                     IngredientCategory::FRUIT, std::vector<int>{
-                                     256,256,256,256,
-                                     257,258,259,260,
-                                     261,261,261,261,
-                                    });
-    break;
-  }
-  case IngredientType::PINEAPPLE: {
-    i = std::make_unique<Ingredient>(IngredientType::PINEAPPLE, to_string(ingredient_type),
-                                     80, 30, 10, 57, 4, 0, 7, 0, 1,
-                                     IngredientCategory::FRUIT, std::vector<int>{
-                                      268,268,268,268,
-                                      269,270,271,272,
-                                      273,273,273,273,
-                                    });
-    break;
-  }
-  case IngredientType::KIWI: {
-    i = std::make_unique<Ingredient>(IngredientType::KIWI, to_string(ingredient_type),
-                                     60, 20, 10, 60, 4, 0, 6, 0, 1,
-                                     IngredientCategory::FRUIT, std::vector<int>{
-                                      274,274,274,274,
-                                      275,276,277,278,
-                                      279,279,279,279,
-                                    });
-
-    break;
-  }
-  case IngredientType::STRAWBERRIES: {
-    i = std::make_unique<Ingredient>(IngredientType::STRAWBERRIES, to_string(ingredient_type),
-                                     20, 10, 10, 40, 3, 0, 4, 0,
-                                     1, IngredientCategory::FRUIT, std::vector<int>{
-                                      280,281,282,283,
-                                      284,285,286,287,
-                                      288,288,288,288,
-                                    });
-    break;
-  }
-  case IngredientType::RASPBERRIES: {
-    i = std::make_unique<Ingredient>(IngredientType::RASPBERRIES, to_string(ingredient_type),
-                                     20, 10, 10, 40, 2, 0, 6, 0,
-                                     1, IngredientCategory::FRUIT, std::vector<int>{
-                                      289,289,289,289,
-                                      288,288,288,288,
-                                      288,288,288,288,
-                                    });
-    break;
-  }
-  case IngredientType::BLACKBERRIES: {
-    i = std::make_unique<Ingredient>(IngredientType::BLACKBERRIES, to_string(ingredient_type),
-                                     20, 10, 10, 44, 2, 0, 2, 0,
-                                     0, IngredientCategory::FRUIT, std::vector<int>{
-                                      290,290,290,290,
-                                      291,291,291,291,
-                                      288,288,288,288,
-                                    });
-    break;
-  }
-  case IngredientType::GOOSEBERRIES: {
-    i = std::make_unique<Ingredient>(IngredientType::GOOSEBERRIES, to_string(ingredient_type),
-                                     40, 10, 10, 74, 2, 0, 7, 0,
-                                     0, IngredientCategory::FRUIT, std::vector<int>{
-                                      292,293,292,293,
-                                      294,294,294,294,
-                                      294,294,294,294,
-                                    });
-    break;
-  }
-  case IngredientType::EGG: {
-    i = std::make_unique<Ingredient>(IngredientType::EGG, to_string(ingredient_type),
-                                     60, 35, 35, 167, 2, 2, 1, 0, 1,
-                                     IngredientCategory::CHEESE, std::vector<int>{
-                                      295,296,295,296,
-                                      297,298,297,298,
-                                      316,316,316,316,
-                                    });
-    break;
-  }
-  case IngredientType::MOZZARELLA: {
-    i = std::make_unique<Ingredient>(IngredientType::MOZZARELLA, to_string(ingredient_type),
-                                     80, 20, 5, 200, 3, 6, 1, 6,
-                                     1, IngredientCategory::CHEESE, std::vector<int>{
-                                      299,300,299,300,
-                                      301,301,301,301,
-                                      305,305,305,305,
-                                    });
-    break;
-  }
-  case IngredientType::PROVOLONE: {
-    i = std::make_unique<Ingredient>(IngredientType::PROVOLONE, to_string(ingredient_type),
-                                     100, 20, 5, 200, 3, 6, 1, 4,
-                                     1, IngredientCategory::CHEESE, std::vector<int>{
-                                      302,303,302,303,
-                                      304,304,304,304,
-                                      305,305,305,305,
-                                    });
-    break;
-  }
-  case IngredientType::BEL_PAESE: {
-    i = std::make_unique<Ingredient>(IngredientType::BEL_PAESE, to_string(ingredient_type),
-                                     100, 20, 5, 200, 3, 6, 1, 4,
-                                     1, IngredientCategory::CHEESE, std::vector<int>{
-                                      306,307,306,307,
-                                      308,308,308,308,
-                                      305,305,305,305,
-                                    });
-    break;
-  }
-  case IngredientType::GORGONZOLA: {
-    i = std::make_unique<Ingredient>(IngredientType::GORGONZOLA, to_string(ingredient_type),
-                                     100, 20, 5, 200, 3, 6, 1, 6,
-                                     3, IngredientCategory::CHEESE, std::vector<int>{
-                                      309,309,309,309,
-                                      310,311,310,311,
-                                      312,312,312,312,
-                                    });
-    break;
-  }
-  case IngredientType::PAMERINO: {
-    i = std::make_unique<Ingredient>(IngredientType::PAMERINO, to_string(ingredient_type),
-                                     100, 20, 5, 200, 3, 6, 1, 6, 1,
-                                     IngredientCategory::CHEESE, std::vector<int>{
-                                     224,224,224,224,
-                                     223,223,223,223,
-                                     305,305,305,305,
-                                    });
-    break;
-  }
-  case IngredientType::PARMESAN: {
-    i = std::make_unique<Ingredient>(IngredientType::PARMESAN, to_string(ingredient_type),
-                                     100, 20, 5, 306, 4, 6, 1, 6, 1,
-                                     IngredientCategory::CHEESE, std::vector<int>{
-                                      313,314,315,225,
-                                      223,223,223,223,
-                                      305,305,305,305,
-                                    });
-    break;
-  }
-  case IngredientType::GOATS_CHEESE: {
-    i = std::make_unique<Ingredient>(IngredientType::GOATS_CHEESE, to_string(ingredient_type),
-                                     100, 20, 5, 170, 5, 6, 1,
-                                     6, 1, IngredientCategory::CHEESE, std::vector<int>{
-                                     222,222,222,222,
-                                     218,218,218,218,
-                                     312,312,312,312,
-                                    });
-    break;
-  }
-  case IngredientType::PARSLEY: {
-    i = std::make_unique<Ingredient>(IngredientType::PARSLEY, to_string(ingredient_type),
-                                     4, 2, 1, 61, 10, 0, 1, 2, 1,
-                                     IngredientCategory::CHEESE, std::vector<int>{
-                                      13,14,186,187,
-                                      188,188,188,188,
-                                      267,267,267,267,
-                                    });
-    break;
-  }
-  case IngredientType::LEMON_BALM: {
-    i = std::make_unique<Ingredient>(IngredientType::LEMON_BALM, to_string(ingredient_type),
-                                     4, 2, 1, 1, 14, 0, 1, 2, 1,
-                                     IngredientCategory::CHEESE, std::vector<int>{
-                                      189,190,191,192,
-                                      188,188,188,188,
-                                      267,267,267,267,
-                                    });
-    break;
-  }
-  case IngredientType::SAGE: {
-    i = std::make_unique<Ingredient>(IngredientType::SAGE, to_string(ingredient_type),
-                                     4, 2, 1, 46, 15, 0, 1, 1, 1,
-                                     IngredientCategory::CHEESE, std::vector<int>{
-                                      231,232,233,234,
-                                      188,188,188,188,
-                                      267,267,267,267,
-                                    });
-    break;
-  }
-  case IngredientType::GINGER: {
-    i = std::make_unique<Ingredient>(IngredientType::GINGER, to_string(ingredient_type),
-                                     4, 2, 1, 66, 19, 0, 1, 2, 1,
-                                     IngredientCategory::CHEESE, std::vector<int>{
-                                      235,262,263,264,
-                                      188,188,188,188,
-                                      267,267,267,267,
-                                    });
-    break;
-  }
-  case IngredientType::OREGANO: {
-    i = std::make_unique<Ingredient>(IngredientType::OREGANO, to_string(ingredient_type),
-                                     4, 2, 1, 35, 20, 0, 1, 3, 1,
-                                     IngredientCategory::CHEESE, std::vector<int>{
-                                      265,266,265,266,
-                                      188,188,188,188,
-                                      267,267,267,267,
-                                    });
-    break;
-  }
-  // clang-format on
-  default:
-    fatal(compat::format("IngredientId {} is unknown.", ingredient_id));
-    break;
+  for (const auto& data : ingredients) {
+    if (static_cast<int>(data.type) == ingredient_id) {
+      auto [pos, _] =
+          cache_.emplace(ingredient_id, std::make_unique<Ingredient>(data));
+      return pos->second.get();
+    }
   }
 
-  auto* ingredient_ptr = i.get();
-  cache_[ingredient_id] = std::move(i);
-
-  return ingredient_ptr;
+  fatal(compat::format("IngredientId {} is unknown.", ingredient_id));
 }

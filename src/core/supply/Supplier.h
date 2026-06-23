@@ -9,6 +9,7 @@
 #include <array>
 #include <cstdint>
 #include <string>
+#include <string_view>
 #include "core/finance/Money.h"
 
 enum class SupplierType {
@@ -61,12 +62,21 @@ enum class SupplierID {
   RESTAURANT_RATIO_LTD,
 };
 
+struct SupplierData {
+  SupplierID id;
+  SupplierType type;
+  uint8_t quality;
+  std::string_view name;
+  uint16_t price_per_tile;
+  std::array<uint8_t, 6> customer_ratings;
+  uint16_t introduction_year;
+  uint8_t u2;
+  uint8_t u3;
+};
+
 class Supplier {
 public:
-  //  Supplier(SupplierID id, uint8_t quality, std::string name);
-  Supplier(SupplierID id, SupplierType type, uint8_t quality, std::string name,
-           uint16_t price_per_tile, std::array<uint8_t, 6> customer_rating,
-           uint16_t introduction_year, uint8_t u2, uint8_t u3);
+  explicit Supplier(const SupplierData& data);
   SupplierID id() const;
   uint8_t quality() const;
   void quality(uint8_t quality);
