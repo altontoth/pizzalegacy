@@ -146,7 +146,6 @@ game. See docs/MODERNIZATIONS.md for a full list of intentional differences.
   GCC 12 works with the libfmt-dev library as a fallback for std::format; GCC
   11 and below are not supported.
 - SDL3 (>= 3.4.0)
-- libpng (for PNG screenshots)
 - zlib (save file compression)
 - [libADLMIDI](https://github.com/Wohlstand/libADLMIDI) for music support
   (optional); you can install it on your system or download the sources and put them in
@@ -155,7 +154,7 @@ game. See docs/MODERNIZATIONS.md for a full list of intentional differences.
 
 Platform-specific setup:
 
-- **Linux (Debian/Ubuntu):** `sudo apt-get install ninja-build libsdl2-dev libpng-dev pkg-config`
+- **Linux (Debian/Ubuntu):** `sudo apt-get install ninja-build libsdl3-dev pkg-config`
 - **macOS:** `brew install sdl3 pkg-config ninja`
 - **Windows:** Install SDL3 via `vcpkg`
 
