@@ -29,6 +29,19 @@ enum class JobRole {
   NONE,
 };
 
+constexpr std::string_view to_string(core::character::JobRole job) noexcept {
+  switch (job) {
+  case core::character::JobRole::CHEF:
+    return "COOK";
+  case core::character::JobRole::WAITER:
+    return "WAITER";
+  case core::character::JobRole::MANAGER:
+    return "MANAGER";
+  case core::character::JobRole::NONE:
+    return "NONE";
+  }
+}
+
 struct CharacterData : public RawRenderable {
   uint8_t id;
   // Public data members
@@ -130,7 +143,7 @@ public:
   uint8_t popularity() const { return popularity_; };
   uint8_t health() const { return health_; };
   uint8_t energy() const { return energy_; };
-  uint8_t intelligence() const { return data_->intelligence; };
+  uint8_t intelligence() const { return intelligence_; };
   uint8_t charisma() const { return data_->charisma; };
   uint8_t dexterity() const { return data_->dexterity; };
   uint8_t personality() const { return personality_; };
@@ -168,6 +181,7 @@ public:
   }
   void health(uint8_t health) { health_ = health; };
   void energy(uint8_t energy) { energy_ = energy; };
+  void intelligence(uint8_t intelligence) { intelligence_ = intelligence; };
   void cooking(uint8_t cooking) { cooking_ = cooking; };
   void serving(uint8_t serving) { serving_ = serving; };
   void management(uint8_t management) { management_ = management; };
@@ -196,6 +210,7 @@ private:
   uint8_t courage_;
   uint8_t health_;
   uint8_t energy_;
+  uint8_t intelligence_;
   uint8_t experience_;
   uint8_t cooking_;
   uint8_t serving_;

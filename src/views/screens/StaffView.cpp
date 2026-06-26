@@ -18,11 +18,12 @@
 #include "engine/geom/Spaces.h"
 #include "engine/ui/InteractionEvent.h"
 #include "factories/CharacterFactory.h"
+#include "factories/TrainingFactory.h"
 #include "gfx/SurfaceBuilder.h"
 #include "magic_enum/magic_enum.hpp"
 #include "resources/BlitmapIcons.h"
-#include "views/base/RawRenderer.h"
 #include "views/base/ViewDefs.h"
+#include "views/helpers/CardGfx.h"
 #include "views/ui/PopupManager.h"
 #include "views/ui/components/BeveledButton.h"
 #include "views/ui/popups/AlertPopup.h"
@@ -50,6 +51,73 @@ static constexpr int MAX_CARD_HEIGHT =
     views::base::MAIN_PANEL_HEIGHT - StaffView::PANEL_SPACE_ON_TOP;
 static constexpr int TEXT_COLOR_BLACK = 240;
 
+// Training course list layout (card-local coordinates). The list opens with a
+// column-header row, then one row per course TRAINING_ROW_H apart.
+static constexpr int TRAINING_LIST_Y = 172; // column-header row
+static constexpr int TRAINING_ROW_H = 20;
+static constexpr int TRAINING_COURSE_Y0 = TRAINING_LIST_Y + TRAINING_ROW_H;
+static constexpr int TRAINING_BTN_X = 18;
+static constexpr int TRAINING_TEXT_X = 50;   // left edge of the name column
+static constexpr int TRAINING_SCORE_X = 245; // right edge of required-score col
+static constexpr int TRAINING_COST_X = 330;  // right edge of cost column
+static constexpr int TRAINING_DAYS_X = 360;  // right edge of days column
+
+namespace {
+
+// The cook or waiter slot array matching a job. Manager is a single slot and
+// handled separately by callers.
+auto& staff_array_for(Restaurant& r, core::character::JobRole job) {
+  return job == core::character::JobRole::CHEF ? r.cooks() : r.waiters();
+}
+
+// Map a job role to the skill its training courses improve.
+SkillType skill_for_job(core::character::JobRole job) {
+  switch (job) {
+  case core::character::JobRole::CHEF:
+    return SkillType::COOKING;
+  case core::character::JobRole::WAITER:
+    return SkillType::SERVING;
+  case core::character::JobRole::MANAGER:
+    return SkillType::MANAGEMENT;
+  case core::character::JobRole::NONE:
+    return SkillType::NONE;
+  }
+  return SkillType::NONE;
+}
+
+// The character's score in the skill relevant to their job. Trainings gate on
+// this value against their min_level requirement.
+int relevant_skill_value(const core::character::Character& c,
+                         core::character::JobRole job) {
+  switch (job) {
+  case core::character::JobRole::CHEF:
+    return c.cooking();
+  case core::character::JobRole::WAITER:
+    return c.serving();
+  case core::character::JobRole::MANAGER:
+    return c.management();
+  case core::character::JobRole::NONE:
+    return 0;
+  }
+  return 0;
+}
+
+std::string_view skill_label(core::character::JobRole job) {
+  switch (job) {
+  case core::character::JobRole::CHEF:
+    return "COOKING";
+  case core::character::JobRole::WAITER:
+    return "SERVING";
+  case core::character::JobRole::MANAGER:
+    return "MANAGEMENT";
+  case core::character::JobRole::NONE:
+    return "";
+  }
+  return "";
+}
+
+} // namespace
+
 // Manager settings panel layout (shared between rendering and interactions)
 static constexpr int MS_LABEL_X = 22;
 static constexpr int MS_ROW_H = 20;
@@ -67,6 +135,15 @@ StaffView::StaffView(GameContext& context, GameState& state)
       blitmap3_(context_.blitmap->get<Blitmap3Icon>()) {
   load_applicant_pool();
   create_input_panel();
+  // When a card finishes sliding away, drop the selection and return to the
+  // overview screen.
+  card_slider_.on_hidden([this] {
+    selected_slot_index_.reset();
+    pressed_training_row_.reset();
+    if (screen_ != StaffScreen::OVERVIEW) {
+      change_screen(StaffScreen::OVERVIEW);
+    }
+  });
   interactions_.create_persistent_item(
       ViewRect{LegacyConstants::WOOD_BORDER_WIDTH_LEFT,
                LegacyConstants::WOOD_BORDER_HEIGHT_TOP,
@@ -97,29 +174,7 @@ StaffView::StaffView(GameContext& context, GameState& state)
 StaffView::~StaffView() { state_.advance_time_blocks(4); }
 
 void StaffView::tick() {
-  auto state_before = card_animator_.state();
-  if (card_animator_.update()) {
-    if (card_animator_.state() == SlideAnimator::SlideState::HIDDEN) {
-      Logger::info("Animator hidden, resetting both cards.");
-      fg_card_.reset();
-      bg_card_.reset();
-      // Clear selection only when animation completes
-      selected_slot_index_.reset();
-    }
-    else if (card_animator_.state() == SlideAnimator::SlideState::VISIBLE &&
-             bg_card_) {
-      if (state_before == SlideAnimator::SlideState::DISAPPEARING) {
-        // pop() finished; background is now the only visible card
-        Logger::info("Moving back to forward card");
-        fg_card_ = std::move(*bg_card_);
-        bg_card_.reset();
-      }
-      else {
-        // push() finished; discard the old background card
-        Logger::info("Push complete, discarding background card");
-        bg_card_.reset();
-      }
-    }
+  if (card_slider_.update()) {
     mark_dirty();
   }
   if (input_panel_needs_update_) {
@@ -176,8 +231,7 @@ void StaffView::render(const RenderContext& ctx) {
 
   // Add interaction items for staff slots (only on overview screen when no card
   // is animating)
-  if (screen_ == StaffScreen::OVERVIEW &&
-      card_animator_.state() == SlideAnimator::SlideState::HIDDEN) {
+  if (screen_ == StaffScreen::OVERVIEW && card_slider_.idle()) {
     constexpr int slot_start_y =
         TOP_BAR_HEIGHT + 20; // Matches create_staff_slots
     constexpr int slot_height = 25;
@@ -200,9 +254,7 @@ void StaffView::render(const RenderContext& ctx) {
     }
     else {
       // Chef/Waiter slots (6 slots)
-      const auto& staff_array = job_ == core::character::JobRole::CHEF
-                                    ? restaurant->cooks()
-                                    : restaurant->waiters();
+      const auto& staff_array = staff_array_for(*restaurant, job_);
 
       for (size_t i = 0; i < staff_array.size(); ++i) {
         if (staff_array[i].has_value()) {
@@ -225,20 +277,26 @@ void StaffView::render(const RenderContext& ctx) {
 
   // Manager settings toggle button interactions
   if (job_ == core::character::JobRole::MANAGER &&
-      screen_ == StaffScreen::OVERVIEW &&
-      card_animator_.state() == SlideAnimator::SlideState::HIDDEN) {
+      screen_ == StaffScreen::OVERVIEW && card_slider_.idle()) {
     draw_manager_settings_interactions();
   }
 
-  // optionally draw background card
-  if (card_animator_.bg_visible() && bg_card_) {
-    ctx.surface->blit_masked(*bg_card_, {CARD_OFFSET_X, CARD_OFFSET_Y});
+  // Training course buttons (only once the card has finished sliding up)
+  if (screen_ == StaffScreen::TRAINING && card_slider_.settled()) {
+    draw_training_interactions();
   }
 
-  // foreground card (may be sliding)
-  if (card_animator_.state() != SlideAnimator::SlideState::HIDDEN && fg_card_) {
-    int y = card_animator_.offset();
-    ctx.surface->blit_masked(*fg_card_, {CARD_OFFSET_X, y});
+  // Background card (during push/pop) and the foreground card (may be sliding).
+  card_slider_.render(*ctx.surface, CARD_OFFSET_X);
+
+  // While a training button is held down, overlay the pressed (flipped-bevel)
+  // sprite over its resting one. Only meaningful when the card sits still.
+  if (screen_ == StaffScreen::TRAINING && pressed_training_row_ &&
+      card_slider_.settled()) {
+    auto pressed = blitmap3_.icon_surface(Blitmap3Icon::DIFFERENT_GRAY_BOX);
+    int row_y = TRAINING_COURSE_Y0 + (*pressed_training_row_ * TRAINING_ROW_H);
+    ctx.surface->blit_raw(
+        pressed, {CARD_OFFSET_X + TRAINING_BTN_X, CARD_OFFSET_Y + row_y});
   }
 }
 
@@ -358,7 +416,7 @@ Surface StaffView::create_manager_settings_panel(Restaurant* r) {
     views::ui::components::draw_beveled_button(
         context_.font, context_.vga->get("gfx/permap"), surface, btn_rect,
         btn_label,
-        (pressed_settings_row_ == i)
+        pressed_settings_row_ == i
             ? views::ui::components::ButtonState::Pressed
             : views::ui::components::ButtonState::Normal);
   }
@@ -408,7 +466,7 @@ Surface StaffView::create_manager_settings_panel(Restaurant* r) {
     views::ui::components::draw_beveled_button(
         context_.font, context_.vga->get("gfx/permap"), surface, btn_rect,
         reaction_label(*reaction_toggles[i].value),
-        (pressed_settings_row_ == settings_row)
+        pressed_settings_row_ == settings_row
             ? views::ui::components::ButtonState::Pressed
             : views::ui::components::ButtonState::Normal);
   }
@@ -451,7 +509,7 @@ Surface StaffView::create_manager_settings_panel(Restaurant* r) {
     views::ui::components::draw_beveled_button(
         context_.font, context_.vga->get("gfx/permap"), surface, btn_rect,
         behavior_label(settings.behavior_towards_staff),
-        (pressed_settings_row_ == settings_row)
+        pressed_settings_row_ == settings_row
             ? views::ui::components::ButtonState::Pressed
             : views::ui::components::ButtonState::Normal);
   }
@@ -459,6 +517,31 @@ Surface StaffView::create_manager_settings_panel(Restaurant* r) {
   draw_green_area(surface, y, MAX_CARD_HEIGHT - y);
 
   return surface;
+}
+
+views::ui::InteractionLayers::Callback
+StaffView::settings_button_handler(int settings_row,
+                                   std::function<void()> on_click) {
+  return [this, settings_row,
+          on_click = std::move(on_click)](views::ui::InteractionEvent ie) {
+    switch (ie.type) {
+    case views::ui::InteractionEvent::Type::ButtonDown:
+      pressed_settings_row_ = settings_row;
+      mark_dirty();
+      break;
+    case views::ui::InteractionEvent::Type::Click:
+      on_click();
+      pressed_settings_row_.reset();
+      mark_dirty();
+      break;
+    case views::ui::InteractionEvent::Type::Cancelled:
+      pressed_settings_row_.reset();
+      mark_dirty();
+      break;
+    default:
+      break;
+    }
+  };
 }
 
 void StaffView::draw_manager_settings_interactions() {
@@ -487,21 +570,7 @@ void StaffView::draw_manager_settings_interactions() {
     bool* val = authority_values[i];
     interactions_.create_frame_item(
         btn_rect, "authority_" + std::to_string(i),
-        [this, val, settings_row](views::ui::InteractionEvent ie) {
-          if (ie.type == views::ui::InteractionEvent::Type::ButtonDown) {
-            pressed_settings_row_ = settings_row;
-            mark_dirty();
-          }
-          else if (ie.type == views::ui::InteractionEvent::Type::Click) {
-            *val = !*val;
-            pressed_settings_row_ = -1;
-            mark_dirty();
-          }
-          else if (ie.type == views::ui::InteractionEvent::Type::Cancelled) {
-            pressed_settings_row_ = -1;
-            mark_dirty();
-          }
-        });
+        settings_button_handler(settings_row, [val] { *val = !*val; }));
   }
   y += 3 * MS_ROW_H;
 
@@ -532,22 +601,9 @@ void StaffView::draw_manager_settings_interactions() {
     ManagerReaction* val = reaction_values[i];
     interactions_.create_frame_item(
         btn_rect, "reaction_" + std::to_string(i),
-        [this, val, settings_row,
-         next_reaction](views::ui::InteractionEvent ie) {
-          if (ie.type == views::ui::InteractionEvent::Type::ButtonDown) {
-            pressed_settings_row_ = settings_row;
-            mark_dirty();
-          }
-          else if (ie.type == views::ui::InteractionEvent::Type::Click) {
-            *val = next_reaction(*val);
-            pressed_settings_row_ = -1;
-            mark_dirty();
-          }
-          else if (ie.type == views::ui::InteractionEvent::Type::Cancelled) {
-            pressed_settings_row_ = -1;
-            mark_dirty();
-          }
-        });
+        settings_button_handler(settings_row, [val, next_reaction] {
+          *val = next_reaction(*val);
+        }));
   }
   y += 4 * MS_ROW_H;
 
@@ -562,25 +618,12 @@ void StaffView::draw_manager_settings_interactions() {
     int settings_row = 7;
     interactions_.create_frame_item(
         btn_rect, "behavior",
-        [this, &settings, settings_row](views::ui::InteractionEvent ie) {
-          if (ie.type == views::ui::InteractionEvent::Type::ButtonDown) {
-            pressed_settings_row_ = settings_row;
-            mark_dirty();
-          }
-          else if (ie.type == views::ui::InteractionEvent::Type::Click) {
-            int next =
-                (static_cast<int>(settings.behavior_towards_staff) + 1) %
-                static_cast<int>(magic_enum::enum_count<ManagerBehavior>());
-            settings.behavior_towards_staff =
-                static_cast<ManagerBehavior>(next);
-            pressed_settings_row_ = -1;
-            mark_dirty();
-          }
-          else if (ie.type == views::ui::InteractionEvent::Type::Cancelled) {
-            pressed_settings_row_ = -1;
-            mark_dirty();
-          }
-        });
+        settings_button_handler(settings_row, [&settings] {
+          int next =
+              (static_cast<int>(settings.behavior_towards_staff) + 1) %
+              static_cast<int>(magic_enum::enum_count<ManagerBehavior>());
+          settings.behavior_towards_staff = static_cast<ManagerBehavior>(next);
+        }));
   }
 }
 
@@ -633,7 +676,7 @@ Surface StaffView::create_staff_overview(Restaurant* r) {
 
   // Gather stats from the staff array matching the current job tab
   bool is_chef = (job_ == core::character::JobRole::CHEF);
-  auto& staff_array = is_chef ? r->cooks() : r->waiters();
+  auto& staff_array = staff_array_for(*r, job_);
 
   int count = is_chef ? r->count_cooks() : r->count_waiters();
   int total_capacity = 0;
@@ -734,35 +777,12 @@ Surface StaffView::create_staff_slots(Restaurant* r) {
   constexpr int slot_start_y = 20;   // First slot starts at y=20
   constexpr int slot_height = 25;    // Height between slots
   constexpr int text_y_offset = 6;   // Y offset within slot for text
-  constexpr int x_offset = 11;
 
-  // If a slot is selected, overlay gray-ish beige background on it
-  // Keep that background until animation fully completes
-  if (selected_slot_index_.has_value() &&
-      card_animator_.state() != SlideAnimator::SlideState::HIDDEN) {
-    int selected_idx = selected_slot_index_.value();
-
-    // Calculate Y position for the selected slot
-    int selected_y = slot_start_y + (selected_idx * slot_height);
-
-    // Render gray-ish background over the green one for selected slot
-    auto gray_left = blitmap3_.icon_surface(Blitmap3Icon::GRAY_FILE_TOP_LEFT);
-    auto gray_mid = blitmap3_.icon_surface(Blitmap3Icon::GRAY_FILE_TOP);
-    auto gray_right = blitmap3_.icon_surface(Blitmap3Icon::GRAY_FILE_TOP_RIGHT);
-
-    this_staff_slots.blit_raw(gray_left, ViewPoint{x_offset, selected_y});
-    for (int j = 0;
-         j < (views::base::MAIN_PANEL_WIDTH - 10 - gray_left.width()) /
-                 gray_mid.width();
-         ++j) {
-      this_staff_slots.blit_raw(
-          gray_mid, ViewPoint{10 + gray_left.width() + (j * gray_mid.width()),
-                              selected_y});
-    }
-    this_staff_slots.blit_raw(
-        gray_right,
-        ViewPoint{views::base::MAIN_PANEL_WIDTH - gray_right.width() - x_offset,
-                  selected_y});
+  // Render gray-ish background over the green one for selected slot while a
+  // slot is selected (until its animation completes).
+  if (selected_slot_index_.has_value() && card_slider_.on_screen()) {
+    int selected_y = slot_start_y + (*selected_slot_index_ * slot_height);
+    draw_gray_header(this_staff_slots, selected_y);
   }
 
   // Render column headers
@@ -808,8 +828,7 @@ Surface StaffView::create_staff_slots(Restaurant* r) {
     }
   }
   else {
-    const auto& staff_array =
-        job_ == core::character::JobRole::CHEF ? r->cooks() : r->waiters();
+    const auto& staff_array = staff_array_for(*r, job_);
 
     for (size_t i = 0; i < staff_array.size(); ++i) {
       const auto& staff = staff_array[i];
@@ -844,6 +863,15 @@ Surface StaffView::create_staff_slots(Restaurant* r) {
   return this_staff_slots;
 }
 
+void StaffView::draw_card_name(Surface& card, std::string_view first,
+                               std::string_view last) {
+  constexpr int name_x = 160;
+  context_.font->render_text_onto(card, first, ViewPoint{name_x, 34},
+                                  FontFace::ASTANDAR, TEXT_COLOR_BLACK);
+  context_.font->render_text_onto(card, last, ViewPoint{name_x, 56},
+                                  FontFace::ASTANDAR, TEXT_COLOR_BLACK);
+}
+
 Surface StaffView::create_data_card(const Staff& staff) {
   const auto& character = staff.character();
   auto snapshot = character.to_character_data();
@@ -858,48 +886,19 @@ Surface StaffView::create_data_card(core::character::CharacterData* character,
                                     core::character::JobRole role) {
   return create_data_card_impl(*character, *character,
                                character->starting_payment(job_),
-                               job_string(role));
+                               to_string(role));
 }
 
 Surface StaffView::create_data_card_impl(
     const RawRenderable& portrait, const core::character::CharacterData& data,
-    int payment_dollars, const std::string& tab_label) {
+    int payment_dollars, std::string_view tab_label) {
   auto card = create_empty_card(tab_label);
 
-  RawRenderer r;
-  auto picture = r.surface(portrait);
-
-  // Photo frame background colors
-  uint8_t photo_white_bg = 15;
-  uint8_t photo_darker_bg = 11;
-  uint8_t photo_light_bg = 12;
-  ViewRect photo_location(8, 30, 118, 132);
-
-  // Local lambda to draw a frame layer
-  auto draw_frame_layer = [&card](const ViewRect& base, int dx, int dy,
-                                  uint8_t color) {
-    ViewRect r{base.x + dx, base.y + dy, base.w, base.h};
-    card.fill_rect(r, color);
-  };
-
-  // Draw frame from back to front
-  draw_frame_layer(photo_location, 0, 0, photo_light_bg);
-  draw_frame_layer(photo_location, 2, -2, photo_darker_bg);
-  draw_frame_layer(photo_location, 4, -4, photo_white_bg);
-
-  card.blit_raw(picture,
-                ViewPoint{photo_location.x + 11, photo_location.y + 3});
-
-  // Render character name
-  constexpr int name_x_offset = 160;
-  context_.font->render_text_onto(card, data.first_name,
-                                  ViewPoint{name_x_offset, 34},
-                                  FontFace::ASTANDAR, TEXT_COLOR_BLACK);
-  context_.font->render_text_onto(card, data.last_name,
-                                  ViewPoint{name_x_offset, 56},
-                                  FontFace::ASTANDAR, TEXT_COLOR_BLACK);
+  views::helpers::draw_framed_portrait(card, portrait, {8, 30});
+  draw_card_name(card, data.first_name, data.last_name);
 
   // Age, payment, pizzas/day
+  constexpr int name_x_offset = 160;
   constexpr int label_x_offset = name_x_offset - 8;
 
   context_.font->render_text_onto(card, std::to_string(data.age) + " YEARS",
@@ -966,6 +965,151 @@ Surface StaffView::create_data_card_impl(
   return card;
 }
 
+Staff* StaffView::selected_staff() {
+  auto* restaurant = state_.active_restaurant();
+  if (!restaurant || !selected_slot_index_.has_value()) {
+    return nullptr;
+  }
+
+  if (job_ == core::character::JobRole::MANAGER) {
+    auto& manager = restaurant->manager();
+    return manager.has_value() ? &manager.value() : nullptr;
+  }
+
+  auto& staff_array = staff_array_for(*restaurant, job_);
+  int slot = *selected_slot_index_;
+  if (slot >= 0 && slot < static_cast<int>(staff_array.size()) &&
+      staff_array[slot].has_value()) {
+    return &staff_array[slot].value();
+  }
+  return nullptr;
+}
+
+Surface StaffView::create_training_card(const Staff& staff) {
+  const auto& character = staff.character();
+  auto card = create_empty_card("Courses");
+
+  views::helpers::draw_framed_portrait(card, character, {8, 30});
+  draw_card_name(card, character.first_name(), character.last_name());
+
+  // Bar for the skill relevant to this job role.
+  constexpr int name_x = 160;
+  int score = relevant_skill_value(character, job_);
+  StatBar statbar(context_.blitmap, context_.font);
+  auto bar = statbar.create_stat_bar(skill_label(job_), score);
+  card.blit_masked(bar, ViewPoint{name_x - 8, 96});
+
+  // List of available courses. A gray button sits in front of every course
+  // the staff member currently qualifies for (score >= required level); an
+  // ineligible course shows the same row, just without the button.
+  auto gray_button = blitmap3_.icon_surface(Blitmap3Icon::GRAY_BOX);
+  auto courses = TrainingFactory::trainings_by_skill(skill_for_job(job_));
+
+  // Column-header row.
+  context_.font->render_text_onto(card,
+                                  "course name    scores     costs      days",
+                                  ViewPoint{TRAINING_TEXT_X, TRAINING_LIST_Y},
+                                  FontFace::PIZ_NUMB, TEXT_COLOR_BLACK);
+
+  int y = TRAINING_COURSE_Y0;
+  for (const auto& course : courses) {
+    if (score >= course.min_level()) {
+      card.blit_raw(gray_button, ViewPoint{TRAINING_BTN_X, y});
+    }
+    context_.font->render_text_onto(card, course.name(),
+                                    ViewPoint{TRAINING_TEXT_X, y},
+                                    FontFace::PIZ_NUMB, TEXT_COLOR_BLACK);
+    context_.font->render_text_onto(card, std::to_string(course.min_level()),
+                                    ViewPoint{TRAINING_SCORE_X, y},
+                                    FontFace::PIZ_NUMB, TEXT_COLOR_BLACK,
+                                    AlignX::RightEdge);
+    context_.font->render_text_onto(card, compat::format("{}", course.cost()),
+                                    ViewPoint{TRAINING_COST_X, y},
+                                    FontFace::PIZ_NUMB, TEXT_COLOR_BLACK,
+                                    AlignX::RightEdge);
+    context_.font->render_text_onto(
+        card, std::to_string(course.duration()), ViewPoint{TRAINING_DAYS_X, y},
+        FontFace::PIZ_NUMB, TEXT_COLOR_BLACK, AlignX::RightEdge);
+    y += TRAINING_ROW_H;
+  }
+
+  return card;
+}
+
+void StaffView::show_training_card() {
+  Staff* staff = selected_staff();
+  if (!staff) {
+    return;
+  }
+
+  card_slider_.push(create_training_card(*staff));
+  change_screen(StaffScreen::TRAINING);
+  mark_dirty();
+}
+
+void StaffView::on_training_clicked(const Training& course) {
+  Staff* staff = selected_staff();
+  if (!staff) {
+    return;
+  }
+
+  context_.popup->origin(ViewPoint{30, 40});
+  context_.popup->create<ConfirmPopup>(
+      "Send on this course?",
+      [this, course](bool yes) {
+        if (yes) {
+          if (Staff* s = selected_staff()) {
+            s->send_on_training(course);
+          }
+          // Card slides away and we drop back to the staff overview.
+          card_slider_.dismiss();
+          change_screen(StaffScreen::OVERVIEW);
+        }
+        mark_dirty();
+      },
+      &staff->character());
+}
+
+void StaffView::draw_training_interactions() {
+  Staff* staff = selected_staff();
+  if (!staff) {
+    return;
+  }
+
+  int score = relevant_skill_value(staff->character(), job_);
+  auto gray_button = blitmap3_.icon_surface(Blitmap3Icon::GRAY_BOX);
+  auto courses = TrainingFactory::trainings_by_skill(skill_for_job(job_));
+
+  int row = 0;
+  int y = TRAINING_COURSE_Y0;
+  for (const auto& course : courses) {
+    if (score >= course.min_level()) {
+      ViewRect btn_rect{CARD_OFFSET_X + TRAINING_BTN_X, CARD_OFFSET_Y + y,
+                        gray_button.width(), gray_button.height()};
+      Training course_copy = course;
+      interactions_.create_frame_item(
+          btn_rect, "training_" + course.name(),
+          [this, course_copy, row](views::ui::InteractionEvent ie) {
+            if (ie.type == views::ui::InteractionEvent::Type::ButtonDown) {
+              pressed_training_row_ = row;
+              mark_dirty();
+            }
+            else if (ie.type == views::ui::InteractionEvent::Type::Click &&
+                     ie.button == views::ui::MouseButton::Left) {
+              pressed_training_row_.reset();
+              on_training_clicked(course_copy);
+            }
+            else if (ie.type == views::ui::InteractionEvent::Type::Cancelled) {
+              pressed_training_row_.reset();
+              mark_dirty();
+            }
+          });
+    }
+    y += TRAINING_ROW_H;
+    ++row;
+  }
+}
+
 std::pair<std::string, std::string>
 StaffView::load_application_text(uint8_t character_id) {
   // Algorithm to read the right lines from bewerb.txt
@@ -1004,42 +1148,10 @@ StaffView::load_application_text(uint8_t character_id) {
 
 Surface StaffView::create_application_card(uint8_t character_id) {
   auto* char_data = CharacterFactory::create_character(character_id);
-  auto card = create_empty_card(job_string(job_));
+  auto card = create_empty_card(to_string(job_));
 
-  // Render portrait with frame
-  RawRenderer r;
-  auto picture = r.surface(*char_data);
-
-  // Photo frame background colors
-  uint8_t photo_white_bg = 15;
-  uint8_t photo_darker_bg = 11;
-  uint8_t photo_light_bg = 12;
-  ViewRect photo_location(8, 30, 118, 132);
-
-  // Local lambda to draw a frame layer
-  auto draw_frame_layer = [&card](const ViewRect& base, int dx, int dy,
-                                  uint8_t color) {
-    ViewRect r{base.x + dx, base.y + dy, base.w, base.h};
-    card.fill_rect(r, color);
-  };
-
-  // Draw frame from back to front
-  draw_frame_layer(photo_location, 0, 0, photo_light_bg);
-  draw_frame_layer(photo_location, 2, -2, photo_darker_bg);
-  draw_frame_layer(photo_location, 4, -4, photo_white_bg);
-
-  // Blit character picture onto card
-  card.blit_raw(picture,
-                ViewPoint{photo_location.x + 11, photo_location.y + 3});
-
-  // Render character name
-  constexpr int name_x_offset = 160;
-  context_.font->render_text_onto(card, char_data->first_name,
-                                  ViewPoint{name_x_offset, 34},
-                                  FontFace::ASTANDAR, TEXT_COLOR_BLACK);
-  context_.font->render_text_onto(card, char_data->last_name,
-                                  ViewPoint{name_x_offset, 56},
-                                  FontFace::ASTANDAR, TEXT_COLOR_BLACK);
+  views::helpers::draw_framed_portrait(card, *char_data, {8, 30});
+  draw_card_name(card, char_data->first_name, char_data->last_name);
 
   // Render "Job Application" label (where age would be on data card)
   constexpr int name_x = 160;
@@ -1082,7 +1194,7 @@ Surface StaffView::create_application_card(uint8_t character_id) {
   return card;
 }
 
-Surface StaffView::create_empty_card(const std::string& label) {
+Surface StaffView::create_empty_card(const std::string_view label) {
   // Cache the base card structure (without the tab label)
   if (!empty_card_surface_) {
     empty_card_surface_ =
@@ -1141,11 +1253,10 @@ void StaffView::handle_left_mouse_click(ViewPoint /*p*/) {
 
   // If a hired employee card is visible on overview, clicking anywhere closes
   // it
-  if (screen_ == StaffScreen::OVERVIEW &&
-      card_animator_.state() == SlideAnimator::SlideState::VISIBLE &&
+  if (screen_ == StaffScreen::OVERVIEW && card_slider_.settled() &&
       selected_slot_index_.has_value()) {
-    card_animator_.start_hide();
-    // Keep selected_slot_index_ until animation completes (cleared in tick())
+    card_slider_.dismiss();
+    // Selection is cleared by the slider's on_hidden callback.
     return;
   }
 }
@@ -1162,20 +1273,16 @@ void StaffView::on_staff_slot_clicked(core::character::JobRole job,
     const auto& manager_opt = restaurant->manager();
     if (manager_opt.has_value()) {
       selected_slot_index_ = 0;
-      selected_character_ = nullptr; // Not needed for hired employees
 
       // Use Staff overload to show payment
-      fg_card_ = create_data_card(*manager_opt);
-      card_animator_.start_show();
+      card_slider_.present(create_data_card(*manager_opt));
       // Stay on OVERVIEW so buttons remain visible
     }
     return;
   }
 
   // Get the appropriate staff list based on job
-  const auto& staff_list = (job == core::character::JobRole::CHEF)
-                               ? restaurant->cooks()
-                               : restaurant->waiters();
+  const auto& staff_list = staff_array_for(*restaurant, job);
 
   // Check if slot is valid and has a staff member
   if (slot_index >= 0 && slot_index < static_cast<int>(staff_list.size())) {
@@ -1183,11 +1290,9 @@ void StaffView::on_staff_slot_clicked(core::character::JobRole job,
     if (staff_opt.has_value()) {
       // Store the selected slot
       selected_slot_index_ = slot_index;
-      selected_character_ = nullptr; // Not needed for hired employees
 
       // Create and show the character card using Staff overload
-      fg_card_ = create_data_card(*staff_opt);
-      card_animator_.start_show();
+      card_slider_.present(create_data_card(*staff_opt));
 
       // Stay on OVERVIEW so fire/wages/training buttons remain visible
     }
@@ -1195,21 +1300,19 @@ void StaffView::on_staff_slot_clicked(core::character::JobRole job,
 }
 
 void StaffView::change_screen(StaffScreen screen) {
-  std::cout << "Change screen to " << magic_enum::enum_name(screen) << "\n";
+  Logger::debug("Change screen to {}", magic_enum::enum_name(screen));
   screen_ = screen;
   input_panel_needs_update_ = true;
   mark_dirty();
 }
 
 void StaffView::change_job(core::character::JobRole job) {
-  if (job == job_) {
-    return;
-  }
   Logger::info("Change job at state {}", magic_enum::enum_name(screen_));
 
-  // If viewing a hired employee card on overview, close it
-  if (screen_ == StaffScreen::OVERVIEW && selected_slot_index_.has_value()) {
-    card_animator_.start_hide();
+  const bool on_card_screen =
+      screen_ == StaffScreen::OVERVIEW || screen_ == StaffScreen::TRAINING;
+  if (on_card_screen && selected_slot_index_.has_value()) {
+    card_slider_.dismiss();
     // Clear selection immediately when switching categories to avoid
     // highlighting wrong row in the new category during animation
     selected_slot_index_.reset();
@@ -1227,20 +1330,6 @@ void StaffView::change_job(core::character::JobRole job) {
     show_applicant_card(job);
   }
 
-  mark_dirty();
-}
-
-void StaffView::show_character(uint8_t char_id) {
-  active_character_id_ = char_id;
-
-  // Build a temporary Staff wrapper just to reuse create_data_card()
-  // CharacterData* cd = CharacterFactory::create_character(char_id);
-  auto* cd = applicant_pool_[job_].front();
-  // Staff dummy(job_, Character(cd));
-
-  fg_card_ = create_data_card(cd, job_);
-  card_animator_.reset();
-  card_animator_.start_show(); // bring the card in
   mark_dirty();
 }
 
@@ -1264,14 +1353,51 @@ void StaffView::add_common_buttons() {
                                state_.ui().pop();
                              }
                              else {
-                               card_animator_.start_hide();
+                               card_slider_.dismiss();
                                change_screen(StaffScreen::OVERVIEW);
                              }
                            });
 }
 
+void StaffView::apply_wage_change(Staff& staff, int new_wage_dollars) {
+  int old_wage_dollars = static_cast<int>(staff.payment().whole());
+  if (old_wage_dollars <= 0) {
+    return;
+  }
+  int wage_pct = (new_wage_dollars * 100) / old_wage_dollars;
+
+  // raise_motivation_factor scales the raise (increase) response by difficulty
+  int difficulty_divisor = (state_.difficulty_level() / 2) + 1;
+  int raise_motivation_factor =
+      (((wage_pct - 100) * 2) / difficulty_divisor) + 100;
+
+  int old_motivation = staff.character().motivation();
+  // No raise halves motivation; a cut drops it further.
+  int motivation_factor =
+      wage_pct > 100 ? raise_motivation_factor : (wage_pct / 2);
+  int motivation_change =
+      ((old_motivation * motivation_factor) / 100) - old_motivation;
+
+  staff.payment(Money{new_wage_dollars * 100});
+  staff.adjust_motivation(motivation_change); // clamps to 0-100
+
+  // Only a raise changes throughput; cuts and no-change leave ppd alone.
+  if (wage_pct > 100) {
+    int old_ppd = staff.character().pizzas_per_day();
+    int multiplier = raise_motivation_factor > 100
+                         ? (raise_motivation_factor + 120) / 2
+                         : raise_motivation_factor;
+    int new_ppd = std::min((old_ppd * multiplier) / 100, 2000);
+    staff.pizzas_per_day(new_ppd);
+  }
+
+  Logger::info("[Staff] Wage ${} -> ${} ({}%), motivation: {:+d}, ppd {}",
+               old_wage_dollars, new_wage_dollars, wage_pct, motivation_change,
+               wage_pct > 100 ? "updated" : "unchanged");
+}
+
 void StaffView::add_overview_buttons() {
-  // Fire button - shows alert if no staff selected
+  // Fire
   input_panel_->add_button(
       Icon::BOOT, ButtonType::Square, ButtonPosition::MiddleLeft, "FIRE",
       [this]() {
@@ -1283,25 +1409,8 @@ void StaffView::add_overview_buttons() {
         }
 
         int slot_index = selected_slot_index_.value();
-        auto* restaurant = state_.active_restaurant();
 
-        const Staff* staff_ptr = nullptr;
-        if (job_ == core::character::JobRole::MANAGER) {
-          if (restaurant->manager().has_value()) {
-            staff_ptr = &restaurant->manager().value();
-          }
-        }
-        else {
-          const auto& staff_array = (job_ == core::character::JobRole::CHEF)
-                                        ? restaurant->cooks()
-                                        : restaurant->waiters();
-          if (slot_index >= 0 &&
-              slot_index < static_cast<int>(staff_array.size()) &&
-              staff_array[slot_index].has_value()) {
-            staff_ptr = &staff_array[slot_index].value();
-          }
-        }
-
+        const Staff* staff_ptr = selected_staff();
         if (staff_ptr == nullptr) {
           return;
         }
@@ -1334,7 +1443,7 @@ void StaffView::add_overview_buttons() {
                       character_id,
                       static_cast<core::character::MarketStatus>(job_));
                   selected_slot_index_.reset();
-                  card_animator_.start_hide();
+                  card_slider_.dismiss();
                 }
                 else {
                   Logger::warn("Failed to fire staff member");
@@ -1345,186 +1454,65 @@ void StaffView::add_overview_buttons() {
             &staff_ptr->character());
       });
 
-  // Wages button - shows alert if no staff selected
+  // Wages
   input_panel_->add_button(
       Icon::MONEY_BAG, ButtonType::Square, ButtonPosition::MiddleCenter,
       "WAGES", [this]() {
-        if (!selected_slot_index_.has_value()) {
+        Staff* staff = selected_staff();
+        if (!staff) {
           context_.popup->origin(ViewPoint{52, 80});
           context_.popup->create<AlertPopup>(
               "To change somebody's wages, you must first select that person!");
           return;
         }
 
-        // Get current staff payment to calculate dynamic range
-        int current_wage = 320; // default fallback
-        Restaurant* restaurant = state_.active_restaurant();
-        if (restaurant) {
-          if (job_ == core::character::JobRole::MANAGER) {
-            auto& manager = restaurant->manager();
-            if (manager.has_value()) {
-              current_wage = manager->payment().whole();
-            }
-          }
-          else {
-            auto& staff_list = (job_ == core::character::JobRole::CHEF)
-                                   ? restaurant->cooks()
-                                   : restaurant->waiters();
-            int slot = *selected_slot_index_;
-            if (slot >= 0 && slot < static_cast<int>(staff_list.size()) &&
-                staff_list[slot].has_value()) {
-              current_wage = staff_list[slot]->payment().whole();
-            }
-          }
-        }
-
+        int current_wage = static_cast<int>(staff->payment().whole());
         int min_wage = current_wage / 2;
         int max_wage = current_wage * 2;
-        int step = 50; // $50 increments
+        constexpr int step = 50; // $50 increments
 
         context_.popup->origin(ViewPoint{52, 80});
         context_.popup->create<NumberInputPopup>(
             "Change payment", "$", current_wage, min_wage, max_wage, step,
             [this](int new_wage_dollars) {
-              if (!selected_slot_index_.has_value()) {
-                return;
+              if (Staff* s = selected_staff()) {
+                apply_wage_change(*s, new_wage_dollars);
+                card_slider_.dismiss();
+                mark_dirty();
               }
-
-              // Get the staff member being edited
-              Restaurant* restaurant = state_.active_restaurant();
-              if (!restaurant) {
-                return;
-              }
-
-              Staff* staff = nullptr;
-              int old_wage_dollars = 0;
-
-              // Get staff based on current job and slot
-              if (job_ == core::character::JobRole::MANAGER) {
-                auto& manager = restaurant->manager();
-                if (!manager.has_value()) {
-                  return;
-                }
-                staff = &(*manager);
-                old_wage_dollars = manager->payment().whole();
-              }
-              else {
-                auto& staff_list = (job_ == core::character::JobRole::CHEF)
-                                       ? restaurant->cooks()
-                                       : restaurant->waiters();
-                int slot = *selected_slot_index_;
-                if (slot < 0 || slot >= static_cast<int>(staff_list.size()) ||
-                    !staff_list[slot].has_value()) {
-                  return;
-                }
-                staff = &(*staff_list[slot]);
-                old_wage_dollars = staff_list[slot]->payment().whole();
-              }
-
-              // Calculate wage percentage change
-              int wage_pct = (new_wage_dollars * 100) / old_wage_dollars;
-
-              // Calculate motivation multiplier (ebp) based on wage change
-              int difficulty = state_.difficulty_level(); // 1-5
-              int difficulty_divisor = (difficulty / 2) + 1;
-
-              int motivation_change = 0;
-
-              if (wage_pct > 100) {
-                int temp = (wage_pct - 100) * 2;
-                int ebp = (temp / difficulty_divisor) + 100;
-
-                // Calculate motivation change: (old_mot * ebp / 100) - old_mot
-                int old_motivation = staff->character().motivation();
-                int new_motivation_calc = (old_motivation * ebp) / 100;
-                motivation_change = new_motivation_calc - old_motivation;
-              }
-              else {
-                // For wage_pct=100 (no change): mot becomes half
-                // For wage_pct=90 (10% cut): mot becomes 45% of original
-                int half_pct = wage_pct / 2;
-                int old_motivation = staff->character().motivation();
-                int new_motivation_calc = (old_motivation * half_pct) / 100;
-                motivation_change = new_motivation_calc - old_motivation;
-              }
-
-              // Update payment first
-              staff->payment(Money{new_wage_dollars * 100});
-
-              // Adjust motivation (will clamp to 0-100)
-              staff->adjust_motivation(motivation_change);
-
-              // Recalculate pizzas_per_day ONLY on wage increase
-              // (wage decrease/no-change does NOT affect ppd, only motivation)
-              if (wage_pct > 100) {
-                int old_ppd = staff->character().pizzas_per_day();
-                int new_ppd;
-
-                // Wage increase: use (ebp + 120) / 2 multiplier (from lines
-                // 329-334)
-                int temp = (wage_pct - 100) * 2;
-                int ebp = (temp / difficulty_divisor) + 100;
-
-                if (ebp > 100) {
-                  int multiplier =
-                      (ebp + 120) / 2; // e.g., (124 + 120) / 2 = 122
-                  new_ppd = (old_ppd * multiplier) / 100;
-                }
-                else {
-                  new_ppd = (old_ppd * ebp) / 100;
-                }
-
-                // Cap at 2000
-                new_ppd = std::min(new_ppd, 2000);
-
-                staff->pizzas_per_day(new_ppd);
-              }
-              // else: wage decrease/no-change - ppd stays unchanged
-
-              // Log the change for debugging
-              if (wage_pct > 100) {
-                Logger::info(
-                    "[Staff] Wage ${} -> ${} ({}%), motivation: {:+d}, ppd "
-                    "updated",
-                    old_wage_dollars, new_wage_dollars, wage_pct,
-                    motivation_change);
-              }
-              else {
-                Logger::info(
-                    "[Staff] Wage ${} -> ${} ({}%), motivation: {:+d}, ppd "
-                    "unchanged",
-                    old_wage_dollars, new_wage_dollars, wage_pct,
-                    motivation_change);
-              }
-
-              // Refresh display
-              card_animator_.start_hide();
-              mark_dirty();
             });
       });
 
-  // Training button - shows alert if no staff selected
-  input_panel_->add_button(Icon::FORM, ButtonType::Square,
-                           ButtonPosition::MiddleRight, "TRAINING", [this]() {
-                             if (!selected_slot_index_.has_value()) {
-                               context_.popup->origin(ViewPoint{52, 80});
-                               context_.popup->create<AlertPopup>(
-                                   "To send somebody on a course, you must "
-                                   "first select that person!");
-                               return;
-                             }
-                             change_screen(StaffScreen::TRAINING);
-                           });
+  // Training
+  input_panel_->add_button(
+      Icon::FORM, ButtonType::Square, ButtonPosition::MiddleRight, "TRAINING",
+      [this]() {
+        if (screen_ == StaffScreen::TRAINING) {
+          return;
+        }
+        if (!selected_slot_index_.has_value()) {
+          context_.popup->origin(ViewPoint{52, 80});
+          context_.popup->create<AlertPopup>(
+              "To send somebody on a course, you must "
+              "first select that person!");
+          return;
+        }
+        Staff* staff = selected_staff();
+        if (staff && staff->on_course()) {
+          const auto& ch = staff->character();
+          context_.popup->origin(ViewPoint{52, 80});
+          context_.popup->create<AlertPopup>(compat::format(
+              "{} {} already is on the '{}' course.", ch.first_name(),
+              ch.last_name(), staff->current_course()->name()));
+          return;
+        }
+        show_training_card();
+      });
 
-  // Recruit button
+  // Recruit
   input_panel_->add_button(Icon::SHOPPING_CART, ButtonType::Horizontal,
                            ButtonPosition::BottomLeft, "RECRUIT",
                            [this]() { show_applicant_card(job_); });
-}
-
-void StaffView::add_hired_employee_buttons() {
-  // When viewing a hired employee card, we don't show action buttons
-  // The card closes on click
 }
 
 void StaffView::add_applicant_buttons() {
@@ -1533,20 +1521,20 @@ void StaffView::add_applicant_buttons() {
                            ButtonPosition::MiddleLeft, "TURN PAGE",
                            [this]() { handle_next_applicant(); });
 
-  input_panel_->add_button(Icon::BAR_CHART, ButtonType::Square,
-                           ButtonPosition::MiddleCenter, "DATA", [this]() {
-                             // Switch to data card (character stats)
-                             if (screen_ == StaffScreen::APPLICATIONS) {
-                               // Get current candidate's ID
-                               auto& vec = applicant_pool_[job_];
-                               if (!vec.empty() &&
-                                   applicant_cursor_[job_] < vec.size()) {
-                                 auto* char_data = vec[applicant_cursor_[job_]];
-                                 fg_card_ = create_data_card(char_data, job_);
-                                 change_screen(StaffScreen::APPLICANT_CARD);
-                               }
-                             }
-                           });
+  input_panel_->add_button(
+      Icon::BAR_CHART, ButtonType::Square, ButtonPosition::MiddleCenter, "DATA",
+      [this]() {
+        // Switch to data card (character stats)
+        if (screen_ == StaffScreen::APPLICATIONS) {
+          // Get current candidate's ID
+          auto& vec = applicant_pool_[job_];
+          if (!vec.empty() && applicant_cursor_[job_] < vec.size()) {
+            auto* char_data = vec[applicant_cursor_[job_]];
+            card_slider_.set_current(create_data_card(char_data, job_));
+            change_screen(StaffScreen::APPLICANT_CARD);
+          }
+        }
+      });
 
   input_panel_->add_button(
       Icon::FORM, ButtonType::Square, ButtonPosition::MiddleRight,
@@ -1557,7 +1545,7 @@ void StaffView::add_applicant_buttons() {
           auto& vec = applicant_pool_[job_];
           if (!vec.empty() && applicant_cursor_[job_] < vec.size()) {
             auto* char_data = vec[applicant_cursor_[job_]];
-            fg_card_ = create_application_card(char_data->id);
+            card_slider_.set_current(create_application_card(char_data->id));
             change_screen(StaffScreen::APPLICATIONS);
           }
         }
@@ -1647,9 +1635,7 @@ void StaffView::add_applicant_buttons() {
                   }
 
                   // Clear cards and go directly to overview (no animation)
-                  fg_card_.reset();
-                  bg_card_.reset();
-                  card_animator_.reset(); // Reset animator to HIDDEN state
+                  card_slider_.clear();
                   change_screen(StaffScreen::OVERVIEW);
                 }
                 else if (result == HiringResult::NoSlotsAvailable) {
@@ -1670,8 +1656,7 @@ void StaffView::add_applicant_buttons() {
 
 void StaffView::create_input_panel() {
   input_panel_needs_update_ = false;
-  std::cout << "Creating input panel for " << magic_enum::enum_name(screen_)
-            << "\n";
+  Logger::debug("Creating input panel for {}", magic_enum::enum_name(screen_));
   input_panel_->delete_buttons();
 
   add_common_buttons();
@@ -1679,34 +1664,14 @@ void StaffView::create_input_panel() {
   // Add screen-specific buttons
   switch (screen_) {
   case StaffScreen::OVERVIEW:
+  case StaffScreen::TRAINING:
     add_overview_buttons();
-    break;
-  case StaffScreen::HIRED_EMPLOYEE_CARD:
-    add_hired_employee_buttons();
     break;
   case StaffScreen::APPLICANT_CARD:
   case StaffScreen::APPLICATIONS:
-    // Both applicant screens use the same buttons
     add_applicant_buttons();
     break;
-  case StaffScreen::TRAINING:
-  case StaffScreen::MANAGER_SETTINGS:
-    break;
   }
-}
-
-std::string StaffView::job_string(core::character::JobRole job) const {
-  switch (job) {
-  case core::character::JobRole::CHEF:
-    return "COOK";
-  case core::character::JobRole::WAITER:
-    return "WAITER";
-  case core::character::JobRole::MANAGER:
-    return "MANAGER";
-  case core::character::JobRole::NONE:
-    return "NONE";
-  }
-  return "";
 }
 
 void StaffView::load_applicant_pool() {
@@ -1748,25 +1713,16 @@ void StaffView::show_applicant_card(core::character::JobRole role) {
     return;
   }
 
-  // create waiter card surface
   std::size_t first = 0;
   Surface new_card = make_card(role, first);
+  applicant_cursor_[role] = first;
 
-  // case 1: a card is already visible
-  if (card_animator_.is_visible()) {
-    bg_card_ = std::move(fg_card_); // current chef card becomes bg
-    fg_card_ = std::move(new_card); // waiter card on top
-    applicant_cursor_[role] = first;
-
-    card_animator_.push(); // fg slides in over bg
+  // Push over a new card
+  if (card_slider_.on_screen()) {
+    card_slider_.push(std::move(new_card));
   }
-  // case 2: no card showing yet
   else {
-    fg_card_ = std::move(new_card);
-    bg_card_.reset();
-    applicant_cursor_[role] = first;
-
-    card_animator_.start_show(); // slide it in from bottom
+    card_slider_.present(std::move(new_card));
   }
   change_screen(StaffScreen::APPLICANT_CARD);
   mark_dirty();
@@ -1791,7 +1747,7 @@ void StaffView::navigate_to_restaurant(core::RestaurantId new_id) {
 }
 
 void StaffView::handle_next_applicant() {
-  if (card_animator_.is_animating()) {
+  if (card_slider_.animating()) {
     return;
   }
   auto& vec = applicant_pool_[job_];
@@ -1801,27 +1757,15 @@ void StaffView::handle_next_applicant() {
   applicant_cursor_[job_] = (applicant_cursor_[job_] + 1) % vec.size();
   Logger::debug("Moving to next candidate, index: {}", applicant_cursor_[job_]);
 
+  card_slider_.push(make_card(job_, applicant_cursor_[job_]));
   if (screen_ == StaffScreen::APPLICATIONS) {
-    auto* char_data = vec[applicant_cursor_[job_]];
-    auto new_card = create_data_card(char_data, job_);
-    bg_card_ = std::move(*fg_card_);
-    fg_card_.reset();
-    fg_card_ = std::move(new_card);
     change_screen(StaffScreen::APPLICANT_CARD);
-    card_animator_.push();
-  }
-  else {
-    auto new_card = make_card(job_, applicant_cursor_[job_]);
-    bg_card_ = std::move(*fg_card_);
-    fg_card_.reset();
-    fg_card_ = std::move(new_card);
-    card_animator_.push();
   }
   mark_dirty();
 }
 
 void StaffView::handle_previous_applicant() {
-  if (card_animator_.is_animating()) {
+  if (card_slider_.animating()) {
     return;
   }
   auto& vec = applicant_pool_[job_];
@@ -1834,15 +1778,9 @@ void StaffView::handle_previous_applicant() {
   Logger::debug("Moving to previous candidate, index: {}", prev);
   applicant_cursor_[job_] = prev;
 
+  card_slider_.pop(make_card(job_, prev));
   if (screen_ == StaffScreen::APPLICATIONS) {
-    auto* char_data = vec[applicant_cursor_[job_]];
-    bg_card_ = create_data_card(char_data, job_);
     change_screen(StaffScreen::APPLICANT_CARD);
-    card_animator_.pop();
-  }
-  else {
-    bg_card_ = make_card(job_, prev);
-    card_animator_.pop();
   }
   mark_dirty();
 }

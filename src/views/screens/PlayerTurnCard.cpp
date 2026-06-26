@@ -10,7 +10,7 @@
 #include "gfx/Blit.h"
 #include "resources/FontManager.h"
 #include "resources/FontTypes.h"
-#include "views/base/RawRenderer.h"
+#include "views/helpers/CardGfx.h"
 
 PlayerTurnCard::PlayerTurnCard(GameContext& context, GameState& state,
                                PlayerTurnCardState ps)
@@ -22,8 +22,6 @@ void PlayerTurnCard::render(const RenderContext& ctx) {
   gfx::blit::blit_with_palette(*ctx.surface, context_.vga->get("gfx/back39"));
 
   auto* player = state_.player(player_);
-  RawRenderer r;
-  auto picture = r.surface(player->character());
   auto name = player->name();
   const TextStyle style{
       .color = 24,
@@ -33,26 +31,8 @@ void PlayerTurnCard::render(const RenderContext& ctx) {
   context_.font->render_text_onto(*ctx.surface, name, {0, 60},
                                   FontFace::ASTANDAR, style);
 
-  // Photo frame background colors
-  uint8_t photo_white_bg = 15;
-  uint8_t photo_darker_bg = 11;
-  uint8_t photo_light_bg = 12;
-  ViewRect photo_location(140, 100, 118, 132);
-
-  // Local lambda to draw a frame layer
-  auto draw_frame_layer = [ctx](const ViewRect& base, int dx, int dy,
-                                uint8_t color) {
-    ViewRect r{base.x + dx, base.y + dy, base.w, base.h};
-    ctx.surface->fill_rect(r, color);
-  };
-
-  // Draw frame from back to front
-  draw_frame_layer(photo_location, 0, 0, photo_light_bg);
-  draw_frame_layer(photo_location, 2, -2, photo_darker_bg);
-  draw_frame_layer(photo_location, 4, -4, photo_white_bg);
-
-  ctx.surface->blit_raw(picture,
-                        ViewPoint{photo_location.x + 11, photo_location.y + 3});
+  views::helpers::draw_framed_portrait(*ctx.surface, player->character(),
+                                       {140, 100});
 
   context_.font->render_text_onto(*ctx.surface,
                                   std::to_string(date_.day()) + ".", {90, 246},

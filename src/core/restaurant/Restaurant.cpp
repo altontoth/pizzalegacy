@@ -15,6 +15,7 @@
 #include "core/city/City.h"
 #include "core/city/District.h"
 #include "core/city/Property.h"
+#include "core/events/LeventId.h"
 #include "core/finance/Money.h"
 #include "core/food/IngredientCategory.h"
 #include "core/food/IngredientType.h"
@@ -1051,12 +1052,43 @@ void Restaurant::end_of_day(GameState& game_state) {
   // decrements happen for all restaurants (open or closed). Event generation
   // and manager routine are skipped for closed restaurants.
   {
-    auto reset_daily_staff = [](Staff& s) {
+    // Fullscreen levent shown when a staff member masters the top course.
+    auto master_levent = [](SkillType skill) {
+      switch (skill) {
+      case SkillType::SERVING:
+        return core::events::LeventId::FullyQualifiedWaiter;
+      case SkillType::MANAGEMENT:
+        return core::events::LeventId::ManagerIsExpertInBusinessStudies;
+      case SkillType::COOKING:
+      case SkillType::NONE:
+        break;
+      }
+      return core::events::LeventId::FullyTrainedMasterchef;
+    };
+
+    auto reset_daily_staff = [&game_state, &master_levent](Staff& s) {
       s.late(false);
       s.stole_money(false);
       s.wants_to_quit(false);
       s.demands_raise(false);
       s.tick_days_away();
+
+      // For a training course that just finished we need to apply the effects.
+      if (s.on_course() && s.time_until_back() == 0) {
+        const auto& ch = s.character();
+        CourseResult res = s.complete_course();
+        game_state.status().post(StatusMsg{
+            .payload = compat::format(
+                "{} {} has {} been on the {} training course.", ch.first_name(),
+                ch.last_name(), res.success ? "successfully" : "not",
+                res.course_name),
+            .severity = StatusSeverity::Info,
+            .scope = StatusScope::Restaurant,
+        });
+        if (res.mastered) {
+          game_state.deliver_message(master_levent(res.skill));
+        }
+      }
     };
     for (auto& cook : cooks_) {
       if (cook) {

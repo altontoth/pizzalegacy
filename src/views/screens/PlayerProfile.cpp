@@ -22,8 +22,8 @@
 #include "resources/FontManager.h"
 #include "resources/FontTypes.h"
 #include "resources/util/FileUtils.h"
-#include "views/base/RawRenderer.h"
 #include "views/base/ViewDefs.h"
+#include "views/helpers/CardGfx.h"
 #include "views/ui/PopupManager.h"
 #include "views/ui/popups/ConfirmPopup.h"
 #include "views/ui/popups/NumberInputPopup.h"
@@ -42,6 +42,12 @@ constexpr int sprite_width = 41 * 2;
 constexpr int sprite_height = 51 * 2;
 
 constexpr int cv_events_per_page = 6;
+
+int cv_total_pages(std::size_t entry_count) {
+  return std::max<int>(
+      1, (static_cast<int>(entry_count) + cv_events_per_page - 1) /
+             cv_events_per_page);
+}
 
 // Screen layout (measured from original)
 constexpr int grid_columns = 3;
@@ -107,20 +113,7 @@ void PlayerProfile::set_up_buttons() {
 }
 
 void PlayerProfile::tick() {
-  if (card_animator_.update()) {
-    if (card_animator_.state() == SlideAnimator::SlideState::HIDDEN) {
-      fg_page_.reset();
-      if (pending_mode_) {
-        change_mode(*pending_mode_);
-        pending_mode_.reset();
-      }
-    }
-    else if (card_animator_.state() == SlideAnimator::SlideState::VISIBLE &&
-             pending_mode_) {
-      // Card just finished appearing but we have a queued mode change,
-      // start sliding it back down so the pending mode can take over.
-      card_animator_.start_hide();
-    }
+  if (card_slider_.update()) {
     mark_dirty();
   }
 }
@@ -133,9 +126,7 @@ void PlayerProfile::render(const RenderContext& ctx) {
   }
   gfx::blit::blit_raw_with_palette(*ctx.surface, *background_);
 
-  // Overview interaction areas: re-registered every frame so begin_frame()
-  // doesn't lose them.
-  if (mode_ == PlayerProfileMode::Overview) {
+  if (mode_ == PlayerProfileMode::Overview && card_slider_.idle()) {
     auto* bob = context_.bob;
     const Size up_btn_size = bob->get("bob/stanbobs.bob").frame(39).size();
     const Size dn_btn_size = bob->get("bob/stanbobs.bob").frame(40).size();
@@ -189,24 +180,17 @@ void PlayerProfile::render(const RenderContext& ctx) {
   }
 
   // foreground card (may be sliding)
-  if (card_animator_.state() != SlideAnimator::SlideState::HIDDEN && fg_page_) {
-    int y = card_animator_.offset();
-    ctx.surface->blit_masked(*fg_page_, {0, y});
-    // A card is visible, so we create a clickable area to dismiss it:
+  card_slider_.render(*ctx.surface, 0);
+  if (card_slider_.on_screen()) {
+    // A card is visible, so clicking anywhere dismisses it back to overview.
     interactions_.create_frame_item(
         ViewRect{0, 0, views::base::MAIN_PANEL_WIDTH,
                  views::base::MAIN_PANEL_HEIGHT},
         "page_dismiss", [this](views::ui::InteractionEvent ie) {
-          if (ie.button != views::ui::MouseButton::Left ||
-              ie.type != views::ui::InteractionEvent::Type::Click) {
-            return;
+          if (ie.button == views::ui::MouseButton::Left &&
+              ie.type == views::ui::InteractionEvent::Type::Click) {
+            change_mode(PlayerProfileMode::Overview);
           }
-          if (card_animator_.is_animating()) {
-            pending_mode_ = PlayerProfileMode::Overview;
-            return;
-          }
-          card_animator_.start_hide();
-          pending_mode_ = PlayerProfileMode::Overview;
         });
   }
 }
@@ -320,55 +304,32 @@ void PlayerProfile::change_mode(PlayerProfileMode mode) {
     return;
   }
 
-  // If an animation is in progress, queue the mode change for after it
-  // completes.
-  if (card_animator_.is_animating()) {
-    pending_mode_ = mode;
-    return;
-  }
-
-  // If a card is already visible and we're switching to a different
-  // non-overview mode, slide the current card down first, then show the new
-  // one.
-  if (mode != PlayerProfileMode::Overview &&
-      card_animator_.state() == SlideAnimator::SlideState::VISIBLE) {
-    pending_mode_ = mode;
-    card_animator_.start_hide();
-    return;
-  }
-
   const auto* player = state_.player(id_);
+  mode_ = mode;
   switch (mode) {
   case PlayerProfileMode::Overview:
-    mode_ = mode;
-    if (card_animator_.state() == SlideAnimator::SlideState::VISIBLE) {
-      card_animator_.start_hide();
-    }
-    return;
+    card_slider_.dismiss();
+    break;
   case PlayerProfileMode::CharacterValues:
-    fg_page_ = create_character_values(player);
+    card_slider_.replace(create_character_values(player));
     break;
   case PlayerProfileMode::Company:
-    fg_page_ = create_company(player);
+    card_slider_.replace(create_company(player));
     break;
   case PlayerProfileMode::CurriculumVitae:
     cv_page_ = 0;
-    fg_page_ = create_curriculum_vitae(player, cv_page_);
+    card_slider_.replace(create_curriculum_vitae(player, cv_page_));
     break;
   case PlayerProfileMode::Position:
-    fg_page_ = create_position(player);
+    card_slider_.replace(create_position(player));
     break;
   case PlayerProfileMode::Awards:
-    fg_page_ = create_awards(player);
+    card_slider_.replace(create_awards(player));
     break;
   case PlayerProfileMode::TargetCV:
-    fg_page_ = create_target_cv(player);
+    card_slider_.replace(create_target_cv(player));
     break;
-  };
-
-  card_animator_.reset();
-  card_animator_.start_show();
-  mode_ = mode;
+  }
 }
 
 bool PlayerProfile::switch_to_player(core::PlayerId new_id) {
@@ -377,10 +338,11 @@ bool PlayerProfile::switch_to_player(core::PlayerId new_id) {
   }
 
   id_ = new_id;
-  card_animator_.start_hide();
-  pending_mode_ = mode_;
   background_.reset();
   player_switched_ = true;
+  // Re-show the current mode for the new player; change_mode slides the old
+  // card out and the new one in.
+  change_mode(mode_);
   mark_dirty();
   return true;
 }
@@ -390,23 +352,15 @@ void PlayerProfile::handle_arrow(PageAction action) {
   if (mode_ == PlayerProfileMode::CurriculumVitae) {
     const auto* player = state_.player(id_);
     auto entries = state_.message_manager().get_cv_entries_for(player->id());
-    int total_pages = std::max(
-        1, (static_cast<int>(entries.size()) + cv_events_per_page - 1) /
-               cv_events_per_page);
+    int total_pages = cv_total_pages(entries.size());
 
-    if (action == PageAction::Next) {
-      if (cv_page_ < total_pages - 1) {
-        cv_page_++;
-        fg_page_ = create_curriculum_vitae(player, cv_page_);
-        mark_dirty();
-      }
-    }
-    else {
-      if (cv_page_ > 0) {
-        cv_page_--;
-        fg_page_ = create_curriculum_vitae(player, cv_page_);
-        mark_dirty();
-      }
+    int new_page = (action == PageAction::Next)
+                       ? std::min(cv_page_ + 1, total_pages - 1)
+                       : std::max(cv_page_ - 1, 0);
+    if (new_page != cv_page_) {
+      cv_page_ = new_page;
+      card_slider_.set_current(create_curriculum_vitae(player, cv_page_));
+      mark_dirty();
     }
     return;
   }
@@ -425,45 +379,21 @@ Surface PlayerProfile::create_character_values(const Player* player) {
   Surface char_val = blue_paper_.clone();
   const auto& character = player->character();
 
-  // Render portrait with frame
-  RawRenderer r;
-  auto picture = r.surface(character);
+  views::helpers::draw_framed_portrait(char_val, character, {42, 20});
 
-  // Photo frame background colors
-  uint8_t photo_white_bg = 15;
-  uint8_t photo_darker_bg = 11;
-  uint8_t photo_light_bg = 12;
-  ViewRect photo_location(42, 20, 118, 132);
-
-  // Local lambda to draw a frame layer
-  auto draw_frame_layer = [&char_val](const ViewRect& base, int dx, int dy,
-                                      uint8_t color) {
-    ViewRect r{base.x + dx, base.y + dy, base.w, base.h};
-    char_val.fill_rect(r, color);
-  };
-
-  // Draw frame from back to front
-  draw_frame_layer(photo_location, 0, 0, photo_light_bg);
-  draw_frame_layer(photo_location, 2, -2, photo_darker_bg);
-  draw_frame_layer(photo_location, 4, -4, photo_white_bg);
-
-  // Blit character picture onto card
-  char_val.blit_raw(picture,
-                    ViewPoint{photo_location.x + 11, photo_location.y + 3});
-
+  auto* font = context_.font;
   constexpr int text_color = 240;
   constexpr int headers_x = 178;
   int line_height = 20;
   int y = 12;
-  context_.font->render_line_onto(char_val, "Character values", {headers_x, y},
-                                  FontFace::PIZ_NUMB, text_color);
+  font->render_line_onto(char_val, "Character values", {headers_x, y},
+                         FontFace::PIZ_NUMB, text_color);
   y += line_height;
-  context_.font->render_line_onto(char_val, player->name(), {headers_x, y},
-                                  FontFace::PIZ_NUMB, text_color);
+  font->render_line_onto(char_val, player->name(), {headers_x, y},
+                         FontFace::PIZ_NUMB, text_color);
   y += line_height;
-  context_.font->render_line_onto(
-      char_val, compat::format("{} Years", character.age()), {headers_x, y},
-      FontFace::PIZ_NUMB, text_color);
+  font->render_line_onto(char_val, compat::format("{} Years", character.age()),
+                         {headers_x, y}, FontFace::PIZ_NUMB, text_color);
 
   constexpr int labels_x = 98;
   constexpr int values_x = 334;
@@ -489,12 +419,11 @@ Surface PlayerProfile::create_character_values(const Player* player) {
   for (const StatRow& row : stat_rows) {
     const int value = (character.*(row.getter))();
 
-    context_.font->render_line_onto(char_val, row.label, {labels_x, y},
-                                    FontFace::PIZ_NUMB, text_color);
+    font->render_line_onto(char_val, row.label, {labels_x, y},
+                           FontFace::PIZ_NUMB, text_color);
 
-    context_.font->render_line_onto(char_val, std::to_string(value),
-                                    {values_x, y}, FontFace::PIZ_NUMB,
-                                    text_color, AlignX::RightEdge);
+    font->render_line_onto(char_val, std::to_string(value), {values_x, y},
+                           FontFace::PIZ_NUMB, text_color, AlignX::RightEdge);
 
     y += line_height;
   }
@@ -592,9 +521,7 @@ Surface PlayerProfile::create_curriculum_vitae(const Player* player, int page) {
     y += row_height;
   }
 
-  int total_pages = static_cast<int>((entries.size() + cv_events_per_page - 1) /
-                                     cv_events_per_page);
-  total_pages = std::max(total_pages, 1);
+  int total_pages = cv_total_pages(entries.size());
   font->render_line_onto(
       cv, compat::format(" - {}/{} -", page + 1, total_pages), {192, 330},
       FontFace::PIZ_NUMB, text_color, AlignX::CenterPoint);

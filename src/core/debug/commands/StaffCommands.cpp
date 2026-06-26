@@ -6,6 +6,7 @@
 
 #include "core/debug/commands/StaffCommands.h"
 
+#include "core/character/Character.h"
 #include "core/character/Staff.h"
 #include "core/city/Property.h"
 #include "core/restaurant/Restaurant.h"
@@ -13,6 +14,8 @@
 #include "core/restaurant/StaffEvents.h"
 #include "core/state/GameState.h"
 #include "engine/FormatCompat.h"
+
+#include <algorithm>
 
 using namespace debug::command;
 using core::character::JobRole;
@@ -385,6 +388,91 @@ Examples:
       .category = "staff"};
 }
 
+static CommandDef make_staff_finish_training() {
+  return CommandDef{
+      .name = "finish_training",
+      .description = "Shorten active training courses for fast testing",
+      .help_text =
+          R"(Usage: staff finish_training [days] [player_id] [restaurant_id]
+
+Set the remaining course days for every staff member currently on a training
+course. Defaults to 1, so the course resolves on the next end-of-day tick.
+
+Examples:
+  staff finish_training         # all on-course staff finish after one more day
+  staff finish_training 3 @ 0   # 3 days left for restaurant 0's trainees
+)",
+      .args =
+          {
+              ArgSpec{
+                  .name = "days",
+                  .type = ArgType::Int,
+                  .optional = true,
+                  // Zero default keeps this leading arg in a fixed position so
+                  // the player/restaurant indices don't shift when it is
+                  // omitted; the handler maps the 0 to the real default of 1.
+                  .default_provider = DefaultProvider::Zero,
+                  .description = "Days left on the course (>= 1)",
+                  .min_value = 1,
+                  .max_value = 365,
+              },
+              ArgSpec{
+                  .name = "player_id",
+                  .type = ArgType::PlayerId,
+                  .optional = true,
+                  .default_provider = DefaultProvider::ActivePlayer,
+                  .description = "Player ID (@ for active player)",
+                  .min_value = 0,
+                  .max_value = NUMBER_OF_PLAYERS - 1,
+              },
+              ArgSpec{
+                  .name = "restaurant_id",
+                  .type = ArgType::RestaurantId,
+                  .optional = true,
+                  .default_provider = DefaultProvider::ActiveRestaurant,
+                  .description = "Restaurant ID (@ for active restaurant)",
+              },
+          },
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        // The Zero provider yields 0; the real default is 1.
+        int days = std::max(1, static_cast<int>(ctx.int_arg(0)));
+        auto player_id = ctx.player_id(1);
+        auto restaurant_id = ctx.restaurant_id(2);
+
+        Restaurant* restaurant = nullptr;
+        if (auto err =
+                check_restaurant(ctx, player_id, restaurant_id, restaurant)) {
+          return *err;
+        }
+
+        int affected = 0;
+        auto shorten = [&](std::optional<Staff>& opt) {
+          if (opt && opt->on_course()) {
+            opt->days_away(days);
+            ++affected;
+          }
+        };
+        for (auto& cook : restaurant->cooks()) {
+          shorten(cook);
+        }
+        for (auto& waiter : restaurant->waiters()) {
+          shorten(waiter);
+        }
+        shorten(restaurant->manager());
+
+        if (affected == 0) {
+          return CommandResult::error({compat::format(
+              "No staff are on a training course in restaurant {}",
+              restaurant_id.value)});
+        }
+
+        return CommandResult::success({compat::format(
+            "Set {} trainee(s) in restaurant {} to {} day(s) remaining",
+            affected, restaurant_id.value, days)});
+      },
+      .category = "staff"};
+}
+
 static CommandDef make_staff_list() {
   return CommandDef{
       .name = "list",
@@ -435,7 +523,7 @@ Examples:
                               JobRole role) {
           if (!opt) {
             lines.push_back(
-                compat::format("  [{:2d}] {} -- empty", slot, role_name(role)));
+                compat::format("  ({:2d}) {} -- empty", slot, role_name(role)));
             return;
           }
           const Staff& s = *opt;
@@ -463,10 +551,17 @@ Examples:
           }
 
           lines.push_back(compat::format(
-              "  [{:2d}] {} -- {} {} | motiv:{} | away:{} |{}", slot,
-              role_name(role), s.character().first_name(),
+              "  ({:2d}) {} -- {} {} | motiv: {} away: {} skill: {} ppd: {} "
+              "|{}",
+              slot, role_name(role), s.character().first_name(),
               s.character().last_name(), s.character().motivation(),
-              s.days_away_remaining(), flags));
+              s.days_away_remaining(),
+              role == core::character::JobRole::MANAGER
+                  ? s.character().management()
+                  : (role == core::character::JobRole::WAITER
+                         ? s.character().serving()
+                         : s.character().cooking()),
+              s.character().pizzas_per_day(), flags));
         };
 
         auto& cooks = restaurant->cooks();
@@ -489,12 +584,14 @@ CommandDef make_staff_commands() {
       .name = "staff",
       .aliases = {"st"},
       .description = "Staff management and event testing commands",
-      .help_text = "Subcommands: event, set_motivation, set_days_away, list",
+      .help_text = "Subcommands: event, set_motivation, set_days_away, "
+                   "finish_training, list",
       .category = "staff",
   }
       .add_subcommand(make_staff_event())
       .add_subcommand(make_staff_set_motivation())
       .add_subcommand(make_staff_set_days_away())
+      .add_subcommand(make_staff_finish_training())
       .add_subcommand(make_staff_list());
 }
 

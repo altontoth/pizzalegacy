@@ -14,10 +14,11 @@ Character::Character(CharacterData* data)
     : data_(data), age_(data_->age), popularity_(data_->popularity),
       personality_(data_->personality), courage_(data_->courage),
       health_(data_->health), energy_(data_->energy),
-      experience_(data_->experience), cooking_(data_->cooking),
-      serving_(data_->serving), management_(data_->management),
-      motivation_(data_->motivation), trustworthiness_(data_->trustworthiness),
-      honesty_(data_->honesty), pizzas_per_day_(data_->pizzas_per_day) {}
+      intelligence_(data_->intelligence), experience_(data_->experience),
+      cooking_(data_->cooking), serving_(data_->serving),
+      management_(data_->management), motivation_(data_->motivation),
+      trustworthiness_(data_->trustworthiness), honesty_(data_->honesty),
+      pizzas_per_day_(data_->pizzas_per_day) {}
 
 int Character::picture_width() const { return PICTURE_WIDTH; }
 
@@ -40,6 +41,7 @@ CharacterData Character::to_character_data() const {
   snapshot.courage = courage_;
   snapshot.health = health_;
   snapshot.energy = energy_;
+  snapshot.intelligence = intelligence_;
   snapshot.experience = experience_;
   snapshot.cooking = cooking_;
   snapshot.serving = serving_;

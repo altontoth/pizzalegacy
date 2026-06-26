@@ -8,13 +8,9 @@
 
 #include "core/common/Ids.h"
 #include "views/base/MainPanelView.h"
-#include "views/ui/SlideAnimator.h"
+#include "views/ui/CardSlider.h"
 
 class Player;
-
-constexpr int space_on_top = 2;
-constexpr int slider_height = 352;
-constexpr int slider_width = 384;
 
 class PlayerProfile final : public MainPanelView {
 public:
@@ -49,15 +45,15 @@ private:
   PlayerProfileMode mode_{PlayerProfileMode::Overview};
   int cv_page_{0};
   static constexpr int max_cv_pages = 6;
-  SlideAnimator card_animator_{slider_height, space_on_top};
+  static constexpr int space_on_top = 2;
+  static constexpr int slider_height = 352;
+  views::ui::CardSlider card_slider_{slider_height, space_on_top};
   const Surface blue_paper_;
   const Surface position_paper_;
   const Surface awards_board_;
   const Surface orden_sheet_;
-  // This is the page that is held by the hand (if any)
-  std::optional<Surface> fg_page_;
+  // The overview screen, drawn as the static backdrop behind any sliding card.
   std::optional<Surface> background_;
-  std::optional<PlayerProfileMode> pending_mode_;
   int start_of_day_{9};
   bool player_switched_{false};
 };

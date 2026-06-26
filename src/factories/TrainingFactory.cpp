@@ -158,7 +158,11 @@ static_assert(trainings.size() ==
 std::vector<Training> TrainingFactory::all_trainings() {
   std::vector<Training> list;
   list.reserve(std::size(trainings));
-  for (const auto& data : trainings) {
+  for (std::size_t i = 0; i < std::size(trainings); ++i) {
+    // The table is indexed implicitly by TrainingType, so the position is the
+    // course identity; stamp it onto the data the Training carries.
+    TrainingData data = trainings[i];
+    data.course = static_cast<TrainingType>(i);
     list.emplace_back(data);
   }
   return list;
@@ -181,5 +185,7 @@ Training TrainingFactory::create_training(TrainingType training_type) {
   if (index >= std::size(trainings)) {
     fatal("Invalid TrainingType requested");
   }
-  return Training(trainings[index]);
+  TrainingData data = trainings[index];
+  data.course = training_type;
+  return Training(data);
 }

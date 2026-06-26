@@ -29,12 +29,12 @@ public:
   bool update();
   int offset() const;
   SlideState state() const;
-  bool is_visible() const;
+  bool on_screen() const;
   bool is_animating() const;
   void reset();
   void push();
   void pop();
-  bool bg_visible() const;
+  bool show_background() const;
 
 private:
   void snap_visible();
@@ -43,5 +43,9 @@ private:
   int target_offset_;
   int offset_;
   SlideState state_;
-  bool bg_visible_{false};
+  // A background card sits under the foreground one during a push or pop.
+  bool show_background_{false};
+  // True only during a pop: when the foreground finishes sliding off, the
+  // background is promoted to foreground instead of the animator going hidden.
+  bool revealing_background_{false};
 };

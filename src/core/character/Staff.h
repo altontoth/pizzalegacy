@@ -12,6 +12,14 @@
 
 #include <optional>
 
+// Outcome of a training course that has just finished
+struct CourseResult {
+  bool success{false};
+  bool mastered{false}; // final course completed
+  SkillType skill{SkillType::NONE};
+  std::string course_name;
+};
+
 class Staff {
 public:
   Staff(core::character::JobRole job_role,
@@ -22,7 +30,12 @@ public:
   Staff& operator=(const Staff&) = default;
   int time_until_back() const;
   bool is_away() const;
-  void send_on_training(Training&);
+  bool on_course() const { return current_course_.has_value(); }
+  const std::optional<Training>& current_course() const {
+    return current_course_;
+  }
+  void send_on_training(const Training&);
+  CourseResult complete_course();
   void payment(Money);
   Money payment() const;
   int pizzas_per_day() const;
@@ -36,8 +49,9 @@ public:
   void adjust_honesty(int change);
   void adjust_health(int change);
 
-  // Event flags (set when events occur)
-  bool is_absent() const { return is_sick_ || is_pregnant_; }
+  bool is_absent() const {
+    return is_sick_ || is_pregnant_ || current_course_.has_value();
+  }
   bool is_late() const { return is_late_; }
   bool is_sick() const { return is_sick_; }
   std::string_view absence_reason() const {
@@ -46,6 +60,9 @@ public:
     }
     if (is_pregnant_) {
       return "pregnant";
+    }
+    if (current_course_.has_value()) {
+      return "course";
     }
     return "";
   }
@@ -83,7 +100,7 @@ private:
   core::character::JobRole job_role_{core::character::JobRole::NONE};
   core::character::Character character_;
   Money payment_{0};
-  std::optional<Training> current_training_;
+  std::optional<Training> current_course_;
 
   // Event flags
   bool is_late_{false};

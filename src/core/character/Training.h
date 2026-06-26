@@ -14,6 +14,32 @@
 
 enum class SkillType { NONE, COOKING, SERVING, MANAGEMENT };
 
+enum class TrainingType {
+  // Cooking:
+  COOKERY_COURSE_1,
+  COOKERY_COURSE_2,
+  AVANTI_AVANTI,
+  SPECIALITIES,
+  SUPER_COOK,
+  MASTER_COOK,
+
+  // Serving:
+  SERVING_COURSE,
+  SALES_COURSE,
+  FAST_SELLING,
+  CUSTOMER_RELATIONS,
+  SUPER_SELLING,
+  WAITER_DIPLOMA,
+
+  // Management:
+  ACCOUNTING,
+  BOOK_KEEPING,
+  STOCK_MANAGEMENT,
+  PROFIT_MAXIMIZING,
+  MANAGING_PERSONNEL,
+  MASTER_OF_BUSINESS,
+};
+
 struct TrainingData {
   std::string_view name;
   SkillType type;
@@ -22,12 +48,11 @@ struct TrainingData {
   Money cost;
   int score_increase; // skill bonus
   int pizzas_day_increase;
+  TrainingType course;
 };
 
 class Training {
 public:
-  Training(const std::string& name, SkillType type, int duration, int min_level,
-           Money cost, int score_increase, int pizzas_day_increase);
   explicit Training(const TrainingData& data);
 
   // Use the default copy semantics.
@@ -37,6 +62,9 @@ public:
   // Getters
   const std::string& name() const { return name_; }
   SkillType type() const { return type_; }
+  TrainingType course() const { return course_; }
+  // 0-5 position of this course within its skill category.
+  int course_index() const;
   int duration() const { return duration_; }
   int min_level() const { return min_level_; }
   Money cost() const { return cost_; }
@@ -51,4 +79,5 @@ private:
   Money cost_;
   int score_increase_;
   int pizzas_day_increase_;
+  TrainingType course_;
 };
