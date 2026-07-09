@@ -8,7 +8,9 @@
 
 #include "core/GameTypes.h"
 #include "core/common/Ids.h"
+#include "core/mission/MissionTarget.h"
 
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -37,6 +39,8 @@ struct Config {
   std::string chosen_character;
   core::CityId city_id{0};
   std::vector<PlayerSlot> players;
+  // Target CV; engaged only for GameMode::MISSION_MODE, nullopt otherwise.
+  std::optional<core::mission::MissionTarget> mission;
 };
 
 } // namespace init

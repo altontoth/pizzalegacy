@@ -12,6 +12,9 @@
 
 namespace core::time {
 
+// The game clock advances in 10-minute blocks.
+inline constexpr int MINUTES_PER_BLOCK = 10;
+
 /**
  * Represents a time of day (hour and minute).
  * Used for restaurant operating hours, appointments, etc.

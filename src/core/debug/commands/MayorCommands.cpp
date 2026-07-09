@@ -84,7 +84,7 @@ Examples:
                             ? ctx.bool_arg(1)
                             : restaurant->first_inspection_pending();
 
-        ctx.state.trigger_mayor_inspection(rid, is_first);
+        ctx.state.turn().trigger_mayor_inspection(rid, is_first);
         return CommandResult::success().add_message(
             compat::format("Triggered {} inspection for restaurant {}",
                            is_first ? "first" : "regular", rid.value));

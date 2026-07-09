@@ -17,7 +17,6 @@
 #include "resources/FontManager.h"
 #include "views/ui/widgets/PositionMarkerMenuItem.h"
 
-using namespace views::base;
 using DisplayConstants::SCREEN_HEIGHT;
 using DisplayConstants::SCREEN_WIDTH;
 

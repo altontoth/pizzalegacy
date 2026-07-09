@@ -101,20 +101,18 @@ public:
   void add_liquidity_snapshot(Money amount, int week_nr);
 
   // Advertising campaigns
+  using CityCampaigns = std::array<std::optional<AdvertisingCampaign>, 4>;
   void add_campaign(const AdvertisingCampaign& campaign);
   std::optional<AdvertisingCampaign>
-  get_campaign(AdvertisingChannel channel) const;
-  bool has_active_campaign(AdvertisingChannel channel) const;
+  get_campaign(core::CityId city, AdvertisingChannel channel) const;
+  bool has_active_campaign(core::CityId city, AdvertisingChannel channel) const;
   void update_campaigns(); // Called daily to decrement days_remaining
-  uint8_t total_advertising_effectiveness() const;
-  const std::array<std::optional<AdvertisingCampaign>, 4>&
-  get_campaigns() const {
+  uint8_t total_advertising_effectiveness(core::CityId city) const;
+  const std::map<core::CityId, CityCampaigns>& get_campaigns() const {
     return campaigns_;
   }
 
-  std::array<std::optional<AdvertisingCampaign>, 4>& get_campaigns() {
-    return campaigns_;
-  }
+  std::map<core::CityId, CityCampaigns>& get_campaigns() { return campaigns_; }
   const Awards& awards() const;
   void award(AwardCategory, AwardLevel);
 
@@ -207,7 +205,7 @@ private:
   void check_ai_expansion(class GameState& game_state);
   void process_contracts(class GameState& game_state);
 
-  std::array<std::optional<AdvertisingCampaign>, 4> campaigns_;
+  std::map<core::CityId, CityCampaigns> campaigns_;
   MafiaPlayerState mafia_state_;
   InsurancePlayerState insurance_state_;
   SocialStatus social_status_;

@@ -13,6 +13,7 @@
 #include <optional>
 #include <string>
 #include <variant>
+#include "core/common/Ids.h"
 #include "core/status/StatusDisplayRecipe.h"
 #include "core/time/GameTime.h"
 #include "core/time/GameTimestamp.h"
@@ -105,6 +106,21 @@ public:
   void show_baseline(); // Left-click: dismiss current, show baseline
   void show_previous(); // Right-click: replay last message with fresh TTL
 
+  // Header freeze: hold the date/time snapshot shown in the panel header while
+  // turn-boundary invoice popups are up. Money stays live via frozen_player().
+  void freeze_header(std::optional<core::PlayerId> player);
+  void unfreeze_header();
+  void refresh_header(); // header inputs changed while frozen, redraw
+
+  // Clear all message/freeze state for a freshly loaded game and rebind to the
+  // new GameTime, keeping the current subscriber (the panel outlives the load).
+  void reset_for_new_game(GameTime& time);
+  bool header_frozen() const noexcept { return header_frozen_; }
+  const GameTime& frozen_time() const noexcept { return frozen_time_; }
+  std::optional<core::PlayerId> frozen_player() const noexcept {
+    return frozen_player_;
+  }
+
   // Game loop hook
   void update(uint64_t dt_ms);
 
@@ -164,4 +180,9 @@ private:
   // Subscription bookkeeping (single-subscriber model)
   bool subscribed_ = false;
   bool suppressed_ = false;
+
+  // Header freeze state (see freeze_header)
+  bool header_frozen_ = false;
+  std::optional<core::PlayerId> frozen_player_;
+  GameTime frozen_time_;
 };

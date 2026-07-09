@@ -238,7 +238,7 @@ void AttackScene::begin_attack(core::item::Item weapon) {
     }
   }
 
-  view_.walking_guest_.reset();
+  view_.walk_scene_.clear_walker();
   attack_active_ = true;
   break_in_music_stopped_ = false;
   state_.pause_time_advancement();
@@ -435,8 +435,7 @@ void AttackScene::render() {
     }
 
     const int body_base = s.is_defender ? 12 : 0;
-    const int frame =
-        body_base + RestaurantView::walk_frame_for(s.direction, s.walk_cycle);
+    const int frame = body_base + walk_frame_for(s.direction, s.walk_cycle);
     view_.background_.blit_masked(body.frame(frame), blit_pos);
 
     const int widx = attack_weapon_index();
@@ -568,7 +567,7 @@ void AttackScene::police_coming() {
   police_window_ = 1;
   // So our siren doesn't play over the music:
   context_.audio->stop_music();
-  if (auto* sd = state_.status_display(context_)) {
+  if (auto* sd = context_.status_panel) {
     sd->set_police_coming();
   }
 }
@@ -621,7 +620,7 @@ void AttackScene::finish_scene() {
   context_.audio->stop_current_indexed_sound();
   context_.audio->stop_music();
   state_.resume_time_advancement();
-  if (auto* sd = state_.status_display(context_)) {
+  if (auto* sd = context_.status_panel) {
     sd->clear_attack_status();
   }
 }
@@ -661,7 +660,7 @@ void AttackScene::process_attack_aftermath(AttackEndReason reason) {
 }
 
 void AttackScene::update_status_display() {
-  auto* sd = state_.status_display(context_);
+  auto* sd = context_.status_panel;
   if (!sd) {
     return;
   }

@@ -5,9 +5,11 @@
 # Use C locale for consistent sorting across different systems
 export LC_ALL=C
 
-ROOTDIR="$(dirname "$0")/.."
-ASSETDIR="$ROOTDIR/assets"
-OUTFILE="$ROOTDIR/source_manifest.cmake"
+ROOTDIR="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$ROOTDIR" || exit 1
+
+ASSETDIR="assets"
+OUTFILE="source_manifest.cmake"
 
 echo "Generating $OUTFILE..."
 
@@ -25,27 +27,27 @@ rm -f "$OUTFILE"
 
 # All game modules, plus other things not dependent on SDL
 echo "set(GAME_PLEGACY_SOURCES" >> "$OUTFILE"
-find "$ROOTDIR/src/core" -type f \( -name '*.cpp' \) | sort | sed "s|^|    |" >> "$OUTFILE"
-find "$ROOTDIR/src/conversations" -type f \( -name '*.cpp' \) | sort | sed "s|^|    |" >> "$OUTFILE"
-find "$ROOTDIR/src/factories" -type f \( -name '*.cpp' \) | sort | sed "s|^|    |" >> "$OUTFILE"
-find "$ROOTDIR/src/views" -type f \( -name '*.cpp' \) | sort | sed "s|^|    |" >> "$OUTFILE"
-find "$ROOTDIR/src/gfx" -type f \( -name '*.cpp' \) | sort | sed "s|^|    |" >> "$OUTFILE"
-find "$ROOTDIR/src/resources" -type f \( -name '*.cpp' -o -name '*.c' \) | sort | sed "s|^|    |" >> "$OUTFILE"
+find src/core -type f \( -name '*.cpp' \) | sort | sed "s|^|    |" >> "$OUTFILE"
+find src/conversations -type f \( -name '*.cpp' \) | sort | sed "s|^|    |" >> "$OUTFILE"
+find src/factories -type f \( -name '*.cpp' \) | sort | sed "s|^|    |" >> "$OUTFILE"
+find src/views -type f \( -name '*.cpp' \) | sort | sed "s|^|    |" >> "$OUTFILE"
+find src/gfx -type f \( -name '*.cpp' \) | sort | sed "s|^|    |" >> "$OUTFILE"
+find src/resources -type f \( -name '*.cpp' -o -name '*.c' \) | sort | sed "s|^|    |" >> "$OUTFILE"
 echo ")" >> "$OUTFILE"
 echo "" >> "$OUTFILE"
 
 # SDL/engine logic: engine/ and audio stuff
 echo "set(ENGINE_PLEGACY_SOURCES" >> "$OUTFILE"
-find "$ROOTDIR/src/engine" -type f \( -name '*.cpp' -o -name '*.c' \) | sort | sed "s|^|    |" >> "$OUTFILE"
-find "$ROOTDIR/src" -maxdepth 1 \( -name '*.cpp' \) | sort | sed "s|^|    |" >> "$OUTFILE"
-find "$ROOTDIR/third_party/tinyfiledialogs/" \( -name '*.c' \) | sort | sed "s|^|    |" >> "$OUTFILE"
+find src/engine -type f \( -name '*.cpp' -o -name '*.c' \) | sort | sed "s|^|    |" >> "$OUTFILE"
+find src -maxdepth 1 \( -name '*.cpp' \) | sort | sed "s|^|    |" >> "$OUTFILE"
+find third_party/tinyfiledialogs/ \( -name '*.c' \) | sort | sed "s|^|    |" >> "$OUTFILE"
 echo ")" >> "$OUTFILE"
 
 
 # Header and inline files
 echo "set(PLEGACY_HEADERS" >> "$OUTFILE"
-find "$ROOTDIR/src" -type f \( -name '*.h' -o -name '*.hpp' -o -name '*.inl' \) | sort | sed "s|^|    |" >> "$OUTFILE"
-find "$ROOTDIR/third_party" -type f \( -name '*.h' -o -name '*.hpp' -o -name '*.inl' \) | sort | sed "s|^|    |" >> "$OUTFILE"
+find src -type f \( -name '*.h' -o -name '*.hpp' -o -name '*.inl' \) | sort | sed "s|^|    |" >> "$OUTFILE"
+find third_party -type f \( -name '*.h' -o -name '*.hpp' -o -name '*.inl' \) | sort | sed "s|^|    |" >> "$OUTFILE"
 echo ")" >> "$OUTFILE"
 echo "" >> "$OUTFILE"
 
@@ -54,7 +56,7 @@ echo "set(PLEGACY_DIST_EXTRA" >> "$OUTFILE"
 
 # Top-level files
 for f in CMakeLists.txt README.md LICENSE; do
-    [ -f "$ROOTDIR/$f" ] && echo "    $f" >> "$OUTFILE"
+    [ -f "$f" ] && echo "    $f" >> "$OUTFILE"
 done
 echo "    $OUTFILE" >> "$OUTFILE"
 
@@ -63,7 +65,4 @@ echo "    $OUTFILE" >> "$OUTFILE"
 
 echo ")" >> "$OUTFILE"
 
-sed -i '' -E 's|\.\./tools/\.\./||g' "$OUTFILE"
-sed -i '' -E 's|tools/\.\./||g' "$OUTFILE"
-
-echo "Done. Wrote $OUTFILE"
+echo "Done. Wrote $ROOTDIR/$OUTFILE"

@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include <optional>
+
 #include "engine/DebugLabel.h"
 #include "engine/input/InputListener.h"
 #include "engine/input/ListenerToken.h"
@@ -21,7 +23,11 @@ public:
   bool on_action(const input::ActionEvent& ev) override;
 
 private:
+  void render_rgb(const RenderContext& ctx);
+
   uint8_t palette_{0};
   bool show_numbers_{false};
+  std::optional<int> hover_index_;
+  std::optional<int> click_index_;
   input::ListenerToken listener_;
 };

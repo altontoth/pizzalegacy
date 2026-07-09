@@ -51,7 +51,7 @@ void ManagerRoutine::queue_alert(std::string message) {
     return;
   }
   alert_queued_ = true;
-  game_state_.queue_manager_alert(restaurant_.id(), std::move(message));
+  game_state_.turn().queue_manager_alert(restaurant_.id(), std::move(message));
 }
 
 void ManagerRoutine::run_daily() {

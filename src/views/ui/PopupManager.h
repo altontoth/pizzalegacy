@@ -53,7 +53,7 @@ public:
   bool needs_force_recompose() const override;
   void clean() override;
   void mark_dirty() override;
-  bool blocks() const override;
+  bool freezes_view() const override;
   ViewPoint origin() const;
 
   std::vector<LayerInfo> get_layers() override;

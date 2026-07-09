@@ -26,6 +26,7 @@
 #include "core/city/MayorOffice.h"
 #include "core/city/Property.h"
 #include "core/events/FullscreenMessageManager.h"
+#include "core/mission/MissionTarget.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/save/SaveGameCharacter.h"
 #include "core/save/SaveGameCity.h"
@@ -435,6 +436,21 @@ json SaveGameManager::state_to_json(const GameState& state,
   j["difficulty_level"] = state.difficulty_level();
   j["game_mode"] = static_cast<int>(state.game_mode());
 
+  // Save the mission target CV (full dates, so loaded games never depend
+  // on the .mis file or its year encoding again)
+  if (state.mission_target().has_value()) {
+    const auto& target = *state.mission_target();
+    json mission_array = json::array();
+    for (const auto& milestone : target.milestones) {
+      mission_array.push_back({{"id", static_cast<int>(milestone.message_id)},
+                               {"y", milestone.date.year()},
+                               {"m", milestone.date.month()},
+                               {"d", milestone.date.day()}});
+    }
+    j["mission_target"] = {{"source_name", target.source_name},
+                           {"milestones", mission_array}};
+  }
+
   // Save customer taste profiles
   {
     json taste_array = json::array();
@@ -490,7 +506,7 @@ json SaveGameManager::state_to_json(const GameState& state,
   // Save deferred staff events (queued at EOD, delivered at 10am next day)
   {
     json staff_array = json::array();
-    for (const auto& ev : state.deferred_staff_events()) {
+    for (const auto& ev : state.turn().deferred_staff_events()) {
       staff_array.push_back({{"restaurant_id", ev.restaurant_id.value},
                              {"type", static_cast<int>(ev.event.type)},
                              {"job_role", static_cast<int>(ev.event.job_role)},
@@ -502,14 +518,14 @@ json SaveGameManager::state_to_json(const GameState& state,
   // Save deferred mayor events (queued at EOD, delivered at 10am next day)
   {
     json insp_array = json::array();
-    for (const auto& ev : state.deferred_mayor_inspections()) {
+    for (const auto& ev : state.turn().deferred_mayor_inspections()) {
       insp_array.push_back({{"restaurant_id", ev.restaurant_id.value},
                             {"is_first", ev.is_first}});
     }
     j["deferred_mayor_inspections"] = insp_array;
 
     json award_array = json::array();
-    for (const auto& ev : state.deferred_mayor_awards()) {
+    for (const auto& ev : state.turn().deferred_mayor_awards()) {
       json entry = {{"type", static_cast<int>(ev.type)},
                     {"is_ceremony", ev.is_ceremony}};
       if (ev.winner_player_id.has_value()) {
@@ -571,6 +587,18 @@ void SaveGameManager::json_to_state(const json& j, GameState& state,
   if (j.contains("game_mode")) {
     auto mode{j["game_mode"].get<int>()};
     state.game_mode(static_cast<GameMode>(mode));
+  }
+  if (j.contains("mission_target")) {
+    const auto& mt = j["mission_target"];
+    core::mission::MissionTarget target;
+    target.source_name = mt.value("source_name", std::string{});
+    for (const auto& milestone : mt["milestones"]) {
+      target.milestones.push_back(
+          {GameDate{milestone["y"].get<int>(), milestone["m"].get<int>(),
+                    milestone["d"].get<int>()},
+           static_cast<core::events::LeventId>(milestone["id"].get<int>())});
+    }
+    state.mission_target(std::move(target));
   }
   if (j.contains("difficulty_level")) {
     state.difficulty_level(j["difficulty_level"].get<int>());
@@ -684,7 +712,7 @@ void SaveGameManager::json_to_state(const json& j, GameState& state,
       data.job_role =
           static_cast<core::character::JobRole>(ev["job_role"].get<int>());
       data.slot_index = ev["slot_index"].get<int>();
-      state.restore_deferred_staff_event(
+      state.turn().restore_deferred_staff_event(
           data, core::RestaurantId{ev["restaurant_id"].get<int>()});
     }
   }
@@ -694,7 +722,7 @@ void SaveGameManager::json_to_state(const json& j, GameState& state,
     for (const auto& ev : j["deferred_mayor_inspections"]) {
       core::RestaurantId rid{ev["restaurant_id"].get<int>()};
       bool is_first = ev["is_first"].get<bool>();
-      state.restore_deferred_mayor_inspection(rid, is_first);
+      state.turn().restore_deferred_mayor_inspection(rid, is_first);
     }
   }
   if (j.contains("deferred_mayor_awards")) {
@@ -707,7 +735,7 @@ void SaveGameManager::json_to_state(const json& j, GameState& state,
           !ev["winner_player_id"].is_null()) {
         award.winner_player_id = ev["winner_player_id"].get<int>();
       }
-      state.restore_deferred_mayor_award(award);
+      state.turn().queue_mayor_award(award);
     }
   }
 

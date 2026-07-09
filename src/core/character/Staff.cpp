@@ -86,10 +86,13 @@ CourseResult Staff::complete_course() {
 void Staff::payment(Money p) { payment_ = p; }
 Money Staff::payment() const { return payment_; }
 
-void Staff::adjust_motivation(int change) {
-  int new_motivation = character_.motivation() + change;
-  new_motivation = std::clamp(new_motivation, 0, 100);
+void Staff::motivation(int motivation) {
+  int new_motivation = std::clamp(motivation, 0, 100);
   character_.motivation(static_cast<uint8_t>(new_motivation));
+}
+
+void Staff::adjust_motivation(int change) {
+  motivation(character_.motivation() + change);
 }
 
 void Staff::adjust_trustworthiness(int change) {
@@ -111,18 +114,15 @@ void Staff::adjust_health(int change) {
 }
 
 int Staff::pizzas_per_day() const {
-  // Base productivity from character attributes
   int base = character_.pizzas_per_day();
 
   // Role-specific skill bonus
   int skill_bonus = 0;
   switch (job_role_) {
   case core::character::JobRole::CHEF:
-    // Chefs: cooking skill influences pizza output
     skill_bonus = character_.cooking() / 2;
     break;
   case core::character::JobRole::WAITER:
-    // Waiters: dexterity and serving skill influence service speed
     skill_bonus = (character_.dexterity() + character_.serving()) / 4;
     break;
   case core::character::JobRole::MANAGER:
@@ -133,35 +133,30 @@ int Staff::pizzas_per_day() const {
     break;
   }
 
-  // Total daily capacity
-  int total = base + skill_bonus; // + payment_bonus;
+  int total = base + skill_bonus;
 
   return total;
 }
 
 void Staff::pizzas_per_day(int ppd) { character_.pizzas_per_day(ppd); }
 
-int Staff::calculate_prep_time_minutes() const {
-  // Assume 12-hour operating day (720 minutes)
-  // Time per pizza = total_minutes / pizzas_per_day
-  constexpr int OPERATING_MINUTES_PER_DAY = 720;
+int Staff::calculate_prep_time_minutes(int operating_minutes) const {
   int ppd = pizzas_per_day();
   if (ppd == 0) {
-    return OPERATING_MINUTES_PER_DAY; // Avoid division by zero
+    return operating_minutes; // Avoid division by zero
   }
 
-  return OPERATING_MINUTES_PER_DAY / ppd;
+  return operating_minutes / ppd;
 }
 
-int Staff::calculate_service_time_minutes() const {
+int Staff::calculate_service_time_minutes(int operating_minutes) const {
   // Same calculation as prep time - converts throughput to time
-  constexpr int OPERATING_MINUTES_PER_DAY = 720;
   int ppd = pizzas_per_day();
   if (ppd == 0) {
-    return OPERATING_MINUTES_PER_DAY; // Avoid division by zero
+    return operating_minutes; // Avoid division by zero
   }
 
-  return OPERATING_MINUTES_PER_DAY / ppd;
+  return operating_minutes / ppd;
 }
 
 const core::character::Character& Staff::character() const {

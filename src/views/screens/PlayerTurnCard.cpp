@@ -47,6 +47,6 @@ void PlayerTurnCard::render(const RenderContext& ctx) {
 void PlayerTurnCard::tick() {
   if (delay_ticks_-- == 0) {
     state_.ui().pop();
-    state_.on_player_turn_card_finished();
+    state_.turn().on_player_turn_card_finished();
   }
 }

@@ -11,6 +11,8 @@
 
 #include "core/city/CarManager.h"
 #include "core/city/CityTypes.h"
+#include "core/city/CityViewCommon.h"
+#include "core/city/CityViewMapState.h"
 #include "engine/audio/AudioManager.h"
 #include "engine/geom/Camera.h"
 #include "engine/geom/Spaces.h"
@@ -19,8 +21,6 @@
 #include "views/helpers/camera/CameraController.h"
 #include "views/helpers/camera/RmbDragScroller.h"
 #include "views/helpers/camera/ScrollEdges.h"
-#include "views/screens/city_view/CityViewCommon.h"
-#include "views/screens/city_view/CityViewMapState.h"
 #include "views/screens/city_view/CityViewTab.h"
 #include "views/ui/DropdownManager.h"
 #include "views/ui/status/StatusController.h"

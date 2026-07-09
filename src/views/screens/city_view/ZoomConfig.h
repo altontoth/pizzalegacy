@@ -6,10 +6,11 @@
 
 #pragma once
 
+#include "core/city/CityViewCommon.h"
+#include "core/city/CityViewMapState.h"
 #include "core/util/Constants.h"
 #include "core/util/LegacyConstants.h"
 #include "views/base/ViewDefs.h"
-#include "views/screens/city_view/CityViewCommon.h"
 
 constexpr int ZOOM_BOX_WIDTH_MEDIUM = 96;
 constexpr int ZOOM_BOX_HEIGHT_MEDIUM = 88;
@@ -81,3 +82,17 @@ struct ZoomConfig {
     throw std::invalid_argument("Invalid zoom_ level");
   }
 };
+
+// Update scroll so the camera will be centered on the given tile index
+// when returning to the city view.
+inline void center_city_view_on_index(CityViewMapState& state, int tile_index) {
+  using namespace LegacyConstants;
+  int tx = tile_index % MAP_TILES_PER_ROW;
+  int ty = tile_index / MAP_TILES_PER_ROW;
+  int wx = tx * BASE_MAP_TILE_WIDTH * BASE_MAP_ZOOM_MULTIPLIER;
+  int wy = ty * BASE_MAP_TILE_HEIGHT * BASE_MAP_ZOOM_MULTIPLIER;
+
+  auto cfg = ZoomConfig::for_zoom_level(state.zoom);
+  state.scroll.x = wx - (cfg.viewport_width * cfg.zoom_multiplier) / 2;
+  state.scroll.y = wy - (cfg.viewport_height * cfg.zoom_multiplier) / 2;
+}

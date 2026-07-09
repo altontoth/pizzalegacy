@@ -16,7 +16,7 @@ namespace views::ui {
 
 // Owns the foreground/background card surfaces and drives them with a
 // SlideAnimator. Callers express intent (present/push/pop/replace/dismiss) and
-// the we do the surface bookkeeping in here.
+// the surface bookkeeping happens in here.
 //
 // We can handle both styles:
 //   - player profile: present / replace / dismiss

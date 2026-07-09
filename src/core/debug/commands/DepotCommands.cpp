@@ -101,7 +101,8 @@ Examples:
               "No available depot properties in this city");
         }
 
-        bool success = ctx.state.rent_depot(*property, *player, /*free=*/true);
+        bool success = ctx.state.real_estate().rent_depot(*property, *player,
+                                                          /*free=*/true);
         if (!success) {
           return CommandResult::error("Failed to rent depot property");
         }

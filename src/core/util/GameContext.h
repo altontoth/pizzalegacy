@@ -17,6 +17,7 @@ class BlitmapManager;
 class PopupManager;
 class CursorupManager;
 class FontManager;
+class StatusDisplay;
 namespace views::ui {
 class InteractionManager;
 }
@@ -34,6 +35,7 @@ public:
   FontManager* font{nullptr};
   BlitmapManager* blitmap{nullptr};
   PopupManager* popup{nullptr};
+  StatusDisplay* status_panel{nullptr};
   ICursorManager* cursor{nullptr};
   views::ui::InteractionManager* interaction{nullptr};
   GameClock clock;

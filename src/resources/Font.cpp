@@ -396,6 +396,10 @@ std::vector<std::string> Font::word_wrap_line(std::string_view input_line,
 
   std::string current_line;
   int current_w = 0;
+  // Trailing whitespace of the previous word, inserted before the next word so
+  // runs of spaces survive for manual column alignment with spaces. But don't
+  // do that :) If we encounter a line break we drop the rest of the whitespace.
+  std::string pending_ws;
 
   while (i < n) {
     // Find next whitespace-delimited word
@@ -431,10 +435,11 @@ std::vector<std::string> Font::word_wrap_line(std::string_view input_line,
     if (needed <= max_width) {
       // Fits whole
       if (!current_line.empty()) {
-        current_line += ' ';
+        current_line += pending_ws;
       }
       current_line += bw.clean_text;
       current_w = needed;
+      pending_ws.assign(ws);
       if (ws_width > 0) {
         current_w += boundary + ws_width;
       }
@@ -467,7 +472,7 @@ std::vector<std::string> Font::word_wrap_line(std::string_view input_line,
       if (best_break >= 0) {
         // emit current line + first part with dash
         if (!current_line.empty()) {
-          current_line += ' ';
+          current_line += pending_ws;
         }
         current_line += bw.clean_text.substr(0, best_break) + '-';
         out.push_back(std::move(current_line));
@@ -477,6 +482,7 @@ std::vector<std::string> Font::word_wrap_line(std::string_view input_line,
         auto remainder = bw.clean_text.substr(best_break);
         current_w = size_text(remainder, wrap_style).width;
         current_line = std::move(remainder);
+        pending_ws.assign(ws);
         if (ws_width > 0) {
           current_w += boundary + ws_width;
         }
@@ -492,6 +498,7 @@ std::vector<std::string> Font::word_wrap_line(std::string_view input_line,
     }
     current_line = bw.clean_text;
     current_w = w_width;
+    pending_ws.assign(ws);
     if (ws_width > 0) {
       current_w += boundary + ws_width;
     }

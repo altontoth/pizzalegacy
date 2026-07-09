@@ -11,7 +11,6 @@
 #include "core/city/Property.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/restaurant/StaffEventData.h"
-#include "core/restaurant/StaffEvents.h"
 #include "core/state/GameState.h"
 #include "engine/FormatCompat.h"
 
@@ -20,7 +19,6 @@
 using namespace debug::command;
 using core::character::JobRole;
 using core::restaurant::StaffEventData;
-using core::restaurant::StaffEvents;
 
 namespace debug::commands {
 
@@ -209,13 +207,7 @@ Examples:
             .type = event_type,
         };
 
-        // PERSF events: apply the world effect first (simulating EOD), then
-        // show the excuse dialog in same two-step sequence as the real path.
-        if (event_type >= StaffEventData::Type::DestroyCheeseStock) {
-          StaffEvents::apply_event_effect(event_type, *staff, *restaurant,
-                                          ctx.state);
-        }
-
+        // show_staff_event_dialog applies the PERSF effect itself.
         ctx.state.show_staff_event_dialog(event, restaurant, []() {});
 
         return CommandResult::success(

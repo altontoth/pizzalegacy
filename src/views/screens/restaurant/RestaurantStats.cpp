@@ -74,7 +74,7 @@ void RestaurantStats::create_buttons() {
     input_panel_->add_button(Icon::SELL, BT::Horizontal,
                              ButtonPosition::BottomCenter, "", [this]() {
                                state_.ui().pop();
-                               state_.on_restaurant_processed();
+                               state_.turn().advance_pipeline();
                              });
     return;
   }

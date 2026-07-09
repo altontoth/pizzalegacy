@@ -9,6 +9,7 @@
 #include "core/character/InsurancePlayerState.h"
 #include "core/character/Player.h"
 #include "core/food/IngredientCategoryType.h"
+#include "core/marketing/NewspaperAdFormat.h"
 #include "core/state/GameState.h"
 #include "core/status/StatusHub.h"
 #include "core/supply/ActiveContract.h"
@@ -226,6 +227,40 @@ json player_to_json(const Player& player) {
   }
   j["pending_notifications"] = pending_notifications_array;
 
+  // Save active advertising campaigns.
+  json campaigns_array = json::array();
+  for (const auto& [city_id, slots] : player.get_campaigns()) {
+    for (const auto& campaign_opt : slots) {
+      if (!campaign_opt.has_value()) {
+        continue;
+      }
+      const auto& c = *campaign_opt;
+      json cj;
+      cj["channel"] = static_cast<int>(c.channel);
+      cj["city_id"] = c.city_id.value;
+      cj["days_remaining"] = c.days_remaining;
+      cj["effectiveness"] = c.rate.effectiveness;
+      cj["cost"] = c.rate.cost.cents;
+      if (c.flyer_count) {
+        cj["flyer_count"] = *c.flyer_count;
+      }
+      if (c.poster_id) {
+        cj["poster_id"] = *c.poster_id;
+      }
+      if (c.newspaper_ad_format) {
+        cj["newspaper_ad_format"] = static_cast<int>(*c.newspaper_ad_format);
+      }
+      if (!c.newspaper_lines.empty()) {
+        cj["newspaper_lines"] = c.newspaper_lines;
+      }
+      if (c.tv_ad_id) {
+        cj["tv_ad_id"] = *c.tv_ad_id;
+      }
+      campaigns_array.push_back(cj);
+    }
+  }
+  j["campaigns"] = campaigns_array;
+
   return j;
 }
 
@@ -370,6 +405,36 @@ json_to_player(const json& j, GameContext& context,
       msg.severity = static_cast<StatusSeverity>(mj.value("severity", 0));
       msg.scope = static_cast<StatusScope>(mj.value("scope", 0));
       player->queue_notification(std::move(msg));
+    }
+  }
+
+  // Restore active advertising campaigns
+  if (j.contains("campaigns")) {
+    for (const auto& cj : j["campaigns"]) {
+      AdvertisingCampaign c;
+      c.channel = static_cast<AdvertisingChannel>(cj.value("channel", 0));
+      c.city_id = core::CityId{cj.value("city_id", -1)};
+      c.days_remaining = cj.value("days_remaining", 0);
+      c.rate.effectiveness = cj.value("effectiveness", 0);
+      c.rate.cost = Money{cj.value("cost", int64_t{0})};
+      if (cj.contains("flyer_count")) {
+        c.flyer_count = cj["flyer_count"].get<int>();
+      }
+      if (cj.contains("poster_id")) {
+        c.poster_id = cj["poster_id"].get<int>();
+      }
+      if (cj.contains("newspaper_ad_format")) {
+        c.newspaper_ad_format = static_cast<NewspaperAdFormat>(
+            cj["newspaper_ad_format"].get<int>());
+      }
+      if (cj.contains("newspaper_lines")) {
+        c.newspaper_lines =
+            cj["newspaper_lines"].get<std::vector<std::string>>();
+      }
+      if (cj.contains("tv_ad_id")) {
+        c.tv_ad_id = cj["tv_ad_id"].get<int>();
+      }
+      player->add_campaign(c);
     }
   }
 

@@ -38,7 +38,7 @@ private:
   Surface create_curriculum_vitae(const Player*, int page);
   Surface create_position(const Player*);
   Surface create_awards(const Player*);
-  Surface create_target_cv(const Player*);
+  Surface create_target_cv(const Player*, int page);
   Surface create_overview(const Player* player);
 
   core::PlayerId id_;

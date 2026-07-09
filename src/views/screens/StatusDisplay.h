@@ -16,12 +16,6 @@ public:
   void tick() override;
   void render(const RenderContext& ctx) override;
 
-  // Snapshot or release the header display (date, time, money).
-  // capture_state() records current values and locks them; calling it again
-  // refreshes the snapshot while staying locked.
-  void capture_state();
-  void release_state();
-
   // Attack mode
   void set_attack_status(std::optional<int> attacker_energy,
                          std::optional<int> defender_energy);
@@ -42,12 +36,6 @@ private:
   std::optional<Money> previous_balance_;
   StatusHub& hub_;
   StatusHub::Subscription sub_;
-
-  // Frozen header state
-  bool frozen_{false};
-  std::string frozen_date_;
-  std::string frozen_time_;
-  std::string frozen_money_;
 
   bool attack_mode_{false};
   std::optional<int> attack_attacker_energy_;

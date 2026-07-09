@@ -21,6 +21,8 @@
 #include "core/character/Player.h"
 #include "core/city/City.h"
 #include "core/city/CityTypes.h"
+#include "core/city/CityViewCommon.h"
+#include "core/city/CityViewMapState.h"
 #include "core/city/District.h"
 #include "core/city/Property.h"
 #include "core/restaurant/Restaurant.h"
@@ -34,8 +36,6 @@
 #include "gfx/Surface.h"
 #include "views/base/ViewDefs.h"
 #include "views/screens/StatusDisplay.h"
-#include "views/screens/city_view/CityViewCommon.h"
-#include "views/screens/city_view/CityViewMapState.h"
 #include "views/screens/city_view/ZoomConfig.h"
 #include "views/ui/popups/ConfirmPopup.h"
 
@@ -100,7 +100,7 @@ CityView::CityView(GameContext& context, GameState& state, core::CityId id)
   state_.active_city(id);
   state_.resume_time_advancement();
   city_ = state_.active_city();
-  state_.prevent_auto_end_of_turn(false);
+  state_.turn().prevent_auto_end_of_turn(false);
 
   if (auto* player = state_.active_player()) {
     state_.on_city_entered(id, *player);
@@ -183,7 +183,7 @@ CityView::~CityView() {
     store_state_in_city(CityViewReentryMode::RESTORE_ALL);
   }
   state_.clear_active_district();
-  state_.prevent_auto_end_of_turn(true);
+  state_.turn().prevent_auto_end_of_turn(true);
   stop_city_sound();
 }
 
@@ -216,7 +216,7 @@ void CityView::register_map_interactions_viewport() {
             if (did != state_.active_district_id()) {
               state_.active_district_id(did);
               build_default_city_status_recipe();
-              state_.status_display(context_)->mark_dirty();
+              context_.status_panel->mark_dirty();
               mark_dirty();
             }
 
@@ -1250,7 +1250,7 @@ void CityView::create_buttons() {
 
   input_panel_->add_button(Icon::SUNSET, ButtonType::Square,
                            ButtonPosition::BottomRight, "End turn",
-                           [this] { state_.request_end_of_turn(); });
+                           [this] { state_.turn().request_end_of_turn(); });
 }
 
 void CityView::create_dropdowns() {

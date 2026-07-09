@@ -140,6 +140,11 @@ void TVPlaybackEngine::previous_commercial() {
   switch_commercial(id);
 }
 
+void TVPlaybackEngine::play_commercial(int id) {
+  switch_commercial(id);
+  start_playback();
+}
+
 void TVPlaybackEngine::switch_commercial(int id) {
   ad_ = CommercialFactory::create(id);
   commercial_sheet_ = vga_->get(ad_.filename());

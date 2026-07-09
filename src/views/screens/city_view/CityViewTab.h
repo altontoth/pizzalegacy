@@ -7,9 +7,9 @@
 #pragma once
 
 #include <string>
+#include "core/city/CityViewCommon.h"
 #include "engine/geom/Spaces.h"
 #include "gfx/Surface.h"
-#include "views/screens/city_view/CityViewCommon.h"
 
 using gfx::Surface;
 

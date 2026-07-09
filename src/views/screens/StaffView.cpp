@@ -696,11 +696,10 @@ Surface StaffView::create_staff_overview(Restaurant* r) {
 
   int avg_quality = (count > 0) ? total_quality / count : 0;
 
-  // Time per pizza: 720 minutes / total capacity (0 for waiters)
-  constexpr int OPERATING_MINUTES_PER_DAY = 720;
+  // Time per pizza: operating minutes / total capacity (0 for waiters)
   int time_per_pizza = 0;
   if (is_chef && total_capacity > 0) {
-    time_per_pizza = OPERATING_MINUTES_PER_DAY / total_capacity;
+    time_per_pizza = r->operating_minutes_per_day() / total_capacity;
   }
 
   // Work: percentage of this role's capacity actually used (yesterday's final)
@@ -1526,7 +1525,6 @@ void StaffView::add_applicant_buttons() {
       [this]() {
         // Switch to data card (character stats)
         if (screen_ == StaffScreen::APPLICATIONS) {
-          // Get current candidate's ID
           auto& vec = applicant_pool_[job_];
           if (!vec.empty() && applicant_cursor_[job_] < vec.size()) {
             auto* char_data = vec[applicant_cursor_[job_]];
@@ -1541,7 +1539,6 @@ void StaffView::add_applicant_buttons() {
       "APPLICATIONS", [this]() {
         // Switch to application text card
         if (screen_ == StaffScreen::APPLICANT_CARD) {
-          // Get current candidate's ID
           auto& vec = applicant_pool_[job_];
           if (!vec.empty() && applicant_cursor_[job_] < vec.size()) {
             auto* char_data = vec[applicant_cursor_[job_]];
@@ -1717,7 +1714,6 @@ void StaffView::show_applicant_card(core::character::JobRole role) {
   Surface new_card = make_card(role, first);
   applicant_cursor_[role] = first;
 
-  // Push over a new card
   if (card_slider_.on_screen()) {
     card_slider_.push(std::move(new_card));
   }

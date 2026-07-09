@@ -5,7 +5,11 @@
  */
 
 #include "GameCommands.h"
+#include "core/events/FullscreenMessageManager.h"
 #include "core/events/LeventId.h"
+#include "core/mission/MissionFile.h"
+#include "core/mission/MissionScoring.h"
+#include "core/mission/MissionTarget.h"
 #include "core/save/SaveGameManager.h"
 #include "core/state/GameState.h"
 #include "core/state/UIState.h"
@@ -292,7 +296,7 @@ Example:
   game competition monthly
 )",
                     .handler = [](const CommandContext& ctx) -> CommandResult {
-                      ctx.state.run_monthly_competition();
+                      ctx.state.competitions().run_monthly_competition();
                       return CommandResult::success().add_message(
                           "Monthly pizza competition triggered");
                     },
@@ -366,6 +370,147 @@ Valid causes: debts, suppliers, killed, tycoon
       .category = "game"};
 }
 
+static CommandDef make_game_levent() {
+  return CommandDef{
+      .name = "levent",
+      .description = "Fire a life event (CV milestone) for the active player",
+      .help_text = R"(Usage: game levent <id>
+
+Delivers the given LeventId to the active player as if the milestone had
+just been achieved: records the CV entry, awards score, and shows the
+fullscreen message if the event has one. In mission mode this can trigger
+the end-of-mission check.
+
+Valid ids: 1-139 (see LeventId.h). 100+ are CV-only (no fullscreen).
+
+Example:
+  game levent 30    # "Opens 1st restaurant"
+)",
+      .args =
+          {
+              ArgSpec{
+                  .name = "id",
+                  .type = ArgType::Int,
+                  .optional = false,
+                  .default_provider = DefaultProvider::None,
+                  .description = "LeventId to fire (1-139)",
+              },
+          },
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        auto* player = ctx.state.active_player();
+        if (!player) {
+          return CommandResult::error("No active player");
+        }
+        const int id = static_cast<int>(ctx.int_arg(0));
+        if (id < 1 || id > 139) {
+          return CommandResult::error("LeventId must be in 1-139");
+        }
+        const auto msg_id = static_cast<core::events::LeventId>(id);
+        const bool already_recorded =
+            ctx.state.message_manager().was_scheduled(msg_id, player->id());
+        ctx.state.deliver_message(msg_id);
+        return CommandResult::success().add_message(
+            compat::format("Fired levent {}: {}{}", id,
+                           ctx.state.message_manager().get_cv_text(msg_id),
+                           already_recorded ? " (was already in the CV)" : ""));
+      },
+      .category = "game"};
+}
+
+static CommandDef make_game_mission_write() {
+  return CommandDef{
+      .name = "write",
+      .description = "Write the active player's CV as a mission file",
+      .help_text = R"(Usage: game mission write <name>
+
+Serializes the active player's career (CV) as a 400-byte .mis mission
+file in the missions directory. The .mis extension is added if needed.
+
+Example:
+  game mission write mycareer
+)",
+      .args =
+          {
+              ArgSpec{
+                  .name = "name",
+                  .type = ArgType::String,
+                  .optional = false,
+                  .default_provider = DefaultProvider::None,
+                  .description = "Mission filename (.mis added if needed)",
+              },
+          },
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        auto* player = ctx.state.active_player();
+        if (!player) {
+          return CommandResult::error("No active player");
+        }
+        auto entries =
+            ctx.state.message_manager().get_cv_entries_for(player->id());
+        if (entries.empty()) {
+          return CommandResult::error("The active player's CV is empty");
+        }
+        std::string name = ctx.string_arg(0);
+        if (name.ends_with(".mis")) {
+          name = name.substr(0, name.size() - 4);
+        }
+        name = core::mission::sanitize_mission_name(name);
+        if (name.empty()) {
+          return CommandResult::error("Mission name is empty");
+        }
+        auto path = core::mission::save_career_mission(name, entries);
+        if (!path) {
+          return CommandResult::error(
+              compat::format("Failed to write mission {}", name));
+        }
+        return CommandResult::success().add_message(compat::format(
+            "Wrote {} milestones to {}", entries.size(), path->string()));
+      },
+      .category = "game"};
+}
+
+static CommandDef make_game_mission() {
+  return CommandDef{
+      .name = "mission",
+      .description = "Mission mode target CV and scoring",
+      .help_text = R"(Usage: game mission
+
+Shows the mission's target milestones with the per-milestone match
+percentage against the active player's CV, plus the overall score.
+)",
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        auto* player = ctx.state.active_player();
+        if (!player) {
+          return CommandResult::error("No active player");
+        }
+        if (!ctx.state.is_mission_active()) {
+          return CommandResult::error("No mission is active");
+        }
+        const auto& target = *ctx.state.mission_target();
+        const auto live_cv =
+            ctx.state.message_manager().get_cv_entries_for(player->id());
+        const auto scores =
+            core::mission::per_milestone_scores(target, live_cv);
+
+        auto result = CommandResult::success();
+        result.add_message(compat::format("Mission: {} ({} milestones)",
+                                          target.source_name,
+                                          target.milestones.size()));
+        for (size_t i = 0; i < target.milestones.size(); ++i) {
+          const auto& milestone = target.milestones[i];
+          result.add_message(compat::format(
+              "  {:3}%  {:c}  [{}] {}", scores[i], milestone.date,
+              static_cast<int>(milestone.message_id),
+              ctx.state.message_manager().get_cv_text(milestone.message_id)));
+        }
+        result.add_message(compat::format(
+            "Overall: {}%", core::mission::overall_score(target, live_cv)));
+        return result;
+      },
+      .category = "game",
+  }
+      .add_subcommand(make_game_mission_write());
+}
+
 static CommandDef make_game_competition() {
   return CommandDef{
       .name = "competition",
@@ -389,7 +534,9 @@ CommandDef make_game_commands() {
       .add_subcommand(make_game_date())
       .add_subcommand(make_game_time())
       .add_subcommand(make_game_competition())
-      .add_subcommand(make_game_end());
+      .add_subcommand(make_game_end())
+      .add_subcommand(make_game_levent())
+      .add_subcommand(make_game_mission());
 }
 
 } // namespace debug::commands

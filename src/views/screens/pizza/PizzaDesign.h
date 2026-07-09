@@ -23,7 +23,14 @@
 #include "views/ui/DropdownManager.h"
 #include "views/ui/status/StatusController.h"
 
-#define NUMBER_OF_DROPDOWNS 4
+/* The PizzaDesign class is split over multiple cpp files:
+ /   PizzaDesign.cpp            - state, mode switching, input panel
+ /   PizzaDesignCanvas.cpp      - pizza design
+ /   PizzaDesignInfo.cpp        - read-only info and ingredients views
+ /   PizzaDesignRecipes.cpp     - recipe list and recipe loading
+ /   PizzaDesignBake.cpp        - bake workflow and post-judging
+ /   PizzaDesignCompetition.cpp - competition flow, reveal and results
+ */
 
 struct DesignResult {
   enum class Outcome { Saved, Cancelled };
@@ -36,7 +43,7 @@ struct DesignResult {
 class PizzaDesign : public MainPanelView, public input::InputListener {
 public:
   PizzaDesign(GameContext& context, GameState& state, PizzaDesignState pms);
-  ~PizzaDesign();
+  ~PizzaDesign() override;
   void tick() override;
   void render(const RenderContext& ctx) override;
   bool on_action(const input::ActionEvent& ev) override;
@@ -45,7 +52,6 @@ public:
 private:
   bool handle_left_mouse_click(ViewPoint p);
   bool handle_right_mouse_click(ViewPoint p);
-  bool handle_mouse_hover(ViewPoint p);
   static bool is_inside_pizza(ViewPoint p);
   void draw_pizza(const RenderContext& ctx) const;
   void draw_ingredients(const RenderContext& ctx) const;
@@ -53,6 +59,7 @@ private:
   void draw_recipes(const RenderContext& ctx);
   void create_dropdowns();
   void start_chop();
+  void tick_chop();
   void create_input_panel();
   void change_mode(PizzaDesignMode mode);
   bool is_new_selected() const;
@@ -78,6 +85,7 @@ private:
   Player* competing_player() const;
   void begin_competition(std::shared_ptr<CompetitionSession> session);
   void begin_annual_competition(std::shared_ptr<CompetitionSession> session);
+  bool tick_competition();
   void on_reveal_complete();
   void on_competition_design_finished();
   void finalize_competition_results();

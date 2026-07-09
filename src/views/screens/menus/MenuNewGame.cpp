@@ -41,7 +41,7 @@ MenuNewGame::MenuNewGame(GameContext& context, GameState& state)
         Logger::debug("Set game mode to Mission Mode");
         state.begin_initialization();
         state.initializer().mode = GameMode::MISSION_MODE;
-        Logger::debug("I don't support this mode yet :(");
+        state.ui().push<ScreenTag>(ScreenTag::Kind::MissionSelect);
       },
       face, style, sel_style));
   add_menu_item(std::make_unique<SpacerMenuItem>(context, space_between_lines));

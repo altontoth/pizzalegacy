@@ -47,11 +47,21 @@ public:
     }
   }
 
-  bool game_blocked() const {
+  bool view_frozen() const {
     return std::any_of(
         stack_.cbegin(), stack_.cend(), [](auto const& p) noexcept {
           if (const IOverlay* ov = dynamic_cast<const IOverlay*>(p.get())) {
-            return ov->blocks(); // Overlay vetoes game logic
+            return ov->freezes_view(); // Overlay vetoes view logic
+          }
+          return false; // plain Renderable: ignore
+        });
+  }
+
+  bool simulation_frozen() const {
+    return std::any_of(
+        stack_.cbegin(), stack_.cend(), [](auto const& p) noexcept {
+          if (const IOverlay* ov = dynamic_cast<const IOverlay*>(p.get())) {
+            return ov->freezes_simulation(); // Overlay vetoes world time
           }
           return false; // plain Renderable: ignore
         });

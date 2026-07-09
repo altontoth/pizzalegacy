@@ -217,7 +217,6 @@ SDL_Surface_unique_ptr Renderer::to_sdl_surface(const Surface& src,
     fatal(SDL_GetError());
   }
 
-  // Create and attach a palette to the surface.
   SDL_Palette* palette = SDL_CreateSurfacePalette(index8);
   if (!palette) {
     fatal(SDL_GetError());

@@ -18,6 +18,7 @@
 #include "resources/FontManager.h"
 #include "views/base/ViewDefs.h"
 #include "views/ui/PageDecoration.h"
+#include "views/ui/finance/TurnInvoicePopups.h"
 
 constexpr int header_y = 22;
 constexpr int header_text_color = 240;
@@ -461,7 +462,8 @@ void WeeksTakings::navigate_to_restaurant(core::RestaurantId new_id) {
 
 void WeeksTakings::dismiss() {
   if (end_of_week_mode_) {
-    state_.show_staff_invoice_popup(restaurant_id_, on_done_);
+    views::ui::finance::show_staff_invoice_popup(context_, state_,
+                                                 restaurant_id_, on_done_);
   }
   state_.ui().pop();
 }

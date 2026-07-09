@@ -33,8 +33,10 @@ MenuSave::MenuSave(GameContext& context, GameState& state)
 
   add_menu_item(std::make_unique<TextMenuItem>(
       context, "as mission",
-      [] { Logger::debug("Save as mission not yet implemented"); }, face, style,
-      sel_style));
+      [&state] {
+        state.ui().push<ScreenTag>(ScreenTag::Kind::MenuSaveAsMission);
+      },
+      face, style, sel_style));
 }
 
 Surface MenuSave::background() const { return default_background("Save"); }

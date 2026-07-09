@@ -43,6 +43,8 @@ struct ScreenTag {
     MenuGameLoad,
     MenuSave,
     MenuSaveAsGame,
+    MenuSaveAsMission,
+    MissionSelect,
 
     Advertising,
     StaffView,
@@ -115,7 +117,8 @@ enum class GameOverCause {
   BankruptDebts,
   BankruptSuppliers,
   KilledByMafia,
-  PizzaTycoon, // you won
+  PizzaTycoon,     // you won
+  MissionComplete, // achieved the mission's last target milestone
 };
 
 struct GameOverState {

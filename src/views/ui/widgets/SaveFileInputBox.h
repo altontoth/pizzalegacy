@@ -22,9 +22,11 @@ public:
   SaveFileInputBox(GameContext& gc,
                    std::vector<fileutils::FileEntry>& save_files,
                    int* scroll_offset,
-                   std::function<void(const std::string&)> on_save_callback)
+                   std::function<void(const std::string&)> on_save_callback,
+                   std::string extension = ".plsave")
       : MenuItem(gc), save_files_(save_files), scroll_offset_(scroll_offset),
-        on_save_callback_(std::move(on_save_callback)) {}
+        on_save_callback_(std::move(on_save_callback)),
+        extension_(std::move(extension)) {}
 
   void draw(Surface& screen, ViewPoint p, bool is_selected) override;
   void handle_action() override;
@@ -46,6 +48,9 @@ private:
   std::vector<fileutils::FileEntry>& save_files_;
   int* scroll_offset_;
   std::function<void(const std::string&)> on_save_callback_;
+  // Appended to typed names and stripped from listed ones (".plsave",
+  // ".mis", ...)
+  std::string extension_;
   int hovered_index_ = -1;
 
   bool input_active_ = false;

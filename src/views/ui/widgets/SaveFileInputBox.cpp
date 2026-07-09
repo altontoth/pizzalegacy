@@ -80,10 +80,11 @@ void SaveFileInputBox::draw(Surface& screen, ViewPoint p, bool is_selected) {
         block.fill_rect(highlight_rect, gray);
       }
 
-      // Remove .plsave extension for display
+      // Remove the file extension for display
       std::string display_name = save_files_[file_index].filename;
-      if (display_name.ends_with(".plsave")) {
-        display_name = display_name.substr(0, display_name.size() - 7);
+      if (display_name.ends_with(extension_)) {
+        display_name =
+            display_name.substr(0, display_name.size() - extension_.size());
       }
 
       context_.font->render_text_onto(block, display_name, ViewPoint{6, y},
@@ -198,10 +199,10 @@ bool SaveFileInputBox::on_action(const input::ActionEvent& ev) {
   switch (ev.action) {
   case input::Action::SubmitInput:
     if (!new_filename_.empty()) {
-      // Add .plsave extension if not present
+      // Add the file extension if not present
       std::string filename = new_filename_;
-      if (!filename.ends_with(".plsave")) {
-        filename += ".plsave";
+      if (!filename.ends_with(extension_)) {
+        filename += extension_;
       }
       on_save_callback_(filename);
     }

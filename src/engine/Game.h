@@ -6,14 +6,11 @@
 
 #pragma once
 
-#include <filesystem>
 #include <string>
-#include <unordered_map>
 #include "engine/SDLSession.h"
 #include "engine/SDL_include.h"
 
 #include "audio/AudioManager.h"
-#include "core/state/ViewerType.h"
 #include "core/util/ConfigManager.h"
 #include "core/util/GameContext.h"
 #include "engine/DisplayConstants.h"
@@ -42,9 +39,8 @@ public:
     std::optional<std::string>
         console_line;             // "console <...>" joined into a single line
     std::optional<bool> crt_mode; // --crt to force CRT mode
-    std::optional<std::string> vga_viewer;   // --vga <path>
-    std::optional<std::string> bob_viewer;   // --bob <path>
-    std::optional<std::string> sound_viewer; // --sound <path>
+    std::optional<std::string> vga_viewer; // --vga <path>
+    std::optional<std::string> bob_viewer; // --bob <path>
   };
 
   Game(LaunchOptions opts);
@@ -60,11 +56,10 @@ private:
     bool screenshot_requested = false;
     bool fade_on_next_transition = false;
     bool skip_tick_during_fade_in = false;
-    int fade_duration_frames = 15; // ~0.5 seconds at 30 FPS
   };
 
   bool init(int display_height, ConfigManager& config_manager);
-  Renderable* change_state(GameState& gs, LoopState& loop);
+  Renderable* change_state(GameState& gs);
   bool enforce_aspect_ratio(SDL_Window*, int, int);
   void create_some_players(GameState&);
   void load_assets();
@@ -72,20 +67,12 @@ private:
   void handle_resize_event(const SDL_Event& event, LoopState& loop_state);
   ScreenPoint resolve_motion_position(const SDL_MouseMotionEvent& motion) const;
   ScreenPoint global_cursor_pos_clamped() const;
-  void handle_viewer_state(GameState& state,
-                           const std::filesystem::path& filename,
-                           ViewerType type = ViewerType::Auto);
-  void open_viewer(GameState& state, const std::filesystem::path& path,
-                   ViewerType type);
-  void save_screenshot(SDL_Surface* surface);
-  static std::string generate_screenshot_filename();
   static int get_display_height(bool crt_mode);
   SDL_Texture* create_display_texture(int display_height) const;
 
   // SDLSession needs to be declared first so it's destroyed last:
   SDLSession sdl_session_;
 
-  std::unordered_map<std::string, std::string> config_;
   bool window_resizing_in_progress_{false};
   int display_height_{DisplayConstants::SCREEN_HEIGHT};
   std::optional<bool> crt_mode_override_;
@@ -113,6 +100,4 @@ private:
   std::optional<std::string> startup_console_line_;
   std::optional<std::string> vga_viewer_path_;
   std::optional<std::string> bob_viewer_path_;
-  std::optional<std::string> fnt_viewer_path_;
-  std::optional<std::string> sound_viewer_path_;
 };

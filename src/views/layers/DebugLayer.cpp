@@ -5,7 +5,6 @@
  */
 
 #include "views/layers/DebugLayer.h"
-#include <algorithm>
 #include "engine/input/InputManager.h"
 #include "gfx/Draw.h"
 #include "resources/FontManager.h"
@@ -24,9 +23,7 @@ void DebugLayer::render(const RenderContext& ctx) {
   ctx.surface->fill(0);
   auto items = context_.interaction->items();
   const auto& hot = context_.interaction->hot_item_name();
-  const int end =
-      std::min(item_offset_ + PAGE_SIZE, static_cast<int>(items.size()));
-  for (int i = item_offset_; i < end; ++i) {
+  for (int i = 0; i < static_cast<int>(items.size()); ++i) {
     const auto& item = items[static_cast<std::size_t>(i)];
     int color = 71;
     if (item.name == hot) {
@@ -56,20 +53,7 @@ bool DebugLayer::on_action(const input::ActionEvent& ev) {
     }
     else {
       show();
-      item_offset_ = 0;
     }
-    return true;
-  }
-  if (!is_active()) {
-    return false;
-  }
-  if (ev.action == input::Action::PageDown) {
-    const int total = static_cast<int>(context_.interaction->items().size());
-    item_offset_ = std::min(item_offset_ + PAGE_SIZE, std::max(0, total - 1));
-    return true;
-  }
-  if (ev.action == input::Action::PageUp) {
-    item_offset_ = std::max(0, item_offset_ - PAGE_SIZE);
     return true;
   }
   return false;

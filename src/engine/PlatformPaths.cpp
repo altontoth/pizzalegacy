@@ -38,4 +38,6 @@ std::string screenshots_dir() { return base_dir_ + "screenshots/"; }
 
 std::string recipes_dir() { return base_dir_ + "recipes/"; }
 
+std::string missions_dir() { return base_dir_ + "missions/"; }
+
 } // namespace platform_paths

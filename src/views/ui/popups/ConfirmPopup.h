@@ -6,7 +6,7 @@
 
 #include "engine/input/InputListener.h"
 #include "engine/input/ListenerToken.h"
-#include "views/base/RawRenderable.h"
+#include "gfx/RawRenderable.h"
 #include "views/ui/popups/BasePopup.h"
 #include "views/ui/popups/PopupButton.h"
 

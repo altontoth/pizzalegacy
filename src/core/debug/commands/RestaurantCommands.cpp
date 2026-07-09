@@ -513,8 +513,9 @@ Examples:
         }
 
         // Create the restaurant (will find a random available property)
-        auto* restaurant = ctx.state.create_restaurant_with_layout(
-            *player, *city, static_cast<int>(layout_id), is_big);
+        auto* restaurant =
+            ctx.state.real_estate().create_restaurant_with_layout(
+                *player, *city, static_cast<int>(layout_id), is_big);
 
         if (!restaurant) {
           return CommandResult::error(compat::format(
@@ -602,7 +603,8 @@ Examples:
 
         // Create small restaurant with layout 1
         auto* restaurant =
-            ctx.state.create_restaurant_with_layout(*player, *city, 1, false);
+            ctx.state.real_estate().create_restaurant_with_layout(
+                *player, *city, 1, false);
 
         if (!restaurant) {
           return CommandResult::error(compat::format(

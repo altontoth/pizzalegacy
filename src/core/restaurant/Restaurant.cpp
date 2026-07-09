@@ -316,20 +316,19 @@ int Restaurant::count_menu_items() const {
 }
 
 int Restaurant::calculate_daily_oven_throughput() const {
-  // sum((capacity * 720) / bake_time), where 720 = 12-hour operating day
-  constexpr int MINUTES_PER_DAY = 720;
-
+  // sum((capacity * operating minutes) / bake_time)
   if (!layout_) {
     return 0;
   }
 
+  const int operating_minutes = operating_minutes_per_day();
   int total_throughput = 0;
   for (const auto& pf : layout_->placed_kitchen_furniture()) {
     if (pf && pf->furniture()->category() == FurnitureCategory::KITCHENWARE) {
       int bake_time = pf->furniture()->bake_time();
       int capacity = pf->furniture()->capacity();
       if (bake_time > 0 && capacity > 0) {
-        total_throughput += (capacity * MINUTES_PER_DAY) / bake_time;
+        total_throughput += (capacity * operating_minutes) / bake_time;
       }
     }
   }
@@ -398,7 +397,7 @@ Money Restaurant::calculate_slot_machine_income() const {
 
 int Restaurant::calculate_seating_capacity(
     const ServiceTimeData* service_data) const {
-  // seating_capacity = (seat_count * 720) / avg_seating_time
+  // seating_capacity = (seat_count * operating minutes) / avg_seating_time
   assert(service_data);
 
   int seat_count = 0;
@@ -414,7 +413,7 @@ int Restaurant::calculate_seating_capacity(
   int seating_time = static_cast<int>(service_data->avg_seating_time);
 
   int capacity = (seating_time > 0 && seat_count > 0)
-                     ? (720 * seat_count) / seating_time
+                     ? (operating_minutes_per_day() * seat_count) / seating_time
                      : 0;
 
   return capacity;
@@ -441,8 +440,9 @@ Restaurant::Occupancy Restaurant::guest_occupancy() const {
 
   const auto service_data = calculate_service_time_data();
   const float avg_seating_time = std::max(service_data.avg_seating_time, 1.0f);
-  const float current_demand =
-      static_cast<float>(total_daily) * avg_seating_time / 720.0f;
+  const float current_demand = static_cast<float>(total_daily) *
+                               avg_seating_time /
+                               static_cast<float>(operating_minutes_per_day());
 
   const int guests = std::min(
       static_cast<int>(std::lround(current_demand + 0.5f)), seat_count);
@@ -495,10 +495,11 @@ ProductionScreenData Restaurant::get_production_screen_data(
   auto service_data = calculate_service_time_data();
   auto analysis = calculate_capacity_analysis(recipes, service_data);
 
-  // Money box (bills): demand * avg_seating_time / 720, cap 20.
+  // Money box (bills): demand * avg_seating_time / operating minutes, cap 20.
   if (service_data.avg_seating_time > 0.0f) {
     float raw = static_cast<float>(analysis.demand) *
-                service_data.avg_seating_time / 720.0f;
+                service_data.avg_seating_time /
+                static_cast<float>(operating_minutes_per_day());
     data.bill_count = std::min(static_cast<int>(raw), 20);
   }
 
@@ -545,7 +546,8 @@ ProductionScreenData Restaurant::get_production_screen_data(
 ServiceTimeData Restaurant::calculate_service_time_data() const {
   ServiceTimeData data;
 
-  constexpr float OPERATING_MINUTES_PER_DAY = 720.0f;
+  const float operating_minutes =
+      static_cast<float>(operating_minutes_per_day());
 
   // Per-demographic eating times: Children, YoungAdults, BlueCollar,
   // WhiteCollar, Business, Seniors
@@ -576,14 +578,14 @@ ServiceTimeData Restaurant::calculate_service_time_data() const {
 
   data.total_oven_capacity = calculate_daily_oven_throughput();
 
-  // Average chef time: (720 * num_chefs) / total_chef_speed
+  // Average chef time: (operating minutes * num_chefs) / total_chef_speed
   {
     float chef_minutes = 0.0f;
     float total_speed = 0.0f;
 
     for (const auto& cook : cooks_) {
       if (cook.has_value() && !cook->is_away()) {
-        chef_minutes += OPERATING_MINUTES_PER_DAY;
+        chef_minutes += operating_minutes;
         total_speed += static_cast<float>(cook->pizzas_per_day());
         data.chef_count++;
       }
@@ -603,7 +605,7 @@ ServiceTimeData Restaurant::calculate_service_time_data() const {
 
     for (const auto& waiter : waiters_) {
       if (waiter.has_value() && !waiter->is_away()) {
-        waiter_minutes += OPERATING_MINUTES_PER_DAY;
+        waiter_minutes += operating_minutes;
         total_speed += static_cast<float>(waiter->pizzas_per_day());
         data.waiter_count++;
       }
@@ -662,7 +664,7 @@ KitchenEquipmentStats Restaurant::calculate_kitchen_equipment_stats() const {
     return stats;
   }
 
-  constexpr int MINUTES_PER_DAY = 720;
+  const int operating_minutes = operating_minutes_per_day();
 
   int quality_sum = 0;
   for (const auto& pf : layout_->placed_kitchen_furniture()) {
@@ -675,7 +677,7 @@ KitchenEquipmentStats Restaurant::calculate_kitchen_equipment_stats() const {
       int bake_time = pf->furniture()->bake_time();
       int capacity = pf->furniture()->capacity();
       if (bake_time > 0) {
-        stats.capacity_per_day += (capacity * MINUTES_PER_DAY) / bake_time;
+        stats.capacity_per_day += (capacity * operating_minutes) / bake_time;
       }
     }
   }
@@ -704,8 +706,6 @@ FurnitureStats Restaurant::calculate_furniture_stats() const {
   if (!layout_) {
     return stats;
   }
-
-  constexpr int MINUTES_PER_DAY = 720;
 
   int quality_sum = 0;
   int quality_count = 0;
@@ -739,7 +739,7 @@ FurnitureStats Restaurant::calculate_furniture_stats() const {
 
   if (seating_time > 0 && stats.seat_count > 0) {
     stats.customers_per_day =
-        (MINUTES_PER_DAY * stats.seat_count) / seating_time;
+        (operating_minutes_per_day() * stats.seat_count) / seating_time;
   }
 
   if (stats.customers_per_day > 0) {
@@ -924,11 +924,13 @@ int Restaurant::calculate_weighted_average_oven_time() const {
 }
 
 int Restaurant::calculate_service_time_minutes(ConsumerType demographic) const {
+  const int operating_minutes = operating_minutes_per_day();
+
   int total_chef_time = 0;
   int chef_count = 0;
   for (const auto& cook : cooks_) {
     if (cook.has_value() && !cook->is_away()) {
-      total_chef_time += cook->calculate_prep_time_minutes();
+      total_chef_time += cook->calculate_prep_time_minutes(operating_minutes);
       chef_count++;
     }
   }
@@ -941,7 +943,8 @@ int Restaurant::calculate_service_time_minutes(ConsumerType demographic) const {
   int waiter_count = 0;
   for (const auto& waiter : waiters_) {
     if (waiter.has_value() && !waiter->is_away()) {
-      total_waiter_time += waiter->calculate_service_time_minutes();
+      total_waiter_time +=
+          waiter->calculate_service_time_minutes(operating_minutes);
       waiter_count++;
     }
   }
@@ -1870,8 +1873,7 @@ void Restaurant::calculate_daily_pizza_sales_distribution(
                 economy_.menu_factor()[ConsumerType::SeniorCitizens]);
 }
 
-void Restaurant::calculate_popularity(const Player& player,
-                                      const City& /* city */,
+void Restaurant::calculate_popularity(const Player& player, const City& city,
                                       const District& district) {
   auto service_data = calculate_service_time_data();
   service_time_minutes_ = service_data.service_time_minutes;
@@ -1914,8 +1916,8 @@ void Restaurant::calculate_popularity(const Player& player,
   component2_score += adjustment;
   popularity_.recipes_on_menu = component2_score;
 
-  // Advertising: total_effectiveness / 2
-  int total_ad_effectiveness = player.total_advertising_effectiveness();
+  int total_ad_effectiveness =
+      player.total_advertising_effectiveness(city.id());
   popularity_.advertising = total_ad_effectiveness / 2;
 
   // StarRating: stars^2 + (stars > 0 ? 4 : 0)

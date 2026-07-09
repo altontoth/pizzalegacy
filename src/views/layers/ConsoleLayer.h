@@ -27,7 +27,7 @@ public:
   void render(const RenderContext& ctx) override;
   void tick() override;
   bool needs_force_recompose() const override { return pull_recompose_flag(); }
-  bool blocks() const override;
+  bool freezes_view() const override;
 
 private:
   // input helpers

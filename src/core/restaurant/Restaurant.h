@@ -335,7 +335,7 @@ public:
   Money calculate_electricity_cost() const;
   Money calculate_slot_machine_income() const;
 
-  // (seat_count * 720) / avg_seating_time
+  // (seat_count * operating minutes) / avg_seating_time
   int calculate_seating_capacity(const ServiceTimeData* service_data) const;
 
   struct Occupancy {
@@ -365,12 +365,17 @@ public:
   int calculate_stock_capacity(const core::food::PlayerRecipes& recipes) const;
 
   // Operating hours
+  static constexpr core::time::TimeOfDay DEFAULT_OPENING_TIME{9, 0};
+  static constexpr core::time::TimeOfDay DEFAULT_CLOSING_TIME{21, 0};
   core::time::TimeOfDay opening_time() const { return opening_time_; }
   core::time::TimeOfDay closing_time() const { return closing_time_; }
-  void set_opening_time(core::time::TimeOfDay time) { opening_time_ = time; }
-  void set_closing_time(core::time::TimeOfDay time) { closing_time_ = time; }
+  void opening_time(core::time::TimeOfDay time) { opening_time_ = time; }
+  void closing_time(core::time::TimeOfDay time) { closing_time_ = time; }
   int operating_blocks_per_day() const {
     return core::time::TimeOfDay::blocks_between(opening_time_, closing_time_);
+  }
+  int operating_minutes_per_day() const {
+    return operating_blocks_per_day() * core::time::MINUTES_PER_BLOCK;
   }
 
   core::food::IngredientDemand calculate_daily_ingredient_demand_grams(
@@ -506,8 +511,8 @@ private:
   core::restaurant::RestaurantInventory inventory_;
   core::restaurant::RestaurantStats stats_;
   RestaurantEconomy economy_;
-  core::time::TimeOfDay opening_time_{9, 0};
-  core::time::TimeOfDay closing_time_{21, 0};
+  core::time::TimeOfDay opening_time_{DEFAULT_OPENING_TIME};
+  core::time::TimeOfDay closing_time_{DEFAULT_CLOSING_TIME};
   ManagerSettings manager_settings_;
   std::optional<int> protection_timer_;
   std::vector<core::restaurant::StaffEventData> pending_staff_events_;

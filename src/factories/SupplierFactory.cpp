@@ -11,7 +11,7 @@
 
 namespace {
 
-// u2 and u3 are unknown to use (so far)
+// u2 and u3 are unknown to us (so far)
 constexpr auto suppliers = std::to_array<SupplierData>({
     {.id = SupplierID::FREDS_TILE_EMPORIUM,
      .type = SupplierType::FLOORING,
@@ -381,7 +381,6 @@ SupplierFactory::all_suppliers_by_type(SupplierType type, int current_year) {
 }
 
 const Supplier* SupplierFactory::create_supplier(SupplierID supplier_id) {
-  // Return the cached instance if we already built it.
   auto it = cache_.find(supplier_id);
   if (it != cache_.end()) {
     return it->second.get();

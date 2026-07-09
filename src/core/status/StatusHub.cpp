@@ -26,6 +26,29 @@ void StatusHub::set_baseline(BaselineProvider p) {
 
 void StatusHub::rebuild_now() { rebuild_and_push(); }
 
+void StatusHub::freeze_header(std::optional<core::PlayerId> player) {
+  header_frozen_ = true;
+  frozen_player_ = player;
+  frozen_time_ = *time_;
+  push_to_subscriber();
+}
+
+void StatusHub::unfreeze_header() {
+  header_frozen_ = false;
+  frozen_player_.reset();
+  push_to_subscriber();
+}
+
+void StatusHub::refresh_header() { push_to_subscriber(); }
+
+void StatusHub::reset_for_new_game(GameTime& time) {
+  auto subscriber = std::move(subscriber_);
+  bool subscribed = subscribed_;
+  *this = StatusHub{time};
+  subscriber_ = std::move(subscriber);
+  subscribed_ = subscribed;
+}
+
 void StatusHub::log_ephemeral(const StatusMsg& m) {
   EphemeralEntry e{
       .time = core::time::make_stamp(*time_),

@@ -19,5 +19,6 @@ std::string config_file_path();
 std::string saves_dir();
 std::string screenshots_dir();
 std::string recipes_dir();
+std::string missions_dir();
 
 } // namespace platform_paths

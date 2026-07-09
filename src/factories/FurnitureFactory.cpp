@@ -2173,7 +2173,6 @@ FurnitureFactory::get_furniture_type(const Furniture* furniture) {
 
 const Furniture*
 FurnitureFactory::create_furniture(FurnitureType furniture_type) {
-  // Return the cached instance if we already built it.
   auto it = cache_.find(furniture_type);
   if (it != cache_.end()) {
     return it->second.get();

@@ -12,6 +12,8 @@
 #include "core/character/SocialStatus.h"
 #include "core/city/Property.h"
 #include "core/finance/Money.h"
+#include "core/mission/MissionScoring.h"
+#include "core/mission/MissionTarget.h"
 #include "core/state/GameState.h"
 #include "core/status/StatusHub.h"
 #include "core/util/Constants.h"
@@ -171,7 +173,7 @@ void PlayerProfile::render(const RenderContext& ctx) {
                         [this](int value) {
                           state_.player(id_)->holiday(value);
                           state_.ui().pop();
-                          state_.request_end_of_turn();
+                          state_.turn().request_end_of_turn();
                         });
                   }
                 });
@@ -327,7 +329,8 @@ void PlayerProfile::change_mode(PlayerProfileMode mode) {
     card_slider_.replace(create_awards(player));
     break;
   case PlayerProfileMode::TargetCV:
-    card_slider_.replace(create_target_cv(player));
+    cv_page_ = 0;
+    card_slider_.replace(create_target_cv(player, cv_page_));
     break;
   }
 }
@@ -348,18 +351,31 @@ bool PlayerProfile::switch_to_player(core::PlayerId new_id) {
 }
 
 void PlayerProfile::handle_arrow(PageAction action) {
-  // CV mode: page through CV pages
-  if (mode_ == PlayerProfileMode::CurriculumVitae) {
+  // CV and Target CV modes: page through CV pages
+  if (mode_ == PlayerProfileMode::CurriculumVitae ||
+      mode_ == PlayerProfileMode::TargetCV) {
     const auto* player = state_.player(id_);
-    auto entries = state_.message_manager().get_cv_entries_for(player->id());
-    int total_pages = cv_total_pages(entries.size());
+    const bool target_mode = mode_ == PlayerProfileMode::TargetCV;
+    std::size_t entry_count = 0;
+    if (target_mode) {
+      if (state_.is_mission_active()) {
+        entry_count = state_.mission_target()->milestones.size();
+      }
+    }
+    else {
+      entry_count =
+          state_.message_manager().get_cv_entries_for(player->id()).size();
+    }
+    int total_pages = cv_total_pages(entry_count);
 
     int new_page = (action == PageAction::Next)
                        ? std::min(cv_page_ + 1, total_pages - 1)
                        : std::max(cv_page_ - 1, 0);
     if (new_page != cv_page_) {
       cv_page_ = new_page;
-      card_slider_.set_current(create_curriculum_vitae(player, cv_page_));
+      card_slider_.set_current(target_mode
+                                   ? create_target_cv(player, cv_page_)
+                                   : create_curriculum_vitae(player, cv_page_));
       mark_dirty();
     }
     return;
@@ -621,13 +637,57 @@ Surface PlayerProfile::create_awards(const Player* player) {
   return page;
 }
 
-Surface PlayerProfile::create_target_cv(const Player* /*player*/) {
-  Surface page = blue_paper_.clone();
+Surface PlayerProfile::create_target_cv(const Player* player, int page) {
+  Surface cv = blue_paper_.clone();
   constexpr int text_color = 240;
+  auto* font = context_.font;
 
-  context_.font->render_text_onto(
-      page, "Target curriculum vitae in mission mode only", {192, 160},
+  if (!state_.is_mission_active()) {
+    font->render_text_onto(cv, "Target curriculum vitae in mission mode only",
+                           {192, 160}, FontFace::PIZ_NUMB, text_color,
+                           AlignX::CenterPoint);
+    return cv;
+  }
+
+  font->render_text_onto(cv, "Target Curriculum Vitae", {192, 24},
+                         FontFace::PIZ_NUMB, text_color, AlignX::CenterPoint);
+
+  const auto& target = *state_.mission_target();
+  font->render_text_onto(cv, target.source_name, {192, 48}, FontFace::PIZ_NUMB,
+                         text_color, AlignX::CenterPoint);
+
+  // How closely each target milestone has been matched so far (by event,
+  // scored on date closeness; 0% until the event is achieved).
+  const auto scores = core::mission::per_milestone_scores(
+      target, state_.message_manager().get_cv_entries_for(player->id()));
+
+  constexpr int date_x = 72;
+  constexpr int text_x = 160;
+  constexpr int percent_x = 356;
+  int y = 80;
+  constexpr int row_height = 40;
+
+  const auto& milestones = target.milestones;
+  int start = page * cv_events_per_page;
+  int end =
+      std::min(start + cv_events_per_page, static_cast<int>(milestones.size()));
+
+  for (int i = start; i < end; ++i) {
+    const auto& milestone = milestones[i];
+    font->render_line_onto(cv, milestone.date.cv_date_string(), {date_x, y},
+                           FontFace::PIZ_NUMB, text_color);
+    font->render_text_onto(
+        cv, state_.message_manager().get_cv_text(milestone.message_id),
+        {text_x, y}, FontFace::PIZ_NUMB, text_color);
+    font->render_line_onto(cv, compat::format("{}%", scores[i]), {percent_x, y},
+                           FontFace::PIZ_NUMB, text_color, AlignX::RightEdge);
+    y += row_height;
+  }
+
+  int total_pages = cv_total_pages(milestones.size());
+  font->render_line_onto(
+      cv, compat::format(" - {}/{} -", page + 1, total_pages), {192, 330},
       FontFace::PIZ_NUMB, text_color, AlignX::CenterPoint);
 
-  return page;
+  return cv;
 }

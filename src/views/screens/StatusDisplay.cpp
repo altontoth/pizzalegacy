@@ -53,8 +53,13 @@ void StatusDisplay::tick() {
     mark_dirty();
   }
 
-  if (!frozen_ && state_.active_player()) {
-    const auto balance = state_.active_player()->cash_balance();
+  const Player* money_player = state_.active_player();
+  if (hub_.header_frozen()) {
+    money_player =
+        hub_.frozen_player() ? state_.player(*hub_.frozen_player()) : nullptr;
+  }
+  if (money_player) {
+    const auto balance = money_player->cash_balance();
     if (previous_balance_ != balance) {
       previous_balance_ = balance;
       mark_dirty();
@@ -134,12 +139,18 @@ void StatusDisplay::render_header_info(const RenderContext& ctx) {
   constexpr int date_time_y_offset = 2;
   constexpr int text_color = 16; // yellow
 
-  // Use frozen values if frozen, otherwise read from GameState
+  // Frozen header reads the snapshot and the frozen player's live balance;
+  // otherwise it tracks GameState and the active player.
   std::string date_str, time_str, money_str;
-  if (frozen_) {
-    date_str = frozen_date_;
-    time_str = frozen_time_;
-    money_str = frozen_money_;
+  if (hub_.header_frozen()) {
+    const GameTime& time = hub_.frozen_time();
+    date_str = time.to_date_string();
+    time_str = time.to_time_string();
+    if (auto id = hub_.frozen_player()) {
+      if (auto* player = state_.player(*id)) {
+        money_str = compat::format("{}", player->cash_balance());
+      }
+    }
   }
   else {
     const GameTime& time = state_.time();
@@ -272,25 +283,5 @@ void StatusDisplay::clear(const RenderContext& ctx) { ctx.surface->fill(240); }
 
 void StatusDisplay::recipe(StatusDisplayRecipe r) {
   recipe_ = std::move(r);
-  mark_dirty();
-}
-
-void StatusDisplay::capture_state() {
-  frozen_ = true;
-  const GameTime& time = state_.time();
-  frozen_date_ = time.to_date_string();
-  frozen_time_ = time.to_time_string();
-  if (state_.active_player()) {
-    frozen_money_ =
-        compat::format("{}", state_.active_player()->cash_balance());
-  }
-  else {
-    frozen_money_ = "";
-  }
-  mark_dirty();
-}
-
-void StatusDisplay::release_state() {
-  frozen_ = false;
   mark_dirty();
 }

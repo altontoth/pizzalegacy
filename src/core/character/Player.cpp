@@ -116,14 +116,15 @@ void Player::end_of_day(GameState& game_state) {
   const auto& current_date = game_state.time().current_date();
 
   // Deduct daily advertising costs for campaigns in active city
-  for (const auto& campaign_opt : campaigns_) {
-    if (campaign_opt.has_value() && campaign_opt->days_remaining > 0 &&
-        campaign_opt->city_id == active_city_id) {
-      // Deduct daily cost (can go negative)
-      Account expense_account = Account::ProfitAndLoss;
-      financials_.transfer(current_date, Account::Cash, expense_account,
-                           campaign_opt->rate.cost,
-                           AccountingScope::Operational);
+  if (auto it = campaigns_.find(active_city_id); it != campaigns_.end()) {
+    for (const auto& campaign_opt : it->second) {
+      if (campaign_opt.has_value() && campaign_opt->days_remaining > 0) {
+        // Deduct daily cost (can go negative)
+        Account expense_account = Account::ProfitAndLoss;
+        financials_.transfer(current_date, Account::Cash, expense_account,
+                             campaign_opt->rate.cost,
+                             AccountingScope::Operational);
+      }
     }
   }
 
@@ -343,35 +344,48 @@ const core::inventory::Inventory& Player::inventory() const {
 
 void Player::add_campaign(const AdvertisingCampaign& campaign) {
   int channel_index = static_cast<int>(campaign.channel);
-  campaigns_[channel_index] = campaign;
+  campaigns_[campaign.city_id][channel_index] = campaign;
 }
 
 std::optional<AdvertisingCampaign>
-Player::get_campaign(AdvertisingChannel channel) const {
-  int channel_index = static_cast<int>(channel);
-  return campaigns_[channel_index];
+Player::get_campaign(core::CityId city, AdvertisingChannel channel) const {
+  auto it = campaigns_.find(city);
+  if (it == campaigns_.end()) {
+    return std::nullopt;
+  }
+  return it->second[static_cast<int>(channel)];
 }
 
-bool Player::has_active_campaign(AdvertisingChannel channel) const {
-  int channel_index = static_cast<int>(channel);
-  return campaigns_[channel_index].has_value() &&
-         campaigns_[channel_index]->days_remaining > 0;
+bool Player::has_active_campaign(core::CityId city,
+                                 AdvertisingChannel channel) const {
+  auto it = campaigns_.find(city);
+  if (it == campaigns_.end()) {
+    return false;
+  }
+  const auto& slot = it->second[static_cast<int>(channel)];
+  return slot.has_value() && slot->days_remaining > 0;
 }
 
 void Player::update_campaigns() {
-  for (auto& campaign_opt : campaigns_) {
-    if (campaign_opt.has_value()) {
-      campaign_opt->days_remaining--;
-      if (campaign_opt->days_remaining <= 0) {
-        campaign_opt.reset(); // Remove expired campaign
+  for (auto& [city, slots] : campaigns_) {
+    for (auto& campaign_opt : slots) {
+      if (campaign_opt.has_value()) {
+        campaign_opt->days_remaining--;
+        if (campaign_opt->days_remaining <= 0) {
+          campaign_opt.reset();
+        }
       }
     }
   }
 }
 
-uint8_t Player::total_advertising_effectiveness() const {
+uint8_t Player::total_advertising_effectiveness(core::CityId city) const {
+  auto it = campaigns_.find(city);
+  if (it == campaigns_.end()) {
+    return 0;
+  }
   int total = 0;
-  for (const auto& campaign_opt : campaigns_) {
+  for (const auto& campaign_opt : it->second) {
     if (campaign_opt.has_value() && campaign_opt->days_remaining > 0) {
       total += campaign_opt->rate.effectiveness;
     }
@@ -544,8 +558,8 @@ void Player::check_ai_expansion(GameState& game_state) {
   bool big = engine::random::rand_percentage_chance(30);
   const int idx4 = engine::random::rand_max_n(4);
   int layout_id = big ? ((idx4 * 2) + 1) : ((idx4 * 2) + 2);
-  auto* rest =
-      game_state.create_restaurant_with_layout(*this, *city, layout_id, big);
+  auto* rest = game_state.real_estate().create_restaurant_with_layout(
+      *this, *city, layout_id, big);
 
   if (rest) {
     rest->open_for_business(game_state);

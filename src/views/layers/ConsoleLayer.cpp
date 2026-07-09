@@ -288,7 +288,7 @@ bool ConsoleLayer::has_older_content() const {
   return scroll_ < num_lines - 1;
 }
 
-bool ConsoleLayer::blocks() const { return is_active(); }
+bool ConsoleLayer::freezes_view() const { return is_active(); }
 
 void ConsoleLayer::tick() {
   if (!is_active()) {

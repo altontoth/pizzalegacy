@@ -22,7 +22,8 @@ public:
   void render(const RenderContext& ctx) override;
   void tick() override;
   bool is_paused() const { return is_paused_; }
-  bool blocks() const override { return is_paused_; }
+  bool freezes_view() const override { return is_paused_; }
+  bool freezes_simulation() const override { return is_paused_; }
   bool on_action(const input::ActionEvent& ev) override;
 
 private:

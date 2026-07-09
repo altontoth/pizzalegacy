@@ -495,12 +495,12 @@ std::unique_ptr<Restaurant> json_to_restaurant(const json& j,
   if (j.contains("opening_time")) {
     core::time::TimeOfDay opening{j["opening_time"]["hours"].get<int>(),
                                   j["opening_time"]["minutes"].get<int>()};
-    restaurant->set_opening_time(opening);
+    restaurant->opening_time(opening);
   }
   if (j.contains("closing_time")) {
     core::time::TimeOfDay closing{j["closing_time"]["hours"].get<int>(),
                                   j["closing_time"]["minutes"].get<int>()};
-    restaurant->set_closing_time(closing);
+    restaurant->closing_time(closing);
   }
 
   // Restore full economy state

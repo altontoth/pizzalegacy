@@ -44,15 +44,14 @@ PaneledView::PaneledView(GameContext& context, GameState& state,
   ViewRect size_and_pos_input = {INPUT_PANEL_OFFSET_X, INPUT_PANEL_OFFSET_Y,
                                  INPUT_PANEL_WIDTH, INPUT_PANEL_HEIGHT};
 
-  status_panel_ = std::make_unique<SharedPanel>(state.status_display(context),
-                                                size_and_pos_status);
+  status_panel_ =
+      std::make_unique<SharedPanel>(context.status_panel, size_and_pos_status);
   input_panel_ =
       std::make_unique<SharedPanel>(mpv->input_panel(), size_and_pos_input);
   main_panel_view_.reset(static_cast<MainPanelView*>(inner.release()));
 
   mpv->interaction_origin(size_and_pos_main.point());
-  state.status_display(context)->interaction_origin(
-      size_and_pos_status.point());
+  context.status_panel->interaction_origin(size_and_pos_status.point());
   mpv->input_panel()->interaction_origin(size_and_pos_input.point());
 }
 

@@ -297,6 +297,14 @@ if(APPLE)
 endif()
 target_link_libraries(game_plegacy PRIVATE ZLIB::ZLIB)
 
+# Dependency rule: core is not allowed to include the view layer.
+add_custom_target(check_dependency_rule ALL
+    COMMAND ${CMAKE_COMMAND}
+            -DCHECK_ROOT=${CMAKE_CURRENT_SOURCE_DIR}/src
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/tools/check_dependency_rule.cmake
+    COMMENT "Checking for disallowed dependencies")
+add_dependencies(game_plegacy check_dependency_rule)
+
 # ---------------------------------------------------------
 #  Main executable "plegacy"
 # -----------------------------------------------------

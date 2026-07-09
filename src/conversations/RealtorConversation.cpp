@@ -249,7 +249,8 @@ bool RealtorConversation::advance_proposal(bool agree) {
       auto* property = active_property();
       auto type = property->type();
       if (type == PropertyType::BUSINESS_PREMISE) {
-        if (state_.rent_restaurant(*property, *state_.active_player())) {
+        if (state_.real_estate().rent_restaurant(*property,
+                                                 *state_.active_player())) {
           current_line(RealtorLine::YOU_HAVE_RENTED_THIS_SHOP_GOOD_LUCK);
         }
         else {
@@ -257,7 +258,8 @@ bool RealtorConversation::advance_proposal(bool agree) {
         }
       }
       else if (type == PropertyType::DEPOT) {
-        if (state_.rent_depot(*property, *state_.active_player())) {
+        if (state_.real_estate().rent_depot(*property,
+                                            *state_.active_player())) {
           current_line(RealtorLine::YOU_HAVE_RENTED_THIS_WAREHOUSE);
         }
         else {
@@ -274,8 +276,8 @@ bool RealtorConversation::advance_proposal(bool agree) {
       auto* property = active_property();
       auto type = property->type();
       if (type == PropertyType::BUSINESS_PREMISE) {
-        if (state_.buy_restaurant(*active_property(), *state_.active_player(),
-                                  price_)) {
+        if (state_.real_estate().buy_restaurant(
+                *active_property(), *state_.active_player(), price_)) {
           current_line(RealtorLine::SHOP_IS_NOW_YOURS_SEE_US_AGAIN);
         }
         else {
@@ -283,7 +285,8 @@ bool RealtorConversation::advance_proposal(bool agree) {
         }
       }
       else if (type == PropertyType::DEPOT) {
-        if (state_.buy_depot(*active_property(), *state_.active_player())) {
+        if (state_.real_estate().buy_depot(*active_property(),
+                                           *state_.active_player())) {
           current_line(RealtorLine::WAREHOUSE_NOW_BELONGS_TO_YOU);
         }
         else {
@@ -303,8 +306,8 @@ bool RealtorConversation::advance_proposal(bool agree) {
     break;
   case RealtorLine::I_WOULD_GIVE_YOU:
     if (agree) {
-      state_.sell_property(*active_property(), *state_.active_player(),
-                           sell_offer_);
+      state_.real_estate().sell_property(*active_property(),
+                                         *state_.active_player(), sell_offer_);
       current_line(RealtorLine::I_HOPE_NOT_LAST_TIME_WE_DO_BUSINESS);
     }
     else {
@@ -360,7 +363,8 @@ bool RealtorConversation::advance_proposal(bool agree) {
           }
         }
       }
-      state_.end_property_lease(*active_property(), *state_.active_player());
+      state_.real_estate().end_property_lease(*active_property(),
+                                              *state_.active_player());
     }
     else {
       current_line(RealtorLine::I_WANT_TO_BUY_THIS_SHOP);

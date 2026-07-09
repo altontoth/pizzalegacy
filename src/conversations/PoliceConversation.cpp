@@ -475,6 +475,6 @@ void PoliceConversation::go_to_jail(int days) {
   // The on_dismiss callback starts the jail day loop.
   on_end_ = [&state = state_] {
     state.deliver_message(core::events::LeventId::YouAreOnTheWayToPrison,
-                          [&state] { state.request_end_of_turn(); });
+                          [&state] { state.turn().request_end_of_turn(); });
   };
 }

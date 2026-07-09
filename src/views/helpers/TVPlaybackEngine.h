@@ -28,6 +28,7 @@ public:
 
   bool tick();
   void start_playback();
+  void play_commercial(int id);
   void next_commercial();
   void previous_commercial();
   // This just returns a pointer to the current_frame_,

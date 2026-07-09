@@ -41,8 +41,9 @@ public:
   int pizzas_per_day() const;
   void pizzas_per_day(int ppd);
 
-  // Adjust motivation with clamping [0, 100]
+  // Adjust motivation (clamped)
   void adjust_motivation(int change);
+  void motivation(int motivation);
 
   // Stat adjustment methods for manager feedback
   void adjust_trustworthiness(int change);
@@ -87,11 +88,11 @@ public:
 
   // Calculate prep time in minutes (for chefs)
   // Derived from pizzas_per_day: time = operating_minutes / pizzas_per_day
-  int calculate_prep_time_minutes() const;
+  int calculate_prep_time_minutes(int operating_minutes) const;
 
   // Calculate service time in minutes (for waiters)
   // Derived from pizzas_per_day: time = operating_minutes / pizzas_per_day
-  int calculate_service_time_minutes() const;
+  int calculate_service_time_minutes(int operating_minutes) const;
 
   const core::character::Character& character() const;
   core::character::JobRole job_role() const;

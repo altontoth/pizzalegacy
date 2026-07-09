@@ -820,7 +820,6 @@ std::unordered_map<int, std::unique_ptr<Ingredient>>
     IngredientFactory::cache_{};
 
 Ingredient* IngredientFactory::create_ingredient(int ingredient_id) {
-  // Return the cached instance if we already built it.
   auto it = cache_.find(ingredient_id);
   if (it != cache_.end()) {
     return it->second.get();

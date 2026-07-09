@@ -30,7 +30,7 @@ namespace { // anonymous
   std::cerr
       << "Usage:\n"
       << "  " << prog << "                        # normal boot (Intro)\n"
-      << "  " << prog << " <file|fonts|sound|pal|char>  # open viewer\n"
+      << "  " << prog << " <file|fonts|sounds|pal|char>  # open viewer\n"
       << "  " << prog
       << " console <cmd...>       # run one console line on startup\n"
       << "Options:\n"

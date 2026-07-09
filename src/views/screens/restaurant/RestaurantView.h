@@ -14,9 +14,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "core/Demographics.h"
 #include "core/item/Item.h"
-#include "core/restaurant/FurnitureBatch.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/state/UIState.h"
 #include "engine/audio/AudioManager.h"
@@ -29,8 +27,10 @@
 #include "views/helpers/camera/ScrollEdges.h"
 #include "views/screens/restaurant/AttackScene.h"
 #include "views/screens/restaurant/CharacterController.h"
+#include "views/screens/restaurant/FurniturePlacementController.h"
+#include "views/screens/restaurant/GuestWalkScene.h"
 #include "views/screens/restaurant/SeatedCharacterRenderer.h"
-#include "views/screens/restaurant/Walk.h"
+#include "views/screens/restaurant/WalkNavigation.h"
 #include "views/ui/status/StatusController.h"
 
 // Offsets within the graphics file
@@ -51,41 +51,6 @@ struct GuestRenderItem {
   core::FurnitureId chair_id;
   bool interacted_before{false};
   int face_index{0};
-};
-
-struct WalkingGuest {
-  using Orientation = views::screens::restaurant::Orientation;
-  enum class WalkerKind {
-    GUEST,
-    GUEST_DEPARTING,
-    WAITER_DELIVERING,
-    WAITER_RETURNING,
-    WAITER_RETURNING_WITH_PIZZA
-  };
-  WorldPoint position;
-  Orientation direction{Orientation::N};
-  WalkerKind kind{WalkerKind::GUEST};
-  // Seats the arrived guest with this demographic. Unused for waiters (whose
-  // guest_type is the waiter sprite set), so they keep the default.
-  ConsumerType demographic{ConsumerType::Children};
-  int walk_cycle{0};
-  int anim_tick{0};
-  WorldPoint destination;
-  core::FurnitureId destination_chair_id;
-  // 0-11 = guest sprite sets, 12 = waiter; selects walk{n}.bob
-  int guest_type{0};
-  int face_index{0};
-  std::vector<Orientation> path;
-  int path_index{0};
-  int sprite_blit_offset_x{0};
-  int sprite_blit_offset_y{0};
-  // true when no chair was reachable; exit instead of seating
-  bool walking_out{false};
-#ifndef NDEBUG
-  std::vector<bool> dbg_blocked;
-  int dbg_grid_w{0};
-  int dbg_grid_h{0};
-#endif
 };
 
 class RestaurantView : public MainPanelView,
@@ -109,7 +74,6 @@ private:
   void toggle_kitchen_view();
   void calculate_background_dimensions();
   void set_up_buttons();
-  void update_buttons_for_furniture_state();
 
   struct CompetitionFlow {
     core::PlayerId human_pid;
@@ -124,17 +88,10 @@ private:
   void challenge_ask_bet(CompetitionFlow flow);
   void challenge_ask_speed(CompetitionFlow flow);
   void challenge_start(CompetitionFlow flow);
-  void handle_throw_away();
-  void handle_move_elsewhere();
-  void handle_sell_furniture();
-  void handle_next_item();
-  void handle_previous_item();
-  void refresh_furniture_cursor_image();
   const BobRenderer& bob_renderer_for(const PlacedFurniture& pf) const;
   const std::vector<std::unique_ptr<PlacedFurniture>>&
   current_furniture_list() const;
   void handle_furniture_click(const PlacedFurniture* pf);
-  bool intersects_wall(const WorldRect& r) const;
   void register_interactions_viewport();
   void prepare_background();
 
@@ -147,7 +104,6 @@ private:
                           std::span<const core::item::Item> items,
                           const std::function<void(core::item::Item)>& on_pick);
   void execute_sabotage_attack(core::item::Item item);
-  void render_walking_guest();
 
   void draw_floor_tiles(ViewRect interior);
 
@@ -161,89 +117,27 @@ private:
   void render_guest_upper();
   void render_guest_pizzas();
 
-  bool decor_conflicts_on_table(const WorldRect& candidate_map,
-                                const WorldRect& table_map_rect) const;
-
   void rebuild_guest_cache();
-  void init_active_batch_if_needed();
-  [[nodiscard]] FurnitureBatch* current_batch();
-  void set_active_batch(size_t idx);
-  void advance_to_next_batch();
-  void decrement_or_erase_current_and_maybe_advance(
-      bool auto_advance_batches = true);
-  void throw_away_one_from_current_batch();
-  std::unique_ptr<PlacedFurniture>
-  make_cursor_for_batch(const FurnitureBatch& b);
-  [[nodiscard]] WorldRect candidate_rect(WorldPoint p,
-                                         const PlacedFurniture& ghost) const;
-
-  [[nodiscard]] bool
-  intersects_any_blocking_furniture(const WorldRect& candidate,
-                                    const PlacedFurniture& cand,
-                                    const PlacedFurniture*& nearest_table_out,
-                                    WorldRect& nearest_table_rect_out) const;
   static ViewPoint center_of(const ViewRect& r);
-  static int walk_frame_for(const WalkingGuest& g);
-  static int walk_frame_for(WalkingGuest::Orientation dir, int walk_cycle);
-
-  static Rotation rotation_towards(const WorldRect& from, const WorldRect& to);
-  void
-  face_chair_towards_nearest_table_if_any(const WorldRect& candidate,
-                                          const PlacedFurniture* nearest_table,
-                                          const WorldRect& table_rect);
-  void place_cursor_item(WorldPoint p);
-  bool can_place_now(WorldPoint p, WorldRect& out_candidate,
-                     const PlacedFurniture*& out_nearest_table,
-                     WorldRect& out_nearest_table_rect) const;
-  void prune_empty_batches();
-  void check_placement_complete_and_navigate_back();
 
   static std::optional<ViewRect> map_rect_to_viewport(const WorldRect& r_map,
                                                       const Camera& camera);
   void render_top_wall_and_floor();
   void render_side_and_bottom_walls();
-#ifndef NDEBUG
-  void render_debug_full_grid();
-#endif
-
-  void render_furniture_ghost();
-  WorldPoint clamp_furniture_to_interior(WorldPoint mouse_world) const;
 
   void zoom_out_of_restaurant_view();
   void update_status_display(const PlacedFurniture* pf);
   void update_restaurant_noise();
-  void spawn_guest();
-  void spawn_guest_departure();
-  void spawn_waiter();
-  void walking_tick();
-  void waiter_delivered();
-  const PlacedFurniture* get_guest_destination_chair();
-  const PlacedFurniture* find_unserved_guest_chair();
-  struct NavGrid {
-    std::vector<bool> blocked;
-    int w{0};
-    int h{0};
-  };
-  struct WalkingPath {
-    std::vector<WalkingGuest::Orientation> steps;
-    std::vector<bool> blocked;
-    int grid_w{0};
-    int grid_h{0};
-  };
-  [[nodiscard]] NavGrid build_navigation_grid() const;
-  [[nodiscard]] const NavGrid& navigation_grid() const;
+  // Cached navigation grid for the dining room (see WalkNavigation.h);
+  // invalidated whenever furniture changes.
+  [[nodiscard]] const views::screens::restaurant::NavGrid&
+  navigation_grid() const;
   void invalidate_nav_grid() { nav_grid_cache_.reset(); }
-  [[nodiscard]] WalkingPath compute_walking_path(WorldPoint from, WorldPoint to,
-                                                 WorldPoint dest_origin,
-                                                 Size dest_size) const;
-
-  void record_walk_debug_destination(WorldPoint destination);
-  void snapshot_walk_debug_grid(WalkingGuest& walker, WalkingPath& wp);
 
   const Surface& k0_;
   bool kitchen_view_ = false;
   bool closed_for_placement_ = false;
-  mutable std::optional<NavGrid> nav_grid_cache_;
+  mutable std::optional<views::screens::restaurant::NavGrid> nav_grid_cache_;
   int background_width_ = 0;
   int background_height_ = 0;
   int furniture_offset_x_ = 0; // for kitchen
@@ -254,13 +148,9 @@ private:
   Restaurant* restaurant_;
   Surface background_;
   std::optional<core::FurnitureId> last_clicked_furniture_index_;
-  std::unique_ptr<PlacedFurniture> on_cursor_;
   RestaurantViewMode view_mode_;
   Camera camera_;
 
-  // Furniture ghost rendering state (when holding furniture)
-  std::optional<WorldPoint> ghost_furniture_topleft_;
-  bool show_furniture_cursor_{false};
   CameraController camctrl_;
   ScrollEdges scroll_edges_{camctrl_, wood_edge_rects(panel_origin_)};
   views::screens::restaurant::SeatedCharacterRenderer guest_renderer_{context_};
@@ -284,11 +174,6 @@ private:
   int interior_end_row_{0};
   int top_rows_consumed_{0};
   int interior_start_row_{0};
-  std::vector<FurnitureBatch>& furniture_placement_;
-  // index into furniture_placement_:
-  std::optional<size_t> active_batch_index_;
-  // Where to navigate after placement complete:
-  std::optional<SupplierType> return_to_supplier_type_;
   std::optional<audio::SoundId> current_restaurant_noise_;
   StatusController status_controller_;
   input::ListenerToken listener_;
@@ -296,20 +181,13 @@ private:
   std::optional<core::item::Item> hovered_item_;
   RmbDragScroller rmb_drag_scroller_;
 
-  void seat_arrived_guest();
-
-  std::optional<WalkingGuest> walking_guest_;
-  std::optional<core::FurnitureId> departing_chair_id_;
-  int spawn_anim_gate_{0};
-  int guest_occupancy_delta_{0};
-#ifndef NDEBUG
-  bool show_walk_debug_{false};
-  // 0=grid+path, 1=grid only, 2=path only, 3=full nav grid
-  int dbg_walk_mode_{3};
-  std::optional<WorldPoint> dbg_walk_destination_; // last attempted destination
-#endif
-
-  // Friend AttackScene so it can acces things like the furniture list, etc.
+  // Friend scenes so they can access things like the furniture list, etc.
   friend class views::screens::restaurant::AttackScene;
+  friend class views::screens::restaurant::GuestWalkScene;
+  friend class views::screens::restaurant::FurniturePlacementController;
+  views::screens::restaurant::FurniturePlacementController placement_{
+      *this, context_, state_};
+  views::screens::restaurant::GuestWalkScene walk_scene_{*this, context_,
+                                                         state_};
   views::screens::restaurant::AttackScene attack_{*this, context_, state_};
 };

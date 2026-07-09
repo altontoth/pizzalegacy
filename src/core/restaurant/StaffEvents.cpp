@@ -17,9 +17,11 @@
 #include "core/restaurant/Restaurant.h"
 #include "core/restaurant/RestaurantInventory.h"
 #include "core/restaurant/RestaurantLayout.h"
+#include "core/restaurant/StaffEventDialogs.h"
 #include "core/state/GameState.h"
 #include "core/status/StatusHub.h"
 #include "engine/FormatCompat.h"
+#include "engine/Logger.h"
 #include "engine/Math.h"
 #include "engine/Random.h"
 #include "factories/FurnitureFactory.h"
@@ -174,6 +176,75 @@ void StaffEvents::apply_event_effect(StaffEventData::Type type, Staff& staff,
   default:
     break;
   }
+}
+
+std::optional<StaffEvents::Outcome>
+StaffEvents::apply_outcome(const StaffEventData& event, int outcome,
+                           Restaurant& restaurant) {
+  using Type = StaffEventData::Type;
+
+  Staff* s = restaurant.staff_at(event.job_role, event.slot_index);
+  if (!s) {
+    Logger::warn("Staff is a nullptr in event handling, ignoring.");
+    return std::nullopt;
+  }
+
+  Outcome result;
+
+  if (event.type == Type::Quit) {
+    if (outcome == 0) {
+      // fire immediately, no reply popup.
+      restaurant.fire_staff(event.job_role, event.slot_index);
+      result.staff_left = true;
+      return result;
+    }
+    // Apply salary raise, then check if they decide to stay.
+    Money new_pay = (outcome == 1) ? s->payment() * 3 / 2 : s->payment() * 2;
+    s->payment(new_pay);
+
+    bool stays = rand_percentage_chance((outcome == 1) ? 40 : 80);
+    if (stays) {
+      s->motivation(20);
+    }
+    else {
+      restaurant.fire_staff(event.job_role, event.slot_index);
+      result.staff_left = true;
+    }
+    // Reply is always shown for Quit.
+    // Line 13 is "sorry I'm quitting" and line 14 is "ok I'll stay"
+    result.reply = StaffEventDialogs::line(event.type, stays ? 14 : 13);
+    return result;
+  }
+
+  // Non-Quit effects
+  switch (event.type) {
+  case Type::Late:
+    s->adjust_motivation(-((outcome * 4) - 2));
+    break;
+  case Type::Sick:
+    s->adjust_motivation(-((outcome * 8) - 3));
+    break;
+  case Type::Raise:
+    s->adjust_motivation((1 - outcome) * 8);
+    break;
+  case Type::Maternity:
+    // Informational only; absence already set when event fired.
+    break;
+  default:
+    // PERSF: fire staff on harsh response
+    if (outcome == 2) {
+      restaurant.fire_staff(event.job_role, event.slot_index);
+      result.staff_left = true;
+    }
+    break;
+  }
+
+  // Optional staff reply (50% for PERS events, 60% for PERSF)
+  int reply_chance = StaffEventDialogs::is_persf(event.type) ? 60 : 50;
+  if (rand_percentage_chance(reply_chance)) {
+    result.reply = StaffEventDialogs::line(event.type, 13 + outcome);
+  }
+  return result;
 }
 
 void StaffEvents::process_staff_member(Staff& staff, JobRole role, int slot) {

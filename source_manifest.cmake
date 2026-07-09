@@ -46,6 +46,7 @@ set(GAME_PLEGACY_SOURCES
     src/core/finance/Loan.cpp
     src/core/finance/MoneyParse.cpp
     src/core/finance/PlayerFinancials.cpp
+    src/core/finance/TurnInvoices.cpp
     src/core/food/Ingredient.cpp
     src/core/food/IngredientCategory.cpp
     src/core/food/Pizza.cpp
@@ -54,6 +55,9 @@ set(GAME_PLEGACY_SOURCES
     src/core/inventory/Inventory.cpp
     src/core/item/ActionText.cpp
     src/core/marketing/Commercial.cpp
+    src/core/marketing/NewspaperAdGame.cpp
+    src/core/mission/MissionFile.cpp
+    src/core/mission/MissionScoring.cpp
     src/core/newspaper/ArticleDatabase.cpp
     src/core/newspaper/NewspaperEventSystem.cpp
     src/core/restaurant/AIEconomy.cpp
@@ -74,7 +78,11 @@ set(GAME_PLEGACY_SOURCES
     src/core/save/SaveGameFood.cpp
     src/core/save/SaveGameManager.cpp
     src/core/save/SaveGameRestaurant.cpp
+    src/core/state/CompetitionCoordinator.cpp
     src/core/state/GameState.cpp
+    src/core/state/MilestoneTracker.cpp
+    src/core/state/RealEstate.cpp
+    src/core/state/TurnOrchestrator.cpp
     src/core/status/StatusHub.cpp
     src/core/supply/FoodSupplier.cpp
     src/core/supply/Supplier.cpp
@@ -107,6 +115,7 @@ set(GAME_PLEGACY_SOURCES
     src/views/base/RestaurantSubView.cpp
     src/views/base/View.cpp
     src/views/factories/ActorViewFactory.cpp
+    src/views/factories/ViewFactory.cpp
     src/views/helpers/CardGfx.cpp
     src/views/helpers/JudgeAnimator.cpp
     src/views/helpers/TVPlaybackEngine.cpp
@@ -128,7 +137,6 @@ set(GAME_PLEGACY_SOURCES
     src/views/screens/MafiaMissionView.cpp
     src/views/screens/MarketResearch.cpp
     src/views/screens/Newspaper.cpp
-    src/views/screens/PizzaDesign.cpp
     src/views/screens/PizzaJudges.cpp
     src/views/screens/PlayerProfile.cpp
     src/views/screens/PlayerTurnCard.cpp
@@ -147,11 +155,19 @@ set(GAME_PLEGACY_SOURCES
     src/views/screens/menus/MenuGameLoad.cpp
     src/views/screens/menus/MenuHighScores.cpp
     src/views/screens/menus/MenuMain.cpp
+    src/views/screens/menus/MenuMissionSelect.cpp
     src/views/screens/menus/MenuNewGame.cpp
     src/views/screens/menus/MenuOptions.cpp
     src/views/screens/menus/MenuQuickstart.cpp
     src/views/screens/menus/MenuSave.cpp
     src/views/screens/menus/MenuSaveAsGame.cpp
+    src/views/screens/menus/MenuSaveAsMission.cpp
+    src/views/screens/pizza/PizzaDesign.cpp
+    src/views/screens/pizza/PizzaDesignBake.cpp
+    src/views/screens/pizza/PizzaDesignCanvas.cpp
+    src/views/screens/pizza/PizzaDesignCompetition.cpp
+    src/views/screens/pizza/PizzaDesignInfo.cpp
+    src/views/screens/pizza/PizzaDesignRecipes.cpp
     src/views/screens/purchasing/CategoryOverviewScreen.cpp
     src/views/screens/purchasing/Demographics.cpp
     src/views/screens/purchasing/FloorListView.cpp
@@ -161,10 +177,14 @@ set(GAME_PLEGACY_SOURCES
     src/views/screens/restaurant/AttackScene.cpp
     src/views/screens/restaurant/CharacterController.cpp
     src/views/screens/restaurant/CharacterRenderer.cpp
+    src/views/screens/restaurant/FurniturePlacementController.cpp
+    src/views/screens/restaurant/GuestPicker.cpp
+    src/views/screens/restaurant/GuestWalkScene.cpp
     src/views/screens/restaurant/RestaurantMenu.cpp
     src/views/screens/restaurant/RestaurantStats.cpp
     src/views/screens/restaurant/RestaurantView.cpp
     src/views/screens/restaurant/SeatedCharacterRenderer.cpp
+    src/views/screens/restaurant/WalkNavigation.cpp
     src/views/screens/restaurant/WeeksTakings.cpp
     src/views/screens/stock/Contracts.cpp
     src/views/screens/stock/DepotIngredientCategoryView.cpp
@@ -181,8 +201,11 @@ set(GAME_PLEGACY_SOURCES
     src/views/ui/PageDecoration.cpp
     src/views/ui/PopupManager.cpp
     src/views/ui/SlideAnimator.cpp
+    src/views/ui/TurnPresenterView.cpp
+    src/views/ui/competition/CompetitionPopups.cpp
     src/views/ui/components/BeveledButton.cpp
     src/views/ui/finance/FinanceComponents.cpp
+    src/views/ui/finance/TurnInvoicePopups.cpp
     src/views/ui/popups/AlertPopup.cpp
     src/views/ui/popups/BasePopup.cpp
     src/views/ui/popups/ChequePopup.cpp
@@ -195,16 +218,19 @@ set(GAME_PLEGACY_SOURCES
     src/views/ui/popups/PopupButton.cpp
     src/views/ui/popups/TextInputPopup.cpp
     src/views/ui/popups/TvPopup.cpp
+    src/views/ui/staff/StaffEventPopups.cpp
     src/views/ui/status/StatusController.cpp
     src/views/ui/widgets/ArrowMenuItem.cpp
     src/views/ui/widgets/Button.cpp
     src/views/ui/widgets/CharacterPhotoBox.cpp
     src/views/ui/widgets/CharacterSelectionBox.cpp
     src/views/ui/widgets/CompanySelectionBox.cpp
+    src/views/ui/widgets/MissionTypeBox.cpp
     src/views/ui/widgets/SaveFileInfoBox.cpp
     src/views/ui/widgets/SaveFileInputBox.cpp
     src/views/ui/widgets/SaveFileListBox.cpp
     src/views/ui/widgets/StatBar.cpp
+    src/views/ui/widgets/TextListBox.cpp
     src/views/ui/widgets/TextMenuItem.cpp
     src/views/ui/widgets/ToggleMenuItem.cpp
     src/views/viewers/BobViewer.cpp
@@ -294,6 +320,8 @@ set(PLEGACY_HEADERS
     src/core/city/CentralDepot.h
     src/core/city/City.h
     src/core/city/CityTypes.h
+    src/core/city/CityViewCommon.h
+    src/core/city/CityViewMapState.h
     src/core/city/ControlMap.h
     src/core/city/District.h
     src/core/city/EconomyTrend.h
@@ -340,6 +368,7 @@ set(PLEGACY_HEADERS
     src/core/finance/MoneyParse.h
     src/core/finance/PlayerFinancials.h
     src/core/finance/Scale.h
+    src/core/finance/TurnInvoices.h
     src/core/food/BakeSession.h
     src/core/food/CanonicalPizza.h
     src/core/food/CustomerTasteProfiles.h
@@ -361,6 +390,11 @@ set(PLEGACY_HEADERS
     src/core/logistics/IngredientStock.h
     src/core/marketing/AdvertisingCampaign.h
     src/core/marketing/Commercial.h
+    src/core/marketing/NewspaperAdFormat.h
+    src/core/marketing/NewspaperAdGame.h
+    src/core/mission/MissionFile.h
+    src/core/mission/MissionScoring.h
+    src/core/mission/MissionTarget.h
     src/core/newspaper/ArticleDatabase.h
     src/core/newspaper/NewspaperEventSystem.h
     src/core/newspaper/NewspaperState.h
@@ -395,11 +429,16 @@ set(PLEGACY_HEADERS
     src/core/settings/RealtorSettings.h
     src/core/state/AnimatedStatsScreen.h
     src/core/state/AnnualCompetitionFlow.h
+    src/core/state/CompetitionCoordinator.h
     src/core/state/CompetitionSession.h
     src/core/state/GameOptions.h
     src/core/state/GameState.h
+    src/core/state/MilestoneTracker.h
     src/core/state/Overloaded.h
+    src/core/state/RealEstate.h
+    src/core/state/TurnOrchestrator.h
     src/core/state/TurnPipeline.h
+    src/core/state/TurnPresenter.h
     src/core/state/UIState.h
     src/core/state/UIStateStack.h
     src/core/state/ViewerType.h
@@ -495,6 +534,7 @@ set(PLEGACY_HEADERS
     src/gfx/PaletteBank.h
     src/gfx/PaletteCycleController.h
     src/gfx/PaletteHandle.h
+    src/gfx/RawRenderable.h
     src/gfx/Surface.h
     src/gfx/SurfaceBuilder.h
     src/resources/AssetMetadata.h
@@ -527,13 +567,13 @@ set(PLEGACY_HEADERS
     src/views/base/PanelContainerView.h
     src/views/base/PanelView.h
     src/views/base/PaneledView.h
-    src/views/base/RawRenderable.h
     src/views/base/RawRenderer.h
     src/views/base/RestaurantSubView.h
     src/views/base/SharedPanel.h
     src/views/base/View.h
     src/views/base/ViewDefs.h
     src/views/factories/ActorViewFactory.h
+    src/views/factories/ViewFactory.h
     src/views/helpers/ButtonGeometry.h
     src/views/helpers/CardGfx.h
     src/views/helpers/JudgeAnimator.h
@@ -562,7 +602,6 @@ set(PLEGACY_HEADERS
     src/views/screens/MafiaMissionView.h
     src/views/screens/MarketResearch.h
     src/views/screens/Newspaper.h
-    src/views/screens/PizzaDesign.h
     src/views/screens/PizzaJudges.h
     src/views/screens/PlayerProfile.h
     src/views/screens/PlayerTurnCard.h
@@ -572,8 +611,6 @@ set(PLEGACY_HEADERS
     src/views/screens/Terminal.h
     src/views/screens/WinSequenceView.h
     src/views/screens/city_view/CityView.h
-    src/views/screens/city_view/CityViewCommon.h
-    src/views/screens/city_view/CityViewMapState.h
     src/views/screens/city_view/CityViewTab.h
     src/views/screens/city_view/ZoomConfig.h
     src/views/screens/depot/DepotExportScreen.h
@@ -585,12 +622,16 @@ set(PLEGACY_HEADERS
     src/views/screens/menus/MenuGameLoad.h
     src/views/screens/menus/MenuHighScores.h
     src/views/screens/menus/MenuMain.h
+    src/views/screens/menus/MenuMissionSelect.h
     src/views/screens/menus/MenuNewGame.h
     src/views/screens/menus/MenuOptions.h
     src/views/screens/menus/MenuQuickstart.h
     src/views/screens/menus/MenuSave.h
     src/views/screens/menus/MenuSaveAsGame.h
+    src/views/screens/menus/MenuSaveAsMission.h
     src/views/screens/menus/MenuTheme.h
+    src/views/screens/pizza/PizzaDesign.h
+    src/views/screens/pizza/PizzaDesignHelpers.h
     src/views/screens/purchasing/CategoryOverviewScreen.h
     src/views/screens/purchasing/Demographics.h
     src/views/screens/purchasing/FloorListView.h
@@ -600,12 +641,16 @@ set(PLEGACY_HEADERS
     src/views/screens/restaurant/AttackScene.h
     src/views/screens/restaurant/CharacterController.h
     src/views/screens/restaurant/CharacterRenderer.h
+    src/views/screens/restaurant/FurniturePlacementController.h
+    src/views/screens/restaurant/GuestPicker.h
+    src/views/screens/restaurant/GuestWalkScene.h
     src/views/screens/restaurant/RecipeListRow.h
     src/views/screens/restaurant/RestaurantMenu.h
     src/views/screens/restaurant/RestaurantStats.h
     src/views/screens/restaurant/RestaurantView.h
     src/views/screens/restaurant/SeatedCharacterRenderer.h
     src/views/screens/restaurant/Walk.h
+    src/views/screens/restaurant/WalkNavigation.h
     src/views/screens/restaurant/WeeksTakings.h
     src/views/screens/stock/Contracts.h
     src/views/screens/stock/DepotIngredientCategoryView.h
@@ -626,8 +671,11 @@ set(PLEGACY_HEADERS
     src/views/ui/PageDecoration.h
     src/views/ui/PopupManager.h
     src/views/ui/SlideAnimator.h
+    src/views/ui/TurnPresenterView.h
+    src/views/ui/competition/CompetitionPopups.h
     src/views/ui/components/BeveledButton.h
     src/views/ui/finance/FinanceComponents.h
+    src/views/ui/finance/TurnInvoicePopups.h
     src/views/ui/popups/AlertPopup.h
     src/views/ui/popups/BasePopup.h
     src/views/ui/popups/ChequePopup.h
@@ -640,6 +688,7 @@ set(PLEGACY_HEADERS
     src/views/ui/popups/PopupButton.h
     src/views/ui/popups/TextInputPopup.h
     src/views/ui/popups/TvPopup.h
+    src/views/ui/staff/StaffEventPopups.h
     src/views/ui/status/StatusController.h
     src/views/ui/widgets/ArrowMenuItem.h
     src/views/ui/widgets/Button.h
@@ -649,12 +698,14 @@ set(PLEGACY_HEADERS
     src/views/ui/widgets/EnumMenuItem.h
     src/views/ui/widgets/IAddsInteractions.h
     src/views/ui/widgets/MenuItem.h
+    src/views/ui/widgets/MissionTypeBox.h
     src/views/ui/widgets/PositionMarkerMenuItem.h
     src/views/ui/widgets/SaveFileInfoBox.h
     src/views/ui/widgets/SaveFileInputBox.h
     src/views/ui/widgets/SaveFileListBox.h
     src/views/ui/widgets/SpacerMenuItem.h
     src/views/ui/widgets/StatBar.h
+    src/views/ui/widgets/TextListBox.h
     src/views/ui/widgets/TextMenuItem.h
     src/views/ui/widgets/ToggleMenuItem.h
     src/views/viewers/BobViewer.h

@@ -14,7 +14,10 @@ struct IOverlay {
   virtual ~IOverlay() = default;
   virtual bool is_finished() const = 0;
   virtual bool pull_recompose_flag() const = 0;
-  virtual bool blocks() const = 0;
+  // Veto the main view's tick() (input popups, console, pause).
+  virtual bool freezes_view() const = 0;
+  // Veto GameState::update() entirely: no clock, no end-of-turn pipeline.
+  virtual bool freezes_simulation() const { return false; }
 };
 
 template <typename Derived> class OverlayBehavior : public IOverlay {
@@ -47,8 +50,8 @@ protected:
     hide();
   }
   void mark_self_dirty() { static_cast<Derived*>(this)->mark_dirty(); }
-  bool blocks() const override { return blocks_; }
-  void blocks(bool blocks) { blocks_ = blocks; }
+  bool freezes_view() const override { return freezes_view_; }
+  void freezes_view(bool freezes) { freezes_view_ = freezes; }
 
 private:
   mutable bool force_recompose_ = false;
@@ -57,5 +60,5 @@ private:
   // Should this be removed?
   bool finished_ = false;
   // Does this block the main view from processing logic?
-  bool blocks_ = false;
+  bool freezes_view_ = false;
 };

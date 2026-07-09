@@ -12,19 +12,13 @@
 #include <filesystem>
 #include <numeric>
 
-#include <magic_enum/magic_enum.hpp>
-#include "conversations/BankConversation.h"
-#include "conversations/MafiaConversation.h"
-#include "conversations/MafiaLine.h"
-#include "conversations/MayorConversation.h"
-#include "conversations/PoliceConversation.h"
-#include "conversations/SupplierConversation.h"
 #include "core/character/Player.h"
 #include "core/debug/DebugCommands.h"
-#include "core/food/IngredientCategory.h"
+#include "core/mission/MissionFile.h"
+#include "core/restaurant/StaffEventData.h"
 #include "core/save/SaveGameManager.h"
-#include "core/state/Overloaded.h"
 #include "core/state/UIState.h"
+#include "core/state/ViewerType.h"
 #include "core/util/ConfigManager.h"
 #include "engine/DebugConsole.h"
 #include "engine/FpsManager.h"
@@ -40,74 +34,18 @@
 #include "factories/CharacterFactory.h"
 #include "gfx/Surface.h"
 #include "resources/VgaLoader.h"
-#include "views/base/PaneledView.h"
 #include "views/base/View.h"
-#include "views/factories/ActorViewFactory.h"
+#include "views/factories/ViewFactory.h"
 #include "views/layers/ConsoleLayer.h"
 #include "views/layers/DebugLayer.h"
 #include "views/layers/PauseLayer.h"
 #include "views/layers/TooltipLayer.h"
-#include "views/screens/ActorView.h"
-#include "views/screens/Advertising.h"
-#include "views/screens/AnimatedStats.h"
-#include "views/screens/CookbookReminder.h"
-#include "views/screens/EuroMap.h"
-#include "views/screens/FullscreenStatus.h"
-#include "views/screens/GameOver.h"
-#include "views/screens/GlobalStats.h"
-#include "views/screens/Intro.h"
-#include "views/screens/MafiaMissionView.h"
-#include "views/screens/MarketResearch.h"
-#include "views/screens/Newspaper.h"
-#include "views/screens/PizzaDesign.h"
-#include "views/screens/PizzaJudges.h"
-#include "views/screens/PlayerProfile.h"
-#include "views/screens/PlayerTurnCard.h"
-#include "views/screens/StaffView.h"
-#include "views/screens/StatsRestaurants.h"
-#include "views/screens/Terminal.h"
-#include "views/screens/WinSequenceView.h"
-#include "views/screens/city_view/CityView.h"
-#include "views/screens/depot/DepotExportScreen.h"
-#include "views/screens/depot/DepotMain.h"
-#include "views/screens/depot/DepotWeaponInterface.h"
-#include "views/screens/menus/CharacterSelection.h"
-#include "views/screens/menus/DifficultySelection.h"
-#include "views/screens/menus/DiskMenu.h"
-#include "views/screens/menus/MenuGameLoad.h"
-#include "views/screens/menus/MenuHighScores.h"
-#include "views/screens/menus/MenuMain.h"
-#include "views/screens/menus/MenuNewGame.h"
-#include "views/screens/menus/MenuOptions.h"
-#include "views/screens/menus/MenuQuickstart.h"
-#include "views/screens/menus/MenuSave.h"
-#include "views/screens/menus/MenuSaveAsGame.h"
-#include "views/screens/purchasing/CategoryOverviewScreen.h"
-#include "views/screens/purchasing/Demographics.h"
-#include "views/screens/purchasing/FloorListView.h"
-#include "views/screens/purchasing/FurnitureListView.h"
-#include "views/screens/purchasing/PurchasingMain.h"
-#include "views/screens/purchasing/SupplierList.h"
-#include "views/screens/restaurant/RestaurantMenu.h"
-#include "views/screens/restaurant/RestaurantStats.h"
-#include "views/screens/restaurant/RestaurantView.h"
-#include "views/screens/restaurant/WeeksTakings.h"
-#include "views/screens/stock/Contracts.h"
-#include "views/screens/stock/DepotIngredientCategoryView.h"
-#include "views/screens/stock/DepotIngredientOrderScreen.h"
-#include "views/screens/stock/DepotIngredientSupplierList.h"
-#include "views/screens/stock/IngredientCategoryView.h"
-#include "views/screens/stock/IngredientOrderScreen.h"
-#include "views/screens/stock/IngredientSupplierList.h"
-#include "views/screens/stock/StockMain.h"
+#include "views/screens/StatusDisplay.h"
 #include "views/ui/PopupManager.h"
+#include "views/ui/TurnPresenterView.h"
+#include "views/ui/competition/CompetitionPopups.h"
 #include "views/ui/popups/ConfirmPopup.h"
-#include "views/viewers/BobViewer.h"
-#include "views/viewers/CharacterViewer.h"
-#include "views/viewers/FontViewer.h"
-#include "views/viewers/PaletteView.h"
-#include "views/viewers/SoundViewer.h"
-#include "views/viewers/VgaViewer.h"
+#include "views/ui/staff/StaffEventPopups.h"
 
 namespace {
 SDL_Surface* format_for_png_fixed(SDL_Surface* input) {
@@ -193,6 +131,7 @@ void Game::run() {
 
   // Configure platform-aware saves directory
   save::SaveGameManager::set_saves_directory(platform_paths::saves_dir());
+  core::mission::set_missions_directory(platform_paths::missions_dir());
 
   // Use CLI-provided config path, or fall back to platform default
   std::string effective_config =
@@ -285,6 +224,23 @@ void Game::run() {
   }
   create_some_players(state);
 
+  // Presentation callbacks core code invokes without depending on popup types
+  state.staff_event_presenter(
+      [this](const core::restaurant::StaffEventData& event,
+             Restaurant* restaurant, std::function<void()> on_done) {
+        views::ui::staff::show_staff_event_dialog(context, event, restaurant,
+                                                  std::move(on_done));
+      });
+  state.monthly_entry_presenter(
+      [this, &state](
+          core::PlayerId pid, bool ask_speed,
+          std::function<void(std::optional<MonthlyCompetitionEntry>)> reply) {
+        views::ui::competition::ask_monthly_entry(context, state, pid,
+                                                  ask_speed, std::move(reply));
+      });
+  state.turn_presenter(
+      std::make_unique<views::ui::TurnPresenterView>(context, state));
+
   // Main game loop prep
   DebugConsole debug_console;
   register_debug_commands(debug_console, state, context);
@@ -347,7 +303,14 @@ void Game::run() {
   cursor_manager_->software_mode(state.options().software_cursor);
   SDL_SetRenderVSync(sdl_.renderer.get(),
                      state.options().vsync ? 1 : SDL_RENDERER_VSYNC_DISABLED);
-  renderer.add_layers(change_state(state, loop_state));
+
+  // The shared status panel outlives every screen transition and survives a
+  // game load (its hub subscription is preserved), so it is created once here.
+  auto status_display =
+      std::make_unique<StatusDisplay>(context, state, state.status());
+  context.status_panel = status_display.get();
+
+  renderer.add_layers(change_state(state));
   std::ranges::for_each(overlays.renderables(),
                         [&](Renderable* r) { renderer.add_layers(r); });
 
@@ -373,7 +336,6 @@ void Game::run() {
     context.clock.begin_frame(wall_ms);
     fps.begin_frame(wall_ms);
 
-    // Apply changes in FPS from the options menu.
     if (static_cast<int>(state.options().render_fps) != render_fps) {
       render_fps = static_cast<int>(state.options().render_fps);
       fps.set_target_fps(render_fps);
@@ -404,29 +366,27 @@ void Game::run() {
       // Skip ticking view during fade-in to avoid missing animations/info
       bool should_skip_tick = renderer.is_fading();
 
-      if (!overlays.game_blocked() && !should_skip_tick) {
+      if (!overlays.view_frozen() && !should_skip_tick) {
         current_view_->tick();
       }
       overlays.tick_all();
 
-      state.update(TICK_MS);
+      if (!overlays.simulation_frozen()) {
+        state.update(TICK_MS);
+      }
 
-      // Handle fade transitions
       bool fade_completed = renderer.tick_fade();
 
-      // Clear skip flag when fade completes
       if (fade_completed && loop_state.skip_tick_during_fade_in) {
         loop_state.skip_tick_during_fade_in = false;
       }
 
-      // Check if resolution change was requested
       if (auto res = state.pending_resolution_change()) {
         state.clear_resolution_request();
         auto [w, h] = resolution_window_size(*res, display_height_);
         apply_window_size(w, h);
       }
 
-      // Check if CRT aspect ratio change was requested
       if (auto crt = state.pending_crt_change()) {
         state.clear_crt_request();
         display_height_ = get_display_height(*crt);
@@ -442,7 +402,6 @@ void Game::run() {
         apply_window_size(w, h);
       }
 
-      // Check if fade requested and not already fading
       if (state.fade_requested() && !renderer.is_fading()) {
         // Include pending_fade_midpoint: a UI push is about to happen at the
         // midpoint (while black), so we must expect a transition even if the
@@ -458,9 +417,9 @@ void Game::run() {
 
       // Don't transition while a popup is active; the popup must be
       // dismissed first so it shows on the current view, not the new one.
-      // game_blocked() before ui_changed() so short-circuit preserves the flag.
+      // view_frozen() before ui_changed() so short-circuit preserves the flag.
       const bool normal_ui_transition = !renderer.is_fading() &&
-                                        !overlays.game_blocked() &&
+                                        !overlays.view_frozen() &&
                                         state.ui().ui_changed();
 
       if (fade_out_finished_and_pending || normal_ui_transition) {
@@ -473,8 +432,7 @@ void Game::run() {
           state.on_fade_midpoint();
         }
 
-        // Get new view and check if it wants to preserve background
-        auto* new_view = change_state(state, loop_state);
+        auto* new_view = change_state(state);
         if (new_view && new_view->preserve_background()) {
           renderer.clear_layers_preserve_backbuffer();
         }
@@ -549,12 +507,9 @@ ScreenPoint Game::global_cursor_pos_clamped() const {
       std::clamp(static_cast<int>(render_y), 0, display_height_ - 1)};
 }
 
-// Only apply the workaround for that macOS bug on macOS
-#if defined(__APPLE__)
+// Enables the workaround for the macOS window-boundary cursor bug described
+// in global_cursor_pos_clamped(). Currently disabled everywhere.
 constexpr bool USE_GLOBAL_CURSOR_POS = false;
-#else
-constexpr bool USE_GLOBAL_CURSOR_POS = false;
-#endif
 
 ScreenPoint
 Game::resolve_motion_position(const SDL_MouseMotionEvent& motion) const {
@@ -742,446 +697,17 @@ bool Game::init(int display_height, ConfigManager& config_manager) {
   return true;
 }
 
-namespace {
-// To help figure out palette for popups and mouse cursor
-bool is_menu_screen(ScreenTag::Kind kind) {
-  using K = ScreenTag::Kind;
-  switch (kind) {
-  case K::Intro:
-  case K::MenuMain:
-  case K::MenuNewGame:
-  case K::MenuOptions:
-  case K::MenuQuickstart:
-  case K::MenuHighScores:
-  case K::CharacterSelection:
-  case K::DifficultySelection:
-  case K::DiskMenu:
-  case K::MenuGameLoad:
-  case K::MenuSave:
-  case K::MenuSaveAsGame:
-    return true;
-  default:
-    return false;
-  }
-}
-} // namespace
-
-Renderable* Game::change_state(GameState& gs, LoopState& /*loop*/) {
+Renderable* Game::change_state(GameState& gs) {
   current_view_.reset();
 
-  // Default to game; menu screens below flip this. Applied to the cursor and
-  // popups once after we know which screen we are building.
-  UiMode ui_mode = UiMode::Game;
-  std::visit(
-      overloaded{
-
-          [&](const ScreenTag& s) {
-            using K = ScreenTag::Kind;
-            if (is_menu_screen(s.kind)) {
-              ui_mode = UiMode::Menu;
-            }
-            switch (s.kind) {
-            case K::Intro:
-              current_view_ = std::make_unique<Intro>(context, gs);
-              break;
-            case K::MenuMain:
-              current_view_ = std::make_unique<MenuMain>(context, gs);
-              break;
-            case K::MenuHighScores:
-              current_view_ = std::make_unique<MenuHighScores>(context, gs);
-              break;
-            case K::MenuNewGame:
-              current_view_ = std::make_unique<MenuNewGame>(context, gs);
-              break;
-            case K::MenuOptions:
-              current_view_ = std::make_unique<MenuOptions>(context, gs);
-              break;
-            case K::MenuQuickstart:
-              current_view_ = std::make_unique<MenuQuickstart>(context, gs);
-              break;
-            case K::CharacterSelection:
-              current_view_ = std::make_unique<CharacterSelection>(context, gs);
-              break;
-            case K::DifficultySelection:
-              current_view_ =
-                  std::make_unique<DifficultySelection>(context, gs);
-              break;
-            case K::DiskMenu:
-              current_view_ = std::make_unique<DiskMenu>(context, gs);
-              break;
-            case K::MenuGameLoad:
-              current_view_ = std::make_unique<MenuGameLoad>(context, gs);
-              break;
-            case K::MenuSave:
-              current_view_ = std::make_unique<MenuSave>(context, gs);
-              break;
-            case K::MenuSaveAsGame:
-              current_view_ = std::make_unique<MenuSaveAsGame>(context, gs);
-              break;
-            case K::Advertising:
-              current_view_ = std::make_unique<Advertising>(context, gs);
-              break;
-            case K::StaffView:
-              current_view_ = std::make_unique<StaffView>(context, gs);
-              break;
-            case K::Newspaper:
-              current_view_ = std::make_unique<Newspaper>(context, gs);
-              break;
-            case K::GlobalStats:
-              current_view_ = std::make_unique<GlobalStats>(context, gs);
-              break;
-            }
-          },
-
-          // data-bearing screens
-          [&](const MarketResearchState& mr) {
-            current_view_ =
-                std::make_unique<MarketResearch>(context, gs, mr.district_id);
-          },
-          [&](const EuroMapState& em) {
-            current_view_ =
-                std::make_unique<EuroMap>(context, gs, em.mode, em.category);
-          },
-          [&](const RestaurantViewState& mm) {
-            current_view_ = std::make_unique<RestaurantView>(context, gs, mm);
-          },
-          [&](const CityViewState& cm) {
-            current_view_ = std::make_unique<CityView>(context, gs, cm.city_id);
-          },
-          [&](const PizzaJudgesState& pj) {
-            current_view_ = std::make_unique<PizzaJudges>(
-                context, gs, pj.scores, pj.on_complete, pj.judging_mode);
-          },
-          [&](const CategoryOverviewState& os) {
-            current_view_ =
-                std::make_unique<CategoryOverviewScreen>(context, gs, os.type);
-          },
-          [&](const IngredientCategoryViewState& is) {
-            current_view_ = std::make_unique<IngredientCategoryView>(
-                context, gs, is.category);
-          },
-          [&](const DepotIngredientCategoryViewState& ds) {
-            current_view_ = std::make_unique<DepotIngredientCategoryView>(
-                context, gs, ds.category);
-          },
-          [&](const DepotMainState& dms) {
-            current_view_ = std::make_unique<views::screens::depot::DepotMain>(
-                context, gs, dms);
-          },
-          [&](const DepotExportState& des) {
-            current_view_ = std::make_unique<DepotExportScreen>(
-                context, gs, des.category, des.target_city_id,
-                des.transport_cost);
-          },
-          [&](const DepotWeaponInterfaceState& dwis) {
-            current_view_ =
-                std::make_unique<views::screens::depot::DepotWeaponInterface>(
-                    context, gs, dwis);
-          },
-          [&](const StockMainState& /*sms*/) {
-            current_view_ =
-                std::make_unique<views::screens::stock::StockMain>(context, gs);
-          },
-          [&](const ContractsViewState& /*cvs*/) {
-            current_view_ = std::make_unique<Contracts>(context, gs);
-          },
-          [&](const IngredientSupplierListState& isls) {
-            current_view_ = std::make_unique<IngredientSupplierList>(
-                context, gs, isls.category);
-          },
-          [&](const DepotIngredientSupplierListState& ds) {
-            current_view_ = std::make_unique<DepotIngredientSupplierList>(
-                context, gs, ds.category, ds.mode);
-          },
-          [&](const IngredientOrderState& ios) {
-            current_view_ = std::make_unique<IngredientOrderScreen>(
-                context, gs, ios.supplier_id, ios.category,
-                ios.saved_ingredients);
-          },
-          [&](const DepotIngredientOrderState& ds) {
-            current_view_ =
-                std::make_unique<DepotIngredientOrderScreen>(context, gs, ds);
-          },
-          [&](const SupplierContractState& scs) {
-            // Find the supplier from the city
-            auto* city = gs.active_city();
-            ActorType supplier_type =
-                core::food::CategoryRegistry::supplier_type(scs.category);
-            const FoodSupplier* supplier = nullptr;
-            for (const auto* s : city->food_suppliers(supplier_type)) {
-              if (s->id() == scs.supplier_id) {
-                supplier = s;
-                break;
-              }
-            }
-            if (supplier) {
-              auto conversation = std::make_unique<SupplierConversation>(
-                  gs, supplier, scs.order, scs.total);
-              auto* conv_ptr = conversation.get();
-              // On success, pop IngredientOrderScreen too so we don't return
-              // to it after the contract is signed.
-              conversation->on_end_ = [&gs, conv_ptr]() {
-                if (conv_ptr->contract_accepted()) {
-                  gs.ui().pop();
-                }
-              };
-              Actor* actor_ptr = conversation->owned_actor();
-              current_view_ = std::make_unique<ActorView<SupplierLine>>(
-                  context, gs, actor_ptr, std::move(conversation));
-            }
-          },
-          [&](const FurnitureListState& fs) {
-            current_view_ = std::make_unique<FurnitureListView>(context, gs,
-                                                                fs.supplier_id);
-          },
-          [&](const FloorListState& fs) {
-            current_view_ =
-                std::make_unique<FloorListView>(context, gs, fs.supplier_id);
-          },
-          [&](const PurchasingState& /*ps*/) {
-            current_view_ = std::make_unique<PurchasingMain>(context, gs);
-          },
-          [&](const SupplierListState& ss) {
-            current_view_ =
-                std::make_unique<SupplierList>(context, gs, ss.supplier);
-          },
-          [&](const PurchasingDemographicState& /*ps*/) {
-            current_view_ =
-                std::make_unique<views::screens::purchasing::Demographics>(
-                    context, gs);
-          },
-          [&](const BankState& bs) {
-            const auto& city = gs.active_city();
-            auto* actor = city->actor_by_id(bs.id);
-            auto conversation = std::make_unique<BankConversation>(
-                gs, actor, city->bank_settings(actor->id()));
-            current_view_ = std::make_unique<ActorView<BankLine>>(
-                context, gs, actor, std::move(conversation));
-          },
-          [&](const PoliceState& ps) {
-            auto* actor = gs.active_city()->actor_by_id(ps.id);
-            auto conversation =
-                std::make_unique<PoliceConversation>(gs, actor, ps.reason);
-            auto view = std::make_unique<ActorView<PoliceLine>>(
-                context, gs, actor, std::move(conversation));
-            view->set_on_complete(ps.on_complete);
-            current_view_ = std::move(view);
-          },
-          [&](const MafiaState& ms) {
-            auto* actor = gs.active_city()->actor_by_id(ms.id);
-            auto mode = ms.mode.value_or(MafiaMode::PlayerCall);
-            auto conversation = std::make_unique<MafiaConversation>(
-                gs, actor, mode, ms.restaurant_id, ms.first_contact);
-            current_view_ = std::make_unique<ActorView<MafiaLine>>(
-                context, gs, actor, std::move(conversation));
-          },
-          [&](const MayorState& mys) {
-            auto* city = gs.active_city();
-            auto* actor = city->actor_by_id(mys.id);
-            std::optional<MayorConversation::InspectionOutcome> opt_outcome;
-            if (mys.is_first_inspection.has_value()) {
-              opt_outcome = MayorConversation::InspectionOutcome{
-                  .star_gained = mys.inspection_star_gained,
-                  .star_lost = mys.inspection_star_lost,
-                  .is_first = *mys.is_first_inspection,
-              };
-            }
-            std::string restaurant_name;
-            if (mys.restaurant_id.has_value()) {
-              if (auto* r = gs.restaurant(*mys.restaurant_id)) {
-                restaurant_name = r->name();
-              }
-            }
-            auto conversation = std::make_unique<MayorConversation>(
-                gs, actor, city->mayor_office(), mys.type, opt_outcome,
-                mys.award_winner_player_id, restaurant_name);
-            if (mys.on_complete) {
-              conversation->on_end_ = mys.on_complete;
-            }
-            current_view_ = std::make_unique<ActorView<MayorLine>>(
-                context, gs, actor, std::move(conversation));
-          },
-          [&](const TerminalState& ts) {
-            current_view_ = std::make_unique<Terminal>(context, gs, ts);
-          },
-          [&](const ActorTerminalState& at) {
-            current_view_ = ActorViewFactory::create(context, gs, at);
-          },
-
-          [&](const GameOverState& gos) {
-            current_view_ = std::make_unique<GameOver>(context, gs, gos);
-          },
-          [&](const CookbookReminderState& pps) {
-            current_view_ =
-                std::make_unique<CookbookReminder>(context, gs, pps);
-          },
-          [&](const ViewerState& v) {
-            ui_mode = UiMode::Menu;
-            // Use the viewer type stored in the ViewerState
-            handle_viewer_state(gs, v.filename, v.type);
-          },
-          [&](const OptionsMenuState& oms) {
-            ui_mode = UiMode::Menu;
-            current_view_ =
-                std::make_unique<MenuOptions>(context, gs, oms.screen);
-          },
-          [&](const RestaurantMenuState& rms) {
-            current_view_ =
-                std::make_unique<RestaurantMenu>(context, gs, rms.id);
-          },
-          [&](const RestaurantStatsState& rss) {
-            std::optional<RestaurantStatsScreen> screen = std::nullopt;
-            if (rss.screen_index.has_value()) {
-              screen =
-                  static_cast<RestaurantStatsScreen>(rss.screen_index.value());
-            }
-            current_view_ = std::make_unique<RestaurantStats>(
-                context, gs, rss.id, screen, rss.automatic_mode);
-          },
-          [&](const WeeksTakingsState& wts) {
-            current_view_ = std::make_unique<WeeksTakings>(
-                context, gs, wts.id, wts.end_of_week_mode, wts.on_done);
-          },
-          [&](const StatsRestaurantsState& srs) {
-            current_view_ =
-                std::make_unique<StatsRestaurants>(context, gs, srs.player_id);
-          },
-          [&](const AnimatedStatsState& ass) {
-            current_view_ = std::make_unique<AnimatedStats>(context, gs, ass.id,
-                                                            ass.screen);
-          },
-          [&](const PizzaDesignState& pms) {
-            current_view_ = std::make_unique<PizzaDesign>(context, gs, pms);
-          },
-          [&](const PlayerTurnCardState& ptcs) {
-            current_view_ = std::make_unique<PlayerTurnCard>(context, gs, ptcs);
-          },
-          [&](const FullscreenStatusState& fss) {
-            current_view_ = std::make_unique<FullscreenStatus>(
-                context, gs, fss.message_id, fss.on_dismiss);
-          },
-          [&](const WinSequenceState& wss) {
-            current_view_ = std::make_unique<WinSequenceView>(
-                context, gs, wss.line_index, wss.player_id);
-          },
-          [&](const MafiaMissionViewState& mmvs) {
-            current_view_ =
-                std::make_unique<MafiaMissionView>(context, gs, mmvs.line);
-          },
-          [&](const PlayerProfileState& pps) {
-            current_view_ =
-                std::make_unique<PlayerProfile>(context, gs, pps.player_id);
-          },
-          // no screen
-          [&](const std::monostate&) { /* leave current_view_ == nullptr */ }
-
-      },
-      gs.ui().top());
+  auto result = ViewFactory::create(context, gs);
+  current_view_ = std::move(result.view);
 
   // Apply the resolved mode to everything that follows the menu/game look.
-  cursor_manager_->base_cursor_mode(ui_mode);
-  context.ui_mode = ui_mode;
-
-  // Wrap in PaneledView if necessary
-  if (current_view_ && !dynamic_cast<PaneledView*>(current_view_.get())) {
-    if (dynamic_cast<MainPanelView*>(current_view_.get())) {
-      current_view_ =
-          std::make_unique<PaneledView>(context, gs, std::move(current_view_));
-    }
-  }
+  cursor_manager_->base_cursor_mode(result.ui_mode);
+  context.ui_mode = result.ui_mode;
 
   return current_view_.get();
-}
-
-void Game::handle_viewer_state(GameState& state,
-                               const std::filesystem::path& filename,
-                               ViewerType type) {
-  if (filename.empty()) {
-    return;
-  }
-  // fonts and pal are not actually filenames but just tell us that we want
-  // to view fonts or the palette. We'll deal with proper arguments maybe
-  // in the future since it's just for debugging.
-  if (filename == "fonts") {
-    current_view_ = std::make_unique<FontViewer>(context, state);
-    return;
-  }
-  if (filename == "sounds") {
-    current_view_ = std::make_unique<SoundViewer>(context, state);
-    return;
-  }
-  if (filename == "pal") {
-    current_view_ = std::make_unique<PaletteView>(context, state);
-    return;
-  }
-  if (filename == "char") {
-    current_view_ = std::make_unique<CharacterViewer>(context, state);
-    return;
-  }
-
-  // If explicit type is provided, use it; otherwise auto-detect
-  ViewerType effective_type = type;
-  if (effective_type == ViewerType::Auto) {
-    if (!fileutils::fexists(filename.string())) {
-      std::cerr << "File not found: " << filename << "\n";
-      exit(1);
-    }
-    std::string ext = filename.extension().string();
-    if (ext == ".vga") {
-      effective_type = ViewerType::Vga;
-    }
-    else if (ext == ".bob") {
-      effective_type = ViewerType::Bob;
-    }
-    else {
-      effective_type = ViewerType::Vga;
-      std::cerr << "Unknown file extension: " << ext << ", assuming VGA\n";
-    }
-  }
-
-  // Use open_viewer for the actual loading with the determined type
-  open_viewer(state, filename, effective_type);
-}
-
-void Game::open_viewer(GameState& state, const std::filesystem::path& path,
-                       ViewerType type) {
-  // Check if file exists
-  if (!std::filesystem::exists(path)) {
-    std::cerr << "File not found: " << path << "\n";
-    exit(1);
-  }
-
-  try {
-    switch (type) {
-    case ViewerType::Vga:
-      Logger::info("Loading VGA file: {}", path.string());
-      current_view_ =
-          std::make_unique<VgaViewer>(context, state, path.string());
-      Logger::info("VGA viewer loaded successfully");
-      break;
-    case ViewerType::Bob:
-      Logger::info("Loading BOB file: {}", path.string());
-      current_view_ =
-          std::make_unique<BobViewer>(context, state, path.string());
-      Logger::info("BOB viewer loaded successfully");
-      break;
-    case ViewerType::Auto:
-      // Fallback to extension-based detection
-      handle_viewer_state(state, path);
-      break;
-    }
-  }
-  catch (const std::exception& e) {
-    Logger::warn("Failed to load viewer: {}", e.what());
-    std::cerr << "ERROR: Failed to load file: " << path << "\n";
-    std::cerr << "Details: " << e.what() << "\n";
-    exit(1);
-  }
-  catch (...) {
-    Logger::warn("Unknown error loading viewer for: {}", path.string());
-    std::cerr << "ERROR: Unknown error loading file: " << path << "\n";
-    exit(1);
-  }
 }
 
 // Returns true if the window size was let through without issue,

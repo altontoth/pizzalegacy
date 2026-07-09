@@ -36,4 +36,13 @@ inline void step_one_cell(WorldPoint& position, int& walk_cycle,
   walk_cycle = (walk_cycle + 1) % 4;
 }
 
+// Maps the 4-phase walk cycle onto the 3 sprite frames per direction:
+// neutral, left-step, neutral, right-step.
+constexpr std::array<int, 4> WALK_CYCLE_TO_FRAME = {0, 1, 0, 2};
+
+// Frame index into a walk bob for a facing and walk-cycle phase.
+constexpr int walk_frame_for(Orientation dir, int walk_cycle) {
+  return (static_cast<int>(dir) * 3) + WALK_CYCLE_TO_FRAME[walk_cycle];
+}
+
 } // namespace views::screens::restaurant

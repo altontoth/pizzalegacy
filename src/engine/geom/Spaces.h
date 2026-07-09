@@ -6,7 +6,8 @@
 
 #pragma once
 
-#include "engine/geom/GeomFormat.h"
+// hash/formatter specializations for the Typed* geometry types
+#include "engine/geom/GeomFormat.h" // IWYU pragma: keep
 #include "engine/geom/TypedDelta.h"
 #include "engine/geom/TypedPoint.h"
 #include "engine/geom/TypedRect.h"
