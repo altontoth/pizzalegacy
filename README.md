@@ -1,14 +1,19 @@
 # Pizza Legacy
 
-![Pizza Legacy city view](screenshots/citymap.jpg)
+![Pizza Legacy city view](screenshots/citymap.png)
 
 Pizza Legacy is an open-source reimplementation of the 1994 DOS game
 Pizza Tycoon (released as Pizza Connection in Germany). The goal is to
 faithfully reimplement the game as a new engine written in modern C++20.
-Only the engine is reimplemented, so you will need a copy of the original game
-for the assets (graphics, sounds, etc).
+The game itself is fully reimplemented; only the assets (graphics, sounds,
+etc.) come from the original, so you will need the original game to play.
 
 Website: [pizzalegacy.nl](https://pizzalegacy.nl)
+
+## Downloads
+
+Prebuilt releases of Pizza Legacy are available on Codeberg:
+[https://codeberg.org/cowomaly/pizzalegacy/releases](https://codeberg.org/cowomaly/pizzalegacy/releases)
 
 ## Getting the original game
 
@@ -24,26 +29,38 @@ If you have a legal copy of the original DOS game on disk, that works too.
 The original game manual is available online at
 [pizzatycoon.org](https://www.pizzatycoon.org/p/manual.html).
 
-### Releases
-
-Prebuilt releases of Pizza Legacy are available on Codeberg:
-[https://codeberg.org/cowomaly/pizzalegacy/releases](https://codeberg.org/cowomaly/pizzalegacy/releases)
-
 ## Current status
 
-Pizza Legacy is fully playable in Free mode from start to finish. Restaurant
-management, the economic simulation, staff, recipes, advertising, and AI
-competitors are all working. A few systems are not yet implemented: staff
-training, in-restaurant walking animations, competitor attacks (weapons can be
-purchased but not used at opponents), the newspaper ads, and Mission mode.
+Pizza Legacy is now feature-complete. Every major gameplay system has been
+implemented and the game can be played from start to finish.
+Development is currently focused on extensive playtesting, balancing, bug
+fixing, and general polish before the next stable release. See
+[docs/CHANGELOG.md](docs/CHANGELOG.md) for recent changes.
+
+![Pizza design screen](screenshots/pizzadesign.png)
+
+### Enhancements
+
+While the goal of the project is a faithful reimplementation, Pizza Legacy
+includes several quality-of-life improvements and bug fixes for the original
+game. See [docs/MODERNIZATIONS.md](docs/MODERNIZATIONS.md) for a full list of
+intentional differences.
+
+Some examples:
+
+- Auto-saving, plus a save/load menu showing in-game date, players and city
+- Keyboard navigation throughout menus
+- Modern mouse support: drag-scrolling and zooming the city map, scroll wheels in lists
+- Support for modern displays, including configurable scaling and vsync
+- Optional fixes for original bugs, such as the win condition only checking
+  Paris instead of all ten cities
 
 ## Engine features
-
-Pizza Legacy is a new C++20 engine built to reproduce the original game's
-behavior, not a reconstruction of the original engine. The reverse engineering
-was done through a mix of modifying asset files and observing the effects in
-the original game, observing gameplay behavior, and reading the disassembled
-DOS executable. The engine itself is designed from scratch.
+Pizza Legacy is a new C++20 engine written from scratch to reproduce the
+original game's behavior while providing a modern, portable way to play it.
+It is not a decompilation or port of the original engine; it was developed
+through a combination of gameplay observation, asset file analysis, and study
+of the disassembled DOS executable.
 
 ### Original asset format support
 
@@ -91,15 +108,14 @@ actions (game-level). Key bindings support chords (e.g. Ctrl+Shift+B) and are
 fully configurable (though not through a UI yet). Listeners register for
 actions with priority ordering, and an IME-aware text input mode uses RAII
 tokens for safe session management. Continuous axes are computed from input
-sources (currently keyboard keys) and normalized to [-1, +1]; the system is
-able to incorporate analog sticks but this is not implemented yet.
+sources to support keyboard and gamepad input.
 
 ### Interaction and UI framework
 
 Mouse interaction is based on rectangular hit regions registered with
 callbacks, per layer. Events include enter/leave/hover, click, double-click,
-and scroll. Registration uses RAII tokens for automatic cleanup. Tooltips,
-custom cursors, and exclusive capture modes are built in.
+scrolling and drag-and-drop. Registration uses RAII tokens for automatic
+cleanup. Tooltips, custom cursors, and exclusive capture modes are built in.
 
 ### Audio
 
@@ -129,12 +145,6 @@ project goal and platform-specific code is kept to a minimum.
 Save data and configuration files are stored in the appropriate user data
 directories for each platform; the only external files accessed are the
 original game assets from the directory you selected.
-
-### Enhancements
-
-While the goal of the project is a faithful reimplementation, Pizza Legacy
-includes several quality-of-life improvements and bug fixes for the original
-game. See docs/MODERNIZATIONS.md for a full list of intentional differences.
 
 ## Building
 
@@ -176,7 +186,7 @@ cmake --build build -j
 
 When you launch Pizza Legacy you will be prompted for the original game's
 installation directory. Point it to the directory containing PT.EXE, or if
-you bought Pizza Connection on steam you can just point it at your Steam
+you bought Pizza Connection on Steam you can just point it at your Steam
 installation directory and it should find the right directory itself.
 
 ## History
@@ -186,9 +196,10 @@ these years the project has gone through several technology migrations:
 
 - C++ standard: from pre-C++11 through C++11, C++17, and now C++20
 - Build system: from a hand-written Makefile to autotools to CMake
-- Graphics: from SDL 1.2 with 8-bit palettes to SDL2 with 32-bit, and now SDL3.
-  surfaces, eventually replacing `SDL_Surface` with a custom Surface class
-  and confining SDL to the engine layer
+- Graphics: from SDL 1.2 with 8-bit palettes to SDL2 with 32-bit surfaces,
+  then replacing `SDL_Surface` with a custom Surface class and confining all
+  SDL code to the engine layer, which made the later move to SDL3 relatively
+  easy
 - Pointers: from raw pointers and `auto_ptr` to `shared_ptr`, then
   to `unique_ptr` with raw non-owning pointers
 

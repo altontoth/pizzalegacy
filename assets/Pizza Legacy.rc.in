@@ -24,7 +24,7 @@ BEGIN
             VALUE "LegalCopyright",   "Copyright 2010-2026 Cowomaly. Licensed under GPL v3."
             VALUE "OriginalFilename", "Pizza Legacy.exe"
             VALUE "ProductName",      "Pizza Legacy"
-            VALUE "ProductVersion",   "@PROJECT_VERSION@"
+            VALUE "ProductVersion",   "@PLEGACY_VERSION_FULL@"
         END
     END
     BLOCK "VarFileInfo"

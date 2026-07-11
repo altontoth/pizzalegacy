@@ -1,4 +1,4 @@
-Pizza Legacy v@PROJECT_VERSION@ - Linux Release
+Pizza Legacy v@PLEGACY_VERSION_FULL@ - Linux Release
 ===============================================
 
 @README_INTRO@
@@ -8,8 +8,8 @@ RUNNING
 
 Make the AppImage executable and run it:
 
-    chmod +x PizzaLegacy_v@PROJECT_VERSION@_linux-x86_64.AppImage
-    ./PizzaLegacy_v@PROJECT_VERSION@_linux-x86_64.AppImage
+    chmod +x PizzaLegacy_v@PLEGACY_VERSION_FULL@_linux-x86_64.AppImage
+    ./PizzaLegacy_v@PLEGACY_VERSION_FULL@_linux-x86_64.AppImage
 
 
 @README_REQUIREMENTS@

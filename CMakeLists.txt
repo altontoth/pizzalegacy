@@ -3,7 +3,13 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 cmake_minimum_required(VERSION 3.25)
-project(plegacy VERSION 0.2.0 LANGUAGES C CXX)
+project(plegacy VERSION 1.0.0 LANGUAGES C CXX)
+
+# SemVer pre-release suffix (e.g. "-beta.1"); empty for final releases.
+# CMake's project(VERSION) only accepts numeric components, so the full
+# version string is assembled here.
+set(PLEGACY_VERSION_SUFFIX "-beta.1")
+set(PLEGACY_VERSION_FULL "${PROJECT_VERSION}${PLEGACY_VERSION_SUFFIX}")
 
 # Generate Version.h from the project version
 configure_file(
@@ -460,9 +466,9 @@ if(UNIX AND NOT APPLE AND NOT CMAKE_SYSTEM_NAME STREQUAL "Haiku")
         DEPENDS plegacy
         COMMAND "${PLEGACY_TOOLS_DIR}/package_linux_appimage.sh"
                 "${CMAKE_BINARY_DIR}"
-                "${PROJECT_VERSION}"
+                "${PLEGACY_VERSION_FULL}"
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-        COMMENT "Packaging Linux AppImage v${PROJECT_VERSION}"
+        COMMENT "Packaging Linux AppImage v${PLEGACY_VERSION_FULL}"
         VERBATIM
     )
 endif()
@@ -472,9 +478,9 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Haiku")
         DEPENDS plegacy
         COMMAND "${PLEGACY_TOOLS_DIR}/package_haiku_zip.sh"
                 "${CMAKE_BINARY_DIR}"
-                "${PROJECT_VERSION}"
+                "${PLEGACY_VERSION_FULL}"
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-        COMMENT "Packaging Haiku ZIP v${PROJECT_VERSION}"
+        COMMENT "Packaging Haiku ZIP v${PLEGACY_VERSION_FULL}"
         VERBATIM
     )
 endif()
@@ -484,9 +490,9 @@ if(APPLE)
         DEPENDS plegacy
         COMMAND "${PLEGACY_TOOLS_DIR}/package_macos_app.sh"
                 "${CMAKE_BINARY_DIR}"
-                "${PROJECT_VERSION}"
+                "${PLEGACY_VERSION_FULL}"
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-        COMMENT "Packaging macOS app bundle v${PROJECT_VERSION}"
+        COMMENT "Packaging macOS app bundle v${PLEGACY_VERSION_FULL}"
         VERBATIM
     )
 endif()
@@ -497,9 +503,9 @@ if(WIN32)
         COMMAND powershell -ExecutionPolicy Bypass -File
                 "${PLEGACY_TOOLS_DIR}/package_windows_zip.ps1"
                 -BuildDir "${CMAKE_BINARY_DIR}"
-                -Version "${PROJECT_VERSION}"
+                -Version "${PLEGACY_VERSION_FULL}"
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-        COMMENT "Packaging Windows ZIP v${PROJECT_VERSION}"
+        COMMENT "Packaging Windows ZIP v${PLEGACY_VERSION_FULL}"
         VERBATIM
     )
 endif()

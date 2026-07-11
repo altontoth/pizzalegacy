@@ -6,5 +6,5 @@
 
 // Generated from Version.h.in by CMake: do not edit directly.
 namespace game_meta {
-inline constexpr const char* VERSION = "@PROJECT_VERSION@";
+inline constexpr const char* VERSION = "@PLEGACY_VERSION_FULL@";
 }

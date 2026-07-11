@@ -2,12 +2,12 @@
 
 This document lists intentional differences from the original game. Some are
 life quality improvements gated by an option, others are bug fixes for original
-bugs (gated by a seperate option) and then there are some that are just always
+bugs (gated by a separate option) and then there are some that are just always
 in effect.
 
 ## Always in effect
 
-### Load Game options
+### Game options
 
 * In the load game you can now see information related to the savegame, like the
   time the save was made, in game date, player names and currently active player
@@ -15,19 +15,15 @@ in effect.
 * You can now delete save games from this menu.
 * The file list also shows the last modified date on the savegame file.
 * The file box can be scrolled with the mouse scroll wheel.
+* Menus can be navigated with the keyboard.
+* Game options are split into sections, with new options added for engine and
+  gameplay features (e.g. FPS, vsync, auto save, etc.).
 
 ### Shift-Tab goes to previous restaurant
 
 * Like in the original you can switch between restaurants by pressing the "Tab"
   key from the restaurant view; in Pizza Legacy you can also press Shift+Tab to
   go to the previous restaurant.
-
-### Game options
-
-* Instead of separate "Save" and "Exit" options there is now a "Save and exit"
-  option; I think the options are simple enough that requiring two clicks to
-  save the changes is not worth it. It was either this or a "Are you sure you
-  want to exit without saving" popup, which would also be annoying.
 
 ### City map scrolling
 
@@ -69,13 +65,13 @@ in effect.
 
 * When the city map is fully zoomed out, the yellow dot highlighting whatever
   you selected to be highlighted will be double the size compared to the
-  original, since often it can be hard too see otherwise.
+  original, since often it can be hard to see otherwise.
 
 ### RMB/LMB alignment for ingredient ordering
 
 * When increasing your ingredient order from a restaurant you use Left Mouse
-  Button (LMB) to increase the count and Right Mouse Button (RMB) to dcrease
-  the count. In the depot interface in the original that is switch around, you
+  Button (LMB) to increase the count and Right Mouse Button (RMB) to decrease
+  the count. In the depot interface in the original that is switched around, you
   use RMB to increase and LMB to decrease. In Pizza Legacy I've normalized this
   to always use LMB for increasing and RMB for decreasing.
 
@@ -118,17 +114,17 @@ QoL setting on you can also just click the city again.
 With the option on it shows an explanation on the "Increase/decrease number of
 human players" arrow buttons.
 
-## Ingredient order remembered when contract fails
+### Ingredient order remembered when contract fails
 If you try to take a contract with a food supplier but for some reason are
 unable to (order too small, or you tried to negotiate but failed) then now your
 order is remembered so you can make adjustments to the order and try again
 without having to make the whole selection again.
 
-## Map scrolling
+### Map scrolling
 You can now scroll the map by using the right mouse button and dragging. This
 works on both the city view and the restaurant view.
 
-## Zooming using mouse wheel
+### Zooming using mouse wheel
 In the city view you can use the mouse wheel to change zoom level.
 
 ## Bug fixes
@@ -154,7 +150,7 @@ trading. If bug fixes are enabled it now prevents you from trading with
 embargoed cities.
 
 ### Investments repay sooner
-In the original when you make a two month investment, you get interested payed
+In the original when you make a two month investment, you get interest paid
 at the end of month one, then again at the end of month two and then you get
 your principal back on the end of month three. That's weird, with bug fixes
 active you get the interest plus the principal back at the end of month two.
@@ -163,9 +159,9 @@ active you get the interest plus the principal back at the end of month two.
 The original had various bugs in the newspaper event system, e.g. when telling
 you pineapple was super out it would affect raspberries instead.
 
-### Contract penalty halfed despite refusal
+### Contract penalty halved despite refusal
 When a skill check failed for complaining about the penalty clause with a
-supplier contract, the original would half it despite saying not seeing a
+supplier contract, the original would halve it despite saying not seeing a
 reason to do so. Now the penalty is only reduced if the checks actually all
 succeed.
 
@@ -173,3 +169,12 @@ succeed.
 In the original Pizza Tycoon there was a bug (at least I think it
 wasn't on purpose?) that you had to have >= 5% market share in just Paris
 instead of all 10 cities.
+
+
+### Mission date mismatch
+The original mission files were created for the German release, which starts in
+1994. The English release starts in 1995, making it impossible to score 100% on
+the missions because they are supposed to happen before the game even begins.
+
+With the fix enabled, mission dates are shifted one year forward to match the
+English release timeline.
