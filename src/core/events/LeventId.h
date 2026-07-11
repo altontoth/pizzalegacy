@@ -95,7 +95,7 @@ enum class LeventId {
   ManagerIsExpertInBusinessStudies = 68,
   LosesOneMillionInOneWeek = 69,
   MakesFirstContactWithMafia = 70,
-  CompletedFirstMissionForTheUnderworld = 71,
+  CompletedFirstCourierService = 71,
   CompletedFirstRaidForTheUnderworld = 72,
   SuccessfullyLaunderedMoney = 73,
   CompletedFirstArmsDeal = 74,

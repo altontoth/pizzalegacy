@@ -140,8 +140,6 @@ void MafiaConversation::apply_npc_effects(GameState& state, MafiaMode mm) {
       player->mafia_state().active_mission = std::nullopt;
 
       on_end_ = [this, mission_type]() {
-        state_.deliver_message(
-            core::events::LeventId::CompletedFirstMissionForTheUnderworld);
         switch (mission_type) {
         case MafiaMissionType::Weapon:
           state_.deliver_message(
@@ -154,6 +152,10 @@ void MafiaConversation::apply_npc_effects(GameState& state, MafiaMode mm) {
         case MafiaMissionType::Investment:
           state_.deliver_message(
               core::events::LeventId::FirstExperienceShadyShareDealing);
+          break;
+        case MafiaMissionType::Package:
+          state_.deliver_message(
+              core::events::LeventId::CompletedFirstCourierService);
           break;
         default:
           break;
