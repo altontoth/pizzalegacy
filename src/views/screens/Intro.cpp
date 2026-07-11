@@ -80,7 +80,7 @@ Intro::~Intro() {
 }
 
 bool Intro::on_action(const input::ActionEvent& ev) {
-  if (!ev.state.pressed) {
+  if (!ev.state.released) {
     return false;
   }
   if (!audio_initialized_) {
