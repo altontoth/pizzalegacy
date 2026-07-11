@@ -31,6 +31,8 @@ struct GameOptions {
   bool map_fx = true;
   bool restaurant_fx = true;
   bool music = true;
+  float sound_volume = 0.9f;
+  float music_volume = 1.0f;
   bool automatic_report = false;
   // Use 640x480 (4:3) CRT aspect ratio instead of 640x400
   bool crt_aspect_ratio = false;

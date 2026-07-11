@@ -229,6 +229,7 @@ set(GAME_PLEGACY_SOURCES
     src/views/ui/widgets/SaveFileInfoBox.cpp
     src/views/ui/widgets/SaveFileInputBox.cpp
     src/views/ui/widgets/SaveFileListBox.cpp
+    src/views/ui/widgets/SliderMenuItem.cpp
     src/views/ui/widgets/StatBar.cpp
     src/views/ui/widgets/TextListBox.cpp
     src/views/ui/widgets/TextMenuItem.cpp
@@ -703,6 +704,7 @@ set(PLEGACY_HEADERS
     src/views/ui/widgets/SaveFileInfoBox.h
     src/views/ui/widgets/SaveFileInputBox.h
     src/views/ui/widgets/SaveFileListBox.h
+    src/views/ui/widgets/SliderMenuItem.h
     src/views/ui/widgets/SpacerMenuItem.h
     src/views/ui/widgets/StatBar.h
     src/views/ui/widgets/TextListBox.h

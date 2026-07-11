@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <optional>
 #include <utility>
 
 #include "core/util/GameContext.h"
@@ -38,6 +39,10 @@ public:
   virtual bool handles_keyboard_events() { return false; };
   virtual bool handles_mouse_events() { return false; };
   virtual bool on_interaction(views::ui::InteractionEvent ie) { return false; };
+  // Item opts into pointer dragging by naming the button that starts a drag.
+  virtual std::optional<views::ui::MouseButton> drag_button() const {
+    return std::nullopt;
+  }
   virtual std::string tooltip_text() const { return ""; }
   virtual void begin_keyboard_session(input::InputManager*,
                                       std::function<void()>) {};

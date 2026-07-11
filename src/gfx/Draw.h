@@ -21,5 +21,6 @@ void grid(Surface& dst, ViewRect bounds, ColorIndex color_idx,
           int h_spacing = 12, int v_spacing = 14);
 void beveled_box(Surface& dst, ViewRect r, ColorIndex light_color,
                  ColorIndex dark_color, int thickness = 2);
+void fill_circle(Surface& dst, ViewPoint center, int radius, ColorIndex color);
 
 } // namespace gfx::draw

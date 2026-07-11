@@ -7,6 +7,7 @@
 #include "core/util/ConfigManager.h"
 
 #include <charconv>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <tinyfiledialogs/tinyfiledialogs.h>
@@ -189,6 +190,8 @@ void ConfigManager::save_options(const GameOptions& opts) {
   save_bool("map_fx", opts.map_fx);
   save_bool("restaurant_fx", opts.restaurant_fx);
   save_bool("music", opts.music);
+  config_["sound_volume"] = std::to_string(opts.sound_volume);
+  config_["music_volume"] = std::to_string(opts.music_volume);
   save_bool("automatic_report", opts.automatic_report);
   save_bool("crt_aspect_ratio", opts.crt_aspect_ratio);
   save_bool("fix_legacy_bugs", opts.fix_legacy_bugs);
@@ -219,9 +222,18 @@ GameOptions ConfigManager::load_options() const {
     }
   };
 
+  auto load_float = [this](const std::string& key, float& target) {
+    auto it = config_.find(key);
+    if (it != config_.end()) {
+      target = std::strtof(it->second.c_str(), nullptr);
+    }
+  };
+
   load_bool("map_fx", opts.map_fx);
   load_bool("restaurant_fx", opts.restaurant_fx);
   load_bool("music", opts.music);
+  load_float("sound_volume", opts.sound_volume);
+  load_float("music_volume", opts.music_volume);
   load_bool("automatic_report", opts.automatic_report);
   load_bool("crt_aspect_ratio", opts.crt_aspect_ratio);
   load_bool("fix_legacy_bugs", opts.fix_legacy_bugs);

@@ -8,7 +8,9 @@
 #include "core/state/GameState.h"
 #include "core/util/ConfigManager.h"
 #include "engine/DisplayConstants.h"
+#include "engine/audio/AudioManager.h"
 #include "views/ui/widgets/EnumMenuItem.h"
+#include "views/ui/widgets/SliderMenuItem.h"
 #include "views/ui/widgets/SpacerMenuItem.h"
 #include "views/ui/widgets/TextMenuItem.h"
 #include "views/ui/widgets/ToggleMenuItem.h"
@@ -96,6 +98,12 @@ void MenuOptions::build_audio(GameState& state) {
         state.options().music = !state.options().music;
         mark_dirty();
       }));
+  add_menu_item(std::make_unique<SliderMenuItem>(
+      context_, "Sound Volume", state.options().sound_volume,
+      [this](float v) { context_.audio->sound_volume(v); }));
+  add_menu_item(std::make_unique<SliderMenuItem>(
+      context_, "Music Volume", state.options().music_volume,
+      [this](float v) { context_.audio->music_volume(v); }));
 }
 
 void MenuOptions::build_graphics(GameState& state) {

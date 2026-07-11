@@ -6,6 +6,7 @@
 
 #include "gfx/Draw.h"
 #include <algorithm>
+#include <cmath>
 #include <cstdlib>
 #include "gfx/Surface.h"
 
@@ -129,6 +130,19 @@ void beveled_box(Surface& dst, ViewRect r, ColorIndex light_color,
          {bottom_right.x - i, bottom_right.y - i}, dark_color);
     line(dst, {top_right.x - i, top_right.y + i},
          {bottom_right.x - i, bottom_right.y - i}, dark_color);
+  }
+}
+
+// Solid disc, filled scanline by scanline from the circle equation.
+void fill_circle(Surface& dst, ViewPoint center, int radius, ColorIndex color) {
+  if (radius <= 0) {
+    return;
+  }
+  for (int dy = -radius; dy <= radius; ++dy) {
+    int dx = static_cast<int>(std::lround(
+        std::sqrt((static_cast<double>(radius) * radius) - (dy * dy))));
+    line(dst, {center.x - dx, center.y + dy}, {center.x + dx, center.y + dy},
+         color);
   }
 }
 } // namespace gfx::draw

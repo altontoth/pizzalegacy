@@ -123,7 +123,8 @@ void Menu::update_interactions() {
               selected_option_ = nullptr;
             }
           },
-          std::move(ttcb));
+          std::move(ttcb), views::ui::InteractionLayer::Normal,
+          menu_item->drag_button());
       y += size.h + line_spacing_;
       ++i;
     }
