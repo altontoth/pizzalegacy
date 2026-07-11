@@ -9,6 +9,7 @@
 #include <functional>
 #include <optional>
 #include <string>
+#include <string_view>
 
 #include "engine/input/InputListener.h"
 #include "engine/input/ListenerToken.h"
@@ -25,12 +26,19 @@ public:
   void render(Surface& surface, ViewPoint origin) override;
   void add_interactions(views::ui::InteractionContext, ViewPoint) override{};
 
+  // The cheque graphic is drawn in its own palette regardless of menu/game
+  // mode.
+  std::optional<gfx::PaletteHandle> palette_override() const override {
+    return vga_->get(BACKGROUND_ASSET).palette();
+  }
+
   bool on_text(const input::TextEvent& ev) override;
   bool on_action(const input::ActionEvent& ev) override;
 
 private:
   enum class Field { AMOUNT, ACCOUNT };
 
+  static constexpr std::string_view BACKGROUND_ASSET = "gfx/back36";
   static constexpr int MAX_DIGITS = 8;
   static constexpr ViewRect amount_box_ = {254, 134, 100, 20};
   static constexpr ViewRect account_box_ = {228, 164, 100, 20};

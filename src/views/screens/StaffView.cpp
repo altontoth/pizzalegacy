@@ -1435,7 +1435,8 @@ void StaffView::add_overview_buttons() {
                 bool fired = restaurant->fire_staff(job_, slot_index);
                 if (fired && character_id != 0) {
                   Logger::info("Fired staff member with ID {}", character_id);
-                  city->add_to_blacklist(character_id, 30);
+                  city->blacklist_staff(character_id,
+                                        state_.active_player()->id());
                   // Restore market slot so the character can be re-hired
                   // elsewhere
                   city->job_market().set_status(
@@ -1586,14 +1587,11 @@ void StaffView::add_applicant_buttons() {
                   return;
                 }
 
-                if (city->is_blacklisted(char_data->id)) {
-                  int days_remaining =
-                      city->blacklist_days_remaining(char_data->id);
+                if (city->is_blacklisted(char_data->id,
+                                         state_.active_player()->id())) {
                   context_.popup->origin(ViewPoint{52, 80});
                   context_.popup->create<AlertPopup>(
-                      "I don't want to work for you again!");
-                  Logger::debug("Char id {} is refusing for {} days",
-                                char_data->id, days_remaining);
+                      "Sorry! I don't want to work for YOU again!");
                   return;
                 }
 
@@ -1695,9 +1693,6 @@ void StaffView::load_applicant_pool() {
     auto role = core::character::job_role(s);
     auto* cd = CharacterFactory::create_character(id, role);
     if (player_char_ids.contains(cd->id)) {
-      continue;
-    }
-    if (city->is_blacklisted(cd->id)) {
       continue;
     }
     applicant_pool_[role].push_back(cd);

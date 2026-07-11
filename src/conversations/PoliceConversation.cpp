@@ -31,7 +31,7 @@ PoliceConversation::PoliceConversation(GameState& state, const Actor* actor,
     int crime_code = static_cast<int>(*arrest_reason_);
 
     int uw_rank =
-        social_rank(player->social_status().underworld_score, difficulty);
+        social_rank(player->social_status().underworld_score(), difficulty);
     sentence_days_ = std::clamp((uw_rank + difficulty - 2) * crime_code, 3, 60);
 
     int raw_bribe = (engine::random::rand_max_n(500) + 500) *
@@ -45,7 +45,7 @@ PoliceConversation::PoliceConversation(GameState& state, const Actor* actor,
   }
   else {
     int business_rank =
-        social_rank(player->social_status().social_score, difficulty);
+        social_rank(player->social_status().social_score(), difficulty);
 
     if (business_rank < 2) {
       return; // player is not welcome, so don't set up anything else
@@ -71,7 +71,7 @@ PoliceConversation::compute_start_line(const GameState& state,
     auto* player = state.active_player();
     int difficulty = state.difficulty_level();
     int business_rank =
-        social_rank(player->social_status().social_score, difficulty);
+        social_rank(player->social_status().social_score(), difficulty);
     if (business_rank < 2) {
       return PoliceLine::WHO_ARE_YOU_GET_OUT_OF_HERE_AT_ONCE;
     }
@@ -98,7 +98,7 @@ bool PoliceConversation::advance() {
     auto* player = state_.active_player();
     int difficulty = state_.difficulty_level();
     int business_rank =
-        social_rank(player->social_status().social_score, difficulty);
+        social_rank(player->social_status().social_score(), difficulty);
     if (business_rank > 6) {
       if (!arrest_reason_) {
         fatal("Don't have an arrest reason when I do expect one.");

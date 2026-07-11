@@ -14,8 +14,7 @@ const std::unordered_map<std::string, FontFace> FontManager::font_map_ = {
     {"MINI", FontFace::MINI}};
 
 Font& FontManager::get(FontFace face) {
-  std::string_view filename = to_string(face);
-  return ResourceManager::get(std::string(filename));
+  return ResourceManager::get(to_string(face));
 }
 
 RenderedTextMetrics FontManager::render_line_onto(Surface& surface,

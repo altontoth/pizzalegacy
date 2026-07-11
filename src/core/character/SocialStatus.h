@@ -17,12 +17,22 @@ struct RankChange {
   bool changed() const { return new_rank != old_rank; }
 };
 
-struct SocialStatus {
-  int social_score = 0;
-  int underworld_score = 0;
+class SocialStatus {
+public:
+  static constexpr int min_score = 0;
+  static constexpr int max_score = 65535;
+
+  int social_score() const { return social_score_; }
+  void social_score(int v) { social_score_ = v; }
+  int underworld_score() const { return underworld_score_; }
+  void underworld_score(int v) { underworld_score_ = v; }
 
   RankChange adjust_underworld(int delta, int difficulty);
   RankChange adjust_social(int delta, int difficulty);
+
+private:
+  int social_score_ = 0;
+  int underworld_score_ = 0;
 };
 
 // Rank lookup table
@@ -60,16 +70,17 @@ inline int social_rank(int score, int difficulty) {
 }
 
 inline RankChange SocialStatus::adjust_underworld(int delta, int difficulty) {
-  int old_r = social_rank(underworld_score, difficulty);
-  underworld_score += delta;
-  int new_r = social_rank(underworld_score, difficulty);
+  int old_r = social_rank(underworld_score_, difficulty);
+  underworld_score_ =
+      std::clamp(underworld_score_ + delta, min_score, max_score);
+  int new_r = social_rank(underworld_score_, difficulty);
   return {.old_rank = old_r, .new_rank = new_r};
 }
 
 inline RankChange SocialStatus::adjust_social(int delta, int difficulty) {
-  int old_r = social_rank(social_score, difficulty);
-  social_score += delta;
-  int new_r = social_rank(social_score, difficulty);
+  int old_r = social_rank(social_score_, difficulty);
+  social_score_ = std::clamp(social_score_ + delta, min_score, max_score);
+  int new_r = social_rank(social_score_, difficulty);
   return {.old_rank = old_r, .new_rank = new_r};
 }
 

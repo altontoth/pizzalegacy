@@ -709,7 +709,7 @@ void GameState::check_mafia_events() {
   }
 
   // Protection racket check (2% daily chance per restaurant)
-  if (player->social_status().underworld_score < 500) {
+  if (player->social_status().underworld_score() < 500) {
     auto restaurants = restaurants_for(player->id());
     for (auto* restaurant : restaurants) {
       if (!restaurant->wants_open() ||

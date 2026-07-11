@@ -12,6 +12,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <set>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -289,12 +290,14 @@ public:
   core::character::JobMarket& job_market() { return job_market_; }
   const core::character::JobMarket& job_market() const { return job_market_; }
 
-  // Blacklist management (for fired staff)
-  void add_to_blacklist(uint8_t character_id, int days = 30);
-  void remove_from_blacklist(uint8_t character_id);
-  bool is_blacklisted(uint8_t character_id) const;
-  int blacklist_days_remaining(uint8_t character_id) const;
-  const std::unordered_map<uint8_t, int>& blacklist() const {
+  // Blacklist: staff remembers having been fired and for some time refuse to
+  // work for you again.
+  void blacklist_staff(uint8_t character_id, core::PlayerId player);
+  bool is_blacklisted(uint8_t character_id, core::PlayerId player) const;
+  // Daily chance of forgiving and becoming available
+  void run_staff_forgiveness(core::PlayerId player, uint8_t charisma);
+  const std::unordered_map<uint8_t, std::set<core::PlayerId>>&
+  staff_blacklist() const {
     return staff_blacklist_;
   }
 
@@ -379,8 +382,7 @@ private:
   int mayor_id_ = -1;
   int police_id_ = -1;
   int first_bank_id_ = -1;
-  // Blacklist: character_id -> days_remaining
-  std::unordered_map<uint8_t, int> staff_blacklist_;
+  std::unordered_map<uint8_t, std::set<core::PlayerId>> staff_blacklist_;
   core::character::JobMarket job_market_;
   // Vendor spending tracking (resets weekly, per-player): vendor_id -> total
   // spent this week

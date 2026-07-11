@@ -184,8 +184,8 @@ json player_to_json(const Player& player) {
 
   j["inventory"] = inventory_to_json(player.inventory());
 
-  j["social_score"] = player.social_status().social_score;
-  j["underworld_score"] = player.social_status().underworld_score;
+  j["social_score"] = player.social_status().social_score();
+  j["underworld_score"] = player.social_status().underworld_score();
 
   j["mafia_state"] = mafia_state_to_json(player.mafia_state());
   j["insurance_state"] = insurance_state_to_json(player.insurance_state());
@@ -351,10 +351,10 @@ json_to_player(const json& j, GameContext& context,
     load_inventory(j["inventory"], player->inventory());
   }
   if (j.contains("social_score")) {
-    player->social_status().social_score = j["social_score"];
+    player->social_status().social_score(j["social_score"]);
   }
   if (j.contains("underworld_score")) {
-    player->social_status().underworld_score = j["underworld_score"];
+    player->social_status().underworld_score(j["underworld_score"]);
   }
   if (j.contains("mafia_state")) {
     player->mafia_state() = json_to_mafia_state(j["mafia_state"]);

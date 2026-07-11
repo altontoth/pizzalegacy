@@ -409,7 +409,7 @@ MayorLine MayorConversation::compute_start_line(const GameState& state,
     // Reputation gate: rank < 2 gets the brush-off.
     auto* player = state.active_player();
     if (player) {
-      int rank = social_rank(player->social_status().social_score,
+      int rank = social_rank(player->social_status().social_score(),
                              state.difficulty_level());
       if (rank < 2) {
         return MayorLine::WHO_ARE_YOU_GOODBYE;

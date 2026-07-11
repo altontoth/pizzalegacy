@@ -565,10 +565,10 @@ Surface PlayerProfile::create_position(const Player* player) {
 
   // Underworld reputation (left)
   constexpr int underworld_x = 54;
-  int underworld_rank_val = social_rank(status.underworld_score, difficulty);
+  int underworld_rank_val = social_rank(status.underworld_score(), difficulty);
   int underworld_rank_idx = underworld_rank_val + 14;
   double underworld_progress = social_rank_progress(
-      status.underworld_score, underworld_rank_val, difficulty);
+      status.underworld_score(), underworld_rank_val, difficulty);
   int underworld_fill = static_cast<int>(underworld_progress * bar_max_width);
   page.fill_rect({underworld_x, bar_y, underworld_fill, bar_height}, bar_color);
 
@@ -582,9 +582,9 @@ Surface PlayerProfile::create_position(const Player* player) {
 
   // Social status (right)
   constexpr int social_x = 218;
-  int social_rank_val = social_rank(status.social_score, difficulty);
+  int social_rank_val = social_rank(status.social_score(), difficulty);
   double social_progress =
-      social_rank_progress(status.social_score, social_rank_val, difficulty);
+      social_rank_progress(status.social_score(), social_rank_val, difficulty);
   int social_fill = static_cast<int>(social_progress * bar_max_width);
   page.fill_rect({social_x, bar_y, social_fill, bar_height}, bar_color);
 

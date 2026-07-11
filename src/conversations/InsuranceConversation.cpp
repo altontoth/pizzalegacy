@@ -470,8 +470,8 @@ InsuranceConversation::compute_start_line(const GameState& /*state*/,
 int InsuranceConversation::risk_score() const {
   int score = 0;
   auto* player = state_.active_player();
-  auto underworld = player->social_status().underworld_score;
-  auto social = player->social_status().social_score;
+  auto underworld = player->social_status().underworld_score();
+  auto social = player->social_status().social_score();
   if (underworld > 500) {
     score += 10;
   }

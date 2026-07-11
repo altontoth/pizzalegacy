@@ -19,7 +19,7 @@ ChequePopup::ChequePopup(const GameContext& context, callback_t cb)
 void ChequePopup::render(Surface& surface, ViewPoint origin) {
   Surface pop(views::base::MAIN_PANEL_WIDTH, views::base::MAIN_PANEL_HEIGHT,
               PaletteHandle{0}, 0);
-  gfx::blit::blit_raw_with_palette(pop, vga_->get("gfx/back36"));
+  gfx::blit::blit_raw_with_palette(pop, vga_->get(BACKGROUND_ASSET));
 
   constexpr uint8_t text_color = 240;
 

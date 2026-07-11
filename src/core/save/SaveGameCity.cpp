@@ -488,10 +488,14 @@ json city_to_json(const City& city) {
   }
   j["properties"] = properties_array;
 
-  // Save blacklist
+  // Save staff hiring blacklist
   json blacklist = json::object();
-  for (const auto& [char_id, days] : city.blacklist()) {
-    blacklist[std::to_string(char_id)] = days;
+  for (const auto& [char_id, players] : city.staff_blacklist()) {
+    json players_array = json::array();
+    for (core::PlayerId p : players) {
+      players_array.push_back(p.value);
+    }
+    blacklist[std::to_string(char_id)] = players_array;
   }
   j["blacklist"] = blacklist;
 
@@ -613,8 +617,9 @@ void json_to_city(const json& j, City& city) {
   if (j.contains("blacklist")) {
     for (const auto& [key, value] : j["blacklist"].items()) {
       uint8_t char_id = std::stoi(key);
-      int days = value.get<int>();
-      city.add_to_blacklist(char_id, days);
+      for (const auto& player : value) {
+        city.blacklist_staff(char_id, core::PlayerId{player.get<int>()});
+      }
     }
   }
 

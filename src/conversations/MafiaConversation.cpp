@@ -87,7 +87,7 @@ MafiaConversation::MafiaConversation(
   auto* city = state.active_city();
 
   int difficulty = state.difficulty_level();
-  int uw_score = player->social_status().underworld_score;
+  int uw_score = player->social_status().underworld_score();
   clan_danger_ = city->mafia_settings(actor->id()).crime_danger_level;
 
   if (mm == MafiaMode::ProtectionRacketOffer && restaurant_id_) {
@@ -139,33 +139,35 @@ void MafiaConversation::apply_npc_effects(GameState& state, MafiaMode mm) {
       auto mission_type = mission->mission_type;
       player->mafia_state().active_mission = std::nullopt;
 
-      state.message_manager().schedule_message(
-          core::events::LeventId::CompletedFirstMissionForTheUnderworld,
-          player->id(), date);
-      switch (mission_type) {
-      case MafiaMissionType::Weapon:
-        state.message_manager().schedule_message(
-            core::events::LeventId::CompletedFirstArmsDeal, player->id(), date);
-        break;
-      case MafiaMissionType::Laundering:
-        state.message_manager().schedule_message(
-            core::events::LeventId::SuccessfullyLaunderedMoney, player->id(),
-            date);
-        break;
-      case MafiaMissionType::Investment:
-        state.message_manager().schedule_message(
-            core::events::LeventId::FirstExperienceShadyShareDealing,
-            player->id(), date);
-        break;
-      default:
-        break;
-      }
+      on_end_ = [this, mission_type]() {
+        state_.deliver_message(
+            core::events::LeventId::CompletedFirstMissionForTheUnderworld);
+        switch (mission_type) {
+        case MafiaMissionType::Weapon:
+          state_.deliver_message(
+              core::events::LeventId::CompletedFirstArmsDeal);
+          break;
+        case MafiaMissionType::Laundering:
+          state_.deliver_message(
+              core::events::LeventId::SuccessfullyLaunderedMoney);
+          break;
+        case MafiaMissionType::Investment:
+          state_.deliver_message(
+              core::events::LeventId::FirstExperienceShadyShareDealing);
+          break;
+        default:
+          break;
+        }
+      };
     }
     break;
   }
   case MafiaMode::MissionOverdue: {
     auto& mission = player->mafia_state().active_mission;
-    if (mission && mission->mission_type == MafiaMissionType::Weapon) {
+    if (!mission) {
+      break;
+    }
+    if (mission->mission_type == MafiaMissionType::Weapon) {
       player->mafia_state().active_mission = std::nullopt;
       game_over_pending_ = true;
     }
@@ -250,7 +252,7 @@ bool MafiaConversation::advance() {
 
 bool MafiaConversation::advance_line_choice(MafiaLine choice) {
   auto* player = state_.active_player();
-  int uw_score = player->social_status().underworld_score;
+  int uw_score = player->social_status().underworld_score();
   int rank = social_rank(uw_score, state_.difficulty_level());
 
   switch (choice) {
@@ -814,7 +816,7 @@ MafiaLine MafiaConversation::compute_start_line(
     GameState& state, const Actor* /* actor */, MafiaMode mode,
     std::optional<core::RestaurantId> /* restaurant_id */, bool first_contact) {
   auto* player = state.active_player();
-  int uw_score = player->social_status().underworld_score;
+  int uw_score = player->social_status().underworld_score();
   int rank = social_rank(uw_score, state.difficulty_level());
 
   switch (mode) {
@@ -833,15 +835,11 @@ MafiaLine MafiaConversation::compute_start_line(
 
   case MafiaMode::MissionDeadlineReached: {
     auto& mission = player->mafia_state().active_mission;
-    if (mission && mission->completed) {
-      if (mission->mission_type == MafiaMissionType::Investment) {
-        return mission->reward.cents > 0
-                   ? MafiaLine::THE_BUSINESS_WAS_SUCCESSFUL
-                   : MafiaLine::INVESTMENT_FAILED;
-      }
-      return MafiaLine::YOU_CARRIED_OUR_MISSION_TO_SATISFACTION;
+    if (mission && mission->mission_type == MafiaMissionType::Investment) {
+      return mission->reward.cents > 0 ? MafiaLine::THE_BUSINESS_WAS_SUCCESSFUL
+                                       : MafiaLine::INVESTMENT_FAILED;
     }
-    return MafiaLine::YOU_RAT_YOU_HAVENT_CARRIED_OUT_MISSION;
+    return MafiaLine::YOU_CARRIED_OUR_MISSION_TO_SATISFACTION;
   }
 
   case MafiaMode::MissionOverdue:

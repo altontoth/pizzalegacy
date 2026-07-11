@@ -208,10 +208,11 @@ Example:
         auto result = CommandResult::success();
         auto& ss = player->social_status();
         int rank =
-            social_rank(ss.underworld_score, ctx.state.difficulty_level());
+            social_rank(ss.underworld_score(), ctx.state.difficulty_level());
         result.add_message(compat::format("Underworld: score={} rank={}",
-                                          ss.underworld_score, rank));
-        result.add_message(compat::format("Social: score={}", ss.social_score));
+                                          ss.underworld_score(), rank));
+        result.add_message(
+            compat::format("Social: score={}", ss.social_score()));
 
         auto& ms = player->mafia_state();
         if (ms.loan) {
@@ -566,13 +567,14 @@ Example:
           result.add_message("Jail: free");
         }
         auto& ss = player->social_status();
-        int s_rank = social_rank(ss.social_score, ctx.state.difficulty_level());
+        int s_rank =
+            social_rank(ss.social_score(), ctx.state.difficulty_level());
         int u_rank =
-            social_rank(ss.underworld_score, ctx.state.difficulty_level());
+            social_rank(ss.underworld_score(), ctx.state.difficulty_level());
         result.add_message(compat::format("Social: score={} rank={}",
-                                          ss.social_score, s_rank));
+                                          ss.social_score(), s_rank));
         result.add_message(compat::format("Underworld: score={} rank={}",
-                                          ss.underworld_score, u_rank));
+                                          ss.underworld_score(), u_rank));
         return result;
       },
       .category = "actor"};

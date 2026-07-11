@@ -305,18 +305,6 @@ void City::end_of_day(int difficulty) {
     district->end_of_day();
   }
 
-  // Update blacklist timers
-  std::vector<uint8_t> to_remove;
-  for (auto& [character_id, days_remaining] : staff_blacklist_) {
-    days_remaining--;
-    if (days_remaining <= 0) {
-      to_remove.push_back(character_id);
-    }
-  }
-  // Remove expired blacklist entries
-  for (uint8_t id : to_remove) {
-    staff_blacklist_.erase(id);
-  }
   replenish_supplier_stock_levels();
 
   // Advance all active ingredient trend effects one day.
@@ -515,24 +503,23 @@ Property* City::property_by_index(int index) const {
 
 WeaponMarket& City::weapon_market() { return weapon_market_; }
 
-void City::add_to_blacklist(uint8_t character_id, int days) {
-  staff_blacklist_[character_id] = days;
+void City::blacklist_staff(uint8_t character_id, core::PlayerId player) {
+  staff_blacklist_[character_id].insert(player);
 }
 
-void City::remove_from_blacklist(uint8_t character_id) {
-  staff_blacklist_.erase(character_id);
-}
-
-bool City::is_blacklisted(uint8_t character_id) const {
-  return staff_blacklist_.contains(character_id);
-}
-
-int City::blacklist_days_remaining(uint8_t character_id) const {
+bool City::is_blacklisted(uint8_t character_id, core::PlayerId player) const {
   auto it = staff_blacklist_.find(character_id);
-  if (it != staff_blacklist_.end()) {
-    return it->second;
+  return it != staff_blacklist_.end() && it->second.contains(player);
+}
+
+void City::run_staff_forgiveness(core::PlayerId player, uint8_t charisma) {
+  for (auto it = staff_blacklist_.begin(); it != staff_blacklist_.end();) {
+    if (it->second.contains(player) &&
+        engine::random::rand_percentage_chance(charisma)) {
+      it->second.erase(player);
+    }
+    it = it->second.empty() ? staff_blacklist_.erase(it) : std::next(it);
   }
-  return 0;
 }
 
 void City::record_vendor_purchase(core::PlayerId player_id, uint8_t vendor_id,

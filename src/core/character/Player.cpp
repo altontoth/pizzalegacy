@@ -50,10 +50,8 @@ Player::Player(core::PlayerId id, Character character, bool is_human)
   financials_.transfer(game_start_date, Account::Capital, Account::Cash,
                        character.starting_money(), AccountingScope::Capital);
 
-  social_status_ = SocialStatus{
-      .social_score = (character.personality() / 2) + 220,
-      .underworld_score = (character.courage() / 2) + 220,
-  };
+  social_status_.social_score((character.personality() / 2) + 220);
+  social_status_.underworld_score((character.courage() / 2) + 220);
 }
 
 Player::~Player() = default;
@@ -78,6 +76,12 @@ core::time::TimeOfDay Player::end_of_day_time() const {
 }
 
 void Player::end_of_day(GameState& game_state) {
+  // Each candidate this player fired gets a charisma-driven daily chance to
+  // forgive them and become available again.
+  for (City* city : game_state.initialized_cities()) {
+    city->run_staff_forgiveness(id_, character_.charisma());
+  }
+
   // AI daily evaluation
   if (!is_human_controlled()) {
     // Closure check: evaluate each restaurant until one is closed.
