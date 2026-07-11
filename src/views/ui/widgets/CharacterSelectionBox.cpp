@@ -6,6 +6,7 @@
 
 #include "views/ui/widgets/CharacterSelectionBox.h"
 #include "engine/geom/Spaces.h"
+#include "gfx/Draw.h"
 #include "resources/FontManager.h"
 
 constexpr int CHAR_BOX_W = 224;
@@ -79,6 +80,11 @@ void CharacterSelectionBox::draw(Surface& screen, ViewPoint p,
     this_y += y_offset;
   }
   screen.blit_raw(block, p);
+  if (is_selected) {
+    constexpr uint8_t focus_color = 29;
+    gfx::draw::box(screen, ViewRect{p.x, p.y, CHAR_BOX_W, CHAR_BOX_H},
+                   focus_color, 2);
+  }
   height_ = block.height();
 }
 
@@ -86,7 +92,15 @@ Size CharacterSelectionBox::measure() const {
   return Size{CHAR_BOX_W, CHAR_BOX_H};
 }
 
-void CharacterSelectionBox::handle_action() {}
+void CharacterSelectionBox::handle_action() { start_rename(); }
+
+bool CharacterSelectionBox::on_adjust(AdjustAxis axis, int delta) {
+  if (axis != AdjustAxis::Vertical || !on_scroll_) {
+    return false;
+  }
+  on_scroll_(-delta);
+  return true;
+}
 
 bool CharacterSelectionBox::on_interaction(views::ui::InteractionEvent ie) {
   if (ie.type == views::ui::InteractionEvent::Type::Scroll) {
@@ -97,12 +111,14 @@ bool CharacterSelectionBox::on_interaction(views::ui::InteractionEvent ie) {
     return false;
   }
 
-  // we care only about key events routed to us by the menu
+  // Consume the press; mouse behavior happens on Click.
+  if (ie.type == views::ui::InteractionEvent::Type::ButtonDown) {
+    return true;
+  }
   if (ie.type != views::ui::InteractionEvent::Type::Click) {
     return false;
   }
-  keyboard_enabled_ = true;
-  rename_active_ = true;
+  start_rename();
   return true;
 }
 
@@ -158,6 +174,11 @@ void CharacterSelectionBox::begin_keyboard_session(input::InputManager* input,
   }
   invalidate_ = std::move(inv);
   text_session_.emplace(input->start_text_input(*this));
+}
+
+void CharacterSelectionBox::start_rename() {
+  keyboard_enabled_ = true;
+  rename_active_ = true;
 }
 
 void CharacterSelectionBox::end_rename() {

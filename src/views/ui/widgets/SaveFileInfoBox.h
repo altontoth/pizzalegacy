@@ -24,6 +24,7 @@ public:
   void draw(Surface& screen, ViewPoint p, bool is_selected) override;
   void handle_action() override;
   Size measure() const override;
+  bool focusable() const override { return false; }
   bool handles_mouse_events() override { return true; }
   bool on_interaction(views::ui::InteractionEvent ie) override;
 

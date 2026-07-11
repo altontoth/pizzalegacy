@@ -12,9 +12,12 @@
 
 constexpr int SAVE_BOX_W = 224;
 constexpr int SAVE_BOX_H = 216;
-constexpr int MAX_VISIBLE_FILES = 12;
-constexpr int LINE_HEIGHT = 18;
+constexpr int MAX_VISIBLE_FILES = 11;
+constexpr int LINE_HEIGHT = 19;
 constexpr int MAX_FILENAME_LENGTH = 16;
+constexpr uint8_t ACTIVE_ROW = 13;
+constexpr uint8_t INACTIVE_ROW = 14;
+constexpr uint8_t FOCUS_COLOR = 29;
 
 void SaveFileInputBox::draw(Surface& screen, ViewPoint p, bool is_selected) {
   auto block = Surface(SAVE_BOX_W, SAVE_BOX_H, PaletteHandle{38}, 15);
@@ -53,11 +56,10 @@ void SaveFileInputBox::draw(Surface& screen, ViewPoint p, bool is_selected) {
                                         FontFace::PIZ_NUMB, 1);
       }
       else {
-        // Draw gray background for hover on NEW NAME
-        if (list_index == hovered_index_) {
-          uint8_t gray = 13;
-          ViewRect highlight_rect{0, y - 2, SAVE_BOX_W - 0, LINE_HEIGHT};
-          block.fill_rect(highlight_rect, gray);
+        if (list_index == cursor_.active) {
+          ViewRect highlight_rect{0, y - 2, SAVE_BOX_W, LINE_HEIGHT};
+          block.fill_rect(highlight_rect,
+                          is_selected ? ACTIVE_ROW : INACTIVE_ROW);
         }
 
         context_.font->render_text_onto(block, " - NEW NAME -", ViewPoint{6, y},
@@ -73,11 +75,10 @@ void SaveFileInputBox::draw(Surface& screen, ViewPoint p, bool is_selected) {
         break;
       }
 
-      // Draw gray background for hovered item
-      if (list_index == hovered_index_ && !input_active_) {
-        uint8_t gray = 14;
-        ViewRect highlight_rect{0, y - 0, SAVE_BOX_W - 0, LINE_HEIGHT};
-        block.fill_rect(highlight_rect, gray);
+      if (list_index == cursor_.active && !input_active_) {
+        ViewRect highlight_rect{0, y, SAVE_BOX_W, LINE_HEIGHT};
+        block.fill_rect(highlight_rect,
+                        is_selected ? ACTIVE_ROW : INACTIVE_ROW);
       }
 
       // Remove the file extension for display
@@ -95,28 +96,68 @@ void SaveFileInputBox::draw(Surface& screen, ViewPoint p, bool is_selected) {
   }
 
   screen.blit_raw(block, p);
+  if (is_selected) {
+    gfx::draw::box(screen, ViewRect{p.x, p.y, SAVE_BOX_W, SAVE_BOX_H},
+                   FOCUS_COLOR, 2);
+  }
   height_ = block.height();
 }
 
 Size SaveFileInputBox::measure() const { return Size{SAVE_BOX_W, SAVE_BOX_H}; }
 
-void SaveFileInputBox::handle_action() {}
+void SaveFileInputBox::handle_action() {
+  // Row 0 is the NEW NAME entry, files follow shifted by one.
+  if (cursor_.active == 0) {
+    start_new_name_input();
+    return;
+  }
+  const int file_index = cursor_.active - 1;
+  if (file_index >= 0 && file_index < static_cast<int>(save_files_.size())) {
+    on_save_callback_(save_files_[file_index].filename);
+  }
+}
+
+bool SaveFileInputBox::on_adjust(AdjustAxis axis, int delta) {
+  if (axis != AdjustAxis::Vertical) {
+    return false;
+  }
+  return cursor_.step(delta, static_cast<int>(save_files_.size()) + 1,
+                      scroll_offset_, MAX_VISIBLE_FILES);
+}
+
+// The list entry under the given widget-local y (0 is the NEW NAME row,
+// files follow shifted by one), or -1.
+int SaveFileInputBox::entry_at(int local_y) const {
+  const int row = (local_y - 4 + 2) / LINE_HEIGHT;
+  if (row < 0 || row >= MAX_VISIBLE_FILES) {
+    return -1;
+  }
+  const int index = *scroll_offset_ + row;
+  if (index > static_cast<int>(save_files_.size())) {
+    return -1;
+  }
+  return index;
+}
+
+void SaveFileInputBox::start_new_name_input() {
+  keyboard_enabled_ = true;
+  input_active_ = true;
+  new_filename_.clear();
+  mark_dirty();
+}
 
 bool SaveFileInputBox::on_interaction(views::ui::InteractionEvent ie) {
+  // Consume the press; mouse behavior happens on Click.
+  if (ie.type == views::ui::InteractionEvent::Type::ButtonDown) {
+    return true;
+  }
   if (ie.type == views::ui::InteractionEvent::Type::Hover) {
-    // Calculate which item is being hovered
-    int relative_y = ie.local.y;
-    int line_index = (relative_y - 4 + 2) / LINE_HEIGHT;
-
-    if (line_index >= 0 && line_index < MAX_VISIBLE_FILES) {
-      int list_index = *scroll_offset_ + line_index;
-      if (list_index <= static_cast<int>(save_files_.size())) {
-        hovered_index_ = list_index;
-        return true;
-      }
+    const int index = entry_at(ie.local.y);
+    if (index < 0) {
+      return false;
     }
-    hovered_index_ = -1;
-    return false;
+    cursor_.active = index;
+    return true;
   }
 
   if (ie.type == views::ui::InteractionEvent::Type::Scroll) {
@@ -145,18 +186,14 @@ bool SaveFileInputBox::on_interaction(views::ui::InteractionEvent ie) {
 
   if (ie.type == views::ui::InteractionEvent::Type::Click &&
       ie.button == views::ui::MouseButton::Left) {
-    if (hovered_index_ >= 0) {
-      // Index 0 is NEW NAME
-      if (hovered_index_ == 0) {
-        // Start text input mode
-        keyboard_enabled_ = true;
-        input_active_ = true;
-        new_filename_.clear();
-        mark_dirty();
+    const int index = entry_at(ie.local.y);
+    if (index >= 0) {
+      cursor_.active = index;
+      if (index == 0) {
+        start_new_name_input();
         return true;
       }
-      // Existing file - trigger save callback with filename
-      int file_index = hovered_index_ - 1;
+      const int file_index = index - 1;
       if (file_index < static_cast<int>(save_files_.size())) {
         on_save_callback_(save_files_[file_index].filename);
         return true;

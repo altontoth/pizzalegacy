@@ -17,4 +17,5 @@ public:
   void draw(Surface& screen, ViewPoint p, bool is_selected) override {};
   void handle_action() override {};
   Size measure() const override { return Size{0, height_}; }
+  bool focusable() const override { return false; }
 };

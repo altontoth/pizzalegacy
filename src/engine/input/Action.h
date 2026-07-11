@@ -77,6 +77,10 @@ enum class Action {
   // Confirm popup
   ConfirmYes,
   ConfirmNo,
+
+  // Menu UI
+  NextMenuItem,
+  PrevMenuItem,
 };
 
 } // namespace input

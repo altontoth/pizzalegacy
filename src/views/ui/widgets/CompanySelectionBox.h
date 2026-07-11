@@ -28,6 +28,7 @@ public:
   bool handles_mouse_events() override { return true; };
   void on_company_clicked(std::function<void(int playerIndex)>);
   Size measure() const override;
+  bool on_adjust(AdjustAxis axis, int delta) override;
   bool on_interaction(views::ui::InteractionEvent ie) override;
   void begin_keyboard_session(input::InputManager* input,
                               std::function<void()> inv) override;
@@ -53,5 +54,6 @@ private:
   std::optional<input::TextSession> text_session_; // RAII
   std::string new_name_;
   std::function<void()> invalidate_;
+  // Wheel-direction scroll handler: positive delta is up.
   std::function<void(int delta)> on_scroll_;
 };

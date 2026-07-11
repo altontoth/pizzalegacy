@@ -38,10 +38,21 @@ public:
   }
 
   void handle_action() override {
-    cycle();
+    cycle(+1);
     if (action_) {
       action_();
     }
+  }
+
+  bool on_adjust(AdjustAxis axis, int delta) override {
+    if (axis != AdjustAxis::Horizontal) {
+      return false;
+    }
+    cycle(delta);
+    if (action_) {
+      action_();
+    }
+    return true;
   }
 
   Size measure() const override {
@@ -53,10 +64,11 @@ public:
     return Size{value_x_pos + val_metrics.width, metrics.height};
   }
 
-  void cycle() {
+  // Step to the neighboring option; delta is -1 or +1, wrapping around.
+  void cycle(int delta) {
     for (size_t i = 0; i < options_.size(); ++i) {
       if (options_[i] == value_) {
-        value_ = options_[(i + 1) % options_.size()];
+        value_ = options_[(i + options_.size() + delta) % options_.size()];
         return;
       }
     }

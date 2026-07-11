@@ -698,12 +698,15 @@ set(PLEGACY_HEADERS
     src/views/ui/widgets/CompanySelectionBox.h
     src/views/ui/widgets/EnumMenuItem.h
     src/views/ui/widgets/IAddsInteractions.h
+    src/views/ui/widgets/LabelMenuItem.h
+    src/views/ui/widgets/ListCursor.h
     src/views/ui/widgets/MenuItem.h
     src/views/ui/widgets/MissionTypeBox.h
     src/views/ui/widgets/PositionMarkerMenuItem.h
     src/views/ui/widgets/SaveFileInfoBox.h
     src/views/ui/widgets/SaveFileInputBox.h
     src/views/ui/widgets/SaveFileListBox.h
+    src/views/ui/widgets/ScrollThumb.h
     src/views/ui/widgets/SliderMenuItem.h
     src/views/ui/widgets/SpacerMenuItem.h
     src/views/ui/widgets/StatBar.h

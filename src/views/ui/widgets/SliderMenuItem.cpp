@@ -99,6 +99,19 @@ Size SliderMenuItem::measure() const {
 
 void SliderMenuItem::handle_action() {}
 
+bool SliderMenuItem::on_adjust(AdjustAxis axis, int delta) {
+  if (axis != AdjustAxis::Horizontal) {
+    return false;
+  }
+  constexpr float KEY_STEP = 0.05f;
+  value_ =
+      std::clamp(value_ + (static_cast<float>(delta) * KEY_STEP), 0.0f, 1.0f);
+  if (on_change_) {
+    on_change_(value_);
+  }
+  return true;
+}
+
 bool SliderMenuItem::point_on_track(int local_x) {
   // Pad by the handle radius so the disc stays grabbable even when at min or
   // max position.

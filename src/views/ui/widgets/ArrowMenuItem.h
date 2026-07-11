@@ -18,6 +18,9 @@ public:
   void draw(Surface& screen, ViewPoint p, bool is_selected) override;
   void handle_action() override;
   Size measure() const override;
+  // Arrows always go above/below a box that exposes the same adjustment via
+  // on_adjust(), so keyboard focus goes to the box instead.
+  bool focusable() const override { return false; }
   std::string tooltip_text() const override { return tooltip_text_; }
 
 private:

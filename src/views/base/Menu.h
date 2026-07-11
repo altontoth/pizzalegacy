@@ -10,15 +10,20 @@
 #include <string>
 #include <vector>
 #include "engine/DebugLabel.h"
+#include "engine/input/InputListener.h"
+#include "engine/input/ListenerToken.h"
 #include "views/base/View.h"
 #include "views/ui/widgets/MenuItem.h"
 
-class Menu : public View, public debug::AutoLabel<Menu> {
+class Menu : public View,
+             public input::InputListener,
+             public debug::AutoLabel<Menu> {
 public:
   Menu(GameContext& context, GameState& state, ViewPoint origin,
        int line_spacing);
   void tick() override;
   void render(const RenderContext& ctx) override;
+  bool on_action(const input::ActionEvent& ev) override;
 
 protected:
   void update_interactions();
@@ -51,6 +56,11 @@ private:
     return ViewPoint{p.x - origin.x, p.y - origin.y};
   }
   [[nodiscard]] std::optional<std::size_t> index_of_selected() const;
+  // Move keyboard focus to the next focusable item in insertion order
+  // (dir is -1 or +1), wrapping at both ends.
+  void move_focus(int dir);
+  // Repeat on_adjust on the focused item while an arrow key is held.
+  void tick_adjust_repeat();
 
   std::vector<std::unique_ptr<MenuItem>> menu_items_;
   ViewPoint origin_in_view_;
@@ -59,4 +69,8 @@ private:
   std::optional<ViewRect> currently_hovered_rect_;
   std::vector<MenuEntry> layout_;
   bool ui_layout_dirty_{false};
+  input::ListenerToken listener_;
+  int adjust_hold_ticks_ = 0;
+  // See the Hover handling in update_interactions().
+  std::optional<ViewPoint> last_hover_pos_;
 };

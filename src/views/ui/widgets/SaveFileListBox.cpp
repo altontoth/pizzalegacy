@@ -10,12 +10,18 @@
 #include "core/time/GameDate.h"
 #include "engine/FormatCompat.h"
 #include "engine/geom/Spaces.h"
+#include "gfx/Draw.h"
 #include "resources/FontManager.h"
+#include "views/ui/widgets/ScrollThumb.h"
 
 constexpr int SAVE_BOX_W = 224;
 constexpr int SAVE_BOX_H = 216;
-constexpr int MAX_VISIBLE_FILES = 12;
-constexpr int LINE_HEIGHT = 18;
+constexpr int MAX_VISIBLE_FILES = 11;
+constexpr int LINE_HEIGHT = 19;
+constexpr int DATE_COLUMN_X = 210;
+constexpr uint8_t ACTIVE_ROW = 13;
+constexpr uint8_t INACTIVE_ROW = 14;
+constexpr uint8_t FOCUS_COLOR = 29;
 
 void SaveFileListBox::draw(Surface& screen, ViewPoint p, bool is_selected) {
   auto block = Surface(SAVE_BOX_W, SAVE_BOX_H, PaletteHandle{38}, 15);
@@ -35,11 +41,9 @@ void SaveFileListBox::draw(Surface& screen, ViewPoint p, bool is_selected) {
       break;
     }
 
-    // Draw gray background for hovered item
-    if (file_index == hovered_index_) {
-      uint8_t gray = 14;
+    if (file_index == cursor_.active) {
       ViewRect highlight_rect{0, y, SAVE_BOX_W, LINE_HEIGHT};
-      block.fill_rect(highlight_rect, gray);
+      block.fill_rect(highlight_rect, is_selected ? ACTIVE_ROW : INACTIVE_ROW);
     }
 
     // Remove .plsave extension for display
@@ -61,34 +65,65 @@ void SaveFileListBox::draw(Surface& screen, ViewPoint p, bool is_selected) {
 
     context_.font->render_text_onto(block, display_name, ViewPoint{6, y},
                                     FontFace::PIZ_NUMB, 1);
-    context_.font->render_text_onto(block, display_date, ViewPoint{174, y + 4},
-                                    FontFace::MINI, 1);
+    context_.font->render_text_onto(block, display_date,
+                                    ViewPoint{DATE_COLUMN_X, y + 4},
+                                    FontFace::MINI, 1, AlignX::RightEdge);
     y += LINE_HEIGHT;
   }
 
+  draw_scroll_thumb(block, Size{SAVE_BOX_W, SAVE_BOX_H}, *scroll_offset_,
+                    MAX_VISIBLE_FILES, static_cast<int>(save_files_.size()));
+
   screen.blit_raw(block, p);
+  if (is_selected) {
+    gfx::draw::box(screen, ViewRect{p.x, p.y, SAVE_BOX_W, SAVE_BOX_H},
+                   FOCUS_COLOR, 2);
+  }
   height_ = block.height();
 }
 
 Size SaveFileListBox::measure() const { return Size{SAVE_BOX_W, SAVE_BOX_H}; }
 
-void SaveFileListBox::handle_action() {}
+void SaveFileListBox::handle_action() {
+  if (cursor_.active >= 0 &&
+      cursor_.active < static_cast<int>(save_files_.size())) {
+    on_file_clicked_(save_files_[cursor_.active].filename);
+  }
+}
+
+bool SaveFileListBox::on_adjust(AdjustAxis axis, int delta) {
+  if (axis != AdjustAxis::Vertical) {
+    return false;
+  }
+  return cursor_.step(delta, static_cast<int>(save_files_.size()),
+                      scroll_offset_, MAX_VISIBLE_FILES);
+}
+
+// The file under the given widget-local y, or -1.
+int SaveFileListBox::file_at(int local_y) const {
+  const int row = (local_y - 4 + 2) / LINE_HEIGHT;
+  if (row < 0 || row >= MAX_VISIBLE_FILES) {
+    return -1;
+  }
+  const int index = *scroll_offset_ + row;
+  if (index >= static_cast<int>(save_files_.size())) {
+    return -1;
+  }
+  return index;
+}
 
 bool SaveFileListBox::on_interaction(views::ui::InteractionEvent ie) {
+  // Consume the press; mouse behavior happens on Click.
+  if (ie.type == views::ui::InteractionEvent::Type::ButtonDown) {
+    return true;
+  }
   if (ie.type == views::ui::InteractionEvent::Type::Hover) {
-    // Calculate which file index is being hovered
-    int relative_y = ie.local.y;
-    int line_index = (relative_y - 4 + 2) / LINE_HEIGHT;
-
-    if (line_index >= 0 && line_index < MAX_VISIBLE_FILES) {
-      int file_index = *scroll_offset_ + line_index;
-      if (file_index < static_cast<int>(save_files_.size())) {
-        hovered_index_ = file_index;
-        return true;
-      }
+    const int index = file_at(ie.local.y);
+    if (index < 0) {
+      return false;
     }
-    hovered_index_ = -1;
-    return false;
+    cursor_.active = index;
+    return true;
   }
 
   if (ie.type == views::ui::InteractionEvent::Type::Scroll) {
@@ -115,18 +150,20 @@ bool SaveFileListBox::on_interaction(views::ui::InteractionEvent ie) {
 
   if (ie.type == views::ui::InteractionEvent::Type::Click &&
       ie.button == views::ui::MouseButton::Left) {
-    if (hovered_index_ >= 0 &&
-        hovered_index_ < static_cast<int>(save_files_.size())) {
-      on_file_clicked_(save_files_[hovered_index_].filename);
+    const int index = file_at(ie.local.y);
+    if (index >= 0) {
+      cursor_.active = index;
+      on_file_clicked_(save_files_[index].filename);
       return true;
     }
   }
 
   if (ie.type == views::ui::InteractionEvent::Type::DoubleClick &&
       ie.button == views::ui::MouseButton::Left) {
-    if (on_file_double_clicked_ && hovered_index_ >= 0 &&
-        hovered_index_ < static_cast<int>(save_files_.size())) {
-      on_file_double_clicked_(save_files_[hovered_index_].filename);
+    const int index = file_at(ie.local.y);
+    if (on_file_double_clicked_ && index >= 0) {
+      cursor_.active = index;
+      on_file_double_clicked_(save_files_[index].filename);
       return true;
     }
   }

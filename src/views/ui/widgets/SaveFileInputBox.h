@@ -13,6 +13,7 @@
 #include "engine/DebugLabel.h"
 #include "engine/geom/Spaces.h"
 #include "resources/util/FileUtils.h"
+#include "views/ui/widgets/ListCursor.h"
 #include "views/ui/widgets/MenuItem.h"
 
 class SaveFileInputBox : public MenuItem,
@@ -33,6 +34,8 @@ public:
   Size measure() const override;
   bool handles_keyboard_events() override { return keyboard_enabled_; }
   bool handles_mouse_events() override { return true; }
+  bool on_adjust(AdjustAxis axis, int delta) override;
+  bool adjust_repeats() const override { return true; }
   bool on_interaction(views::ui::InteractionEvent ie) override;
   void begin_keyboard_session(input::InputManager* input,
                               std::function<void()> inv) override;
@@ -44,6 +47,8 @@ public:
 
 private:
   void mark_dirty();
+  void start_new_name_input();
+  int entry_at(int local_y) const;
 
   std::vector<fileutils::FileEntry>& save_files_;
   int* scroll_offset_;
@@ -51,11 +56,11 @@ private:
   // Appended to typed names and stripped from listed ones (".plsave",
   // ".mis", ...)
   std::string extension_;
-  int hovered_index_ = -1;
 
   bool input_active_ = false;
   bool keyboard_enabled_ = false;
   std::string new_filename_;
   std::optional<input::TextSession> text_session_;
   std::function<void()> invalidate_;
+  ListCursor cursor_;
 };

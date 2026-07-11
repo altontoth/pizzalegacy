@@ -17,6 +17,9 @@
 #include "engine/ui/InteractionEvent.h"
 #include "resources/FontTypes.h"
 
+// Direction of an arrow-key adjustment on a focused item.
+enum class AdjustAxis { Horizontal, Vertical };
+
 class MenuItem {
 public:
   MenuItem(GameContext& gc) : context_(gc), font_face_(FontFace::MENU) {};
@@ -34,6 +37,19 @@ public:
   int x() const { return x_pos_; }
   FontFace font_face() const { return font_face_; }
   AlignX alignment() const { return alignment_; }
+
+  // Whether keyboard navigation can land on this item. Decorative and
+  // layout-only items return false and are skipped when stepping focus.
+  virtual bool focusable() const { return true; }
+  // Whether the item reacts to the mouse at all. Plain informative items
+  // return false and get no hover or click handling.
+  virtual bool interactive() const { return true; }
+  // Arrow-key adjustment while focused; delta is -1 (left/up) or +1
+  // (right/down). Return true if consumed; an unconsumed vertical step
+  // falls back to menu focus movement.
+  virtual bool on_adjust(AdjustAxis /*axis*/, int /*delta*/) { return false; }
+  // Whether holding Left/Right keeps calling on_adjust after a short delay.
+  virtual bool adjust_repeats() const { return false; }
 
   // For specific cases we have some input handling
   virtual bool handles_keyboard_events() { return false; };

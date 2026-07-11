@@ -175,7 +175,7 @@ void MenuMissionSelect::show_goals() {
       lines.emplace_back();
     }
   }
-  goals_box_->set_lines(std::move(lines), false);
+  goals_box_->set_lines(std::move(lines), false, "Select mission...");
   mark_dirty();
 }
 
@@ -193,7 +193,7 @@ void MenuMissionSelect::show_files() {
     }
     lines.push_back(std::move(name));
   }
-  goals_box_->set_lines(std::move(lines), true);
+  goals_box_->set_lines(std::move(lines), true, "No missions available");
   mark_dirty();
 }
 

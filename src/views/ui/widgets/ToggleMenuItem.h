@@ -22,6 +22,13 @@ public:
 
   void draw(Surface& screen, ViewPoint p, bool is_selected) override;
   void handle_action() override;
+  bool on_adjust(AdjustAxis axis, int /*delta*/) override {
+    if (axis != AdjustAxis::Horizontal) {
+      return false;
+    }
+    handle_action();
+    return true;
+  }
   Size measure() const override;
 
 private:

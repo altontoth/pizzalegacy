@@ -90,6 +90,10 @@ void configure_default_bindings(InputManager& in) {
   in.bind_button(chord("Y"), Action::ConfirmYes);
   in.bind_button(chord("Enter"), Action::ConfirmYes);
   in.bind_button(chord("N"), Action::ConfirmNo);
+
+  // Menu UI
+  in.bind_button(chord("Tab"), Action::NextMenuItem);
+  in.bind_button(chord("Shift+Tab"), Action::PrevMenuItem);
 }
 
 } // namespace input

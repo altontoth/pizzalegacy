@@ -15,15 +15,22 @@
 #include "gfx/Draw.h"
 #include "gfx/Surface.h"
 #include "resources/FontManager.h"
+#include "views/ui/PopupManager.h"
 #include "views/ui/widgets/PositionMarkerMenuItem.h"
 
 using DisplayConstants::SCREEN_HEIGHT;
 using DisplayConstants::SCREEN_WIDTH;
 
+namespace {
+constexpr int ADJUST_REPEAT_DELAY_TICKS = 12;
+constexpr int ADJUST_REPEAT_INTERVAL_TICKS = 3;
+} // namespace
+
 Menu::Menu(GameContext& context, GameState& state, ViewPoint origin,
            int line_spacing)
     : View(context, state), menu_bobs(context_.bob->get("bob/menubobs.bob")),
-      origin_in_view_(origin), line_spacing_(line_spacing) {
+      origin_in_view_(origin), line_spacing_(line_spacing),
+      listener_(context.input->register_listener(*this)) {
 
   update_selection(nullptr);
   state.pause_time_advancement();
@@ -76,6 +83,11 @@ void Menu::update_interactions() {
           .rect = r,
           .selected = is_selected,
       });
+      if (!menu_item->interactive()) {
+        y += size.h + line_spacing_;
+        ++i;
+        continue;
+      }
       views::ui::InteractionLayers::TooltipCb ttcb;
       if (context_.config->options().qol_improvements) {
         if (std::string tt = menu_item->tooltip_text(); !tt.empty()) {
@@ -96,6 +108,15 @@ void Menu::update_interactions() {
       interactions_.create_persistent_item(
           r, "menu_item_" + std::to_string(i),
           [this, menu_item](views::ui::InteractionEvent ie) {
+            // Hover fires every frame while the pointer rests on an item;
+            // forward it only when the pointer actually moved, so it can't
+            // override keyboard navigation.
+            if (ie.type == views::ui::InteractionEvent::Type::Hover) {
+              if (last_hover_pos_.has_value() && *last_hover_pos_ == ie.pos) {
+                return;
+              }
+              last_hover_pos_ = ie.pos;
+            }
             // convert to the menu-item's local coordinates
             views::ui::InteractionEvent local = ie;
             local.pos = ie.local;
@@ -120,7 +141,6 @@ void Menu::update_interactions() {
             }
             else if (ie.type == views::ui::InteractionEvent::Type::Leave) {
               mark_dirty();
-              selected_option_ = nullptr;
             }
           },
           std::move(ttcb), views::ui::InteractionLayer::Normal,
@@ -131,7 +151,52 @@ void Menu::update_interactions() {
   }
 }
 
+void Menu::tick_adjust_repeat() {
+  int h_dir = 0;
+  if (context_.input->is_pressed(input::Action::MoveLeft)) {
+    h_dir -= 1;
+  }
+  if (context_.input->is_pressed(input::Action::MoveRight)) {
+    h_dir += 1;
+  }
+  int v_dir = 0;
+  if (context_.input->is_pressed(input::Action::MoveUp)) {
+    v_dir -= 1;
+  }
+  if (context_.input->is_pressed(input::Action::MoveDown)) {
+    v_dir += 1;
+  }
+  if ((h_dir == 0 && v_dir == 0) || keyboard_receiving_item_ != nullptr ||
+      context_.popup->freezes_view() || !selected_option_ ||
+      !selected_option_->adjust_repeats()) {
+    adjust_hold_ticks_ = 0;
+    return;
+  }
+  // The initial press is handled by on_action; this only handles repeats. A
+  // repeat that hits the end of the item's range does not escape to focus
+  // movement; that requires a fresh key press so it has to be conscious action
+  // by the user.
+  ++adjust_hold_ticks_;
+  if (adjust_hold_ticks_ >= ADJUST_REPEAT_DELAY_TICKS &&
+      (adjust_hold_ticks_ - ADJUST_REPEAT_DELAY_TICKS) %
+              ADJUST_REPEAT_INTERVAL_TICKS ==
+          0) {
+    bool changed = false;
+    if (h_dir != 0) {
+      changed |= selected_option_->on_adjust(AdjustAxis::Horizontal, h_dir);
+    }
+    if (v_dir != 0) {
+      changed |= selected_option_->on_adjust(AdjustAxis::Vertical, v_dir);
+    }
+    if (changed) {
+      mark_dirty();
+    }
+  }
+}
+
 void Menu::tick() {
+  tick_adjust_repeat();
+
   // Decide which item (if any) should receive keyboard this frame.
   MenuItem* wants = nullptr;
 
@@ -158,6 +223,8 @@ void Menu::tick() {
     if (keyboard_receiving_item_) {
       keyboard_receiving_item_->begin_keyboard_session(
           context_.input, [this] { mark_dirty(); });
+      // Repaint so the item can show its text-entry state right away.
+      mark_dirty();
     }
   }
 
@@ -168,12 +235,88 @@ void Menu::tick() {
   }
 }
 
+void Menu::move_focus(int dir) {
+  if (menu_items_.empty()) {
+    return;
+  }
+  const auto n = static_cast<int>(menu_items_.size());
+  // Start from the focused item, or just off either end when nothing is
+  // focused yet so the first step lands on the first/last focusable item.
+  int i = static_cast<int>(index_of_selected().value_or(
+      dir > 0 ? static_cast<std::size_t>(n) - 1 : 0));
+
+  for (int step = 1; step <= n; ++step) {
+    i += dir;
+    // Wrap around either direction
+    if (i < 0) {
+      i = n - 1;
+    }
+    else if (i >= n) {
+      i = 0;
+    }
+    if (menu_items_[i]->focusable()) {
+      update_selection(menu_items_[i].get());
+      return;
+    }
+  }
+}
+
+bool Menu::on_action(const input::ActionEvent& ev) {
+  if (keyboard_receiving_item_ != nullptr || context_.popup->freezes_view()) {
+    return false;
+  }
+  if (ev.state.pressed) {
+    switch (ev.action) {
+    // Up/Down goes to the focused item first (a vertical list moves its
+    // cursor); only an unconsumed step moves menu focus.
+    case input::Action::MoveUp:
+    case input::Action::MoveDown: {
+      const int delta = ev.action == input::Action::MoveDown ? +1 : -1;
+      if (selected_option_ &&
+          selected_option_->on_adjust(AdjustAxis::Vertical, delta)) {
+        mark_dirty();
+        return true;
+      }
+      move_focus(delta);
+      return true;
+    }
+    case input::Action::MoveLeft:
+    case input::Action::MoveRight:
+      if (selected_option_ &&
+          selected_option_->on_adjust(
+              AdjustAxis::Horizontal,
+              ev.action == input::Action::MoveRight ? +1 : -1)) {
+        mark_dirty();
+        return true;
+      }
+      return false;
+    case input::Action::NextMenuItem:
+      move_focus(+1);
+      return true;
+    case input::Action::PrevMenuItem:
+      move_focus(-1);
+      return true;
+    default:
+      return false;
+    }
+  }
+  // Fire on release, so that when the action opens a text session (e.g. a
+  // rename), the release of the triggering key does not reach the session.
+  if (ev.state.released &&
+      (ev.action == input::Action::Fire ||
+       ev.action == input::Action::SubmitInput) &&
+      selected_option_) {
+    handle_menu_selection(selected_option_);
+    return true;
+  }
+  return false;
+}
+
 void Menu::render(const RenderContext& ctx) {
   update_interactions();
   auto bg = background();
   ctx.surface->fill(15);
   gfx::blit::blit_with_palette(*ctx.surface, bg);
-  // ctx.surface->palette({63});
 
   for (auto& e : layout_) {
     e.item->draw(*ctx.surface, e.pos, e.item == selected_option_);

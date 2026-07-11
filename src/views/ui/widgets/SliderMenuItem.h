@@ -27,6 +27,8 @@ public:
   Size measure() const override;
 
   bool handles_mouse_events() override { return true; }
+  bool on_adjust(AdjustAxis axis, int delta) override;
+  bool adjust_repeats() const override { return true; }
   bool on_interaction(views::ui::InteractionEvent ie) override;
   std::optional<views::ui::MouseButton> drag_button() const override {
     return views::ui::MouseButton::Left;

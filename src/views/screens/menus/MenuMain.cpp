@@ -14,6 +14,7 @@
 #include "views/screens/menus/MenuTheme.h"
 #include "views/ui/PopupManager.h"
 #include "views/ui/popups/AlertPopup.h"
+#include "views/ui/widgets/LabelMenuItem.h"
 #include "views/ui/widgets/PositionMarkerMenuItem.h"
 #include "views/ui/widgets/SpacerMenuItem.h"
 #include "views/ui/widgets/TextMenuItem.h"
@@ -64,16 +65,16 @@ MenuMain::MenuMain(GameContext& context, GameState& state)
 #ifndef NDEBUG
     version_str += " (DEBUG)";
 #endif
-    add_menu_item(std::make_unique<TextMenuItem>(
-        context, std::move(version_str), [] {}, FontFace::MINI, ts));
+    add_menu_item(std::make_unique<LabelMenuItem>(
+        context, std::move(version_str), FontFace::MINI, ts));
   }
   add_menu_item(std::make_unique<PositionMarkerMenuItem>(context, debug_info.x,
                                                          debug_info.y + 10));
   ts.color = 13;
   const std::string& base = platform_paths::base_dir();
 
-  add_menu_item(std::make_unique<TextMenuItem>(
-      context, "User directory: " + base, [] {}, FontFace::MINI, ts));
+  add_menu_item(std::make_unique<LabelMenuItem>(
+      context, "User directory: " + base, FontFace::MINI, ts));
 }
 
 Surface MenuMain::background() const {

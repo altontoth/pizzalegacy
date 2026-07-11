@@ -11,6 +11,7 @@
 #include "engine/DebugLabel.h"
 #include "engine/geom/Spaces.h"
 #include "resources/util/FileUtils.h"
+#include "views/ui/widgets/ListCursor.h"
 #include "views/ui/widgets/MenuItem.h"
 
 class SaveFileListBox : public MenuItem,
@@ -29,12 +30,16 @@ public:
   void handle_action() override;
   Size measure() const override;
   bool handles_mouse_events() override { return true; }
+  bool on_adjust(AdjustAxis axis, int delta) override;
+  bool adjust_repeats() const override { return true; }
   bool on_interaction(views::ui::InteractionEvent ie) override;
 
 private:
+  int file_at(int local_y) const;
+
   std::vector<fileutils::FileEntry>& save_files_;
   int* scroll_offset_;
   std::function<void(const std::string&)> on_file_clicked_;
   std::function<void(const std::string&)> on_file_double_clicked_;
-  int hovered_index_ = -1;
+  ListCursor cursor_;
 };

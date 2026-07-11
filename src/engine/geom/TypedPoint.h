@@ -27,8 +27,4 @@ template <typename Tag> struct TypedPoint {
   constexpr TypedPoint operator-(PxOffset b) const noexcept {
     return TypedPoint{x - b.dx, y - b.dy};
   }
-
-  bool operator==(TypedPoint other) const {
-    return x == other.x && y == other.y;
-  }
 };

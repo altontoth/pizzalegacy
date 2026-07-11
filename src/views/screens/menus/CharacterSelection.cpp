@@ -67,7 +67,9 @@ CharacterSelection::CharacterSelection(GameContext& context, GameState& state)
   add_menu_item(std::make_unique<TextMenuItem>(
       context, "Start",
       [this] {
-        state_.initializer().players = std::move(player_items_);
+        // Copy: the view stays alive (and may render) until the deferred
+        // view swap happens.
+        state_.initializer().players = player_items_;
         state_.ui().push<EuroMapState>(MapMode::GAME_INIT);
       },
       face, style, sel_style));
@@ -91,15 +93,15 @@ CharacterSelection::CharacterSelection(GameContext& context, GameState& state)
       std::make_unique<CompanySelectionBox>(context, player_items_);
   company_box->on_company_clicked([this](int index) { active_player(index); });
   company_box->on_scroll([this](int delta) {
-    // Scroll up (positive) = increase human players, scroll down (negative) =
-    // decrease human players
+    // Up (positive delta) removes a human player, down adds one, matching
+    // the arrow buttons above/below the box.
     if (delta > 0) {
-      human_players_ = std::clamp(human_players_ + 1, 1, MAX_HUMAN_PLAYERS);
-      player_items_.at(human_players_ - 1).is_human = true;
-    }
-    else {
       human_players_ = std::clamp(human_players_ - 1, 1, MAX_HUMAN_PLAYERS);
       player_items_.at(human_players_).is_human = false;
+    }
+    else {
+      human_players_ = std::clamp(human_players_ + 1, 1, MAX_HUMAN_PLAYERS);
+      player_items_.at(human_players_ - 1).is_human = true;
     }
     mark_dirty();
   });

@@ -20,8 +20,7 @@ constexpr int company_name_box_height = 26;
 constexpr int company_name_box_y_offset = 2;
 constexpr int max_name_length = 14;
 
-void CompanySelectionBox::draw(Surface& screen, ViewPoint p,
-                               bool /*is_selected*/) {
+void CompanySelectionBox::draw(Surface& screen, ViewPoint p, bool is_selected) {
   auto block = Surface(COMPANY_BOX_W, COMPANY_BOX_H, PaletteHandle{38});
 
   constexpr uint8_t color_outer_border = 10;
@@ -95,11 +94,24 @@ void CompanySelectionBox::draw(Surface& screen, ViewPoint p,
   }
 
   screen.blit_raw(block, p);
+  if (is_selected) {
+    constexpr uint8_t focus_color = 29;
+    gfx::draw::box(screen, ViewRect{p.x, p.y, COMPANY_BOX_W, COMPANY_BOX_H},
+                   focus_color, 2);
+  }
   height_ = block.height();
   width_ = block.width();
 }
 
-void CompanySelectionBox::handle_action() {}
+void CompanySelectionBox::handle_action() { rename_company(selected_company_); }
+
+bool CompanySelectionBox::on_adjust(AdjustAxis axis, int delta) {
+  if (axis != AdjustAxis::Vertical || !on_scroll_) {
+    return false;
+  }
+  on_scroll_(-delta);
+  return true;
+}
 
 void CompanySelectionBox::begin_keyboard_session(input::InputManager* input,
                                                  std::function<void()> inv) {
@@ -191,7 +203,10 @@ bool CompanySelectionBox::on_interaction(views::ui::InteractionEvent ie) {
     return false;
   }
 
-  // we care only about key events routed to us by the menu
+  // Consume the press; mouse behavior happens on Click.
+  if (ie.type == views::ui::InteractionEvent::Type::ButtonDown) {
+    return true;
+  }
   if (ie.type != views::ui::InteractionEvent::Type::Click) {
     return false;
   }

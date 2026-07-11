@@ -27,6 +27,8 @@ public:
   Size measure() const override;
   bool handles_keyboard_events() override { return keyboard_enabled_; };
   bool handles_mouse_events() override { return true; };
+  bool on_adjust(AdjustAxis axis, int delta) override;
+  bool adjust_repeats() const override { return true; }
   bool on_interaction(views::ui::InteractionEvent ie) override;
   void begin_keyboard_session(input::InputManager* input,
                               std::function<void()> inv) override;
@@ -40,6 +42,7 @@ public:
 
 private:
   void mark_dirty();
+  void start_rename();
   void end_rename();
 
   core::character::CharacterData** character_;
@@ -50,5 +53,6 @@ private:
   std::function<void()> invalidate_;
   std::optional<input::TextSession> text_session_;
   bool rename_active_{false};
+  // Wheel-direction scroll handler: positive delta is up.
   std::function<void(int delta)> on_scroll_;
 };
