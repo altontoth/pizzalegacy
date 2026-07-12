@@ -1367,13 +1367,24 @@ void CityView::render_highlights(const RenderContext& ctx) {
       // Add tab offset for MEDIUM/FAR zoom (at CLOSE, offset is 0)
       const ViewPoint screen_pos = view_pos + tab_offset;
 
-      // Box size in view pixels (scaled by camera zoom)
+      // Cell size in view space (scaled by camera zoom)
       const int world_box_size = BASE_MAP_TILE_WIDTH * BASE_MAP_ZOOM_MULTIPLIER;
-      // View box is the same size regardless of zoom level because otherwise
-      // it'd be basically invisible on zoom FAR
-      const int view_box_size = world_box_size / 4;
+      const int cell_view_size = world_box_size / camera_.zoom();
 
-      const ViewRect dest_rect{screen_pos.x, screen_pos.y, view_box_size,
+      // At zoom FAR a cell-sized dot is too small to see, so it's always
+      // doubled there; qol_improvements doubles it again on top of that
+      int view_box_size = cell_view_size;
+      if (zoom_ == ZoomLevel::FAR) {
+        view_box_size *= 2;
+        if (context_.config->options().qol_improvements) {
+          view_box_size *= 2;
+        }
+      }
+
+      // Center the (possibly enlarged) box on the cell
+      const int center_offset = (cell_view_size - view_box_size) / 2;
+      const ViewRect dest_rect{screen_pos.x + center_offset,
+                               screen_pos.y + center_offset, view_box_size,
                                view_box_size};
 
       // Clip to viewport

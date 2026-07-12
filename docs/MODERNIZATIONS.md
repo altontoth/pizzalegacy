@@ -61,12 +61,6 @@ in effect.
 * In the original you can pause the game by going to the Disk Menu, but in
   Pizza Legacy you can also pause by pressing `Control+P`.
 
-### Larger highlight dot on city map
-
-* When the city map is fully zoomed out, the yellow dot highlighting whatever
-  you selected to be highlighted will be double the size compared to the
-  original, since often it can be hard to see otherwise.
-
 ### RMB/LMB alignment for ingredient ordering
 
 * When increasing your ingredient order from a restaurant you use Left Mouse
@@ -84,6 +78,12 @@ in effect.
 ## Life quality improvements option
 
 We have a new option to optionally make some more improvements:
+
+### Larger highlight dot on city map
+
+When the city map is fully zoomed out, the yellow dot highlighting whatever you
+selected to be highlighted will be double the size compared to the original,
+since often it can be hard to see otherwise.
 
 ### Pizza demand
 We guarantee a small random minimum demand for any pizza on the menu. The
