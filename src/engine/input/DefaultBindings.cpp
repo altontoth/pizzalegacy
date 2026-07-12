@@ -44,22 +44,30 @@ void configure_default_bindings(InputManager& in) {
   in.bind_button(chord("PageUp"), Action::PageUp);
   in.bind_button(chord("PageDown"), Action::PageDown);
 
-  in.bind_axis_keys(Action::MoveVec2, Key::Up, Key::Down, Key::Left,
-                    Key::Right);
-
   in.bind_button(chord("Left"), Action::MoveLeft);
   in.bind_button(chord("Right"), Action::MoveRight);
   in.bind_button(chord("Up"), Action::MoveUp);
   in.bind_button(chord("Down"), Action::MoveDown);
+  in.bind_gamepad_button(GamepadButton::DpadLeft, Action::MoveLeft);
+  in.bind_gamepad_button(GamepadButton::DpadRight, Action::MoveRight);
+  in.bind_gamepad_button(GamepadButton::DpadUp, Action::MoveUp);
+  in.bind_gamepad_button(GamepadButton::DpadDown, Action::MoveDown);
 
-  in.bind_axis_keys(Action::P2_MoveVec2, Key::W, Key::S, Key::A, Key::D);
+  in.bind_button(chord("A"), Action::P2_MoveLeft);
+  in.bind_button(chord("D"), Action::P2_MoveRight);
+  in.bind_button(chord("W"), Action::P2_MoveUp);
+  in.bind_button(chord("S"), Action::P2_MoveDown);
   in.bind_button(chord("LCtrl"), Action::P2_Fire);
-  in.bind_gamepad_stick(Action::P2_MoveVec2, GamepadAxis::LeftX,
-                        GamepadAxis::LeftY);
+  in.bind_gamepad_button(GamepadButton::LeftStickLeft, Action::P2_MoveLeft);
+  in.bind_gamepad_button(GamepadButton::LeftStickRight, Action::P2_MoveRight);
+  in.bind_gamepad_button(GamepadButton::LeftStickUp, Action::P2_MoveUp);
+  in.bind_gamepad_button(GamepadButton::LeftStickDown, Action::P2_MoveDown);
   in.bind_gamepad_button(GamepadButton::A, Action::P2_Fire);
 
-  in.bind_axis_keys(Action::ScrollVec2, Key::Up, Key::Down, Key::Left,
-                    Key::Right);
+  in.bind_button(chord("Left"), Action::ScrollLeft);
+  in.bind_button(chord("Right"), Action::ScrollRight);
+  in.bind_button(chord("Up"), Action::ScrollUp);
+  in.bind_button(chord("Down"), Action::ScrollDown);
 
   in.bind_button(chord("Space"), Action::Fire);
 

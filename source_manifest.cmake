@@ -272,6 +272,7 @@ set(ENGINE_PLEGACY_SOURCES
     src/engine/audio/AudioManager.cpp
     src/engine/audio/VocDecoder.cpp
     src/engine/geom/Camera.cpp
+    src/engine/input/BindingsFile.cpp
     src/engine/input/DefaultBindings.cpp
     src/engine/input/Gamepad.cpp
     src/engine/input/GlobalActionHandler.cpp
@@ -501,6 +502,7 @@ set(PLEGACY_HEADERS
     src/engine/geom/TypedRect.h
     src/engine/geom/ViewportTransform.h
     src/engine/input/Action.h
+    src/engine/input/BindingsFile.h
     src/engine/input/Gamepad.h
     src/engine/input/GlobalActionHandler.h
     src/engine/input/InputListener.h

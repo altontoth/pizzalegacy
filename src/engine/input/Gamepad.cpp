@@ -24,7 +24,7 @@ struct ButtonAlias {
   std::string_view name;
   GamepadButton button;
 };
-constexpr ButtonAlias k_button_names[] = {
+constexpr ButtonAlias button_names[] = {
     {"a", GamepadButton::A},
     {"b", GamepadButton::B},
     {"x", GamepadButton::X},
@@ -40,13 +40,21 @@ constexpr ButtonAlias k_button_names[] = {
     {"dpaddown", GamepadButton::DpadDown},
     {"dpadleft", GamepadButton::DpadLeft},
     {"dpadright", GamepadButton::DpadRight},
+    {"leftstickup", GamepadButton::LeftStickUp},
+    {"leftstickdown", GamepadButton::LeftStickDown},
+    {"leftstickleft", GamepadButton::LeftStickLeft},
+    {"leftstickright", GamepadButton::LeftStickRight},
+    {"rightstickup", GamepadButton::RightStickUp},
+    {"rightstickdown", GamepadButton::RightStickDown},
+    {"rightstickleft", GamepadButton::RightStickLeft},
+    {"rightstickright", GamepadButton::RightStickRight},
 };
 
 struct AxisAlias {
   std::string_view name;
   GamepadAxis axis;
 };
-constexpr AxisAlias k_axis_names[] = {
+constexpr AxisAlias axis_names[] = {
     {"leftx", GamepadAxis::LeftX},
     {"lefty", GamepadAxis::LeftY},
     {"rightx", GamepadAxis::RightX},
@@ -58,7 +66,7 @@ constexpr AxisAlias k_axis_names[] = {
 } // namespace
 
 std::string_view gamepad_button_to_string(GamepadButton b) {
-  for (const auto& a : k_button_names) {
+  for (const auto& a : button_names) {
     if (a.button == b) {
       return a.name;
     }
@@ -68,7 +76,7 @@ std::string_view gamepad_button_to_string(GamepadButton b) {
 
 std::optional<GamepadButton> gamepad_button_from_string(std::string_view sv) {
   const auto s = lower(sv);
-  for (const auto& a : k_button_names) {
+  for (const auto& a : button_names) {
     if (s == a.name) {
       return a.button;
     }
@@ -77,7 +85,7 @@ std::optional<GamepadButton> gamepad_button_from_string(std::string_view sv) {
 }
 
 std::string_view gamepad_axis_to_string(GamepadAxis ax) {
-  for (const auto& a : k_axis_names) {
+  for (const auto& a : axis_names) {
     if (a.axis == ax) {
       return a.name;
     }
@@ -87,7 +95,7 @@ std::string_view gamepad_axis_to_string(GamepadAxis ax) {
 
 std::optional<GamepadAxis> gamepad_axis_from_string(std::string_view sv) {
   const auto s = lower(sv);
-  for (const auto& a : k_axis_names) {
+  for (const auto& a : axis_names) {
     if (s == a.name) {
       return a.axis;
     }

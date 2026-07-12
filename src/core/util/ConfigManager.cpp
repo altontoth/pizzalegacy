@@ -100,14 +100,14 @@ static std::string probe_for_dos_game(const std::string& base) {
 }
 
 #ifdef __APPLE__
-static constexpr const char* k_location_hint =
+static constexpr const char* location_hint =
     "Select the folder containing your original Pizza Tycoon / Pizza "
     "Connection game files.\n\n"
     "Steam users: you can point to your Steam directory, your steamapps/common "
     "folder, or the Pizza Connection folder. The game inside the app bundle "
     "will be found automatically.";
 #elif defined(_WIN32)
-static constexpr const char* k_location_hint =
+static constexpr const char* location_hint =
     "Select the folder containing your original Pizza Tycoon / Pizza "
     "Connection game files.\n\n"
     "Steam users: you can point to your Steam directory, your "
@@ -115,7 +115,7 @@ static constexpr const char* k_location_hint =
     "GOG users: point to your GOG Galaxy directory or directly to the Pizza "
     "Connection folder.";
 #else
-static constexpr const char* k_location_hint =
+static constexpr const char* location_hint =
     "Select the folder containing your original Pizza Tycoon / Pizza "
     "Connection game files.\n\n"
     "Steam users: you can point to your Steam directory, your steamapps/common "
@@ -123,7 +123,7 @@ static constexpr const char* k_location_hint =
 #endif
 
 std::string ConfigManager::prompt_for_game_location() {
-  tinyfd_messageBox("Note", k_location_hint, "ok", "info", 1);
+  tinyfd_messageBox("Note", location_hint, "ok", "info", 1);
 
   bool give_up = false;
   bool game_found = false;

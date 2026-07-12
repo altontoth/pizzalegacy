@@ -27,6 +27,16 @@ enum class GamepadButton {
   DpadDown,
   DpadLeft,
   DpadRight,
+  // Analog stick directions, synthesized as button presses when the stick
+  // crosses a threshold.
+  LeftStickUp,
+  LeftStickDown,
+  LeftStickLeft,
+  LeftStickRight,
+  RightStickUp,
+  RightStickDown,
+  RightStickLeft,
+  RightStickRight,
 };
 
 enum class GamepadAxis {

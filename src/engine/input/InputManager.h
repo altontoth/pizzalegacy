@@ -82,10 +82,8 @@ public:
 
   // Bindings
   void bind_button(Binding chord, Action a);
-  void bind_axis_keys(Action a, Key up, Key down, Key left, Key right);
   void bind_gamepad_button(GamepadButton b, Action a);
-  // For binding with a vec2 action:
-  void bind_gamepad_stick(Action a, GamepadAxis x_axis, GamepadAxis y_axis);
+  void remove_bindings(Action a);
   void clear_bindings();
 
 private:
@@ -108,9 +106,8 @@ private:
   // Axis state: aggregated per action, normalized to [-1, +1]
   std::unordered_map<Action, std::pair<float, float>> axes_{};
 
-  // Gamepad analog-stick state, merged into axes_ by rebuild_axes(). Keyed by
-  // action, populated from gamepad_stick_bindings_ on controller axis events.
-  std::unordered_map<Action, std::pair<float, float>> gamepad_axes_{};
+  // Stick-direction pseudo-buttons currently past the press threshold
+  std::unordered_set<GamepadButton> stick_dirs_down_;
   // Connected gamepad (SDL_Gamepad*), or nullptr if none.
   // Stored as void* to keep SDL out of this header.
   void* gamepad_{nullptr};
@@ -134,16 +131,7 @@ private:
   std::unordered_multimap<Binding, Action, BindingHash, BindingEq>
       button_bindings_;
 
-  struct KeyVec2 {
-    Key up{}, down{}, left{}, right{};
-  };
-  std::unordered_multimap<Action, KeyVec2> axis_key_bindings_;
-
-  std::unordered_map<GamepadButton, Action> gamepad_button_bindings_;
-  struct AxisVec2 {
-    GamepadAxis x{GamepadAxis::Unknown}, y{GamepadAxis::Unknown};
-  };
-  std::unordered_map<Action, AxisVec2> gamepad_stick_bindings_;
+  std::unordered_multimap<GamepadButton, Action> gamepad_button_bindings_;
 
   // Key state updates from backend
   void key_down(Key k, Mod mods);
@@ -151,15 +139,17 @@ private:
 
   // Action evaluation & dispatch
   void evaluate_bindings_for_key_down(Key k, Mod mods);
-  void evaluate_bindings_for_key_up(Key k, Mod mods);
-  bool dispatch_action_press(Action a);
+  void evaluate_bindings_for_key_up(Key k);
+  void gamepad_button_down(GamepadButton b);
+  void gamepad_button_up(GamepadButton b);
+  void update_stick_directions();
+  void press_actions(const std::vector<Action>& actions);
   void dispatch_action_release(Action a);
   bool dispatch_action(const ActionEvent& ev);
   bool dispatch_text(const std::string& utf8);
 
   // Axis aggregation
   static float axis_component(bool positive_down, bool negative_down);
-  std::pair<float, float> compute_axis_from_keys(const KeyVec2& kv) const;
   void rebuild_axes();
 
   enum class TextRoute { Block, ToSinkExlusive, Normal };

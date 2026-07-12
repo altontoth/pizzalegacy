@@ -16,7 +16,6 @@
 #include "engine/input/backend/SDLKeymap.h"
 
 #include <algorithm>
-#include <cmath>
 #include <iostream>
 #include <utility>
 #include "engine/SDL_include.h"
@@ -74,16 +73,40 @@ static inline Binding lookup_binding(Key k, Mod mods) noexcept {
   return Binding{without(mods, contributed_mod_bit(k)), k};
 }
 
-static inline bool is_vec2_action(Action a) noexcept {
-  switch (a) {
-  case Action::MoveVec2:
-  case Action::P2_MoveVec2:
-  case Action::ScrollVec2:
-    return true;
-  default:
-    return false;
-  }
-}
+// Each vec2 action is derived from the held state of four direction actions,
+// so any input bound to a direction action also drives the vec2.
+struct Vec2Components {
+  Action vec2;
+  Action up, down, left, right;
+};
+static constexpr Vec2Components vec2_components[] = {
+    {Action::MoveVec2, Action::MoveUp, Action::MoveDown, Action::MoveLeft,
+     Action::MoveRight},
+    {Action::P2_MoveVec2, Action::P2_MoveUp, Action::P2_MoveDown,
+     Action::P2_MoveLeft, Action::P2_MoveRight},
+    {Action::ScrollVec2, Action::ScrollUp, Action::ScrollDown,
+     Action::ScrollLeft, Action::ScrollRight},
+};
+
+// Analog stick directions dispatched as pseudo-button presses. Hysteresis:
+// press past one threshold, release only once back under a lower one.
+struct StickDir {
+  GamepadButton button;
+  GamepadAxis axis;
+  float sign;
+};
+static constexpr StickDir stick_dirs[] = {
+    {GamepadButton::LeftStickUp, GamepadAxis::LeftY, -1.f},
+    {GamepadButton::LeftStickDown, GamepadAxis::LeftY, 1.f},
+    {GamepadButton::LeftStickLeft, GamepadAxis::LeftX, -1.f},
+    {GamepadButton::LeftStickRight, GamepadAxis::LeftX, 1.f},
+    {GamepadButton::RightStickUp, GamepadAxis::RightY, -1.f},
+    {GamepadButton::RightStickDown, GamepadAxis::RightY, 1.f},
+    {GamepadButton::RightStickLeft, GamepadAxis::RightX, -1.f},
+    {GamepadButton::RightStickRight, GamepadAxis::RightX, 1.f},
+};
+static constexpr float stick_press_threshold = 0.5f;
+static constexpr float stick_release_threshold = 0.35f;
 
 InputManager::InputManager() {}
 
@@ -192,34 +215,18 @@ void InputManager::process(const SDL_Event& ev) {
     if (gamepad_) {
       SDL_CloseGamepad(static_cast<SDL_Gamepad*>(gamepad_));
       gamepad_ = nullptr;
-      // Release any stick-driven axes so movement stops on disconnect
-      for (auto& [action, vec] : gamepad_axes_) {
-        vec = {0.f, 0.f};
+      // Release held stick directions so movement stops on disconnect
+      for (GamepadButton b : stick_dirs_down_) {
+        gamepad_button_up(b);
       }
+      stick_dirs_down_.clear();
     }
     break;
   }
 
   case SDL_EVENT_GAMEPAD_AXIS_MOTION: {
-    // SDL fires one event per axis, but a stick is two axes. Re-sample every
-    // bound stick from the controller so each entry holds a consistent {x, y}.
     if (gamepad_) {
-      auto* pad = static_cast<SDL_Gamepad*>(gamepad_);
-      constexpr float AXIS_MAX = 32767.f;
-      // TODO: Maybe have an option for configuring the deadzone?
-      constexpr float DEAD_ZONE = 4000.f / AXIS_MAX;
-      const auto sample = [&](GamepadAxis a) -> float {
-        const SDL_GamepadAxis sdl_axis = backend::axis_to_sdl(a);
-        if (sdl_axis == SDL_GAMEPAD_AXIS_INVALID) {
-          return 0.f;
-        }
-        const float v =
-            static_cast<float>(SDL_GetGamepadAxis(pad, sdl_axis)) / AXIS_MAX;
-        return (std::abs(v) < DEAD_ZONE) ? 0.f : v;
-      };
-      for (const auto& [action, stick] : gamepad_stick_bindings_) {
-        gamepad_axes_[action] = {sample(stick.x), sample(stick.y)};
-      }
+      update_stick_directions();
     }
     break;
   }
@@ -228,14 +235,11 @@ void InputManager::process(const SDL_Event& ev) {
   case SDL_EVENT_GAMEPAD_BUTTON_UP: {
     const GamepadButton b = backend::button_from_sdl(
         static_cast<SDL_GamepadButton>(ev.gbutton.button));
-    if (auto it = gamepad_button_bindings_.find(b);
-        it != gamepad_button_bindings_.end()) {
-      if (ev.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN) {
-        dispatch_action_press(it->second);
-      }
-      else {
-        dispatch_action_release(it->second);
-      }
+    if (ev.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN) {
+      gamepad_button_down(b);
+    }
+    else {
+      gamepad_button_up(b);
     }
     break;
   }
@@ -255,17 +259,92 @@ void InputManager::key_up(Key k, Mod mods) {
   keys_down_.erase(k);
   mods_down_ = mods;
 
-  evaluate_bindings_for_key_up(k, mods);
+  evaluate_bindings_for_key_up(k);
 }
 
 void InputManager::evaluate_bindings_for_key_down(Key k, Mod mods) {
   Binding b = lookup_binding(k, mods);
 
   auto range = button_bindings_.equal_range(b);
+  std::vector<Action> actions;
   for (auto it = range.first; it != range.second; ++it) {
-    Action a = it->second;
+    actions.push_back(it->second);
+  }
+  press_actions(actions);
+}
+
+void InputManager::evaluate_bindings_for_key_up(Key k) {
+  // Match on the key alone: the held modifiers may have changed since the
+  // press, and a stricter match would leave the action stuck down.
+  for (const auto& [bind, bound_action] : button_bindings_) {
+    if (bind.key != k) {
+      continue;
+    }
+    Action a = bound_action;
+    if (a == Action::Exit && text_active_) {
+      a = Action::CancelInput;
+    }
+
+    dispatch_action_release(a);
+  }
+}
+
+void InputManager::gamepad_button_down(GamepadButton b) {
+  auto range = gamepad_button_bindings_.equal_range(b);
+  std::vector<Action> actions;
+  for (auto it = range.first; it != range.second; ++it) {
+    actions.push_back(it->second);
+  }
+  press_actions(actions);
+}
+
+void InputManager::gamepad_button_up(GamepadButton b) {
+  auto range = gamepad_button_bindings_.equal_range(b);
+  for (auto it = range.first; it != range.second; ++it) {
+    dispatch_action_release(it->second);
+  }
+}
+
+void InputManager::update_stick_directions() {
+  auto* pad = static_cast<SDL_Gamepad*>(gamepad_);
+  constexpr float AXIS_MAX = 32767.f;
+  for (const auto& dir : stick_dirs) {
+    const SDL_GamepadAxis sdl_axis = backend::axis_to_sdl(dir.axis);
+    if (sdl_axis == SDL_GAMEPAD_AXIS_INVALID) {
+      continue;
+    }
+    const float v = dir.sign *
+                    static_cast<float>(SDL_GetGamepadAxis(pad, sdl_axis)) /
+                    AXIS_MAX;
+    const bool was_down = stick_dirs_down_.contains(dir.button);
+    if (!was_down && v >= stick_press_threshold) {
+      stick_dirs_down_.insert(dir.button);
+      gamepad_button_down(dir.button);
+    }
+    else if (was_down && v <= stick_release_threshold) {
+      stick_dirs_down_.erase(dir.button);
+      gamepad_button_up(dir.button);
+    }
+  }
+}
+
+void InputManager::press_actions(const std::vector<Action>& actions) {
+  // Record held state for every action up front so polled state (is_pressed,
+  // vec2 axes) does not depend on which listener consumed the press event.
+  std::vector<Action> newly_down;
+  newly_down.reserve(actions.size());
+  for (Action a : actions) {
+    if (actions_down_.insert(a).second) {
+      newly_down.push_back(a);
+    }
+  }
+
+  for (Action a : newly_down) {
     const bool was_text_active = text_active_;
-    const bool consumed = dispatch_action_press(a);
+    ActionEvent ev{
+        .action = a,
+        .state = ActionState{.pressed = true, .released = false, .held = true}};
+    const bool consumed = dispatch_action(ev);
 
     // Suppress the backtick TEXTINPUT that follows a ToggleConsole keydown
     if (a == Action::ToggleConsole && (was_text_active || text_active_)) {
@@ -275,34 +354,6 @@ void InputManager::evaluate_bindings_for_key_down(Key k, Mod mods) {
       break;
     }
   }
-}
-
-void InputManager::evaluate_bindings_for_key_up(Key k, Mod mods) {
-  Binding b = lookup_binding(k, mods);
-
-  auto range = button_bindings_.equal_range(b);
-  for (auto it = range.first; it != range.second; ++it) {
-    Action a = it->second;
-
-    if (a == Action::Exit && text_active_) {
-      a = Action::CancelInput;
-    }
-
-    dispatch_action_release(a);
-  }
-}
-
-bool InputManager::dispatch_action_press(Action a) {
-  const bool was_down = actions_down_.find(a) != actions_down_.end();
-  actions_down_.insert(a);
-
-  if (!was_down) {
-    ActionEvent ev{
-        .action = a,
-        .state = ActionState{.pressed = true, .released = false, .held = true}};
-    return dispatch_action(ev);
-  }
-  return false;
 }
 
 void InputManager::dispatch_action_release(Action a) {
@@ -348,38 +399,10 @@ float InputManager::axis_component(bool positive_down, bool negative_down) {
   return (positive_down ? 1.f : 0.f) - (negative_down ? 1.f : 0.f);
 }
 
-std::pair<float, float>
-InputManager::compute_axis_from_keys(const KeyVec2& kv) const {
-  const bool l = keys_down_.contains(kv.left);
-  const bool r = keys_down_.contains(kv.right);
-  const bool u = keys_down_.contains(kv.up);
-  const bool d = keys_down_.contains(kv.down);
-  std::pair<float, float> v{axis_component(r, l), axis_component(d, u)};
-  return v;
-}
-
 void InputManager::rebuild_axes() {
-  for (const auto& [act, kv] : axis_key_bindings_) {
-    // Zero out gameplay axes while typing
-    if (text_active_ && !is_vec2_action(act)) {
-      axes_[act] = {0.f, 0.f};
-      continue;
-    }
-    axes_[act] = compute_axis_from_keys(kv);
-  }
-  // Keyboard and gamepad can both contribute to the same action. For each
-  // component, keep whichever input is farther from zero.
-  for (const auto& [act, gv] : gamepad_axes_) {
-    if (text_active_ && !is_vec2_action(act)) {
-      continue;
-    }
-    auto& dst = axes_[act];
-    if (std::abs(gv.first) > std::abs(dst.first)) {
-      dst.first = gv.first;
-    }
-    if (std::abs(gv.second) > std::abs(dst.second)) {
-      dst.second = gv.second;
-    }
+  for (const auto& c : vec2_components) {
+    axes_[c.vec2] = {axis_component(is_pressed(c.right), is_pressed(c.left)),
+                     axis_component(is_pressed(c.down), is_pressed(c.up))};
   }
 }
 
@@ -402,11 +425,10 @@ void InputManager::debug_dump_bindings(std::ostream& os) const {
     os << "\n";
   }
 
-  os << "[axes]\n";
-  for (const auto& [act, kv] : axis_key_bindings_) {
-    os << "  " << std::string(magic_enum::enum_name(act)) << " = Vec2Keys("
-       << key_to_string(kv.up) << "," << key_to_string(kv.down) << ","
-       << key_to_string(kv.left) << "," << key_to_string(kv.right) << ")\n";
+  os << "[gamepad]\n";
+  for (const auto& [btn, act] : gamepad_button_bindings_) {
+    os << "  " << std::string(magic_enum::enum_name(act)) << " = Pad."
+       << gamepad_button_to_string(btn) << "\n";
   }
 }
 
@@ -456,26 +478,20 @@ void InputManager::bind_button(Binding chord, Action a) {
   button_bindings_.emplace(chord, a);
 }
 
-void InputManager::bind_axis_keys(Action a, Key up, Key down, Key left,
-                                  Key right) {
-  axis_key_bindings_.emplace(
-      a, KeyVec2{.up = up, .down = down, .left = left, .right = right});
-}
-
 void InputManager::bind_gamepad_button(GamepadButton b, Action a) {
-  gamepad_button_bindings_[b] = a;
+  gamepad_button_bindings_.emplace(b, a);
 }
 
-void InputManager::bind_gamepad_stick(Action a, GamepadAxis x_axis,
-                                      GamepadAxis y_axis) {
-  gamepad_stick_bindings_[a] = AxisVec2{.x = x_axis, .y = y_axis};
+void InputManager::remove_bindings(Action a) {
+  std::erase_if(button_bindings_,
+                [a](const auto& entry) { return entry.second == a; });
+  std::erase_if(gamepad_button_bindings_,
+                [a](const auto& entry) { return entry.second == a; });
 }
 
 void InputManager::clear_bindings() {
   button_bindings_.clear();
-  axis_key_bindings_.clear();
   gamepad_button_bindings_.clear();
-  gamepad_stick_bindings_.clear();
 }
 
 } // namespace input

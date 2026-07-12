@@ -22,7 +22,7 @@ struct KeyAlias {
   std::string_view name;
   Key key;
 };
-constexpr KeyAlias k_key_names[] = {
+constexpr KeyAlias key_names[] = {
     // letters
     {"a", Key::A},
     {"b", Key::B},
@@ -145,10 +145,10 @@ struct ModAlias {
   std::string_view name;
   Mod mod;
 };
-constexpr ModAlias k_mod_names[] = {
-    {"shift", Mod::Shift}, {"ctrl", Mod::Ctrl}, {"control", Mod::Ctrl},
-    {"alt", Mod::Alt},     {"gui", Mod::Meta},  {"meta", Mod::Meta},
-    {"cmd", Mod::Meta},    {"super", Mod::Meta}};
+constexpr ModAlias mod_names[] = {{"shift", Mod::Shift},  {"ctrl", Mod::Ctrl},
+                                  {"control", Mod::Ctrl}, {"alt", Mod::Alt},
+                                  {"gui", Mod::Meta},     {"meta", Mod::Meta},
+                                  {"cmd", Mod::Meta},     {"super", Mod::Meta}};
 
 inline std::optional<Mod> mod_from_name(std::string_view sv) {
   const auto s = lower(sv);
@@ -161,7 +161,7 @@ inline std::optional<Mod> mod_from_name(std::string_view sv) {
         s.substr(start, (end == std::string::npos ? s.size() : end) - start);
     if (!token.empty()) {
       bool hit = false;
-      for (auto& m : k_mod_names) {
+      for (auto& m : mod_names) {
         if (token == m.name) {
           acc = acc | m.mod;
           hit = true;
@@ -184,7 +184,7 @@ inline std::optional<Mod> mod_from_name(std::string_view sv) {
 
 std::optional<Key> key_from_string(std::string_view sv) {
   const auto s = lower(sv);
-  for (const auto& a : k_key_names) {
+  for (const auto& a : key_names) {
     if (s == a.name) {
       return a.key;
     }
@@ -193,7 +193,7 @@ std::optional<Key> key_from_string(std::string_view sv) {
 }
 
 std::string_view key_to_string(Key k) {
-  for (const auto& a : k_key_names) {
+  for (const auto& a : key_names) {
     if (a.key == k) {
       return a.name; // returns lower-case
     }

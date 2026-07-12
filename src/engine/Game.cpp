@@ -28,6 +28,7 @@
 #include "engine/Renderer.h"
 #include "engine/SDL_include.h"
 #include "engine/Version.h"
+#include "engine/input/BindingsFile.h"
 #include "engine/input/InputManager.h"
 #include "engine/ui/CursorManager.h"
 #include "engine/ui/TooltipManager.h"
@@ -634,6 +635,9 @@ bool Game::init(int display_height, ConfigManager& config_manager) {
       *tooltip_manager_, display_height);
   input_manager_ = std::make_unique<input::InputManager>();
   input::configure_default_bindings(*input_manager_);
+  input::write_bindings_template(platform_paths::bindings_file_path());
+  input::apply_bindings_file(*input_manager_,
+                             platform_paths::bindings_file_path());
 
   // Initialize the SDL subsystems we use on top of the bootstrap.
   if (!sdl_session_.init_subsystems(SDL_INIT_VIDEO | SDL_INIT_AUDIO |

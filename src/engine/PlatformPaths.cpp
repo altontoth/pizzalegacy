@@ -32,6 +32,8 @@ const std::string& base_dir() { return base_dir_; }
 
 std::string config_file_path() { return base_dir_ + "settings.conf"; }
 
+std::string bindings_file_path() { return base_dir_ + "bindings.conf"; }
+
 std::string saves_dir() { return base_dir_ + "saves/"; }
 
 std::string screenshots_dir() { return base_dir_ + "screenshots/"; }
