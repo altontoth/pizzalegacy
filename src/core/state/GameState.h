@@ -281,6 +281,16 @@ public:
   void on_city_entered(core::CityId city_id, const Player& player);
   void check_mafia_events();
 
+  struct RacketOffer {
+    core::RestaurantId restaurant_id;
+    bool first_contact;
+  };
+  // Single protection racket roll: 2% chance, then one random restaurant of
+  // the active player must be open and have an expired timer. On success the
+  // restaurant is marked contacted and the offer is returned.
+  std::optional<RacketOffer> roll_protection_racket();
+  void push_protection_racket_offer(const RacketOffer& offer);
+
   // Process all pending messages for the active player immediately:
   // award score, push fullscreen if needed, mark as shown.
   void process_pending_messages();
@@ -341,6 +351,7 @@ private:
   std::optional<int> last_clicked_property_index_;
   bool time_advancement_enabled_{false};
   uint32_t time_accumulator_{0};
+  int protection_roll_phase_{0};
   std::optional<core::RestaurantId> active_restaurant_;
   GameMode game_mode_;
   std::optional<core::mission::MissionTarget> mission_target_;

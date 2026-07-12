@@ -476,8 +476,9 @@ public:
   ManagerSettings& manager_settings() { return manager_settings_; };
   const ManagerSettings& manager_settings() const { return manager_settings_; };
 
-  // Mafia protection racket timer.
-  // nullopt = never contacted, 1 = expired (trigger visit), >1 = counting down.
+  // Mafia protection racket timer, in days.
+  // nullopt = eligible now, 1 = expired (eligible), >1 = counting down.
+  // New restaurants start with a crime-rate-based grace period.
   std::optional<int> protection_timer() const { return protection_timer_; }
   void protection_timer(std::optional<int> t) { protection_timer_ = t; }
   void decrement_protection_timer() {
@@ -485,6 +486,11 @@ public:
       (*protection_timer_)--;
     }
   }
+
+  // Whether the mafia has ever demanded protection money here; selects the
+  // first-contact vs repeat dialog and the first-contact discount.
+  bool protection_contacted() const { return protection_contacted_; }
+  void protection_contacted(bool c) { protection_contacted_ = c; }
 
 private:
   friend struct save::RestaurantLoader;
@@ -515,6 +521,7 @@ private:
   core::time::TimeOfDay closing_time_{DEFAULT_CLOSING_TIME};
   ManagerSettings manager_settings_;
   std::optional<int> protection_timer_;
+  bool protection_contacted_{false};
   std::vector<core::restaurant::StaffEventData> pending_staff_events_;
 
   // Mayor inspection countdown

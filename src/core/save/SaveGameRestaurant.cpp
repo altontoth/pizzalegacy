@@ -394,6 +394,7 @@ json restaurant_to_json(const Restaurant& restaurant) {
   if (restaurant.protection_timer().has_value()) {
     j["protection_timer"] = *restaurant.protection_timer();
   }
+  j["protection_contacted"] = restaurant.protection_contacted();
 
   // Save sabotage contamination and reputation damage slots
   j["sabotage_contamination"] = restaurant.sabotage_contamination();
@@ -604,6 +605,9 @@ std::unique_ptr<Restaurant> json_to_restaurant(const json& j,
 
   if (j.contains("protection_timer")) {
     restaurant->protection_timer(j["protection_timer"].get<int>());
+  }
+  if (j.contains("protection_contacted")) {
+    restaurant->protection_contacted(j["protection_contacted"].get<bool>());
   }
 
   // Restore sabotage contamination and reputation damage slots

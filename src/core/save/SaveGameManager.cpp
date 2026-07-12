@@ -539,6 +539,18 @@ json SaveGameManager::state_to_json(const GameState& state,
     j["deferred_mayor_awards"] = award_array;
   }
 
+  // Save deferred protection racket offers (rolled at EOD, delivered on the
+  // owning player's next turn)
+  {
+    json racket_array = json::array();
+    for (const auto& offer : state.turn().deferred_racket_offers()) {
+      racket_array.push_back({{"player_id", offer.player_id.value},
+                              {"restaurant_id", offer.restaurant_id.value},
+                              {"first_contact", offer.first_contact}});
+    }
+    j["deferred_racket_offers"] = racket_array;
+  }
+
   // Save shown message history with dates (for CV display and deduplication)
   json shown_msgs;
   for (size_t pid = 0; pid < players.size(); ++pid) {
@@ -736,6 +748,16 @@ void SaveGameManager::json_to_state(const json& j, GameState& state,
         award.winner_player_id = ev["winner_player_id"].get<int>();
       }
       state.turn().queue_mayor_award(award);
+    }
+  }
+
+  // Restore deferred protection racket offers
+  if (j.contains("deferred_racket_offers")) {
+    for (const auto& ev : j["deferred_racket_offers"]) {
+      state.turn().restore_deferred_racket_offer(
+          {.player_id = core::PlayerId{ev["player_id"].get<int>()},
+           .restaurant_id = core::RestaurantId{ev["restaurant_id"].get<int>()},
+           .first_contact = ev["first_contact"].get<bool>()});
     }
   }
 

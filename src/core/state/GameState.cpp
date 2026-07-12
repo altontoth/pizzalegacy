@@ -708,34 +708,77 @@ void GameState::check_mafia_events() {
     }
   }
 
-  // Protection racket check (2% daily chance per restaurant)
-  if (player->social_status().underworld_score() < 500) {
-    auto restaurants = restaurants_for(player->id());
-    for (auto* restaurant : restaurants) {
-      if (!restaurant->wants_open() ||
-          restaurant->property().city().id() != active_city()->id()) {
-        continue;
-      }
-      auto timer = restaurant->protection_timer();
-      // trigger if timer expired (==1) or never contacted (nullopt)
-      if (timer.has_value() && *timer > 1) {
-        continue;
-      }
-      if (!engine::random::rand_percentage_chance(2)) {
-        continue;
-      }
-      bool first = !restaurant->protection_timer().has_value();
-      // Set timer now to prevent re-triggering while the negotiation
-      // screen is pending. The conversation will overwrite this with
-      // the real cooldown value when it resolves.
-      restaurant->protection_timer(30);
-      ui_.push<MafiaState>(MafiaState{.id = mafia_id,
-                                      .mode = MafiaMode::ProtectionRacketOffer,
-                                      .restaurant_id = restaurant->id(),
-                                      .first_contact = first});
-      return;
+  // Protection racket check, spaced out via protection_roll_phase_.
+  protection_roll_phase_ = (protection_roll_phase_ + 1) % 4;
+  if (protection_roll_phase_ == 0) {
+    if (auto offer = roll_protection_racket()) {
+      push_protection_racket_offer(*offer);
     }
   }
+}
+
+std::optional<GameState::RacketOffer> GameState::roll_protection_racket() {
+  auto* player = active_player();
+  auto* city = active_city();
+  if (!player || !city) {
+    return std::nullopt;
+  }
+  if (city->actors(ActorType::MAFIA).empty()) {
+    return std::nullopt;
+  }
+
+  if (player->social_status().underworld_score() >= 500) {
+    return std::nullopt;
+  }
+
+  std::vector<Restaurant*> candidates;
+  for (auto* restaurant : restaurants_for(player->id())) {
+    if (restaurant->property().city().id() == city->id()) {
+      candidates.push_back(restaurant);
+    }
+  }
+  if (candidates.empty()) {
+    return std::nullopt;
+  }
+
+  if (!engine::random::rand_percentage_chance(2)) {
+    return std::nullopt;
+  }
+
+  // The 2% roll targets a single random restaurant; if the pick is closed or
+  // its timer hasn't expired, nothing happens this roll.
+  auto* restaurant = candidates[engine::random::rand_max_n(
+      static_cast<int>(candidates.size()))];
+  if (!restaurant->wants_open()) {
+    return std::nullopt;
+  }
+  auto timer = restaurant->protection_timer();
+  if (timer.has_value() && *timer > 1) {
+    return std::nullopt;
+  }
+
+  bool first = !restaurant->protection_contacted();
+  // Set timer now to prevent re-triggering while the offer is pending
+  // delivery. The conversation will overwrite this with the real cooldown
+  // value when it resolves.
+  restaurant->protection_timer(30);
+  restaurant->protection_contacted(true);
+  return RacketOffer{.restaurant_id = restaurant->id(), .first_contact = first};
+}
+
+void GameState::push_protection_racket_offer(const RacketOffer& offer) {
+  auto* city = active_city();
+  if (!city || !restaurant(offer.restaurant_id)) {
+    return;
+  }
+  auto mafia_actors = city->actors(ActorType::MAFIA);
+  if (mafia_actors.empty()) {
+    return;
+  }
+  ui_.push<MafiaState>(MafiaState{.id = mafia_actors[0]->id(),
+                                  .mode = MafiaMode::ProtectionRacketOffer,
+                                  .restaurant_id = offer.restaurant_id,
+                                  .first_contact = offer.first_contact});
 }
 
 void GameState::active_player(core::PlayerId player_id) {

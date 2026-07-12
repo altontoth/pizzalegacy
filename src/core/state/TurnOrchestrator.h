@@ -77,6 +77,14 @@ public:
     std::string message;
   };
 
+  // Protection racket offers rolled during the day-end flush, delivered on
+  // the owning player's next turn.
+  struct DeferredRacketOffer {
+    core::PlayerId player_id;
+    core::RestaurantId restaurant_id;
+    bool first_contact;
+  };
+
   void queue_manager_alert(core::RestaurantId rid, std::string message);
   void queue_mayor_award(const MayorAwardEvent& ev);
 
@@ -101,6 +109,12 @@ public:
   }
   const std::vector<MayorAwardEvent>& deferred_mayor_awards() const {
     return deferred_mayor_awards_;
+  }
+  const std::vector<DeferredRacketOffer>& deferred_racket_offers() const {
+    return deferred_racket_offers_;
+  }
+  void restore_deferred_racket_offer(const DeferredRacketOffer& offer) {
+    deferred_racket_offers_.push_back(offer);
   }
 
 private:
@@ -157,6 +171,8 @@ private:
   bool showing_deferred_staff_event_{false};
 
   std::vector<DeferredManagerAlert> deferred_manager_alerts_;
+
+  std::vector<DeferredRacketOffer> deferred_racket_offers_;
 
   std::vector<DeferredInspectionEvent> deferred_mayor_inspections_;
   bool showing_deferred_inspection_{false};

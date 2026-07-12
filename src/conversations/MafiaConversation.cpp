@@ -95,16 +95,14 @@ MafiaConversation::MafiaConversation(
     if (!restaurant) {
       fatal("Expect restaurant and property");
     }
-    auto& property = restaurant->property();
-    int crime_stats = property.district().crime_statistics();
-
     // first_contact is passed from the caller since the protection_timer
     // is set before the conversation starts to prevent re-triggering.
     auto player_cash = player->cash_balance();
-    auto base_money = std::min(player_cash, 5000_usd);
-    double multiplier = std::min(
-        static_cast<double>(base_money) / static_cast<double>(5000_usd), 6.0);
-    int base = rand_max_n(crime_stats + 60) + 1500 - uw_score;
+    // Wealth multiplier: $5K or less pays base price, scaling up to 6x.
+    double multiplier = std::clamp(static_cast<double>(player_cash) /
+                                       static_cast<double>(5000_usd),
+                                   1.0, 6.0);
+    int base = (rand_max_n(300) + 1500 - uw_score) * (clan_danger_ + 60) / 100;
     int amount = static_cast<int>(base * multiplier);
     amount = amount * (difficulty + 1) / 2;
     if (first_contact) {

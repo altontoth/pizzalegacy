@@ -104,7 +104,9 @@ Examples:
         }
 
         auto rid = restaurant->id();
-        bool first = !restaurant->protection_timer().has_value();
+        bool first = !restaurant->protection_contacted();
+        restaurant->protection_timer(30);
+        restaurant->protection_contacted(true);
         ctx.state.ui().push<MafiaState>(
             MafiaState{.id = mafia_id,
                        .mode = MafiaMode::ProtectionRacketOffer,
@@ -246,9 +248,10 @@ Example:
         for (auto* r : restaurants) {
           auto t = r->protection_timer();
           std::string timer_str =
-              t.has_value() ? compat::format("{}", *t) : "never";
+              t.has_value() ? compat::format("{}", *t) : "expired";
           result.add_message(compat::format(
-              "Restaurant {}: protection_timer={}", r->id().value, timer_str));
+              "Restaurant {}: protection_timer={} (1=eligible) contacted={}",
+              r->id().value, timer_str, r->protection_contacted()));
         }
 
         return result;

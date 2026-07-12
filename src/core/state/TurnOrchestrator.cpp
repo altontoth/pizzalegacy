@@ -101,6 +101,20 @@ void TurnOrchestrator::end_of_turn() {
     gs_->status().suppress(true);
   }
 
+  // The original's day-end flush loop passes the protection racket roll about
+  // twice, so ending the day early never fully escapes the mafia. A fired
+  // offer is delivered on this player's next turn.
+  if (interactive) {
+    for (int i = 0; i < 2; ++i) {
+      if (auto offer = gs_->roll_protection_racket()) {
+        deferred_racket_offers_.push_back(
+            {.player_id = current_player->id(),
+             .restaurant_id = offer->restaurant_id,
+             .first_contact = offer->first_contact});
+      }
+    }
+  }
+
   // Player end of day accounting
   current_player->end_of_day(*gs_);
 
@@ -392,6 +406,22 @@ void TurnOrchestrator::fire_due_events() {
   if (!processing_end_of_turn_ && !prevent_auto_end_of_turn_ &&
       !deferred_manager_alerts_.empty() && time.is_past_time(9, 0)) {
     show_next_deferred_manager_alert();
+  }
+
+  // Deliver protection racket offers rolled during this player's day-end
+  // flush.
+  if (!processing_end_of_turn_ && !prevent_auto_end_of_turn_ &&
+      !deferred_racket_offers_.empty()) {
+    auto it = std::ranges::find_if(
+        deferred_racket_offers_, [&](const DeferredRacketOffer& d) {
+          return d.player_id == gs_->active_player()->id();
+        });
+    if (it != deferred_racket_offers_.end()) {
+      GameState::RacketOffer offer{.restaurant_id = it->restaurant_id,
+                                   .first_contact = it->first_contact};
+      deferred_racket_offers_.erase(it);
+      gs_->push_protection_racket_offer(offer);
+    }
   }
 
   // Fire deferred staff event dialogs at 10:00 the next day.
