@@ -34,32 +34,26 @@ constexpr int TRACK_WIDTH = 132;
 constexpr int TRACK_THICKNESS = 6;
 constexpr int HANDLE_RADIUS = 8;
 constexpr int ROW_HEIGHT = (2 * HANDLE_RADIUS) + 2;
-// Gap between the track's right end and the percentage.
-constexpr int PCT_GAP = 10;
-// Row-local x where the percentage text starts.
-constexpr int PCT_LOCAL_X =
-    TRACK_LOCAL_X + TRACK_WIDTH + HANDLE_RADIUS + PCT_GAP;
+// Gap between the track's right end and the value text.
+constexpr int VALUE_GAP = 10;
+// Row-local x where the value text starts.
+constexpr int VALUE_LOCAL_X =
+    TRACK_LOCAL_X + TRACK_WIDTH + HANDLE_RADIUS + VALUE_GAP;
+} // anonymous namespace
 
-int percent_of(float value) {
-  return static_cast<int>(std::lround(std::clamp(value, 0.0f, 1.0f) * 100));
-}
-} // namespace
+SliderMenuItemBase::SliderMenuItemBase(GameContext& context,
+                                       const std::string& text,
+                                       FontFace font_face)
+    : MenuItem(context, font_face, text) {}
 
-SliderMenuItem::SliderMenuItem(GameContext& context, const std::string& text,
-                               float& value,
-                               std::function<void(float)> on_change,
-                               FontFace font_face)
-    : MenuItem(context, font_face, text), value_(value),
-      on_change_(std::move(on_change)) {}
-
-void SliderMenuItem::draw(Surface& screen, ViewPoint p, bool is_selected) {
+void SliderMenuItemBase::draw(Surface& screen, ViewPoint p, bool is_selected) {
   context_.font->render_text_onto(screen, text_, p, font_face_, COLOR_LABEL,
                                   AlignX::Left);
 
   const int track_x = p.x + TRACK_LOCAL_X;
   const int cy = p.y + (ROW_HEIGHT / 2);
   const int track_y = cy - (TRACK_THICKNESS / 2);
-  const float frac = std::clamp(value_, 0.0f, 1.0f);
+  const float frac = std::clamp(fraction(), 0.0f, 1.0f);
   const int handle_x =
       track_x + static_cast<int>(std::lround(frac * TRACK_WIDTH));
 
@@ -84,51 +78,42 @@ void SliderMenuItem::draw(Surface& screen, ViewPoint p, bool is_selected) {
   gfx::draw::fill_circle(screen, center, HANDLE_RADIUS, COLOR_HANDLE_RING);
   gfx::draw::fill_circle(screen, center, HANDLE_RADIUS - 2, handle_color);
 
-  const std::string pct = compat::format("({}%)", percent_of(value_));
-  context_.font->render_text_onto(screen, pct,
-                                  ViewPoint{p.x + PCT_LOCAL_X, p.y}, font_face_,
-                                  COLOR_LABEL, AlignX::Left);
+  context_.font->render_text_onto(screen, value_text(),
+                                  ViewPoint{p.x + VALUE_LOCAL_X, p.y},
+                                  font_face_, COLOR_LABEL, AlignX::Left);
 }
 
-Size SliderMenuItem::measure() const {
+Size SliderMenuItemBase::measure() const {
   RenderedTextMetrics label = context_.font->size_text(text_, font_face_);
-  // Reserve room for the widest value so the row width stays stable.
-  RenderedTextMetrics pct = context_.font->size_text("(100%)", font_face_);
-  return Size{PCT_LOCAL_X + pct.width, std::max(label.height, ROW_HEIGHT)};
+  RenderedTextMetrics value =
+      context_.font->size_text(widest_value_text(), font_face_);
+  return Size{VALUE_LOCAL_X + value.width, std::max(label.height, ROW_HEIGHT)};
 }
 
-void SliderMenuItem::handle_action() {}
+void SliderMenuItemBase::handle_action() {}
 
-bool SliderMenuItem::on_adjust(AdjustAxis axis, int delta) {
+bool SliderMenuItemBase::on_adjust(AdjustAxis axis, int delta) {
   if (axis != AdjustAxis::Horizontal) {
     return false;
   }
-  constexpr float KEY_STEP = 0.05f;
-  value_ =
-      std::clamp(value_ + (static_cast<float>(delta) * KEY_STEP), 0.0f, 1.0f);
-  if (on_change_) {
-    on_change_(value_);
-  }
+  step(delta);
   return true;
 }
 
-bool SliderMenuItem::point_on_track(int local_x) {
+bool SliderMenuItemBase::point_on_track(int local_x) {
   // Pad by the handle radius so the disc stays grabbable even when at min or
   // max position.
   return local_x >= TRACK_LOCAL_X - HANDLE_RADIUS &&
          local_x <= TRACK_LOCAL_X + TRACK_WIDTH + HANDLE_RADIUS;
 }
 
-void SliderMenuItem::seek_to(int local_x) {
+void SliderMenuItemBase::seek_to(int local_x) {
   const float frac = std::clamp(
       static_cast<float>(local_x - TRACK_LOCAL_X) / TRACK_WIDTH, 0.0f, 1.0f);
-  value_ = frac;
-  if (on_change_) {
-    on_change_(frac);
-  }
+  set_fraction(frac);
 }
 
-bool SliderMenuItem::on_interaction(views::ui::InteractionEvent ie) {
+bool SliderMenuItemBase::on_interaction(views::ui::InteractionEvent ie) {
   using Type = views::ui::InteractionEvent::Type;
   // Menu::update_interactions rewrites ie.pos to be local to the row rect,
   // whose origin is the row origin the track is drawn relative to.
@@ -168,3 +153,35 @@ bool SliderMenuItem::on_interaction(views::ui::InteractionEvent ie) {
     return false;
   }
 }
+
+SliderMenuItem::SliderMenuItem(GameContext& context, const std::string& text,
+                               float& value,
+                               std::function<void(float)> on_change,
+                               FontFace font_face)
+    : SliderMenuItemBase(context, text, font_face), value_(value),
+      on_change_(std::move(on_change)) {}
+
+float SliderMenuItem::fraction() const {
+  return std::clamp(value_, 0.0f, 1.0f);
+}
+
+void SliderMenuItem::set_fraction(float frac) {
+  value_ = frac;
+  if (on_change_) {
+    on_change_(frac);
+  }
+}
+
+void SliderMenuItem::step(int delta) {
+  constexpr float KEY_STEP = 0.05f;
+  set_fraction(
+      std::clamp(value_ + (static_cast<float>(delta) * KEY_STEP), 0.0f, 1.0f));
+}
+
+std::string SliderMenuItem::value_text() const {
+  const int pct =
+      static_cast<int>(std::lround(std::clamp(value_, 0.0f, 1.0f) * 100));
+  return compat::format("({}%)", pct);
+}
+
+std::string SliderMenuItem::widest_value_text() const { return "(100%)"; }

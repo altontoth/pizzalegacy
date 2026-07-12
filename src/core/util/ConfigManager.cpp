@@ -6,12 +6,14 @@
 
 #include "core/util/ConfigManager.h"
 
+#include <algorithm>
 #include <charconv>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <tinyfiledialogs/tinyfiledialogs.h>
 #include <vector>
+#include "core/state/GameOptions.h"
 #include "core/state/GameState.h"
 #include "engine/Fatal.h"
 #include "resources/util/FileUtils.h"
@@ -203,6 +205,22 @@ void ConfigManager::save_options(const GameOptions& opts) {
 
   config_["render_fps"] = std::to_string(static_cast<int>(opts.render_fps));
 
+  switch (opts.autosave_frequency) {
+  case AutosaveFrequency::Off:
+    config_["autosave_frequency"] = "off";
+    break;
+  case AutosaveFrequency::Daily:
+    config_["autosave_frequency"] = "daily";
+    break;
+  case AutosaveFrequency::Weekly:
+    config_["autosave_frequency"] = "weekly";
+    break;
+  case AutosaveFrequency::Monthly:
+    config_["autosave_frequency"] = "monthly";
+    break;
+  }
+  config_["autosave_count"] = std::to_string(opts.autosave_count);
+
   config_["active_asset_format"] =
       (opts.asset_format == platform::AssetFormat::GERMAN) ? "german"
                                                            : "english";
@@ -258,6 +276,34 @@ GameOptions ConfigManager::load_options() const {
       else if (fps == 120) {
         opts.render_fps = FpsOption::Fps120;
       }
+    }
+  }
+
+  auto freq_it = config_.find("autosave_frequency");
+  if (freq_it != config_.end()) {
+    const std::string& s = freq_it->second;
+    if (s == "off") {
+      opts.autosave_frequency = AutosaveFrequency::Off;
+    }
+    else if (s == "daily") {
+      opts.autosave_frequency = AutosaveFrequency::Daily;
+    }
+    else if (s == "weekly") {
+      opts.autosave_frequency = AutosaveFrequency::Weekly;
+    }
+    else if (s == "monthly") {
+      opts.autosave_frequency = AutosaveFrequency::Monthly;
+    }
+  }
+
+  auto count_it = config_.find("autosave_count");
+  if (count_it != config_.end()) {
+    const std::string& s = count_it->second;
+    int count = 0;
+    auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), count);
+    if (ec == std::errc{}) {
+      opts.autosave_count = std::clamp(count, GameOptions::AUTOSAVE_COUNT_MIN,
+                                       GameOptions::AUTOSAVE_COUNT_MAX);
     }
   }
 

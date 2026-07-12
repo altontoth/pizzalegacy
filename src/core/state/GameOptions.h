@@ -27,7 +27,26 @@ inline std::string to_string(FpsOption fps) {
   return "??";
 }
 
+enum class AutosaveFrequency : int { Off, Daily, Weekly, Monthly };
+
+inline std::string to_string(AutosaveFrequency freq) {
+  switch (freq) {
+  case AutosaveFrequency::Off:
+    return "Off";
+  case AutosaveFrequency::Daily:
+    return "Daily";
+  case AutosaveFrequency::Weekly:
+    return "Weekly";
+  case AutosaveFrequency::Monthly:
+    return "Monthly";
+  }
+  return "??";
+}
+
 struct GameOptions {
+  static constexpr int AUTOSAVE_COUNT_MIN = 1;
+  static constexpr int AUTOSAVE_COUNT_MAX = 9;
+
   bool map_fx = true;
   bool restaurant_fx = true;
   bool music = true;
@@ -41,7 +60,9 @@ struct GameOptions {
   // Asset format (English or German DOS)
   platform::AssetFormat asset_format = platform::AssetFormat::ENGLISH;
   ScreenResolution resolution = ScreenResolution::Res_640x400;
-  bool auto_save = true;
+  AutosaveFrequency autosave_frequency = AutosaveFrequency::Daily;
+  // Number of rotating autosave slot files.
+  int autosave_count = 3;
   bool rmb_drag_inverted = false;
   bool scroll_zoom_inverted = false;
   bool software_cursor = true;

@@ -5,11 +5,13 @@
  */
 
 #include "views/screens/menus/MenuOptions.h"
+#include "core/state/GameOptions.h"
 #include "core/state/GameState.h"
 #include "core/util/ConfigManager.h"
 #include "engine/DisplayConstants.h"
 #include "engine/audio/AudioManager.h"
 #include "views/ui/widgets/EnumMenuItem.h"
+#include "views/ui/widgets/IntSliderMenuItem.h"
 #include "views/ui/widgets/SliderMenuItem.h"
 #include "views/ui/widgets/SpacerMenuItem.h"
 #include "views/ui/widgets/TextMenuItem.h"
@@ -153,11 +155,15 @@ void MenuOptions::build_gameplay(GameState& state) {
         state.options().qol_improvements = !state.options().qol_improvements;
         mark_dirty();
       }));
-  add_menu_item(std::make_unique<ToggleMenuItem>(
-      context_, "Auto save", state.options().auto_save, [&state, this] {
-        state.options().auto_save = !state.options().auto_save;
-        mark_dirty();
-      }));
+  add_menu_item(std::make_unique<EnumMenuItem<AutosaveFrequency>>(
+      context_, "Auto save", state.options().autosave_frequency,
+      std::vector{AutosaveFrequency::Off, AutosaveFrequency::Daily,
+                  AutosaveFrequency::Weekly, AutosaveFrequency::Monthly},
+      [this] { mark_dirty(); }, face));
+  add_menu_item(std::make_unique<IntSliderMenuItem>(
+      context_, "Auto save slots", state.options().autosave_count,
+      GameOptions::AUTOSAVE_COUNT_MIN, GameOptions::AUTOSAVE_COUNT_MAX,
+      [this](int) { mark_dirty(); }));
 }
 
 void MenuOptions::build_controls(GameState& state) {

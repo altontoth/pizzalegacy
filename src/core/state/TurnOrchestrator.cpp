@@ -24,6 +24,7 @@
 #include "core/restaurant/AIEconomy.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/save/SaveGameManager.h"
+#include "core/state/GameOptions.h"
 #include "core/state/GameState.h"
 #include "core/state/Overloaded.h"
 #include "core/state/TurnPresenter.h"
@@ -619,7 +620,21 @@ void TurnOrchestrator::build_turn_pipeline(
     }
     turn_pipeline_.push_back(turn::FadeTransition{});
     turn_pipeline_.push_back(turn::AdvanceDate{start_time});
-    if (gs_->options().auto_save) {
+    bool autosave_due = false;
+    switch (gs_->options().autosave_frequency) {
+    case AutosaveFrequency::Off:
+      break;
+    case AutosaveFrequency::Daily:
+      autosave_due = true;
+      break;
+    case AutosaveFrequency::Weekly:
+      autosave_due = is_end_of_week;
+      break;
+    case AutosaveFrequency::Monthly:
+      autosave_due = is_end_of_month;
+      break;
+    }
+    if (autosave_due) {
       turn_pipeline_.push_back(turn::Autosave{});
     }
   }

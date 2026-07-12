@@ -15,12 +15,12 @@
 #include "views/ui/widgets/MenuItem.h"
 
 // A menu row with a label on the left and a draggable horizontal slider in the
-// value column. The value is between 0 and 1.
-class SliderMenuItem : public MenuItem {
+// value column. Subclasses can map the track position (float between 0 and 1)
+// to their value type.
+class SliderMenuItemBase : public MenuItem {
 public:
-  SliderMenuItem(GameContext& context, const std::string& text, float& value,
-                 std::function<void(float)> on_change,
-                 FontFace font_face = FontFace::PIZ_NUMB);
+  SliderMenuItemBase(GameContext& context, const std::string& text,
+                     FontFace font_face);
 
   void draw(Surface& screen, ViewPoint p, bool is_selected) override;
   void handle_action() override;
@@ -34,14 +34,42 @@ public:
     return views::ui::MouseButton::Left;
   }
 
+protected:
+  // Current value as a 0..1 track position.
+  virtual float fraction() const = 0;
+  virtual void set_fraction(float frac) = 0;
+  // Keyboard adjust; delta is -1 or +1.
+  virtual void step(int delta) = 0;
+  // Text shown to the right of the track.
+  virtual std::string value_text() const = 0;
+  // Widest possible value text, so we can keep the the row width stable.
+  virtual std::string widest_value_text() const = 0;
+
 private:
   static bool point_on_track(int local_x);
-  // Set value_ from a row-local pointer x, clamped to 0..1.
+  // Set the value from a row-local pointer x, clamped to 0..1.
   void seek_to(int local_x);
 
-  float& value_;
-  std::function<void(float)> on_change_;
   bool dragging_ = false;
   // A press landed on the track and may still turn into a drag.
   bool armed_ = false;
+};
+
+// Continuous slider for a float (between 0 and 1), shown as a percentage.
+class SliderMenuItem : public SliderMenuItemBase {
+public:
+  SliderMenuItem(GameContext& context, const std::string& text, float& value,
+                 std::function<void(float)> on_change,
+                 FontFace font_face = FontFace::PIZ_NUMB);
+
+protected:
+  float fraction() const override;
+  void set_fraction(float frac) override;
+  void step(int delta) override;
+  std::string value_text() const override;
+  std::string widest_value_text() const override;
+
+private:
+  float& value_;
+  std::function<void(float)> on_change_;
 };

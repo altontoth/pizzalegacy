@@ -6,6 +6,7 @@
 
 #include "core/save/SaveGameManager.h"
 
+#include <algorithm>
 #include <array>
 #include <bit>
 #include <ctime>
@@ -32,6 +33,7 @@
 #include "core/save/SaveGameCity.h"
 #include "core/save/SaveGameFood.h"
 #include "core/save/SaveGameRestaurant.h"
+#include "core/state/GameOptions.h"
 #include "core/state/GameState.h"
 #include "core/time/GameTime.h"
 #include "core/util/GameContext.h"
@@ -182,17 +184,15 @@ bool SaveGameManager::save(const GameState& state, const GameContext& context,
 
 namespace {
 
-constexpr int AUTOSAVE_MAX_COUNT = 3;
-
 std::string autosave_slot_filename(int slot) {
   return "AUTOSAV" + std::to_string(slot) + ".plsave";
 }
 
-std::string next_autosave_filename() {
+std::string next_autosave_filename(int slot_count) {
   fs::path saves_dir = SaveGameManager::get_saves_directory();
 
   // Fill slots in order before overwriting any
-  for (int i = 1; i <= AUTOSAVE_MAX_COUNT; ++i) {
+  for (int i = 1; i <= slot_count; ++i) {
     std::error_code ec;
     if (!fs::exists(saves_dir / autosave_slot_filename(i), ec)) {
       return autosave_slot_filename(i);
@@ -202,7 +202,7 @@ std::string next_autosave_filename() {
   // All slots filled; overwrite the one with the oldest mtime
   int oldest_slot = 1;
   fs::file_time_type oldest_time = fs::file_time_type::max();
-  for (int i = 1; i <= AUTOSAVE_MAX_COUNT; ++i) {
+  for (int i = 1; i <= slot_count; ++i) {
     std::error_code ec;
     auto mtime = fs::last_write_time(saves_dir / autosave_slot_filename(i), ec);
     if (!ec && mtime < oldest_time) {
@@ -217,7 +217,10 @@ std::string next_autosave_filename() {
 
 bool SaveGameManager::autosave(const GameState& state,
                                const GameContext& context) {
-  std::string filename = next_autosave_filename();
+  const int slot_count = std::clamp(state.options().autosave_count,
+                                    GameOptions::AUTOSAVE_COUNT_MIN,
+                                    GameOptions::AUTOSAVE_COUNT_MAX);
+  std::string filename = next_autosave_filename(slot_count);
   Logger::info("Autosaving to {}", filename);
   bool ok = save(state, context, filename);
   if (!ok) {

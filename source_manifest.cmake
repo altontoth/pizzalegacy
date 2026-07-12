@@ -225,6 +225,7 @@ set(GAME_PLEGACY_SOURCES
     src/views/ui/widgets/CharacterPhotoBox.cpp
     src/views/ui/widgets/CharacterSelectionBox.cpp
     src/views/ui/widgets/CompanySelectionBox.cpp
+    src/views/ui/widgets/IntSliderMenuItem.cpp
     src/views/ui/widgets/MissionTypeBox.cpp
     src/views/ui/widgets/SaveFileInfoBox.cpp
     src/views/ui/widgets/SaveFileInputBox.cpp
@@ -698,6 +699,7 @@ set(PLEGACY_HEADERS
     src/views/ui/widgets/CompanySelectionBox.h
     src/views/ui/widgets/EnumMenuItem.h
     src/views/ui/widgets/IAddsInteractions.h
+    src/views/ui/widgets/IntSliderMenuItem.h
     src/views/ui/widgets/LabelMenuItem.h
     src/views/ui/widgets/ListCursor.h
     src/views/ui/widgets/MenuItem.h
