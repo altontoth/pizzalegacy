@@ -61,24 +61,18 @@ Restaurant* RealEstate::rent_restaurant(Property& property, Player& player,
   Money price = property.get_monthly_rent();
   GameDate today = gs_->time().current_date();
 
-  // Mark property as rented and create restaurant first
+  if (!free && player.cash_balance() < price) {
+    return nullptr;
+  }
+
   property.rent(player.id());
   auto* restaurant = create_restaurant(player, property);
-
   if (!restaurant) {
     return nullptr;
   }
 
-  // Pay first month's rent (with restaurant_id for proper accounting)
-  // spend_cash is always operational
-  if (!free &&
-      !player.spend_cash(today, Account::Rents, price, restaurant->id())) {
-    // If payment fails, we should probably clean up the restaurant
-    // but for now match original behavior
-    return nullptr;
-  }
-
   if (!free) {
+    player.spend_cash(today, Account::Rents, price, restaurant->id());
     gs_->adjust_social_score(player, 50);
   }
   return restaurant;
