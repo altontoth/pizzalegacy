@@ -643,8 +643,8 @@ Surface PlayerProfile::create_target_cv(const Player* player, int page) {
   auto* font = context_.font;
 
   if (!state_.is_mission_active()) {
-    font->render_text_onto(cv, "Target curriculum vitae in mission mode only",
-                           {192, 160}, FontFace::PIZ_NUMB, text_color,
+    font->render_text_onto(cv, "Target curriculum vitae|in mission mode only",
+                           {192, 60}, FontFace::ASTANDAR, text_color,
                            AlignX::CenterPoint);
     return cv;
   }
@@ -653,8 +653,6 @@ Surface PlayerProfile::create_target_cv(const Player* player, int page) {
                          FontFace::PIZ_NUMB, text_color, AlignX::CenterPoint);
 
   const auto& target = *state_.mission_target();
-  font->render_text_onto(cv, target.source_name, {192, 48}, FontFace::PIZ_NUMB,
-                         text_color, AlignX::CenterPoint);
 
   // How closely each target milestone has been matched so far (by event,
   // scored on date closeness; 0% until the event is achieved).
@@ -663,7 +661,7 @@ Surface PlayerProfile::create_target_cv(const Player* player, int page) {
 
   constexpr int date_x = 72;
   constexpr int text_x = 160;
-  constexpr int percent_x = 356;
+  constexpr int percent_x = 132;
   int y = 80;
   constexpr int row_height = 40;
 
@@ -679,7 +677,8 @@ Surface PlayerProfile::create_target_cv(const Player* player, int page) {
     font->render_text_onto(
         cv, state_.message_manager().get_cv_text(milestone.message_id),
         {text_x, y}, FontFace::PIZ_NUMB, text_color);
-    font->render_line_onto(cv, compat::format("{}%", scores[i]), {percent_x, y},
+    font->render_line_onto(cv, compat::format("{}%", scores[i]),
+                           {percent_x, y + (row_height / 2)},
                            FontFace::PIZ_NUMB, text_color, AlignX::RightEdge);
     y += row_height;
   }
