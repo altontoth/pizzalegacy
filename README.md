@@ -43,6 +43,11 @@ Settings, key bindings, saved games, and screenshots are stored per user:
 - **macOS:** `~/Library/Application Support/nl.pizzalegacy/Pizza Legacy/`
 - **Linux:** `~/.local/share/nl.pizzalegacy/Pizza Legacy/`
 
+This directory contains subdirectories for `saves/` (saved games),
+`screenshots/` (in-game screenshots), and `recipes/` (pizza recipe `.pc`
+files). In the pizza design screen, `F1` imports a recipe from `recipes/` and
+`F2` exports the current pizza to it.
+
 Game settings (resolution, volume, autosaves, optional bug fixes, and more)
 are changed from the in-game options screen. Keyboard and gamepad bindings can
 be customized by editing `bindings.conf` in the directory above; the file is

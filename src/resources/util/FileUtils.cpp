@@ -13,11 +13,12 @@
 #include <fstream>
 #include <iostream>
 #include <sys/stat.h>
+#include <utility>
 #include "core/save/SaveGameManager.h"
 #include "engine/Fatal.h"
 #include "engine/Logger.h"
 #include "engine/Random.h"
-#if PLEGACY_CASE_INSENSITIVE_FS
+#if PLEGACY_EMULATE_CASE_INSENSITIVE_FS
 #include <string.h>
 #endif
 #if defined(_WIN32)
@@ -88,11 +89,14 @@ find_file_path(const std::string& file_path) {
     return without_extension;
   }
 
-#if PLEGACY_CASE_INSENSITIVE_FS
-  auto fallback = case_insensitive_lookup(
-      fs::path(game_data_path_), input_path.is_absolute()
-                                     ? input_path.lexically_relative("/")
-                                     : input_path);
+#if PLEGACY_EMULATE_CASE_INSENSITIVE_FS
+  // Absolute paths are searched from their filesystem root; relative paths
+  // are searched from the game data directory.
+  const auto [walk_base, relative] =
+      input_path.is_absolute()
+          ? std::pair{input_path.root_path(), input_path.relative_path()}
+          : std::pair{fs::path(game_data_path_), input_path};
+  auto fallback = case_insensitive_lookup(walk_base, relative);
   if (fallback && fs::exists(*fallback)) {
     return *fallback;
   }

@@ -118,8 +118,8 @@ void PizzaDesign::load_user_recipe(int number) {
 
   // Check if file exists first
   if (!fileutils::fexists(filename)) {
-    context_.popup->create<ConfirmPopup>("Pizza r'" + std::to_string(number) +
-                                             "' not found! Try again?",
+    context_.popup->create<ConfirmPopup>("Pizza r" + std::to_string(number) +
+                                             ".pc not found! Try again?",
                                          [this, number](bool retry) {
                                            if (retry) {
                                              load_user_recipe(number);

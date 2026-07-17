@@ -178,21 +178,21 @@ message(STATUS "zlib: found")
 # ---------------------------------------------------------
 # Case sensitivy options
 # -----------------------------------------------------
-set(PLEGACY_CASE_INSENSITIVE_FS "" CACHE STRING "Enable case-insensitive fallback when opening files (ON, OFF, or empty for auto)")
+set(PLEGACY_EMULATE_CASE_INSENSITIVE_FS "" CACHE STRING "Enable case-insensitive fallback when opening files (ON, OFF, or empty for auto)")
 
-if(PLEGACY_CASE_INSENSITIVE_FS STREQUAL "")
+if(PLEGACY_EMULATE_CASE_INSENSITIVE_FS STREQUAL "")
   if(CMAKE_SYSTEM_NAME STREQUAL "Windows" OR CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     message(STATUS "Case insensitivity disabled")
-    set(_PLEGACY_CASE_INSENSITIVE_FS OFF)
+    set(_PLEGACY_EMULATE_CASE_INSENSITIVE_FS OFF)
   else()
     message(STATUS "Case insensitivity enabled")
-    set(_PLEGACY_CASE_INSENSITIVE_FS ON)
+    set(_PLEGACY_EMULATE_CASE_INSENSITIVE_FS ON)
   endif()
 else()
-  set(_PLEGACY_CASE_INSENSITIVE_FS ${PLEGACY_CASE_INSENSITIVE_FS})
+  set(_PLEGACY_EMULATE_CASE_INSENSITIVE_FS ${PLEGACY_EMULATE_CASE_INSENSITIVE_FS})
 endif()
 
-add_compile_definitions(PLEGACY_CASE_INSENSITIVE_FS=$<BOOL:${_PLEGACY_CASE_INSENSITIVE_FS}>)
+add_compile_definitions(PLEGACY_EMULATE_CASE_INSENSITIVE_FS=$<BOOL:${_PLEGACY_EMULATE_CASE_INSENSITIVE_FS}>)
 
 
 #  Source file lists taken from include file
