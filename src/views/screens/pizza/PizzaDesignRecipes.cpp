@@ -147,7 +147,7 @@ void PizzaDesign::load_user_recipe(int number) {
   auto* player = state_.active_player();
   auto& recipes = player->recipes();
 
-  const std::string& new_name = pizza->name();
+  const std::string new_name = pizza->name();
   bool already_exists = std::any_of(recipes.user.begin(), recipes.user.end(),
                                     [&](const core::food::Recipe& r) {
                                       return r.display_name() == new_name;
@@ -210,7 +210,8 @@ void PizzaDesign::load_canonical_recipe(int number) {
   }
   else {
     // Competition recipes (14+) are treated as user recipes
-    auto id = recipes.create_user(pizza->name(), std::move(*pizza));
+    std::string name = pizza->name();
+    auto id = recipes.create_user(std::move(name), std::move(*pizza));
     Logger::info("Loaded recipe from {} into user slot {}", filename, id.value);
   }
 
