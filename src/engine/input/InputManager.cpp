@@ -339,6 +339,27 @@ void InputManager::press_actions(const std::vector<Action>& actions) {
     }
   }
 
+  // In text mode, some keys are intentionally bound to multiple actions
+  // (e.g. Enter => SubmitInput and ConfirmYes). Ensure text-edit actions are
+  // dispatched first so they are not starved by blocked actions.
+  if (text_active_ && newly_down.size() > 1) {
+    auto route_priority = [this](Action a) {
+      switch (route_in_text_mode(a)) {
+      case TextRoute::ToSinkExlusive:
+        return 0;
+      case TextRoute::Normal:
+        return 1;
+      case TextRoute::Block:
+      default:
+        return 2;
+      }
+    };
+    std::stable_sort(newly_down.begin(), newly_down.end(),
+                     [&](Action lhs, Action rhs) {
+                       return route_priority(lhs) < route_priority(rhs);
+                     });
+  }
+
   for (Action a : newly_down) {
     const bool was_text_active = text_active_;
     ActionEvent ev{
