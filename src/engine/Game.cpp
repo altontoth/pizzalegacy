@@ -635,7 +635,8 @@ bool Game::init(int display_height, ConfigManager& config_manager) {
       *tooltip_manager_, display_height);
   input_manager_ = std::make_unique<input::InputManager>();
   input::configure_default_bindings(*input_manager_);
-  input::write_bindings_template(platform_paths::bindings_file_path());
+  input::write_bindings_template(*input_manager_,
+                                 platform_paths::bindings_file_path());
   input::apply_bindings_file(*input_manager_,
                              platform_paths::bindings_file_path());
 

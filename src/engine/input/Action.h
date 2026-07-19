@@ -68,7 +68,6 @@ enum class Action {
   ChangeItem,
   ChangeItem2,
   HideItem,
-  LockItem,
 
   LoadRecipe,
   SaveRecipe,

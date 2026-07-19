@@ -479,10 +479,34 @@ void InputManager::debug_dump_state(std::ostream& os) const {
 
 void InputManager::bind_button(Binding chord, Action a) {
   button_bindings_.emplace_back(chord, a);
+  document_action(a);
 }
 
 void InputManager::bind_gamepad_button(GamepadButton b, Action a) {
   gamepad_button_bindings_.emplace_back(b, a);
+  document_action(a);
+}
+
+void InputManager::bind_fixed(Binding chord, Action a) {
+  button_bindings_.emplace_back(chord, a);
+  fixed_actions_.insert(a);
+}
+
+bool InputManager::is_fixed(Action a) const {
+  return fixed_actions_.contains(a);
+}
+
+void InputManager::declare_unbound(Action a) { document_action(a); }
+
+void InputManager::begin_section(std::string label) {
+  doc_sections_.push_back(
+      BindingDocSection{documented_actions_.size(), std::move(label)});
+}
+
+void InputManager::document_action(Action a) {
+  if (std::ranges::find(documented_actions_, a) == documented_actions_.end()) {
+    documented_actions_.push_back(a);
+  }
 }
 
 void InputManager::remove_bindings(Action a) {
@@ -495,6 +519,9 @@ void InputManager::remove_bindings(Action a) {
 void InputManager::clear_bindings() {
   button_bindings_.clear();
   gamepad_button_bindings_.clear();
+  documented_actions_.clear();
+  doc_sections_.clear();
+  fixed_actions_.clear();
 }
 
 } // namespace input

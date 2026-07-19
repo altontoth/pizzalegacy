@@ -42,6 +42,8 @@ std::string lower(std::string_view sv) {
 }
 
 constexpr std::string_view pad_prefix = "pad.";
+// Gamepad prefix as written back out to the bindings template.
+constexpr std::string_view pad_prefix_out = "Pad.";
 
 void bind_token(InputManager& in, Action action, std::string_view token,
                 const std::string& path, int line_no) {
@@ -99,6 +101,12 @@ void apply_bindings_file(InputManager& in, const std::string& path) {
       continue;
     }
 
+    if (in.is_fixed(*action)) {
+      Logger::warn("{}:{}: '{}' cannot be reassigned", path, line_no,
+                   action_name);
+      continue;
+    }
+
     in.remove_bindings(*action);
 
     std::string_view rest = trim(stripped.substr(eq + 1));
@@ -114,7 +122,34 @@ void apply_bindings_file(InputManager& in, const std::string& path) {
   }
 }
 
-void write_bindings_template(const std::string& path) {
+namespace { // anonymous
+
+std::string bindings_for(const InputManager& in, Action a) {
+  std::string joined;
+  auto append = [&joined](std::string_view token) {
+    if (!joined.empty()) {
+      joined += ',';
+    }
+    joined += token;
+  };
+
+  for (const auto& [chord, action] : in.button_bindings()) {
+    if (action == a) {
+      append(chord_to_string(chord));
+    }
+  }
+  for (const auto& [button, action] : in.gamepad_button_bindings()) {
+    if (action == a) {
+      append(std::string(pad_prefix_out) +
+             std::string(gamepad_button_to_string(button)));
+    }
+  }
+  return joined;
+}
+
+} // namespace
+
+void write_bindings_template(const InputManager& in, const std::string& path) {
   if (std::filesystem::exists(path)) {
     return;
   }
@@ -141,45 +176,23 @@ void write_bindings_template(const std::string& path) {
 # Names are case-insensitive. Lines starting with # are comments.
 # Delete this file to restore it with all defaults.
 #
-# The defaults:
-#
-#ToggleFullscreen=Ctrl+F
-#TakeScreenshot=Ctrl+S
-#TogglePause=Ctrl+P
-#ToggleConsole=Backtick
-#Exit=Escape
-#PageUp=PageUp
-#PageDown=PageDown
-#
-# Player movement and menu navigation:
-#MoveLeft=Left,Pad.DpadLeft
-#MoveRight=Right,Pad.DpadRight
-#MoveUp=Up,Pad.DpadUp
-#MoveDown=Down,Pad.DpadDown
-#Fire=Space
-#
-# Map scrolling:
-#ScrollLeft=Left
-#ScrollRight=Right
-#ScrollUp=Up
-#ScrollDown=Down
-#
-# Second player (defender in the showdown):
-#P2_MoveLeft=A,Pad.LeftStickLeft
-#P2_MoveRight=D,Pad.LeftStickRight
-#P2_MoveUp=W,Pad.LeftStickUp
-#P2_MoveDown=S,Pad.LeftStickDown
-#P2_Fire=LCtrl,Pad.A
-#
-#NextRestaurant=Tab
-#PreviousRestaurant=Shift+Tab
-#ToggleRestaurantView=Space
-#
-#ConfirmYes=Y,Enter
-#ConfirmNo=N
-#NextMenuItem=Tab
-#PrevMenuItem=Shift+Tab
+# Everything below is this build's defaults. An action listed with no value
+# has no default binding; give it a chord to enable it.
 )";
+
+  const auto& actions = in.documented_actions();
+  const auto& sections = in.doc_sections();
+  std::size_t next_section = 0;
+
+  for (std::size_t i = 0; i < actions.size(); ++i) {
+    while (next_section < sections.size() &&
+           sections[next_section].first_action == i) {
+      file << "#\n# " << sections[next_section].label << ":\n";
+      ++next_section;
+    }
+    file << '#' << magic_enum::enum_name(actions[i]) << '='
+         << bindings_for(in, actions[i]) << '\n';
+  }
 }
 
 } // namespace input

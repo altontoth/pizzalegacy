@@ -25,25 +25,26 @@ static inline Binding chord(std::string_view s) {
 void configure_default_bindings(InputManager& in) {
   in.clear_bindings();
 
-  // Global/UI
-  in.bind_button(chord("Backtick"), Action::ToggleConsole);
-  in.bind_button(chord("Ctrl+D"), Action::ToggleDebug);
+  in.begin_section("Global");
   in.bind_button(chord("Ctrl+S"), Action::TakeScreenshot);
   in.bind_button(chord("Ctrl+F"), Action::ToggleFullscreen);
+  in.bind_button(chord("Ctrl+P"), Action::TogglePause);
 
   // This is automatically bound to CancelInput in text input mode:
   in.bind_button(chord("Escape"), Action::Exit);
-  // Text input controls (work inside text mode)
-  in.bind_button(chord("Enter"), Action::SubmitInput);
-  in.bind_button(chord("Backspace"), Action::Backspace);
+
+  in.bind_fixed(chord("Enter"), Action::SubmitInput);
+  in.bind_fixed(chord("Backspace"), Action::Backspace);
+
+  in.begin_section("Text input");
   in.bind_button(chord("Ctrl+U"), Action::EraseLine);
 
-  in.bind_button(chord("Ctrl+P"), Action::TogglePause);
-
-  // Menu / list navigation
+  in.begin_section("Menu and list navigation");
   in.bind_button(chord("PageUp"), Action::PageUp);
   in.bind_button(chord("PageDown"), Action::PageDown);
 
+  in.begin_section("Restaurant attack");
+  in.bind_button(chord("Space"), Action::Fire);
   in.bind_button(chord("Left"), Action::MoveLeft);
   in.bind_button(chord("Right"), Action::MoveRight);
   in.bind_button(chord("Up"), Action::MoveUp);
@@ -53,6 +54,7 @@ void configure_default_bindings(InputManager& in) {
   in.bind_gamepad_button(GamepadButton::DpadUp, Action::MoveUp);
   in.bind_gamepad_button(GamepadButton::DpadDown, Action::MoveDown);
 
+  in.begin_section("Second player (defend against attacks)");
   in.bind_button(chord("A"), Action::P2_MoveLeft);
   in.bind_button(chord("D"), Action::P2_MoveRight);
   in.bind_button(chord("W"), Action::P2_MoveUp);
@@ -64,44 +66,46 @@ void configure_default_bindings(InputManager& in) {
   in.bind_gamepad_button(GamepadButton::LeftStickDown, Action::P2_MoveDown);
   in.bind_gamepad_button(GamepadButton::A, Action::P2_Fire);
 
+  in.begin_section("Map scrolling");
   in.bind_button(chord("Left"), Action::ScrollLeft);
   in.bind_button(chord("Right"), Action::ScrollRight);
   in.bind_button(chord("Up"), Action::ScrollUp);
   in.bind_button(chord("Down"), Action::ScrollDown);
 
-  in.bind_button(chord("Space"), Action::Fire);
-
-  // Debug tooling:
-  in.bind_button(chord("Left"), Action::CycleBackward);
-  in.bind_button(chord("Right"), Action::CycleForward);
-  in.bind_button(chord("Up"), Action::CycleUp);
-  in.bind_button(chord("Down"), Action::CycleDown);
-  in.bind_button(chord("Ctrl+N"), Action::ToggleExtraInfo);
-  in.bind_button(chord("W"), Action::MoveItemUp);
-  in.bind_button(chord("A"), Action::MoveItemLeft);
-  in.bind_button(chord("S"), Action::MoveItemDown);
-  in.bind_button(chord("D"), Action::MoveItemRight);
-  in.bind_button(chord("E"), Action::ChangeItem);
-  in.bind_button(chord("T"), Action::ChangeItem2);
-  in.bind_button(chord("Ctrl+L"), Action::LockItem);
-  in.bind_button(chord("Ctrl+H"), Action::HideItem);
-
+  in.begin_section("Recipes");
   in.bind_button(chord("F1"), Action::LoadRecipe);
   in.bind_button(chord("F2"), Action::SaveRecipe);
-  in.bind_button(chord("F3"), Action::LoadCanonicalRecipe);
 
+  in.begin_section("Restaurant view");
   in.bind_button(chord("Tab"), Action::NextRestaurant);
   in.bind_button(chord("Shift+Tab"), Action::PreviousRestaurant);
   in.bind_button(chord("Space"), Action::ToggleRestaurantView);
 
-  // Confirm popup
+  in.begin_section("Confirm popup");
   in.bind_button(chord("Y"), Action::ConfirmYes);
   in.bind_button(chord("Enter"), Action::ConfirmYes);
   in.bind_button(chord("N"), Action::ConfirmNo);
 
-  // Menu UI
+  in.begin_section("Menu UI");
   in.bind_button(chord("Tab"), Action::NextMenuItem);
   in.bind_button(chord("Shift+Tab"), Action::PrevMenuItem);
+
+  in.begin_section("Debug tooling, no assignment by default");
+  in.declare_unbound(Action::ToggleConsole);
+  in.declare_unbound(Action::ToggleDebug);
+  in.declare_unbound(Action::LoadCanonicalRecipe);
+  in.declare_unbound(Action::CycleBackward);
+  in.declare_unbound(Action::CycleForward);
+  in.declare_unbound(Action::CycleUp);
+  in.declare_unbound(Action::CycleDown);
+  in.declare_unbound(Action::ToggleExtraInfo);
+  in.declare_unbound(Action::MoveItemUp);
+  in.declare_unbound(Action::MoveItemLeft);
+  in.declare_unbound(Action::MoveItemDown);
+  in.declare_unbound(Action::MoveItemRight);
+  in.declare_unbound(Action::ChangeItem);
+  in.declare_unbound(Action::ChangeItem2);
+  in.declare_unbound(Action::HideItem);
 }
 
 } // namespace input
