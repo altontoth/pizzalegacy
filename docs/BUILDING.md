@@ -9,10 +9,14 @@
   11 and below are not supported.
 - SDL3 (>= 3.4.0)
 - zlib (save file compression)
-- [libADLMIDI](https://github.com/Wohlstand/libADLMIDI) for music support
-  (optional); you can install it on your system or download the sources and put
-  them in `third_party/libadlmidi/` and it will be picked up during the build
-  automatically
+- [libADLMIDI](https://github.com/Wohlstand/libADLMIDI) for music support.
+  Music is enabled by default, so the build requires this unless you configure
+  with `-DPLEGACY_ENABLE_MUSIC=OFF`. A system-installed copy is used if one is
+  found; the sources can also be picked up automatically from
+  `third_party/libadlmidi/`. Download the [1.6.1
+  release](https://github.com/Wohlstand/libADLMIDI/releases/tag/v1.6.1)
+  and extract it so that `third_party/libadlmidi/CMakeLists.txt` exists (the
+  archive unpacks to `libADLMIDI-1.6.1/`, so rename it).
 
 Platform-specific setup:
 

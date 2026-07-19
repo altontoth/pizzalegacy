@@ -5,3 +5,5 @@ tags
 
 # === CMake build artifacts ===
 CMakeUserPresets.json
+
+third_party/libadlmidi/
