@@ -92,6 +92,7 @@ constexpr IngredientInfo ingredients[] = {
     {.category = FRUIT, .id = PINEAPPLE, .name = "PINEAPPLE"},
     {.category = FRUIT, .id = KIWI, .name = "KIWI"},
     {.category = FRUIT, .id = STRAWBERRIES, .name = "STRAWBERRIES"},
+    {.category = FRUIT, .id = RASPBERRIES, .name = "RASPBERRIES"},
     {.category = FRUIT, .id = BLACKBERRIES, .name = "BLACKBERRIES"},
     {.category = FRUIT, .id = GOOSEBERRIES, .name = "GOOSEBERRIES"},
     {.category = CHEESE, .id = EGG, .name = "EGG"},
