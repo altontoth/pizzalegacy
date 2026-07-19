@@ -7,6 +7,7 @@
 #include "core/debug/commands/DebugCommands.h"
 
 #include <sstream>
+#include "core/debug/command/CommandRegistry.h"
 #include "core/state/GameState.h"
 #include "core/util/GameContext.h"
 #include "engine/input/InputManager.h"
@@ -66,40 +67,41 @@ Examples:
         }
         return result;
       },
-      .category = "debug"};
+  };
 }
 
 static CommandDef make_debug_dump_players() {
-  return CommandDef{.name = "players",
-                    .description = "Dump all players",
-                    .help_text = R"(Usage: debug dump players
+  return CommandDef{
+      .name = "players",
+      .description = "Dump all players",
+      .help_text = R"(Usage: debug dump players
 
 Dumps information about all players in the game.
 
 Example:
   debug dump players
 )",
-                    .handler = [](const CommandContext& ctx) -> CommandResult {
-                      std::ostringstream ss;
-                      for (auto player : ctx.state.players()) {
-                        ss << *player << "\n";
-                      }
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        std::ostringstream ss;
+        for (auto player : ctx.state.players()) {
+          ss << *player << "\n";
+        }
 
-                      std::string output = ss.str();
-                      std::istringstream stream(output);
-                      std::vector<std::string> lines;
-                      std::string line;
-                      while (std::getline(stream, line)) {
-                        lines.push_back(line);
-                      }
+        std::string output = ss.str();
+        std::istringstream stream(output);
+        std::vector<std::string> lines;
+        std::string line;
+        while (std::getline(stream, line)) {
+          lines.push_back(line);
+        }
 
-                      CommandResult result = CommandResult::success();
-                      for (const auto& l : lines) {
-                        result.add_message(l);
-                      }
-                      return result;
-                    },
-                    .category = "debug"};
+        CommandResult result = CommandResult::success();
+        for (const auto& l : lines) {
+          result.add_message(l);
+        }
+        return result;
+      },
+  };
 }
 
 static CommandDef make_debug_dump_ledger() {
@@ -152,69 +154,71 @@ Examples:
         }
         return result;
       },
-      .category = "debug"};
+  };
 }
 
 static CommandDef make_debug_dump_state() {
-  return CommandDef{.name = "state",
-                    .description = "Dump entire game state",
-                    .help_text = R"(Usage: debug dump state
+  return CommandDef{
+      .name = "state",
+      .description = "Dump entire game state",
+      .help_text = R"(Usage: debug dump state
 
 Dumps the entire game state.
 
 Example:
   debug dump state
 )",
-                    .handler = [](const CommandContext& ctx) -> CommandResult {
-                      std::ostringstream ss;
-                      ss << ctx.state;
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        std::ostringstream ss;
+        ss << ctx.state;
 
-                      std::string output = ss.str();
-                      std::istringstream stream(output);
-                      std::vector<std::string> lines;
-                      std::string line;
-                      while (std::getline(stream, line)) {
-                        lines.push_back(line);
-                      }
+        std::string output = ss.str();
+        std::istringstream stream(output);
+        std::vector<std::string> lines;
+        std::string line;
+        while (std::getline(stream, line)) {
+          lines.push_back(line);
+        }
 
-                      CommandResult result = CommandResult::success();
-                      for (const auto& l : lines) {
-                        result.add_message(l);
-                      }
-                      return result;
-                    },
-                    .category = "debug"};
+        CommandResult result = CommandResult::success();
+        for (const auto& l : lines) {
+          result.add_message(l);
+        }
+        return result;
+      },
+  };
 }
 
 static CommandDef make_debug_dump_layers() {
-  return CommandDef{.name = "layers",
-                    .description = "Dump interaction layers",
-                    .help_text = R"(Usage: debug dump layers
+  return CommandDef{
+      .name = "layers",
+      .description = "Dump interaction layers",
+      .help_text = R"(Usage: debug dump layers
 
 Dumps the current interaction manager layer stack.
 
 Example:
   debug dump layers
 )",
-                    .handler = [](const CommandContext& ctx) -> CommandResult {
-                      std::ostringstream ss;
-                      ctx.context.interaction->dump_layers(ss);
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        std::ostringstream ss;
+        ctx.context.interaction->dump_layers(ss);
 
-                      std::string output = ss.str();
-                      std::istringstream stream(output);
-                      std::vector<std::string> lines;
-                      std::string line;
-                      while (std::getline(stream, line)) {
-                        lines.push_back(line);
-                      }
+        std::string output = ss.str();
+        std::istringstream stream(output);
+        std::vector<std::string> lines;
+        std::string line;
+        while (std::getline(stream, line)) {
+          lines.push_back(line);
+        }
 
-                      CommandResult result = CommandResult::success();
-                      for (const auto& l : lines) {
-                        result.add_message(l);
-                      }
-                      return result;
-                    },
-                    .category = "debug"};
+        CommandResult result = CommandResult::success();
+        for (const auto& l : lines) {
+          result.add_message(l);
+        }
+        return result;
+      },
+  };
 }
 
 static CommandDef make_debug_dump_inventory() {
@@ -267,7 +271,7 @@ Examples:
         }
         return result;
       },
-      .category = "debug"};
+  };
 }
 
 static CommandDef make_debug_dump_input() {
@@ -325,7 +329,7 @@ Examples:
         }
         return result;
       },
-      .category = "debug"};
+  };
 }
 
 static CommandDef make_debug_dump() {
@@ -333,7 +337,6 @@ static CommandDef make_debug_dump() {
       .name = "dump",
       .description = "Dump debugging information",
       .help_text = "Dump various game state for debugging",
-      .category = "debug",
   }
       .add_subcommand(make_debug_dump_player())
       .add_subcommand(make_debug_dump_players())
@@ -342,27 +345,6 @@ static CommandDef make_debug_dump() {
       .add_subcommand(make_debug_dump_layers())
       .add_subcommand(make_debug_dump_inventory())
       .add_subcommand(make_debug_dump_input());
-}
-
-static CommandDef make_debug_test() {
-  return CommandDef{.name = "test",
-                    .description = "Test status message system",
-                    .help_text = R"(Usage: debug test
-
-Posts a test message to the status hub.
-
-Example:
-  debug test
-)",
-                    .handler = [](const CommandContext& ctx) -> CommandResult {
-                      StatusMsg msg;
-                      msg.payload = "test 123";
-                      msg.ttl = std::chrono::milliseconds{2500};
-                      ctx.state.status().post_direct(msg);
-                      return CommandResult::success().add_message(
-                          "Test message posted to status hub");
-                    },
-                    .category = "debug"};
 }
 
 CommandDef make_debug_commands() {
@@ -370,10 +352,8 @@ CommandDef make_debug_commands() {
       .name = "debug",
       .description = "Debug and diagnostic commands",
       .help_text = "Debug utilities for inspecting game state",
-      .category = "debug",
   }
-      .add_subcommand(make_debug_dump())
-      .add_subcommand(make_debug_test());
+      .add_subcommand(make_debug_dump());
 }
 
 CommandDef make_dump_command() {
@@ -381,7 +361,6 @@ CommandDef make_dump_command() {
       .name = "dump",
       .description = "Dump debugging information (alias for 'debug dump')",
       .help_text = "Dump various game state for debugging",
-      .category = "general",
   }
       .add_subcommand(make_debug_dump_player())
       .add_subcommand(make_debug_dump_players())
@@ -392,62 +371,39 @@ CommandDef make_dump_command() {
       .add_subcommand(make_debug_dump_input());
 }
 
-CommandDef make_test_command() {
-  return CommandDef{.name = "test",
-                    .description = "Test status message system",
-                    .help_text = R"(Usage: test
-
-Posts a test message to the status hub.
-
-Example:
-  test
-)",
-                    .handler = [](const CommandContext& ctx) -> CommandResult {
-                      StatusMsg msg;
-                      msg.payload = "test 123";
-                      msg.ttl = std::chrono::milliseconds{2500};
-                      ctx.state.status().post_direct(msg);
-                      return CommandResult::success().add_message(
-                          "Test message posted to status hub");
-                    },
-                    .category = "general"};
-}
-
 CommandDef make_help_command() {
   return CommandDef{
       .name = "help",
       .description = "Show help for commands",
-      .help_text = R"(Usage: help
+      .help_text = R"(Usage: help [command]
 
-Shows help information for available commands.
+Lists every registered command. Name a command for its
+arguments and subcommands, or "all" for the whole tree at once.
 
-Example:
+Examples:
   help
+  help player
+  help all
 )",
-      .handler = [](const CommandContext& /*ctx*/) -> CommandResult {
+      .args =
+          {
+              ArgSpec{
+                  .name = "command",
+                  .type = ArgType::String,
+                  .optional = true,
+                  .description = R"(Command to describe, or "all")",
+              },
+          },
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        const std::string path = ctx.args.empty() ? "" : ctx.string_arg(0);
+
         CommandResult result = CommandResult::success();
-
-        result.add_message("Available commands:");
-        result.add_message("==================");
-        result.add_message("");
-        result.add_message("  player     - Player management commands");
-        result.add_message("  restaurant - Restaurant management commands");
-        result.add_message("  depot      - Depot management commands");
-        result.add_message(
-            "  game       - Game state commands (save/load/exit)");
-        result.add_message("  nav        - Navigation commands");
-        result.add_message("  debug      - Debug and diagnostic commands");
-        result.add_message("  city       - City commands (pizza charts)");
-        result.add_message("  news       - Newspaper and trend system");
-        result.add_message("  dump       - Dump debugging information");
-        result.add_message("  test       - Test status message system");
-        result.add_message("");
-        result.add_message("Type a command name to see its subcommands.");
-        result.add_message("Example: player, dump, restaurant");
-
+        for (const auto& line : ctx.registry.get_help(path)) {
+          result.add_message(line);
+        }
         return result;
       },
-      .category = "general"};
+  };
 }
 
 } // namespace debug::commands

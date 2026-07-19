@@ -114,7 +114,7 @@ Examples:
             compat::format("Gave player {} a depot at tile ({}, {}) in {}",
                            player_id.value, tile_x, tile_y, city->name()));
       },
-      .category = "depot"};
+  };
 }
 
 static CommandDef make_depot_info() {
@@ -171,7 +171,7 @@ Examples:
 
         return CommandResult::success(lines);
       },
-      .category = "depot"};
+  };
 }
 
 static CommandDef make_depot_stock_add() {
@@ -263,7 +263,7 @@ Examples:
             "Added {}g of ingredient {} at quality {} to {}'s depot in {}",
             quantity, ingredient_id, quality, player_id.value, city->name()));
       },
-      .category = "depot"};
+  };
 }
 
 static CommandDef make_depot_stock_fill() {
@@ -349,7 +349,7 @@ Examples:
                            "for player {}'s depot in {}",
                            quantity, quality, player_id.value, city->name()));
       },
-      .category = "depot"};
+  };
 }
 
 static CommandDef make_depot_stock_steal() {
@@ -390,7 +390,7 @@ Examples:
             "depot in {}",
             player_id.value, city->name()));
       },
-      .category = "depot"};
+  };
 }
 
 static CommandDef make_depot_stock_clear() {
@@ -434,7 +434,7 @@ Examples:
                            "depot in {}",
                            player_id.value, city->name()));
       },
-      .category = "depot"};
+  };
 }
 
 static CommandDef make_depot_stock() {
@@ -442,7 +442,6 @@ static CommandDef make_depot_stock() {
       .name = "stock",
       .description = "Manage depot ingredient stocks",
       .help_text = "Subcommands: add, fill, clear",
-      .category = "depot",
   }
       .add_subcommand(make_depot_stock_add())
       .add_subcommand(make_depot_stock_fill())
@@ -456,7 +455,6 @@ CommandDef make_depot_commands() {
       .aliases = {"d", "dep"},
       .description = "Depot management commands",
       .help_text = "Manage depots: give, info, stock",
-      .category = "depot",
   }
       .add_subcommand(make_depot_give())
       .add_subcommand(make_depot_info())

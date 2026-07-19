@@ -32,10 +32,6 @@ public:
   std::optional<std::reference_wrapper<const CommandDef>>
   find_command(const std::string& name) const;
 
-  // Get all commands in a category
-  std::vector<const CommandDef*>
-  get_commands_by_category(const std::string& category) const;
-
   // Get all command names (for completion)
   std::vector<std::string> get_all_command_names() const;
 

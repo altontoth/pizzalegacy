@@ -5,6 +5,11 @@
  */
 
 #include "core/debug/command/CommandRegistry.h"
+
+#include <algorithm>
+#include <string>
+#include <string_view>
+
 #include "CommandContext.h"
 #include "core/debug/command/CommandTokenizer.h"
 #include "core/state/GameState.h"
@@ -12,6 +17,29 @@
 #include "engine/Logger.h"
 
 namespace debug::command {
+
+// Argument to 'help' that dumps every command and subcommand.
+constexpr std::string_view all_keyword = "all";
+
+static void sort_by_name(std::vector<const CommandDef*>& cmds) {
+  std::ranges::sort(cmds, {}, &CommandDef::name);
+}
+
+// "restaurant (r, rest)", or just the name when there are no aliases.
+static std::string label_with_aliases(const CommandDef& cmd) {
+  if (cmd.aliases.empty()) {
+    return cmd.name;
+  }
+
+  std::string joined;
+  for (const auto& alias : cmd.aliases) {
+    if (!joined.empty()) {
+      joined += ", ";
+    }
+    joined += alias;
+  }
+  return compat::format("{} ({})", cmd.name, joined);
+}
 
 void CommandRegistry::register_command(CommandDef cmd) {
   std::string name = cmd.name;
@@ -45,19 +73,6 @@ CommandRegistry::find_command(const std::string& name) const {
   return std::nullopt;
 }
 
-std::vector<const CommandDef*>
-CommandRegistry::get_commands_by_category(const std::string& category) const {
-  std::vector<const CommandDef*> result;
-
-  for (const auto& [name, cmd] : commands_) {
-    if (cmd.category == category) {
-      result.push_back(&cmd);
-    }
-  }
-
-  return result;
-}
-
 std::vector<std::string> CommandRegistry::get_all_command_names() const {
   std::vector<std::string> result;
 
@@ -72,29 +87,39 @@ std::vector<std::string>
 CommandRegistry::get_help(const std::string& command_path) const {
   std::vector<std::string> result;
 
-  if (command_path.empty()) {
-    // General help - list all commands by category
-    result.push_back("Available commands:");
-    result.push_back("");
+  if (command_path.empty() || command_path == all_keyword) {
+    const bool full_tree = (command_path == all_keyword);
 
-    // Group by category
-    std::unordered_map<std::string, std::vector<const CommandDef*>> by_category;
+    std::vector<const CommandDef*> cmds;
+    cmds.reserve(commands_.size());
     for (const auto& [name, cmd] : commands_) {
-      std::string category = cmd.category.empty() ? "general" : cmd.category;
-      by_category[category].push_back(&cmd);
+      cmds.push_back(&cmd);
+    }
+    sort_by_name(cmds);
+
+    std::vector<std::string> labels;
+    labels.reserve(cmds.size());
+    std::size_t width = 0;
+    for (const auto* cmd : cmds) {
+      labels.push_back(label_with_aliases(*cmd));
+      width = std::max(width, labels.back().size());
     }
 
-    // Output each category
-    for (const auto& [category, cmds] : by_category) {
-      result.push_back(compat::format("{}:", category));
-      for (const auto* cmd : cmds) {
-        result.push_back(
-            compat::format("  {} - {}", cmd->name, cmd->description));
+    result.push_back("Available commands:");
+    for (std::size_t i = 0; i < cmds.size(); ++i) {
+      result.push_back(compat::format("  {:<{}}  {}", labels[i], width,
+                                      cmds[i]->description));
+      if (full_tree) {
+        collect_subcommand_help(*cmds[i], "  " + cmds[i]->name, result);
       }
-      result.push_back("");
     }
 
-    result.push_back("Use 'help <command>' for more information");
+    if (!full_tree) {
+      result.push_back(
+          compat::format("Use 'help <command>', or 'help {}' for every "
+                         "subcommand",
+                         all_keyword));
+    }
   }
   else {
     // Specific command help
@@ -107,6 +132,11 @@ CommandRegistry::get_help(const std::string& command_path) const {
     const auto& cmd = cmd_ref->get();
     auto cmd_help = format_command_help(cmd);
     result.insert(result.end(), cmd_help.begin(), cmd_help.end());
+
+    if (!cmd.subcommands.empty()) {
+      result.push_back("Subcommands:");
+      collect_subcommand_help(cmd, cmd.name, result);
+    }
   }
 
   return result;
@@ -148,7 +178,7 @@ CommandResult CommandRegistry::execute(const std::string& line,
 
   // Execute the command handler
   try {
-    CommandContext ctx{state, context, std::move(parsed.args)};
+    CommandContext ctx{state, context, *this, std::move(parsed.args)};
     return parsed.command->handler(ctx);
   }
   catch (const std::exception& e) {
@@ -211,14 +241,22 @@ CommandRegistry::format_command_help(const CommandDef& cmd) const {
 void CommandRegistry::collect_subcommand_help(
     const CommandDef& cmd, const std::string& prefix,
     std::vector<std::string>& output) const {
+  std::vector<const CommandDef*> subs;
+  subs.reserve(cmd.subcommands.size());
   for (const auto& [name, subcmd] : cmd.subcommands) {
-    std::string full_name =
-        prefix.empty() ? name : compat::format("{} {}", prefix, name);
-    output.push_back(compat::format("{} - {}", full_name, subcmd.description));
+    subs.push_back(&subcmd);
+  }
+  sort_by_name(subs);
+
+  for (const auto* subcmd : subs) {
+    std::string full_name = prefix.empty()
+                                ? subcmd->name
+                                : compat::format("{} {}", prefix, subcmd->name);
+    output.push_back(compat::format("{} - {}", full_name, subcmd->description));
 
     // Recurse for nested subcommands
-    if (!subcmd.subcommands.empty()) {
-      collect_subcommand_help(subcmd, full_name, output);
+    if (!subcmd->subcommands.empty()) {
+      collect_subcommand_help(*subcmd, full_name, output);
     }
   }
 }

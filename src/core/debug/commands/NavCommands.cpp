@@ -29,7 +29,7 @@ static CommandDef make_screen_nav(const std::string& name,
         return CommandResult::success().add_message(
             compat::format("Navigated to {}", static_cast<int>(screen)));
       },
-      .category = "navigation"};
+  };
 }
 
 static CommandDef make_nav_cityview() {
@@ -65,7 +65,7 @@ Examples:
         return CommandResult::success().add_message(
             compat::format("Navigated to city view (city {})", city_id.value));
       },
-      .category = "navigation"};
+  };
 }
 
 static CommandDef make_nav_restaurant() {
@@ -100,7 +100,7 @@ Examples:
         return CommandResult::success().add_message(compat::format(
             "Navigated to restaurant view (restaurant {})", rid.value));
       },
-      .category = "navigation"};
+  };
 }
 
 CommandDef make_nav_commands() {
@@ -109,7 +109,6 @@ CommandDef make_nav_commands() {
       .aliases = {"ns"},
       .description = "Navigation commands",
       .help_text = "Navigate to different screens in the game",
-      .category = "navigation",
   } // Menus
       .add_subcommand(make_screen_nav("intro", {"is"}, "intro screen",
                                       ScreenTag::Kind::Intro))
@@ -136,7 +135,6 @@ CommandDef make_nav_commands() {
               .name = "pizza",
               .description = "Pizza designer/recipes",
               .help_text = "Usage: nav pizza <design|recipes>",
-              .category = "navigation",
           }
               .add_subcommand(CommandDef{
                   .name = "design",
@@ -147,7 +145,6 @@ CommandDef make_nav_commands() {
                     return CommandResult::success().add_message(
                         "Navigated to pizza designer");
                   },
-                  .category = "navigation",
               })
               .add_subcommand(CommandDef{
                   .name = "recipes",
@@ -159,7 +156,6 @@ CommandDef make_nav_commands() {
                     return CommandResult::success().add_message(
                         "Navigated to recipe list");
                   },
-                  .category = "navigation",
               }))
 
       // Other screens
@@ -172,7 +168,6 @@ CommandDef make_nav_commands() {
             return CommandResult::success().add_message(
                 "Navigated to Europe map");
           },
-          .category = "navigation",
       })
       .add_subcommand(CommandDef{
           .name = "terminal",
@@ -183,7 +178,6 @@ CommandDef make_nav_commands() {
             return CommandResult::success().add_message(
                 "Navigated to Terminal");
           },
-          .category = "navigation",
       })
       .add_subcommand(CommandDef{
           .name = "purchasing",
@@ -195,7 +189,6 @@ CommandDef make_nav_commands() {
             return CommandResult::success().add_message(
                 "Navigated to purchasing");
           },
-          .category = "navigation",
       })
       .add_subcommand(CommandDef{
           .name = "suppliers",
@@ -207,7 +200,6 @@ CommandDef make_nav_commands() {
             return CommandResult::success().add_message(
                 "Navigated to supplier list");
           },
-          .category = "navigation",
       })
       .add_subcommand(CommandDef{
           .name = "stock",
@@ -219,7 +211,6 @@ CommandDef make_nav_commands() {
             return CommandResult::success().add_message(
                 "Navigated to stock management");
           },
-          .category = "navigation",
       });
 }
 

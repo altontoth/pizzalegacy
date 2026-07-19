@@ -115,7 +115,7 @@ Examples:
         return CommandResult::success().add_message(compat::format(
             "Triggered mafia shakedown for restaurant {}", rid.value));
       },
-      .category = "actor"};
+  };
 }
 
 static CommandDef make_mafia_loan_due() {
@@ -151,7 +151,7 @@ Example:
         return CommandResult::success().add_message(
             "Triggered mafia loan repayment");
       },
-      .category = "actor"};
+  };
 }
 
 static CommandDef make_mafia_mission_overdue() {
@@ -187,7 +187,7 @@ Example:
         return CommandResult::success().add_message(
             "Triggered mafia mission overdue");
       },
-      .category = "actor"};
+  };
 }
 
 static CommandDef make_mafia_status() {
@@ -256,7 +256,7 @@ Example:
 
         return result;
       },
-      .category = "actor"};
+  };
 }
 
 static CommandDef make_mafia_set_bust() {
@@ -291,7 +291,7 @@ Examples:
         return CommandResult::success().add_message(
             compat::format("Set busted={}", val));
       },
-      .category = "actor"};
+  };
 }
 
 static CommandDef make_mafia_set_pickup() {
@@ -356,7 +356,7 @@ Examples:
         return CommandResult::success().add_message(
             compat::format("Pickup: {}", location_info(pickup, city)));
       },
-      .category = "actor"};
+  };
 }
 
 static CommandDef make_mafia_set_dropoff() {
@@ -422,7 +422,7 @@ Examples:
         return CommandResult::success().add_message(
             compat::format("Dropoff: {}", location_info(dropoff, city)));
       },
-      .category = "actor"};
+  };
 }
 
 static CommandDef make_mafia_set_deadline() {
@@ -459,7 +459,7 @@ Examples:
             "Deadline set to {} {}:{:02}", m.deadline.to_string(),
             m.deadline_hour, m.deadline_minute));
       },
-      .category = "actor"};
+  };
 }
 
 CommandDef make_mafia_commands() {
@@ -467,7 +467,6 @@ CommandDef make_mafia_commands() {
       .name = "mafia",
       .description = "Mafia interaction commands",
       .help_text = "Trigger mafia events and inspect mafia state",
-      .category = "actor",
   }
       .add_subcommand(make_mafia_shakedown())
       .add_subcommand(make_mafia_loan_due())
@@ -512,7 +511,7 @@ Example:
         return CommandResult::success().add_message(
             compat::format("Triggered police arrest for crime code {}", code));
       },
-      .category = "actor"};
+  };
 }
 
 static CommandDef make_police_visit() {
@@ -540,7 +539,7 @@ Example:
         return CommandResult::success().add_message(
             "Triggered voluntary police visit");
       },
-      .category = "actor"};
+  };
 }
 
 static CommandDef make_police_status() {
@@ -580,7 +579,7 @@ Example:
                                           ss.underworld_score(), u_rank));
         return result;
       },
-      .category = "actor"};
+  };
 }
 
 CommandDef make_police_commands() {
@@ -588,7 +587,6 @@ CommandDef make_police_commands() {
       .name = "police",
       .description = "Police interaction commands",
       .help_text = "Trigger police events (arrest, visit, status)",
-      .category = "actor",
   }
       .add_subcommand(make_police_arrest())
       .add_subcommand(make_police_visit())
@@ -600,7 +598,6 @@ CommandDef make_armsdealer_commands() {
       .name = "armsdealer",
       .description = "Arms dealer commands",
       .help_text = "Inspect weapon market prices across all cities",
-      .category = "actor",
   }
       .add_subcommand(CommandDef{
           .name = "market",
@@ -638,7 +635,6 @@ Example:
             }
             return result;
           },
-          .category = "actor",
       });
 }
 

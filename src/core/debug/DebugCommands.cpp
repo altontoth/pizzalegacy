@@ -41,7 +41,6 @@ void register_debug_commands(DebugConsole& console, GameState& state,
 
   // Register top-level convenience commands
   registry.register_command(debug::commands::make_dump_command());
-  registry.register_command(debug::commands::make_test_command());
   registry.register_command(debug::commands::make_help_command());
 
   // Initialize console with registry - all command execution delegates to

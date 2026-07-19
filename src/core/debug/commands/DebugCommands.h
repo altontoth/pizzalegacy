@@ -15,7 +15,6 @@ debug::command::CommandDef make_debug_commands();
 
 // Top-level convenience commands (aliases for debug subcommands)
 debug::command::CommandDef make_dump_command();
-debug::command::CommandDef make_test_command();
 debug::command::CommandDef make_help_command();
 
 } // namespace debug::commands

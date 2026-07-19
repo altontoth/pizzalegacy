@@ -67,7 +67,7 @@ Examples:
               compat::format("Failed to save game to: {}", filename));
         }
       },
-      .category = "game"};
+  };
 }
 
 static CommandDef make_game_load() {
@@ -128,14 +128,15 @@ Examples:
 
         return result;
       },
-      .category = "game"};
+  };
 }
 
 static CommandDef make_game_exit() {
-  return CommandDef{.name = "exit",
-                    .aliases = {"quit"},
-                    .description = "Exit the game",
-                    .help_text = R"(Usage: game exit
+  return CommandDef{
+      .name = "exit",
+      .aliases = {"quit"},
+      .description = "Exit the game",
+      .help_text = R"(Usage: game exit
 
 Exits the game immediately without saving.
 
@@ -143,12 +144,11 @@ Example:
   game exit
   game quit        # Alternative command
 )",
-                    .handler = [](const CommandContext& ctx) -> CommandResult {
-                      ctx.state.request_exit();
-                      return CommandResult::success().add_message(
-                          "Exiting game...");
-                    },
-                    .category = "game"};
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        ctx.state.request_exit();
+        return CommandResult::success().add_message("Exiting game...");
+      },
+  };
 }
 
 static CommandDef make_game_date_set() {
@@ -203,7 +203,7 @@ Examples:
         return CommandResult::success().add_message(compat::format(
             "Date set to {} ({})", time.to_date_string(), season));
       },
-      .category = "game"};
+  };
 }
 
 static CommandDef make_game_date() {
@@ -217,7 +217,6 @@ static CommandDef make_game_date() {
         return CommandResult::success().add_message(
             compat::format("{} ({})", time.to_date_string(), season));
       },
-      .category = "game",
   }
       .add_subcommand(make_game_date_set());
 }
@@ -264,7 +263,7 @@ Example:
             compat::format("Time set to {:02d}:{:02d}", time.current_hour(),
                            time.current_minute()));
       },
-      .category = "game"};
+  };
 }
 
 static CommandDef make_game_time() {
@@ -277,15 +276,15 @@ static CommandDef make_game_time() {
         return CommandResult::success().add_message(compat::format(
             "{:02d}:{:02d}", time.current_hour(), time.current_minute()));
       },
-      .category = "game",
   }
       .add_subcommand(make_game_time_set());
 }
 
 static CommandDef make_game_competition_monthly() {
-  return CommandDef{.name = "monthly",
-                    .description = "Trigger the monthly pizza competition",
-                    .help_text = R"(Usage: game competition monthly
+  return CommandDef{
+      .name = "monthly",
+      .description = "Trigger the monthly pizza competition",
+      .help_text = R"(Usage: game competition monthly
 
 Immediately triggers the monthly pizza baking competition for the active
 player, bypassing the normal end-of-month schedule. The player must have
@@ -295,12 +294,12 @@ will appear.
 Example:
   game competition monthly
 )",
-                    .handler = [](const CommandContext& ctx) -> CommandResult {
-                      ctx.state.competitions().run_monthly_competition();
-                      return CommandResult::success().add_message(
-                          "Monthly pizza competition triggered");
-                    },
-                    .category = "game"};
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        ctx.state.competitions().run_monthly_competition();
+        return CommandResult::success().add_message(
+            "Monthly pizza competition triggered");
+      },
+  };
 }
 
 static CommandDef make_game_end() {
@@ -367,7 +366,7 @@ Valid causes: debts, suppliers, killed, tycoon
         return CommandResult::success().add_message(
             compat::format("Game over triggered: {}", cause_str));
       },
-      .category = "game"};
+  };
 }
 
 static CommandDef make_game_levent() {
@@ -414,7 +413,7 @@ Example:
                            ctx.state.message_manager().get_cv_text(msg_id),
                            already_recorded ? " (was already in the CV)" : ""));
       },
-      .category = "game"};
+  };
 }
 
 static CommandDef make_game_mission_write() {
@@ -465,7 +464,7 @@ Example:
         return CommandResult::success().add_message(compat::format(
             "Wrote {} milestones to {}", entries.size(), path->string()));
       },
-      .category = "game"};
+  };
 }
 
 static CommandDef make_game_mission() {
@@ -506,7 +505,6 @@ percentage against the active player's CV, plus the overall score.
             "Overall: {}%", core::mission::overall_score(target, live_cv)));
         return result;
       },
-      .category = "game",
   }
       .add_subcommand(make_game_mission_write());
 }
@@ -516,7 +514,6 @@ static CommandDef make_game_competition() {
       .name = "competition",
       .description = "Pizza competition commands",
       .help_text = "Trigger pizza competitions for testing",
-      .category = "game",
   }
       .add_subcommand(make_game_competition_monthly());
 }
@@ -526,7 +523,6 @@ CommandDef make_game_commands() {
       .name = "game",
       .description = "Game state management",
       .help_text = "Manage game state: save, load, exit",
-      .category = "game",
   }
       .add_subcommand(make_game_save())
       .add_subcommand(make_game_load())

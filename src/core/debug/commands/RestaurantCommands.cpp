@@ -91,7 +91,7 @@ Examples:
 
         return CommandResult::success(lines);
       },
-      .category = "restaurant"};
+  };
 }
 
 static CommandDef make_restaurant_clear() {
@@ -130,7 +130,7 @@ Examples:
         // User can recreate the restaurant layout manually
         return CommandResult::success({"Restaurant furniture removed"});
       },
-      .category = "restaurant"};
+  };
 }
 
 static CommandDef make_restaurant_furniture_list() {
@@ -176,7 +176,7 @@ Examples:
 
         return CommandResult::success(lines);
       },
-      .category = "restaurant"};
+  };
 }
 
 static CommandDef make_restaurant_furniture() {
@@ -184,7 +184,6 @@ static CommandDef make_restaurant_furniture() {
       .name = "furniture",
       .description = "Manage restaurant furniture",
       .help_text = "Subcommands: list",
-      .category = "restaurant",
   }
       .add_subcommand(make_restaurant_furniture_list());
 }
@@ -282,7 +281,7 @@ Examples:
             "Added {}g of ingredient {} at quality {} to restaurant {}",
             quantity, ingredient_id, quality, restaurant_id.value));
       },
-      .category = "restaurant"};
+  };
 }
 
 static CommandDef make_restaurant_stock_fill() {
@@ -371,7 +370,7 @@ Examples:
                            "for restaurant {}",
                            quantity, quality, restaurant_id.value));
       },
-      .category = "restaurant"};
+  };
 }
 
 static CommandDef make_restaurant_stock_clear() {
@@ -417,7 +416,7 @@ Examples:
         return CommandResult::success(
             {"Cleared all ingredient stocks from restaurant"});
       },
-      .category = "restaurant"};
+  };
 }
 
 static CommandDef make_restaurant_stock() {
@@ -425,7 +424,6 @@ static CommandDef make_restaurant_stock() {
       .name = "stock",
       .description = "Manage restaurant ingredient stocks",
       .help_text = "Subcommands: add, fill, clear",
-      .category = "restaurant",
   }
       .add_subcommand(make_restaurant_stock_add())
       .add_subcommand(make_restaurant_stock_fill())
@@ -530,7 +528,7 @@ Examples:
                            size_str, restaurant->id().value, player_id.value,
                            city_id.value, layout_id));
       },
-      .category = "restaurant"};
+  };
 }
 
 static CommandDef make_restaurant_qs() {
@@ -699,7 +697,7 @@ Examples:
 
         return result;
       },
-      .category = "restaurant"};
+  };
 }
 
 static CommandDef make_restaurant_inspection_timer() {
@@ -767,7 +765,7 @@ Examples:
             "Set inspection timer to {} day(s) for restaurant {}", days,
             restaurant_id.value));
       },
-      .category = "restaurant"};
+  };
 }
 
 CommandDef make_restaurant_commands() {
@@ -778,7 +776,6 @@ CommandDef make_restaurant_commands() {
       .help_text =
           "Manage restaurants: info, clear, furniture, stock, create, qs, "
           "inspection-timer",
-      .category = "restaurant",
   }
       .add_subcommand(make_restaurant_info())
       .add_subcommand(make_restaurant_clear())

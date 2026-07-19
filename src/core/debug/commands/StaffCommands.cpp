@@ -215,7 +215,7 @@ Examples:
                             type_str, staff->character().first_name(),
                             staff->character().last_name(), slot)});
       },
-      .category = "staff"};
+  };
 }
 
 static CommandDef make_staff_set_motivation() {
@@ -297,7 +297,7 @@ Examples:
                             staff->character().first_name(),
                             staff->character().last_name(), current, value)});
       },
-      .category = "staff"};
+  };
 }
 
 static CommandDef make_staff_set_days_away() {
@@ -377,7 +377,7 @@ Examples:
             "Set days_away for {} {} to {}", staff->character().first_name(),
             staff->character().last_name(), days)});
       },
-      .category = "staff"};
+  };
 }
 
 static CommandDef make_staff_finish_training() {
@@ -462,7 +462,7 @@ Examples:
             "Set {} trainee(s) in restaurant {} to {} day(s) remaining",
             affected, restaurant_id.value, days)});
       },
-      .category = "staff"};
+  };
 }
 
 static CommandDef make_staff_list() {
@@ -568,7 +568,7 @@ Examples:
 
         return CommandResult::success(lines);
       },
-      .category = "staff"};
+  };
 }
 
 CommandDef make_staff_commands() {
@@ -578,7 +578,6 @@ CommandDef make_staff_commands() {
       .description = "Staff management and event testing commands",
       .help_text = "Subcommands: event, set_motivation, set_days_away, "
                    "finish_training, list",
-      .category = "staff",
   }
       .add_subcommand(make_staff_event())
       .add_subcommand(make_staff_set_motivation())

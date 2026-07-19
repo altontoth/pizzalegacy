@@ -89,7 +89,7 @@ Examples:
             compat::format("Triggered {} inspection for restaurant {}",
                            is_first ? "first" : "regular", rid.value));
       },
-      .category = "actor"};
+  };
 }
 
 static CommandDef make_mayor_award() {
@@ -161,7 +161,7 @@ Examples:
             "Triggered {} award (winner={})", type_str,
             winner_id.has_value() ? std::to_string(*winner_id) : "none"));
       },
-      .category = "actor"};
+  };
 }
 
 static CommandDef make_mayor_favor() {
@@ -211,7 +211,7 @@ Examples:
         return CommandResult::success().add_message(compat::format(
             "Set mayor favor for player {} to {}", player_id.value, amount));
       },
-      .category = "actor"};
+  };
 }
 
 static CommandDef make_mayor_status() {
@@ -248,7 +248,7 @@ Example:
 
         return result;
       },
-      .category = "actor"};
+  };
 }
 
 CommandDef make_mayor_commands() {
@@ -256,7 +256,6 @@ CommandDef make_mayor_commands() {
       .name = "mayor",
       .description = "Mayor interaction commands",
       .help_text = "Trigger mayor events (inspect, award, favor, status)",
-      .category = "actor",
   }
       .add_subcommand(make_mayor_inspect())
       .add_subcommand(make_mayor_award())

@@ -15,10 +15,13 @@ class GameContext;
 
 namespace debug::command {
 
+class CommandRegistry;
+
 // Context passed to command handlers
 struct CommandContext {
   GameState& state;
   GameContext& context;
+  const CommandRegistry& registry;
   std::vector<ParsedValue> args; // Validated positional arguments
 
   // Access argument with bounds checking

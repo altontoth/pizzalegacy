@@ -31,9 +31,10 @@ static ArgSpec player_id_arg() {
 }
 
 static CommandDef make_player_info() {
-  return CommandDef{.name = "info",
-                    .description = "Show player information",
-                    .help_text = R"(Usage: player info [player_id]
+  return CommandDef{
+      .name = "info",
+      .description = "Show player information",
+      .help_text = R"(Usage: player info [player_id]
 
 Displays detailed information about a player including name, cash balance,
 and other stats.
@@ -44,30 +45,30 @@ Examples:
   player info 0        # Show player 0 info
   player info 2        # Show player 2 info
 )",
-                    .args = {player_id_arg()},
-                    .handler = [](const CommandContext& ctx) -> CommandResult {
-                      auto player_id = ctx.player_id(0);
-                      auto* player = ctx.state.player(player_id);
+      .args = {player_id_arg()},
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        auto player_id = ctx.player_id(0);
+        auto* player = ctx.state.player(player_id);
 
-                      if (!player) {
-                        return CommandResult::error(compat::format(
-                            "Player {} not found", player_id.value));
-                      }
+        if (!player) {
+          return CommandResult::error(
+              compat::format("Player {} not found", player_id.value));
+        }
 
-                      std::ostringstream ss;
-                      ss << *player;
+        std::ostringstream ss;
+        ss << *player;
 
-                      // Convert to lines
-                      std::vector<std::string> lines;
-                      std::string line;
-                      std::istringstream stream(ss.str());
-                      while (std::getline(stream, line)) {
-                        lines.push_back(line);
-                      }
+        // Convert to lines
+        std::vector<std::string> lines;
+        std::string line;
+        std::istringstream stream(ss.str());
+        while (std::getline(stream, line)) {
+          lines.push_back(line);
+        }
 
-                      return CommandResult::success(lines);
-                    },
-                    .category = "player"};
+        return CommandResult::success(lines);
+      },
+  };
 }
 
 static CommandDef make_player_money_set() {
@@ -133,7 +134,7 @@ Examples:
                   compat::format("New balance: ${:n}", player->cash_balance()));
         }
       },
-      .category = "player"};
+  };
 }
 
 static CommandDef make_player_money_add() {
@@ -179,7 +180,7 @@ Examples:
             .add_message(
                 compat::format("New balance: ${:n}", player->cash_balance()));
       },
-      .category = "player"};
+  };
 }
 
 static CommandDef make_player_money_sub() {
@@ -226,7 +227,7 @@ Examples:
             .add_message(
                 compat::format("New balance: ${:n}", player->cash_balance()));
       },
-      .category = "player"};
+  };
 }
 
 static CommandDef make_player_money() {
@@ -234,7 +235,6 @@ static CommandDef make_player_money() {
       .name = "money",
       .description = "Manage player's cash balance",
       .help_text = "Subcommands: set, add, sub",
-      .category = "player",
   }
       .add_subcommand(make_player_money_set())
       .add_subcommand(make_player_money_add())
@@ -305,7 +305,7 @@ Examples:
               compat::format("No change (already {})", amount));
         }
       },
-      .category = "player"};
+  };
 }
 
 static CommandDef make_player_inventory_clear() {
@@ -347,7 +347,7 @@ Examples:
         return CommandResult::success().add_message(
             compat::format("Cleared {} items from inventory", total));
       },
-      .category = "player"};
+  };
 }
 
 static CommandDef make_player_inventory() {
@@ -356,7 +356,6 @@ static CommandDef make_player_inventory() {
       .aliases = {"inv"},
       .description = "Manage player's inventory",
       .help_text = "Subcommands: set, clear",
-      .category = "player",
   }
       .add_subcommand(make_player_inventory_set())
       .add_subcommand(make_player_inventory_clear());
@@ -451,7 +450,7 @@ Examples:
 
         return result;
       },
-      .category = "player"};
+  };
 }
 
 static CommandDef make_player_recipes() {
@@ -459,7 +458,6 @@ static CommandDef make_player_recipes() {
       .name = "recipes",
       .description = "Manage player's pizza recipes",
       .help_text = "Subcommands: load",
-      .category = "player",
   }
       .add_subcommand(make_player_recipes_load());
 }
@@ -470,7 +468,6 @@ CommandDef make_player_commands() {
       .aliases = {"p"},
       .description = "Player management commands",
       .help_text = "Manage player state: info, money, inventory, recipes",
-      .category = "player",
   }
       .add_subcommand(make_player_info())
       .add_subcommand(make_player_money())

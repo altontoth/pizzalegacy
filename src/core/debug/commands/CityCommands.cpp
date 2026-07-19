@@ -62,7 +62,7 @@ Example:
         }
         return result;
       },
-      .category = "city"};
+  };
 }
 
 // Rebuild chart and show all candidates (not just top 10) for debugging
@@ -192,33 +192,33 @@ Examples:
 
         return result;
       },
-      .category = "city"};
+  };
 }
 
 // Force rebuild the chart (without waiting for end_of_day)
 static CommandDef make_chart_rebuild() {
-  return CommandDef{.name = "rebuild",
-                    .description = "Force rebuild the pizza chart now",
-                    .help_text = R"(Usage: city chart rebuild
+  return CommandDef{
+      .name = "rebuild",
+      .description = "Force rebuild the pizza chart now",
+      .help_text = R"(Usage: city chart rebuild
 
 Rebuilds the pizza chart immediately without waiting for end of day.
 
 Example:
   city chart rebuild
 )",
-                    .handler = [](const CommandContext& ctx) -> CommandResult {
-                      auto* city = ctx.state.active_city();
-                      if (!city) {
-                        return CommandResult::error("No active city");
-                      }
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        auto* city = ctx.state.active_city();
+        if (!city) {
+          return CommandResult::error("No active city");
+        }
 
-                      city->pizza_charts().build(ctx.state);
-                      int count = static_cast<int>(
-                          city->pizza_charts().entries().size());
-                      return CommandResult::success().add_message(
-                          compat::format("Chart rebuilt: {} entries", count));
-                    },
-                    .category = "city"};
+        city->pizza_charts().build(ctx.state);
+        int count = static_cast<int>(city->pizza_charts().entries().size());
+        return CommandResult::success().add_message(
+            compat::format("Chart rebuilt: {} entries", count));
+      },
+  };
 }
 
 static CommandDef make_chart() {
@@ -227,7 +227,6 @@ static CommandDef make_chart() {
       .aliases = {"charts"},
       .description = "Pizza chart commands",
       .help_text = "Subcommands: show, debug, rebuild",
-      .category = "city",
   }
       .add_subcommand(make_chart_show())
       .add_subcommand(make_chart_debug())
@@ -239,7 +238,6 @@ CommandDef make_city_commands() {
       .name = "city",
       .description = "City-level commands",
       .help_text = "City management and diagnostics",
-      .category = "city",
   }
       .add_subcommand(make_chart());
 }

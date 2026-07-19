@@ -76,7 +76,7 @@ Examples:
 
         return CommandResult::success(lines);
       },
-      .category = "news"};
+  };
 }
 
 static CommandDef make_news_schedule_set() {
@@ -124,7 +124,7 @@ Examples:
             "Scheduled {} ({}) in slot {} to fire in {} days",
             core::newspaper::to_string(event), event_id, slot, days));
       },
-      .category = "news"};
+  };
 }
 
 static CommandDef make_news_schedule_clear() {
@@ -173,7 +173,7 @@ Examples:
         return CommandResult::success().add_message(
             "Cleared all 50 scheduled slots");
       },
-      .category = "news"};
+  };
 }
 
 static CommandDef make_news_schedule_fire() {
@@ -215,7 +215,7 @@ Examples:
             compat::format("{} ({}) was suppressed (e.g. wrong season)",
                            core::newspaper::to_string(event), event_id));
       },
-      .category = "news"};
+  };
 }
 
 static CommandDef make_news_schedule_generate() {
@@ -256,7 +256,7 @@ Examples:
             "Generation failed (random ingredient invalid or already "
             "trending). Try again.");
       },
-      .category = "news"};
+  };
 }
 
 static CommandDef make_news_schedule() {
@@ -264,7 +264,6 @@ static CommandDef make_news_schedule() {
       .name = "schedule",
       .description = "Manage scheduled newspaper events",
       .help_text = "Subcommands: list, set, clear, fire, generate",
-      .category = "news",
   }
       .add_subcommand(make_news_schedule_list())
       .add_subcommand(make_news_schedule_set())
@@ -325,7 +324,7 @@ Displays all fields of the current newspaper article state.
 
         return CommandResult::success(lines);
       },
-      .category = "news"};
+  };
 }
 
 static CommandDef make_news_article_set() {
@@ -371,7 +370,7 @@ Examples:
         return CommandResult::success().add_message(compat::format(
             "Set article_id={} cooldown={}", ns.article_id, ns.cooldown));
       },
-      .category = "news"};
+  };
 }
 
 static CommandDef make_news_article_ingredient() {
@@ -434,7 +433,7 @@ Examples:
             "Set ingredient article: {} (slot {}), polarity={}, category={}",
             name, slot, polarity, category));
       },
-      .category = "news"};
+  };
 }
 
 static CommandDef make_news_article_clear() {
@@ -452,7 +451,7 @@ static CommandDef make_news_article_clear() {
         city->newspaper_state().cooldown = 0;
         return CommandResult::success().add_message("Article state cleared");
       },
-      .category = "news"};
+  };
 }
 
 static CommandDef make_news_article_read() {
@@ -471,7 +470,7 @@ static CommandDef make_news_article_read() {
         return CommandResult::success().add_message(
             "Article marked as read (cooldown=0)");
       },
-      .category = "news"};
+  };
 }
 
 static CommandDef make_news_article() {
@@ -479,7 +478,6 @@ static CommandDef make_news_article() {
       .name = "article",
       .description = "Manage newspaper article display state",
       .help_text = "Subcommands: show, set, ingredient, clear, read",
-      .category = "news",
   }
       .add_subcommand(make_news_article_show())
       .add_subcommand(make_news_article_set())
@@ -570,7 +568,7 @@ Examples:
 
         return CommandResult::success(lines);
       },
-      .category = "news"};
+  };
 }
 
 static CommandDef make_news_trends_get() {
@@ -620,7 +618,7 @@ Examples:
 
         return CommandResult::success(lines);
       },
-      .category = "news"};
+  };
 }
 
 static CommandDef make_news_trends_set() {
@@ -716,7 +714,7 @@ Examples:
             "duration={} (article set, polarity={}, cat={})",
             slot, name, initial, target, dur_str, ns.polarity, ns.category));
       },
-      .category = "news"};
+  };
 }
 
 static CommandDef make_news_trends_clear() {
@@ -764,7 +762,7 @@ Examples:
         return CommandResult::success().add_message(
             "Cleared all ingredient trend slots");
       },
-      .category = "news"};
+  };
 }
 
 static CommandDef make_news_trends_tick() {
@@ -807,7 +805,7 @@ Examples:
         return CommandResult::success().add_message(
             compat::format("Advanced trend system by {} day(s)", n));
       },
-      .category = "news"};
+  };
 }
 
 static CommandDef make_news_trends() {
@@ -815,7 +813,6 @@ static CommandDef make_news_trends() {
       .name = "trends",
       .description = "Manage ingredient trend system",
       .help_text = "Subcommands: list, get, set, clear, tick",
-      .category = "news",
   }
       .add_subcommand(make_news_trends_list())
       .add_subcommand(make_news_trends_get())
@@ -892,7 +889,7 @@ static CommandDef make_news_status() {
 
         return CommandResult::success(lines);
       },
-      .category = "news"};
+  };
 }
 
 CommandDef make_newspaper_commands() {
@@ -900,7 +897,6 @@ CommandDef make_newspaper_commands() {
       .name = "news",
       .description = "Newspaper and trend system",
       .help_text = "Subcommands: status, schedule, article, trends",
-      .category = "news",
   }
       .add_subcommand(make_news_status())
       .add_subcommand(make_news_schedule())

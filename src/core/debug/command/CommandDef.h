@@ -29,7 +29,6 @@ struct CommandDef {
   std::vector<ArgSpec> args;        // Positional arguments
   std::unordered_map<std::string, CommandDef> subcommands; // Nested commands
   CommandHandler handler; // The actual implementation (leaf nodes only)
-  std::string category;   // For organizing help (e.g., "player", "game")
 
   // Is this a leaf command (has handler) or just a namespace?
   bool is_leaf() const { return handler != nullptr; }
