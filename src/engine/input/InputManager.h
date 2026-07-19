@@ -115,23 +115,11 @@ private:
   // The SDL_Window that owns text input focus
   SDL_Window* window_{nullptr};
 
-  // Binding tables
-  struct BindingHash {
-    std::size_t operator()(const Binding& b) const noexcept {
-      return (static_cast<std::size_t>(static_cast<uint8_t>(b.mods)) << 16) ^
-             static_cast<std::size_t>(static_cast<uint16_t>(b.key));
-    }
-  };
-  struct BindingEq {
-    bool operator()(const Binding& a, const Binding& b) const noexcept {
-      return a.key == b.key && a.mods == b.mods;
-    }
-  };
+  // Binding tables. A key may carry several actions; they dispatch in the
+  // order they were bound.
+  std::vector<std::pair<Binding, Action>> button_bindings_;
 
-  std::unordered_multimap<Binding, Action, BindingHash, BindingEq>
-      button_bindings_;
-
-  std::unordered_multimap<GamepadButton, Action> gamepad_button_bindings_;
+  std::vector<std::pair<GamepadButton, Action>> gamepad_button_bindings_;
 
   // Key state updates from backend
   void key_down(Key k, Mod mods);
@@ -145,6 +133,7 @@ private:
   void update_stick_directions();
   void press_actions(const std::vector<Action>& actions);
   void dispatch_action_release(Action a);
+  // True if the action was delivered to a listener or to the text sink.
   bool dispatch_action(const ActionEvent& ev);
   bool dispatch_text(const std::string& utf8);
 

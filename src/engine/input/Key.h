@@ -122,6 +122,8 @@ inline bool has(Mod m, Mod bit) {
 struct Binding {
   Mod mods{Mod::None};
   Key key{Key::Unknown};
+
+  bool operator==(const Binding&) const = default;
 };
 
 /// Parse "Ctrl+Shift+B", "Backquote", "PageDown", case-insensitive, with

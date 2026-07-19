@@ -265,10 +265,11 @@ void InputManager::key_up(Key k, Mod mods) {
 void InputManager::evaluate_bindings_for_key_down(Key k, Mod mods) {
   Binding b = lookup_binding(k, mods);
 
-  auto range = button_bindings_.equal_range(b);
   std::vector<Action> actions;
-  for (auto it = range.first; it != range.second; ++it) {
-    actions.push_back(it->second);
+  for (const auto& [bind, bound_action] : button_bindings_) {
+    if (bind == b) {
+      actions.push_back(bound_action);
+    }
   }
   press_actions(actions);
 }
@@ -290,18 +291,20 @@ void InputManager::evaluate_bindings_for_key_up(Key k) {
 }
 
 void InputManager::gamepad_button_down(GamepadButton b) {
-  auto range = gamepad_button_bindings_.equal_range(b);
   std::vector<Action> actions;
-  for (auto it = range.first; it != range.second; ++it) {
-    actions.push_back(it->second);
+  for (const auto& [button, bound_action] : gamepad_button_bindings_) {
+    if (button == b) {
+      actions.push_back(bound_action);
+    }
   }
   press_actions(actions);
 }
 
 void InputManager::gamepad_button_up(GamepadButton b) {
-  auto range = gamepad_button_bindings_.equal_range(b);
-  for (auto it = range.first; it != range.second; ++it) {
-    dispatch_action_release(it->second);
+  for (const auto& [button, bound_action] : gamepad_button_bindings_) {
+    if (button == b) {
+      dispatch_action_release(bound_action);
+    }
   }
 }
 
@@ -344,13 +347,13 @@ void InputManager::press_actions(const std::vector<Action>& actions) {
     ActionEvent ev{
         .action = a,
         .state = ActionState{.pressed = true, .released = false, .held = true}};
-    const bool consumed = dispatch_action(ev);
+    const bool delivered = dispatch_action(ev);
 
     // Suppress the backtick TEXTINPUT that follows a ToggleConsole keydown
     if (a == Action::ToggleConsole && (was_text_active || text_active_)) {
       suppress_next_textinput_ = true;
     }
-    if (consumed) {
+    if (delivered) {
       break;
     }
   }
@@ -370,7 +373,7 @@ void InputManager::dispatch_action_release(Action a) {
 bool InputManager::dispatch_action(const ActionEvent& ev) {
   switch (route_in_text_mode(ev.action)) {
   case TextRoute::Block:
-    return true;
+    return false;
   case TextRoute::ToSinkExlusive:
     if (text_sink_) {
       text_sink_->on_action(ev);
@@ -408,7 +411,7 @@ void InputManager::rebuild_axes() {
 
 void InputManager::debug_dump_bindings(std::ostream& os) const {
   os << "[buttons]\n";
-  // Invert multimap so we print grouped by action
+  // Invert the table so we print grouped by action
   std::unordered_map<Action, std::vector<Binding>> by_action;
   by_action.reserve(button_bindings_.size());
   for (const auto& [bind, act] : button_bindings_) {
@@ -475,11 +478,11 @@ void InputManager::debug_dump_state(std::ostream& os) const {
 }
 
 void InputManager::bind_button(Binding chord, Action a) {
-  button_bindings_.emplace(chord, a);
+  button_bindings_.emplace_back(chord, a);
 }
 
 void InputManager::bind_gamepad_button(GamepadButton b, Action a) {
-  gamepad_button_bindings_.emplace(b, a);
+  gamepad_button_bindings_.emplace_back(b, a);
 }
 
 void InputManager::remove_bindings(Action a) {
