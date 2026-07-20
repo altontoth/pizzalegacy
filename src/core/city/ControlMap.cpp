@@ -60,10 +60,11 @@ void ControlMap::build(const GameState& game_state, const City& city) {
     }
   }
 
-  // Base threshold from economy trend:
-  // (40 - economy_trend / 3) * 64
+  // Base threshold from economy trend, the factor is computed in floating point
+  // and rounded to nearest before the << 6 scale.
   int economy = city.economy_trend().current();
-  int base_threshold = (40 - economy / 3) * 64;
+  int base_threshold =
+      static_cast<int>(std::lround(40.0 - (economy / 3.0))) * 64;
 
   std::array<int, NUMBER_OF_PLAYERS> cell_counts{};
 
@@ -73,7 +74,9 @@ void ControlMap::build(const GameState& game_state, const City& city) {
     int base_tile_x = col * TILES_PER_CELL;
     int base_tile_y = row * TILES_PER_CELL;
 
-    int best_score = 0;
+    // Start with the base threshold. A restaurant can only claim the cell by
+    // exceeding it and every other restaurant.
+    int best_score = base_threshold;
     std::optional<core::PlayerId> best_player;
 
     for (const auto& rest : restaurants) {
@@ -87,7 +90,7 @@ void ControlMap::build(const GameState& game_state, const City& city) {
           int distance = std::abs(sample_x - rest.tile_x) +
                          std::abs(sample_y - rest.tile_y);
 
-          if (distance >= rest.range) {
+          if (distance > rest.range) {
             continue;
           }
 
@@ -102,7 +105,7 @@ void ControlMap::build(const GameState& game_state, const City& city) {
       }
     }
 
-    if (best_score >= base_threshold && best_player.has_value()) {
+    if (best_player.has_value()) {
       cell_owners_[cell_i] = best_player;
       cell_counts[best_player->value]++;
     }
