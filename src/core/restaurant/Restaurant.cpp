@@ -1462,7 +1462,10 @@ void Restaurant::calculate_pizza_quality_rating(
   int base_stock = inventory_.average_stock_quality() / 4;
   int base_cook = calculate_average_cook_quality() / 4;
   int base_oven = calculate_average_oven_quality() / 4;
-  int base_contamination = sabotage_contamination_ / 4;
+  // Use >> 2 to match the original x86 `sar` instruction.
+  // This differs from `/ 4` for negative values: e.g. -1 >> 2 == -1,
+  // while -1 / 4 == 0.
+  int base_contamination = sabotage_contamination_ >> 2;
 
   pizza_quality_factors_.ingredients = base_stock;
   pizza_quality_factors_.chef = base_cook;
@@ -1471,8 +1474,7 @@ void Restaurant::calculate_pizza_quality_rating(
 
   int base_sum = base_stock + base_cook + base_oven + base_contamination;
 
-  // Min of RAW (not /4) staff quality, used as threshold against ingredient
-  // quality
+  // Min of RAW staff quality, used as threshold against ingredient quality
   int min_staff = std::min(calculate_average_cook_quality(),
                            calculate_average_oven_quality());
 
@@ -1926,9 +1928,13 @@ void Restaurant::calculate_popularity(const Player& player, const City& city,
   // Furnishing: also seems disabled in the original
   popularity_.furnishing = 0;
 
-  // DemandFulfillment: penalty for unmet demand
-  int fulfillment_penalty = -((100 - fulfillment_rate_) / 8);
-  popularity_.demand_fulfillment = fulfillment_penalty;
+  // DemandFulfillment: the original recomputes -((100 - fulfillment) >> 3), but
+  // the daily tick zeroes the fulfillment byte before popularity is computed an
+  // only rewrites it after order fulfillment, so the input is always 0. The
+  // re-open path skips the zeroing and uses the previous operating day's rate;
+  // not replicated because it's a small temporary effect anyway.
+  constexpr int ambient_penalty = -12;
+  popularity_.demand_fulfillment = ambient_penalty;
 
   // UnexpectedEvents: last non-zero penalty from the 4 event slots
   int last_nonzero_penalty = 0;

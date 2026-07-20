@@ -902,8 +902,10 @@ json_to_restaurant_inventory(const json& j) {
     stocks[i] = json_to_ingredient_stock(j["stocks"][i]);
   }
 
-  inventory.set_average_stock_quality(
-      j["average_stock_quality"].get<uint8_t>());
+  if (j.contains("average_stock_quality")) {
+    inventory.set_average_stock_quality(
+        j["average_stock_quality"].get<uint8_t>());
+  }
 
   return inventory;
 }
