@@ -263,6 +263,14 @@ json player_to_json(const Player& player) {
   }
   j["campaigns"] = campaigns_array;
 
+  // Per-city gross turnover accumulator (backs the competitor turnover chart;
+  // the ledger only tracks the human, so this must persist for all players).
+  json turnover_array = json::array();
+  for (int c = 0; c < NUMBER_OF_CITIES; ++c) {
+    turnover_array.push_back(player.turnover_in_city(core::CityId{c}).cents);
+  }
+  j["turnover_by_city"] = turnover_array;
+
   return j;
 }
 
@@ -437,6 +445,15 @@ json_to_player(const json& j, GameContext& context,
         c.tv_ad_id = cj["tv_ad_id"].get<int>();
       }
       player->add_campaign(c);
+    }
+  }
+
+  if (j.contains("turnover_by_city")) {
+    const auto& arr = j["turnover_by_city"];
+    for (int c = 0; c < NUMBER_OF_CITIES && c < static_cast<int>(arr.size());
+         ++c) {
+      player->set_turnover_in_city(core::CityId{c},
+                                   Money{arr[c].get<int64_t>()});
     }
   }
 

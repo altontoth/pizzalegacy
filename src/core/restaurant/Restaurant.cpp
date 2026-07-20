@@ -1349,6 +1349,9 @@ void Restaurant::eod_batch_order_fulfillment(class GameState& game_state) {
   player->financials().transfer(
       game_state.time().current_date(), Account::Sales, Account::Cash,
       stats_.today.revenue, restaurant_id_, AccountingScope::Operational);
+  // Also feed the per-city turnover accumulator the competitor chart reads, so
+  // it stays consistent with the AI path (which has no ledger).
+  player->add_turnover(property().city().id(), stats_.today.revenue);
 
   stats_.end_of_day(effective_capacity);
   calculate_pizza_quality_rating(recipes);

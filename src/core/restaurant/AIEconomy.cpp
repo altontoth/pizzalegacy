@@ -50,6 +50,10 @@ void process_restaurant_revenue(Restaurant& restaurant, Player& player) {
                         static_cast<int64_t>(avg_menu) / 20 * total_customers) *
                        100;
 
+  // AI receipts never reach a ledger, so accumulate gross turnover here for the
+  // competitor "turnover in $" chart (the human path books this in Restaurant).
+  player.add_turnover(restaurant.property().city().id(), Money{revenue_cents});
+
   Logger::info("[AI] {} ({}) - Revenue: {}, Costs: {}, Customers: {}",
                player.name(), restaurant.name(), Money{revenue_cents},
                Money{cost_cents}, total_customers);

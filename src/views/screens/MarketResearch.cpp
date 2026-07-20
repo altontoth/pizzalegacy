@@ -767,11 +767,14 @@ void MarketResearch::render_pizza_charts(const RenderContext& ctx) {
 void MarketResearch::render_competitors(const RenderContext& ctx) {
   std::array<float, NUMBER_OF_PLAYERS> values{};
   auto players = state_.players();
-  for (int i = 0; i < NUMBER_OF_PLAYERS; ++i) {
-    if (players[i]) {
-      // Revenue accounts carry negative (credit) balances, negate for display
-      values[i] = static_cast<float>(
-          -players[i]->financials().total_receipts().whole());
+  City* city = state_.active_city();
+  if (city) {
+    core::CityId city_id = city->id();
+    for (int i = 0; i < NUMBER_OF_PLAYERS; ++i) {
+      if (players[i]) {
+        values[i] =
+            static_cast<float>(players[i]->turnover_in_city(city_id).whole());
+      }
     }
   }
   render_bar_chart(ctx, BarChartMode::Currency, values);

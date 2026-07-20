@@ -27,6 +27,7 @@
 #include "core/status/StatusHub.h"
 #include "core/supply/ActiveContract.h"
 #include "core/time/TimeOfDay.h"
+#include "core/util/Constants.h"
 
 enum class PlayerStatus { Active, InPrison, Eliminated };
 
@@ -112,6 +113,19 @@ public:
   // decays the post-expiry advertising effectiveness toward zero.
   void update_campaigns();
   int advertising_effectiveness_sum(core::CityId city) const;
+
+  // Cumulative gross turnover (sales revenue) per city, shown on the competitor
+  // "turnover in $" chart. Accumulated for both human and AI restaurants,
+  // because the ledger tracks human receipts only.
+  Money turnover_in_city(core::CityId city) const {
+    return turnover_by_city_.at(static_cast<std::size_t>(city.value));
+  }
+  void add_turnover(core::CityId city, Money amount) {
+    turnover_by_city_.at(static_cast<std::size_t>(city.value)) += amount;
+  }
+  void set_turnover_in_city(core::CityId city, Money amount) {
+    turnover_by_city_.at(static_cast<std::size_t>(city.value)) = amount;
+  }
   const std::map<core::CityId, CityCampaigns>& get_campaigns() const {
     return campaigns_;
   }
@@ -214,6 +228,7 @@ private:
   // per city. Starts at campaign's rate when it starts, then decays after the
   // campaign expires.
   std::map<core::CityId, std::array<uint8_t, 4>> ad_effectiveness_;
+  std::array<Money, NUMBER_OF_CITIES> turnover_by_city_{};
   MafiaPlayerState mafia_state_;
   InsurancePlayerState insurance_state_;
   SocialStatus social_status_;
