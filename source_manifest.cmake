@@ -14,6 +14,7 @@ set(GAME_PLEGACY_SOURCES
     src/core/city/ControlMap.cpp
     src/core/city/District.cpp
     src/core/city/EconomyTrend.cpp
+    src/core/city/IngredientTrendSystem.cpp
     src/core/city/JobMarket.cpp
     src/core/city/MayorOffice.cpp
     src/core/city/PizzaCharts.cpp

@@ -6,12 +6,9 @@
 
 #pragma once
 
-#include <algorithm>
-#include <array>
-#include <cmath>
-#include <cstdint>
 #include <string_view>
-#include "core/food/Ingredient.h"
+#include "core/food/IngredientArray.h"
+#include "core/food/IngredientType.h"
 
 // How a trend approaches its target value over time.
 enum class TrendDuration {
@@ -63,20 +60,7 @@ public:
     approaching_[type] = true;
   }
 
-  void daily_tick() {
-    for (int i = 0; i < max_ingredient_count; ++i) {
-      if (duration_[i] == TrendDuration::None) {
-        continue;
-      }
-
-      if (approaching_[i]) {
-        tick_approaching(i);
-      }
-      else {
-        tick_decaying(i);
-      }
-    }
-  }
+  void daily_tick();
 
   [[nodiscard]] int get_trend(core::food::IngredientType type) const {
     return current_[type];
@@ -115,69 +99,12 @@ private:
     approaching_[i] = false;
   }
 
-  bool reached_target(int i) const {
-    int8_t target = static_cast<int8_t>(targets_[i]);
-    return std::abs(current_[i] - target) < std::abs(target / 10) + 1;
-  }
-
-  // Moving toward target
-  void tick_approaching(int i) {
-    switch (duration_[i]) {
-    case TrendDuration::Linear: {
-      int8_t target = static_cast<int8_t>(targets_[i]);
-      if (target < 0) {
-        current_[i] -= 4;
-      }
-      else if (target > 0) {
-        current_[i] += 4;
-      }
-      if (reached_target(i)) {
-        current_[i] = targets_[i];
-        approaching_[i] = false;
-      }
-      break;
-    }
-    case TrendDuration::Exponential: {
-      auto half = (targets_[i] - current_[i]) / 2;
-      current_[i] = current_[i] + half;
-      if (reached_target(i)) {
-        current_[i] = targets_[i];
-        approaching_[i] = false;
-      }
-      break;
-    }
-    case TrendDuration::Countdown: {
-      if (targets_[i] > 0) {
-        targets_[i]--;
-      }
-      else {
-        targets_[i]++;
-      }
-      if (targets_[i] == 0) {
-        clear_slot(i);
-      }
-      break;
-    }
-    default:
-      break;
-    }
-  }
-
-  // Decaying back toward 0 (types Linear/Exponential after reaching target)
-  void tick_decaying(int i) {
-    auto val = current_[i];
-    if (val > 0) {
-      val = std::max(val - 4, 0);
-    }
-    else if (val < 0) {
-      val = std::min(val + 4, 0);
-    }
-    current_[i] = val;
-
-    if (val == 0) {
-      clear_slot(i);
-    }
-  }
+  // Flip-to-decay test: within |target|/10 of the target.
+  bool reached_target(int i) const;
+  // Moving toward target (Linear steps, Exponential halves, Countdown counts).
+  void tick_approaching(int i);
+  // Decaying back toward 0 (Linear/Exponential after reaching target).
+  void tick_decaying(int i);
 
   IngredientTrends current_;
   IngredientTrends targets_;

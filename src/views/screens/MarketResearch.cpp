@@ -25,6 +25,7 @@
 #include "views/ui/PageDecoration.h"
 
 #include <algorithm>
+#include <cstdlib>
 #include <span>
 
 constexpr int text_color = 10;
@@ -434,6 +435,15 @@ void MarketResearch::render_property_info(const RenderContext& ctx) {
     }
   }
 
+  // Named buildings are permanent premises the original counts as unavailable,
+  // though they don't show up on the not available highlight view
+  const City* city = district_.city();
+  for (int index = 0; index < city->data_length(); ++index) {
+    if (city->is_named_building_by_index(index)) {
+      building_counts.not_available++;
+    }
+  }
+
   position.y += 24;
   constexpr int col_2_x = 270;
 
@@ -639,25 +649,45 @@ void MarketResearch::render_trends(const RenderContext& ctx) {
 
   const auto& trends = state_.active_city()->ingredient_trend_system().trends();
 
+  // The original only lists trends whose magnitude falls in [9, 100], at most
+  // 8 per column: tiny values and runaway values past +/-100 are hidden.
+  constexpr int min_visible_magnitude = 9;
+  constexpr int max_visible_magnitude = 100;
+  constexpr int max_rows_per_column = 8;
+
   std::vector<std::pair<int, int>> positive_trends;
   std::vector<std::pair<int, int>> negative_trends;
 
   for (int i = 0; i < max_ingredient_count; ++i) {
     int val = trends[i];
+    int magnitude = std::abs(val);
+    if (magnitude < min_visible_magnitude ||
+        magnitude > max_visible_magnitude) {
+      continue;
+    }
     if (val > 0) {
       positive_trends.emplace_back(i, val);
     }
-    else if (val < 0) {
+    else {
       negative_trends.emplace_back(i, val);
     }
   }
 
-  std::sort(positive_trends.begin(), positive_trends.end(),
-            [](const auto& a, const auto& b) { return a.second > b.second; });
-  std::sort(negative_trends.begin(), negative_trends.end(),
-            [](const auto& a, const auto& b) { return a.second < b.second; });
+  // Stable so ties keep ingredient-index order, matching the original's
+  // threshold scan (descending magnitude, ascending index within a tie).
+  std::stable_sort(
+      positive_trends.begin(), positive_trends.end(),
+      [](const auto& a, const auto& b) { return a.second > b.second; });
+  std::stable_sort(
+      negative_trends.begin(), negative_trends.end(),
+      [](const auto& a, const auto& b) { return a.second < b.second; });
 
-  for (int row = 0; row < static_cast<int>(positive_trends.size()); ++row) {
+  const int positive_rows =
+      std::min(static_cast<int>(positive_trends.size()), max_rows_per_column);
+  const int negative_rows =
+      std::min(static_cast<int>(negative_trends.size()), max_rows_per_column);
+
+  for (int row = 0; row < positive_rows; ++row) {
     const auto& [slot, val] = positive_trends[row];
     int y = up_row1_label.y + (row * trend_row_height);
     auto name = std::string(
@@ -670,7 +700,7 @@ void MarketResearch::render_trends(const RenderContext& ctx) {
         FontFace::PIZ_NUMB, text_color, AlignX::RightEdge);
   }
 
-  for (int row = 0; row < static_cast<int>(negative_trends.size()); ++row) {
+  for (int row = 0; row < negative_rows; ++row) {
     const auto& [slot, val] = negative_trends[row];
     int y = down_row1_label.y + (row * trend_row_height);
     auto name = std::string(
