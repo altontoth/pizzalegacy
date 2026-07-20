@@ -381,6 +381,19 @@ public:
   core::food::IngredientDemand calculate_daily_ingredient_demand_grams(
       const core::food::PlayerRecipes& recipes) const;
 
+  // Daily ingredient demand as of the last end-of-day, in grams, for the stock
+  // screen. No live calculation to match original behavior.
+  const core::food::IngredientDemand& daily_ingredient_demand_cache() const {
+    return daily_ingredient_demand_cache_;
+  }
+  void daily_ingredient_demand_cache(const core::food::IngredientDemand& d) {
+    daily_ingredient_demand_cache_ = d;
+  }
+
+  // Marks a newly menued recipe's ingredients as needed (1 kg placeholder,
+  // as the original does on menu add) until the next end-of-day recompute.
+  void seed_menu_ingredient_demand(const core::food::Recipe& recipe);
+
   static std::vector<std::pair<core::food::IngredientType, int>>
   get_recipe_requirements_grams(const core::food::Recipe& recipe);
 
@@ -547,6 +560,8 @@ private:
 
   int service_time_minutes_{0}; // max(chef, oven) + waiter
   int fulfillment_rate_{0};     // can-make vs demanded, 0-100%
+  // See daily_ingredient_demand_cache().
+  core::food::IngredientDemand daily_ingredient_demand_cache_{};
 
   // Temporary reputation penalties from events (sabotage, mistakes, etc.)
   // that decay toward 0 each day at the corresponding recovery rate.

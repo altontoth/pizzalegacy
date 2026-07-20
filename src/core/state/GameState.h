@@ -126,8 +126,11 @@ public:
   // Returns false if account doesn't exist or sender can't afford it.
   bool bank_transfer(int account_number, Money amount, Player& sender);
 
+  // Daily ingredient demand of the player's open restaurants in one city
+  // (the scope of a central depot).
   core::food::IngredientDemand
-  total_ingredient_need_for_player(core::PlayerId player_id) const;
+  total_ingredient_need_for_player(core::PlayerId player_id,
+                                   core::CityId city) const;
 
   // Deduct staff wages for a restaurant (called from invoice popup on dismiss)
   void deduct_staff_wages_for_restaurant(core::RestaurantId restaurant_id);

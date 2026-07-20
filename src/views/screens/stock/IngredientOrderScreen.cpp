@@ -53,10 +53,8 @@ IngredientOrderScreen::IngredientOrderScreen(
   auto* restaurant = state_.active_restaurant();
   const auto& inventory = restaurant->inventory();
 
-  auto* player = state_.active_player();
-  assert(player);
-  core::food::IngredientDemand demand_grams =
-      restaurant->calculate_daily_ingredient_demand_grams(player->recipes());
+  const core::food::IngredientDemand& demand_grams =
+      restaurant->daily_ingredient_demand_cache();
 
   auto [start_id, end_id] = core::food::CategoryRegistry::id_range(category);
   for (int ing_id = start_id; ing_id < end_id; ing_id++) {

@@ -51,7 +51,8 @@ DepotIngredientOrderScreen::DepotIngredientOrderScreen(
 
   auto& depot = city->central_depot(state_.active_player()->id());
   const core::food::IngredientDemand demand_grams =
-      state_.total_ingredient_need_for_player(state_.active_player()->id());
+      state_.total_ingredient_need_for_player(state_.active_player()->id(),
+                                              city->id());
 
   auto [start_id, end_id] = core::food::CategoryRegistry::id_range(category_);
   for (int ing_id = start_id; ing_id < end_id; ing_id++) {

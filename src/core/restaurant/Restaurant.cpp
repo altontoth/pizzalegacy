@@ -1225,9 +1225,11 @@ void Restaurant::eod_batch_order_fulfillment(class GameState& game_state) {
   std::string shortage_msg;
   int remaining_demand = total_orders;
 
+  auto demand_grams = calculate_daily_ingredient_demand_grams(recipes);
+  daily_ingredient_demand_cache_ = demand_grams;
+
   if (remaining_demand > 0) {
     // Supplies: check if ingredient stock covers total demand
-    auto demand_grams = calculate_daily_ingredient_demand_grams(recipes);
     float supply_ratio = 1.0f;
     for (int i = 0; i < max_ingredient_count; ++i) {
       int needed = demand_grams[i];
@@ -1700,6 +1702,18 @@ void Restaurant::start_of_day(GameState& game_state) {
       Logger::warn("[Economy] {} - Zero customers! Check property location or "
                    "range setting.",
                    name_);
+    }
+  }
+}
+
+void Restaurant::seed_menu_ingredient_demand(const core::food::Recipe& recipe) {
+  for (const auto& topping : recipe.pizza().toppings()) {
+    if (!topping) {
+      continue;
+    }
+    int& demand = daily_ingredient_demand_cache_[topping->ingredient_type()];
+    if (demand == 0) {
+      demand = 1000;
     }
   }
 }

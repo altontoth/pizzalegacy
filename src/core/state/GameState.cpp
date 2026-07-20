@@ -1294,16 +1294,17 @@ std::optional<bool> GameState::pending_crt_change() const {
 void GameState::clear_crt_request() { pending_crt_.reset(); }
 
 core::food::IngredientDemand
-GameState::total_ingredient_need_for_player(core::PlayerId player_id) const {
+GameState::total_ingredient_need_for_player(core::PlayerId player_id,
+                                            core::CityId city) const {
   core::food::IngredientDemand demand_grams{};
 
   for (auto* restaurant : restaurants_for(player_id)) {
-    if (!restaurant) {
+    if (!restaurant || restaurant->property().city().id() != city ||
+        !restaurant->wants_open()) {
       continue;
     }
 
-    demand_grams += restaurant->calculate_daily_ingredient_demand_grams(
-        player(player_id)->recipes());
+    demand_grams += restaurant->daily_ingredient_demand_cache();
   }
 
   return demand_grams;

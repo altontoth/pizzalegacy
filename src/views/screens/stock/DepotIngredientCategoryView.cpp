@@ -68,7 +68,8 @@ void DepotIngredientCategoryView::draw_ingredient_list(
       state_.active_city()->central_depot(state_.active_player()->id());
 
   const core::food::IngredientDemand demand_grams =
-      state_.total_ingredient_need_for_player(state_.active_player()->id());
+      state_.total_ingredient_need_for_player(state_.active_player()->id(),
+                                              state_.active_city_id());
 
   const ViewPoint topleft{14, 30};
   const uint8_t text_color = 8;
@@ -113,7 +114,6 @@ void DepotIngredientCategoryView::draw_ingredient_list(
     const int supplies = stock ? stock->quantity / 1000 : 0;
     const int usage_grams = demand_grams[ing_id];
     const int need = (usage_grams + 999) / 1000;
-    const int usage = usage_grams / 1000;
 
     context_.font->render_text_onto(*ctx.surface, ingredient->name(),
                                     ViewPoint{name_x, y}, FontFace::CSTANDAR,
@@ -131,12 +131,12 @@ void DepotIngredientCategoryView::draw_ingredient_list(
     context_.font->render_text_onto(*ctx.surface, std::to_string(need),
                                     ViewPoint{260, y}, FontFace::CSTANDAR,
                                     row_color, AlignX::RightEdge);
-    context_.font->render_text_onto(*ctx.surface, std::to_string(usage),
-                                    ViewPoint{308, y}, FontFace::CSTANDAR,
-                                    row_color, AlignX::RightEdge);
     if (stock) {
       context_.font->render_text_onto(
-          *ctx.surface, compat::format("{}", stock->last_price),
+          *ctx.surface, compat::format("{:n}", stock->weighted_avg_cost),
+          ViewPoint{326, y}, FontFace::CSTANDAR, text_color, AlignX::RightEdge);
+      context_.font->render_text_onto(
+          *ctx.surface, compat::format("{:n}", stock->last_price),
           ViewPoint{360, y}, FontFace::CSTANDAR, text_color, AlignX::RightEdge);
     }
 

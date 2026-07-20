@@ -62,8 +62,8 @@ void IngredientCategoryView::draw_ingredient_list(const RenderContext& ctx) {
   const auto& inventory = restaurant->inventory();
 
   auto* player = state_.active_player();
-  const core::food::IngredientDemand demand_grams =
-      restaurant->calculate_daily_ingredient_demand_grams(player->recipes());
+  const core::food::IngredientDemand& demand_grams =
+      restaurant->daily_ingredient_demand_cache();
 
   const ViewPoint topleft{52, 44};
   const uint8_t text_color = 8;

@@ -504,7 +504,12 @@ void PizzaDesign::create_input_panel() {
                     auto price = from_input(input);
                     if (price) {
                       Logger::debug("Price is {}", *price);
-                      state_.active_restaurant()->menu().add_or_set(id, *price);
+                      auto* restaurant = state_.active_restaurant();
+                      restaurant->menu().add_or_set(id, *price);
+                      if (const auto* recipe =
+                              state_.active_player()->recipes().find(id)) {
+                        restaurant->seed_menu_ingredient_demand(*recipe);
+                      }
                       mark_dirty();
                     }
                     else {

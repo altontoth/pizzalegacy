@@ -12,6 +12,7 @@
 #include "core/city/City.h"
 #include "core/city/Property.h"
 #include "core/finance/Money.h"
+#include "core/food/IngredientArray.h"
 #include "core/logistics/IngredientStock.h"
 #include "core/restaurant/FloorPattern.h"
 #include "core/restaurant/Menu.h"
@@ -408,6 +409,9 @@ json restaurant_to_json(const Restaurant& restaurant) {
 
   j["last_weekly_profit"] = restaurant.last_weekly_profit().cents;
 
+  j["daily_ingredient_demand"] =
+      restaurant.daily_ingredient_demand_cache().values;
+
   return j;
 }
 
@@ -585,6 +589,15 @@ std::unique_ptr<Restaurant> json_to_restaurant(const json& j,
   // Restore inventory
   if (j.contains("inventory")) {
     restaurant->inventory() = json_to_restaurant_inventory(j["inventory"]);
+  }
+
+  if (j.contains("daily_ingredient_demand")) {
+    core::food::IngredientDemand demand{};
+    const auto& arr = j["daily_ingredient_demand"];
+    for (std::size_t i = 0; i < demand.size() && i < arr.size(); ++i) {
+      demand[static_cast<int>(i)] = arr[i].get<int>();
+    }
+    restaurant->daily_ingredient_demand_cache(demand);
   }
 
   // Restore pizza quality
