@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include <algorithm>
+
 #include "core/finance/Money.h"
 
 namespace core::restaurant {
@@ -60,13 +62,8 @@ struct IngredientStock {
     return true;
   }
 
-  /**
-   * Apply daily quality degradation.
-   * Default rate: 0.95 (5% degradation per day)
-   */
-  void apply_degradation(float degradation_rate = 0.95f) {
-    weighted_avg_quality =
-        std::max(static_cast<int>(weighted_avg_quality * degradation_rate), 0);
+  void apply_degradation(int amount) {
+    weighted_avg_quality = std::max(weighted_avg_quality - amount, 0);
   }
 
   bool has_available(int required_grams) const {

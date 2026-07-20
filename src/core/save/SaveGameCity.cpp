@@ -594,6 +594,9 @@ json city_to_json(const City& city) {
   }
   j["newspaper_scheduled"] = scheduled_array;
 
+  j["spoilage_rate"] = city.spoilage_rate();
+  j["spoilage_duration_counter"] = city.spoilage_duration_counter();
+
   return j;
 }
 
@@ -735,6 +738,9 @@ void json_to_city(const json& j, City& city) {
       ns.target_ingredient = std::nullopt;
     }
   }
+
+  city.spoilage_rate(j.value("spoilage_rate", 1));
+  city.spoilage_duration_counter(j.value("spoilage_duration_counter", 0));
 
   // Restore mayor office state
   if (j.contains("mayor_office")) {

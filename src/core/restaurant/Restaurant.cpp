@@ -1349,6 +1349,10 @@ void Restaurant::eod_batch_order_fulfillment(class GameState& game_state) {
   player->financials().transfer(
       game_state.time().current_date(), Account::Sales, Account::Cash,
       stats_.today.revenue, restaurant_id_, AccountingScope::Operational);
+  // Do the bookkeeping to remove the used up stock from the stock account
+  player->financials().transfer(
+      game_state.time().current_date(), Account::Stock, Account::ProfitAndLoss,
+      total_ingredient_cost, restaurant_id_, AccountingScope::Operational);
   // Also feed the per-city turnover accumulator the competitor chart reads, so
   // it stays consistent with the AI path (which has no ledger).
   player->add_turnover(property().city().id(), stats_.today.revenue);
@@ -1649,7 +1653,10 @@ int Restaurant::calculate_trend_appeal(const City& city) const {
 }
 
 void Restaurant::start_of_day(GameState& game_state) {
-  for (const auto ingredient_type : inventory_.apply_daily_degradation()) {
+  Money rotten_value{0};
+  for (const auto& [ingredient_type, book_value] :
+       inventory_.apply_daily_degradation(property_.city().spoilage_rate())) {
+    rotten_value = rotten_value + book_value;
     game_state.status().post(StatusMsg{
         .payload =
             compat::format("{}: The supplies of {} were rotten and had to be "
@@ -1658,6 +1665,16 @@ void Restaurant::start_of_day(GameState& game_state) {
         .scope = StatusScope::Restaurant,
         .delay_blocks = 3,
     });
+  }
+
+  // Book keeping for stock thrown away
+  if (rotten_value.cents > 0) {
+    if (auto* player = game_state.active_player()) {
+      player->financials().transfer(game_state.time().current_date(),
+                                    Account::Stock, Account::ProfitAndLoss,
+                                    rotten_value, restaurant_id_,
+                                    AccountingScope::Operational);
+    }
   }
 
   // Tick down forced closures. On re-open you get the reputation hit.

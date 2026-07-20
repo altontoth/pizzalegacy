@@ -6,9 +6,13 @@
 
 #pragma once
 
+#include <utility>
+#include <vector>
 #include "core/food/Ingredient.h"
 #include "core/food/IngredientArray.h"
+
 #include "core/logistics/IngredientStock.h"
+#include "engine/Random.h"
 
 namespace core::restaurant {
 
@@ -68,18 +72,21 @@ public:
     return true;
   }
 
-  std::vector<core::food::IngredientType>
-  apply_daily_degradation(float degradation_rate = 0.95f) {
-    std::vector<core::food::IngredientType> rotten;
+  // Each stocked ingredient loses the city spoilage rate plus 0-2 quality.
+  // Returns what rotted, with the book value written off with it.
+  std::vector<std::pair<core::food::IngredientType, Money>>
+  apply_daily_degradation(int spoilage_rate) {
+    std::vector<std::pair<core::food::IngredientType, Money>> rotten;
     for (size_t i = 0; i < stocks_.size(); ++i) {
       if (!core::food::is_valid_ingredient_id(static_cast<uint8_t>(i))) {
         continue;
       }
       auto& stock = stocks_[static_cast<int>(i)];
       if (stock.quantity > 0) {
-        stock.apply_degradation(degradation_rate);
+        stock.apply_degradation(spoilage_rate + engine::random::rand_max_n(3));
         if (stock.weighted_avg_quality < 5) {
-          rotten.push_back(static_cast<core::food::IngredientType>(i));
+          rotten.emplace_back(static_cast<core::food::IngredientType>(i),
+                              stock.total_value());
           stock.clear();
         }
       }

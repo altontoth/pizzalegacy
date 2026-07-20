@@ -321,6 +321,13 @@ void City::end_of_day(int difficulty) {
     }
   }
 
+  if (spoilage_duration_counter_ > 0) {
+    spoilage_duration_counter_--;
+  }
+  else if (spoilage_rate_ != 1) {
+    spoilage_rate_ = 1;
+  }
+
   job_market_.end_of_day(difficulty);
 }
 

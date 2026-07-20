@@ -271,18 +271,36 @@ void DepotIngredientOrderScreen::place_order() {
   if (is_sell_) {
     auto& depot =
         state_.active_city()->central_depot(state_.active_player()->id());
+    Money book_value{0};
     for (const auto& batch : ingredients_) {
       if (batch.count > 0) {
+        const auto& stock = depot.get_stock(batch.ingredient_type);
+        book_value =
+            book_value + Money{stock.weighted_avg_cost.cents * batch.count};
         depot.consume_ingredient(batch.ingredient_type, batch.count * 1000);
         Logger::info("[Depot Sale] {} x{} @ {} each", batch.ingredient->name(),
                      batch.count, batch.price_per_unit);
       }
     }
 
-    if (total_cost.cents > 0) {
-      auto* player = state_.active_player();
-      player->financials().transfer(state_.time().current_date(),
-                                    Account::Stock, Account::Cash, total_cost,
+    // Supplies leave the books at their value; the sale price determines the
+    // gain or loss.
+    auto* player = state_.active_player();
+    auto date = state_.time().current_date();
+    Money relieved{std::min(book_value.cents, total_cost.cents)};
+    if (relieved.cents > 0) {
+      player->financials().transfer(date, Account::Stock, Account::Cash,
+                                    relieved, AccountingScope::Operational);
+    }
+    if (book_value.cents > total_cost.cents) {
+      player->financials().transfer(date, Account::Stock,
+                                    Account::ProfitAndLoss,
+                                    Money{book_value.cents - total_cost.cents},
+                                    AccountingScope::Operational);
+    }
+    else if (total_cost.cents > book_value.cents) {
+      player->financials().transfer(date, Account::ProfitAndLoss, Account::Cash,
+                                    Money{total_cost.cents - book_value.cents},
                                     AccountingScope::Operational);
     }
   }
