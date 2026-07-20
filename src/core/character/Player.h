@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include <array>
+#include <cstdint>
 #include <map>
 #include <unordered_set>
 #include <vector>
@@ -106,8 +108,10 @@ public:
   std::optional<AdvertisingCampaign>
   get_campaign(core::CityId city, AdvertisingChannel channel) const;
   bool has_active_campaign(core::CityId city, AdvertisingChannel channel) const;
-  void update_campaigns(); // Called daily to decrement days_remaining
-  uint8_t total_advertising_effectiveness(core::CityId city) const;
+  // Called daily: decrements days_remaining, drops expired campaigns, and
+  // decays the post-expiry advertising effectiveness toward zero.
+  void update_campaigns();
+  int advertising_effectiveness_sum(core::CityId city) const;
   const std::map<core::CityId, CityCampaigns>& get_campaigns() const {
     return campaigns_;
   }
@@ -206,6 +210,10 @@ private:
   void process_contracts(class GameState& game_state);
 
   std::map<core::CityId, CityCampaigns> campaigns_;
+  // Live per-channel advertising effectiveness (indexed by AdvertisingChannel),
+  // per city. Starts at campaign's rate when it starts, then decays after the
+  // campaign expires.
+  std::map<core::CityId, std::array<uint8_t, 4>> ad_effectiveness_;
   MafiaPlayerState mafia_state_;
   InsurancePlayerState insurance_state_;
   SocialStatus social_status_;

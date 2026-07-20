@@ -1946,9 +1946,8 @@ void Restaurant::calculate_popularity(const Player& player, const City& city,
   component2_score += adjustment;
   popularity_.recipes_on_menu = component2_score;
 
-  int total_ad_effectiveness =
-      player.total_advertising_effectiveness(city.id());
-  popularity_.advertising = total_ad_effectiveness / 2;
+  // Advertising: the city's live per-channel effectiveness summed and halved.
+  popularity_.advertising = player.advertising_effectiveness_sum(city.id()) / 2;
 
   // StarRating: stars^2 + (stars > 0 ? 4 : 0)
   int star_bonus = star_rating_ * star_rating_;

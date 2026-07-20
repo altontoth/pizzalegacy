@@ -349,6 +349,8 @@ const core::inventory::Inventory& Player::inventory() const {
 void Player::add_campaign(const AdvertisingCampaign& campaign) {
   int channel_index = static_cast<int>(campaign.channel);
   campaigns_[campaign.city_id][channel_index] = campaign;
+  ad_effectiveness_[campaign.city_id][channel_index] =
+      static_cast<uint8_t>(campaign.rate.effectiveness);
 }
 
 std::optional<AdvertisingCampaign>
@@ -381,20 +383,29 @@ void Player::update_campaigns() {
       }
     }
   }
+
+  // Once a campaign expires its channel's effectiveness decays toward zero; an
+  // active campaign holds its channel at the rate set in add_campaign.
+  constexpr int decay_per_day = 8;
+  for (auto& [city, eff] : ad_effectiveness_) {
+    for (int ch = 0; ch < 4; ++ch) {
+      if (!has_active_campaign(city, static_cast<AdvertisingChannel>(ch))) {
+        eff[ch] = static_cast<uint8_t>(std::max(0, eff[ch] - decay_per_day));
+      }
+    }
+  }
 }
 
-uint8_t Player::total_advertising_effectiveness(core::CityId city) const {
-  auto it = campaigns_.find(city);
-  if (it == campaigns_.end()) {
+int Player::advertising_effectiveness_sum(core::CityId city) const {
+  auto it = ad_effectiveness_.find(city);
+  if (it == ad_effectiveness_.end()) {
     return 0;
   }
   int total = 0;
-  for (const auto& campaign_opt : it->second) {
-    if (campaign_opt.has_value() && campaign_opt->days_remaining > 0) {
-      total += campaign_opt->rate.effectiveness;
-    }
+  for (uint8_t e : it->second) {
+    total += e;
   }
-  return static_cast<uint8_t>(std::min(total, 255));
+  return total;
 }
 
 int Player::negotiation_skill() const {

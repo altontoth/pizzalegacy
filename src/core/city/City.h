@@ -200,22 +200,6 @@ public:
     return trade_embargo_counters_[static_cast<int>(cat)];
   }
 
-  // Advertising effectiveness per channel (for popularity Component 3)
-  struct AdvertisingEffectiveness {
-    uint8_t flyers{0};
-    uint8_t posters{0};
-    uint8_t newspaper{0};
-    uint8_t tv_ads{0};
-  };
-
-  const AdvertisingEffectiveness& advertising_effectiveness() const {
-    return advertising_effectiveness_;
-  }
-
-  void advertising_effectiveness(const AdvertisingEffectiveness& eff) {
-    advertising_effectiveness_ = eff;
-  }
-
   // Advertising campaign options (randomized at city init)
   void poster_rates(const std::array<AdvertisingRate, 9>& rates) {
     poster_rates_ = rates;
@@ -389,10 +373,6 @@ private:
   std::array<std::unordered_map<uint8_t, Money>, NUMBER_OF_PLAYERS>
       weekly_vendor_spending_;
   IngredientPrices ingredient_base_prices_;
-
-  // Advertising campaign effectiveness percentages per city
-  // Used in popularity Component 3 calculation
-  AdvertisingEffectiveness advertising_effectiveness_;
 
   // Unified ingredient trend system (replaces old separate arrays)
   IngredientTrendSystem ingredient_trend_system_;
