@@ -242,12 +242,13 @@ void GlobalStats::render_month_overview(const RenderContext& ctx) {
   {
     ViewPoint pos{18, 72};
 
+    // Current month is summed per restaurant (so the drill-down matches);
+    // previous month is a per-player figure read with one player-level query.
     for (auto acct : PlayerFinancials::receipt_accounts()) {
+      receipts_last += financials.previous_month_operational(acct, date);
       for (auto* r : restaurants) {
         receipts_this +=
             financials.current_month_operational(acct, date, r->id());
-        receipts_last +=
-            financials.previous_month_operational(acct, date, r->id());
       }
     }
     draw_label_and_amounts("receipts", -receipts_last, -receipts_this, pos);
@@ -256,10 +257,9 @@ void GlobalStats::render_month_overview(const RenderContext& ctx) {
     for (auto acct : PlayerFinancials::receipt_accounts()) {
       pos.y += line_spacing;
       Money this_m = 0_usd;
-      Money last_m = 0_usd;
+      Money last_m = financials.previous_month_operational(acct, date);
       for (auto* r : restaurants) {
         this_m += financials.current_month_operational(acct, date, r->id());
-        last_m += financials.previous_month_operational(acct, date, r->id());
       }
       draw_label_and_amounts(to_string(acct), -last_m, -this_m, pos);
       create_clickable_row(acct, pos, true, false, to_string(acct));
@@ -273,9 +273,9 @@ void GlobalStats::render_month_overview(const RenderContext& ctx) {
     ViewPoint pos{18, 160};
 
     for (auto acct : PlayerFinancials::expenditure_accounts()) {
+      exp_last += financials.previous_month_operational(acct, date);
       for (auto* r : restaurants) {
         exp_this += financials.current_month_operational(acct, date, r->id());
-        exp_last += financials.previous_month_operational(acct, date, r->id());
       }
     }
     draw_label_and_amounts("expenditure", exp_last, exp_this, pos);
@@ -284,10 +284,9 @@ void GlobalStats::render_month_overview(const RenderContext& ctx) {
     for (auto acct : PlayerFinancials::expenditure_accounts()) {
       pos.y += line_spacing;
       Money this_m = 0_usd;
-      Money last_m = 0_usd;
+      Money last_m = financials.previous_month_operational(acct, date);
       for (auto* r : restaurants) {
         this_m += financials.current_month_operational(acct, date, r->id());
-        last_m += financials.previous_month_operational(acct, date, r->id());
       }
       draw_label_and_amounts(to_string(acct), last_m, this_m, pos);
       create_clickable_row(acct, pos, false, false, to_string(acct));
@@ -582,18 +581,12 @@ void GlobalStats::render_cash_flow(const RenderContext& ctx) {
 
 void GlobalStats::render_daily_profits(const RenderContext& ctx) {
   auto& financials = state_.active_player()->financials();
-  auto today = state_.time().current_date();
 
-  // Net profit per day: receipts minus expenditures for each elapsed day.
-  constexpr int max_days = 30;
-  std::vector<int64_t> daily_dollars;
-  GameDate cursor = today.start_of_year();
-  while (cursor < today && static_cast<int>(daily_dollars.size()) < max_days) {
-    Money profit = -financials.total_receipts(cursor, cursor) -
-                   financials.total_expenditures(cursor, cursor);
-    daily_dollars.push_back(profit.whole());
-    cursor = cursor.add_days(1);
-  }
+  // The rolling series holds the most recent days at the end; draw only the
+  // filled entries.
+  const auto& history = financials.daily_profit_history();
+  const int days = financials.daily_profit_days();
+  std::vector<int64_t> daily_dollars(history.end() - days, history.end());
 
   render_bar_chart(ctx, daily_dollars, "daily profits", "days");
 }

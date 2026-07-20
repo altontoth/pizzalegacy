@@ -41,6 +41,7 @@ private:
 
   std::optional<core::RestaurantId> restaurant_id_;
   int clan_danger_ = 0;
+  int clan_ = 0;
   int protection_price_ = 0;
   int loan_amount_ = 0;
   int loan_repayment_ = 0;

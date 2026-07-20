@@ -6,6 +6,8 @@
 
 #include "core/finance/PlayerFinancials.h"
 
+#include <algorithm>
+
 // spend_cash: Always operational
 void PlayerFinancials::spend_cash(
     const GameDate& date, Account to, Money amount,
@@ -129,6 +131,21 @@ Money PlayerFinancials::total_expenditures(
 void PlayerFinancials::post(const JournalEntry& je) {
   ledger_.post(je);
   cached_cash_ = 0; // ledger_.balance(Account::Cash);
+}
+
+void PlayerFinancials::record_daily_profit(Money profit) {
+  std::rotate(daily_profit_history_.begin(), daily_profit_history_.begin() + 1,
+              daily_profit_history_.end());
+  daily_profit_history_.back() = profit.whole();
+  if (daily_profit_days_ < daily_profit_days_max) {
+    ++daily_profit_days_;
+  }
+}
+
+void PlayerFinancials::set_daily_profit_history(
+    const std::array<int64_t, daily_profit_days_max>& history, int days) {
+  daily_profit_history_ = history;
+  daily_profit_days_ = std::clamp(days, 0, daily_profit_days_max);
 }
 
 Money PlayerFinancials::current_month_balance(

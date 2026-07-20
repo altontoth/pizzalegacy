@@ -90,6 +90,16 @@ MafiaConversation::MafiaConversation(
   int uw_score = player->social_status().underworld_score();
   clan_danger_ = city->mafia_settings(actor->id()).crime_danger_level;
 
+  // Record which clan this is so a mission accepted here reports back with the
+  // matching face.
+  auto mafia_actors = city->actors(ActorType::MAFIA);
+  for (std::size_t i = 0; i < mafia_actors.size(); ++i) {
+    if (mafia_actors[i]->id() == actor->id()) {
+      clan_ = static_cast<int>(i);
+      break;
+    }
+  }
+
   if (mm == MafiaMode::ProtectionRacketOffer && restaurant_id_) {
     auto* restaurant = state.restaurant(*restaurant_id_);
     if (!restaurant) {
@@ -451,7 +461,8 @@ bool MafiaConversation::advance_proposal(bool agree) {
       // Must repay the repayment amount (loan + interest) in 90 days
       player->mafia_state().loan = MafiaLoan{
           .amount = Money{static_cast<int64_t>(loan_repayment_) * 100},
-          .due_date = date.add_days(90)};
+          .due_date = date.add_days(90),
+          .clan = clan_};
       state_.adjust_underworld_score(*player, 40);
       current_line(MafiaLine::DONT_FORGET_IF_YOU_CANT_PAY_IN_THREE_MONTHS);
     }
@@ -464,6 +475,7 @@ bool MafiaConversation::advance_proposal(bool agree) {
     if (agree) {
       if (pending_mission_) {
         pending_mission_->active = true;
+        pending_mission_->clan = clan_;
         // Pre-roll the bust: risk_pct chance of police arrest at pickup.
         // Investment missions use risk for profit outcome instead (already
         // handled in generate_mission), so they don't get busted.

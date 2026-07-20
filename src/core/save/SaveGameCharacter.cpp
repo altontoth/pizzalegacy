@@ -5,6 +5,8 @@
  */
 
 #include "core/save/SaveGameCharacter.h"
+#include <array>
+#include <cstdint>
 #include <ctime>
 #include "core/character/InsurancePlayerState.h"
 #include "core/character/Player.h"
@@ -485,6 +487,7 @@ static json mission_to_json(const MafiaMission& m) {
   j["busted"] = m.busted;
   j["item_index"] = m.item_index;
   j["quantity"] = m.quantity;
+  j["clan"] = m.clan;
   j["cash_amount"] = m.cash_amount.cents;
   j["pickup"] = mission_location_to_json(m.pickup);
   j["dropoff"] = mission_location_to_json(m.dropoff);
@@ -517,6 +520,7 @@ static MafiaMission json_to_mission(const json& j) {
   m.busted = j.value("busted", false);
   m.item_index = j.value("item_index", 0);
   m.quantity = j.value("quantity", 0);
+  m.clan = j.value("clan", 0);
   m.cash_amount = Money{j.value("cash_amount", int64_t{0})};
   if (j.contains("pickup")) {
     m.pickup = json_to_mission_location(j["pickup"]);
@@ -545,6 +549,7 @@ static json mafia_loan_to_json(const MafiaLoan& loan) {
   json j;
   j["amount"] = loan.amount.cents;
   j["due_date"] = date_to_json(loan.due_date);
+  j["clan"] = loan.clan;
   return j;
 }
 
@@ -554,6 +559,7 @@ static MafiaLoan json_to_mafia_loan(const json& j) {
   if (j.contains("due_date")) {
     loan.due_date = json_to_date(j["due_date"]);
   }
+  loan.clan = j.value("clan", 0);
   return loan;
 }
 
@@ -792,6 +798,8 @@ Ledger json_to_ledger(const json& j) {
 json player_financials_to_json(const PlayerFinancials& financials) {
   json j;
   j["journal"] = ledger_to_json(financials.ledger());
+  j["daily_profit_history"] = financials.daily_profit_history();
+  j["daily_profit_days"] = financials.daily_profit_days();
   return j;
 }
 
@@ -800,6 +808,18 @@ PlayerFinancials json_to_player_financials(const json& j) {
 
   if (j.contains("journal")) {
     financials.restore_ledger(json_to_ledger(j["journal"]));
+  }
+
+  if (j.contains("daily_profit_history")) {
+    std::array<int64_t, PlayerFinancials::daily_profit_days_max> history{};
+    const auto& arr = j["daily_profit_history"];
+    for (int i = 0; i < PlayerFinancials::daily_profit_days_max &&
+                    i < static_cast<int>(arr.size());
+         ++i) {
+      history[i] = arr[i].get<int64_t>();
+    }
+    financials.set_daily_profit_history(history,
+                                        j.value("daily_profit_days", 0));
   }
 
   return financials;

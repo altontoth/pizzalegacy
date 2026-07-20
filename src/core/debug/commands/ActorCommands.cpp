@@ -19,6 +19,8 @@
 #include "core/util/Constants.h"
 #include "engine/FormatCompat.h"
 
+#include <algorithm>
+
 using namespace debug::command;
 
 namespace debug::commands {
@@ -144,8 +146,11 @@ Example:
           return CommandResult::error("No mafia actor in this city");
         }
 
+        // The call comes from the clan that made the loan.
+        int clan = std::clamp(player->mafia_state().loan->clan, 0,
+                              static_cast<int>(mafia_actors.size()) - 1);
         ctx.state.ui().push<MafiaState>(
-            MafiaState{.id = mafia_actors[0]->id(),
+            MafiaState{.id = mafia_actors[clan]->id(),
                        .mode = MafiaMode::LoanRepaymentDue,
                        .restaurant_id = std::nullopt});
         return CommandResult::success().add_message(
@@ -180,8 +185,11 @@ Example:
           return CommandResult::error("No mafia actor in this city");
         }
 
+        // The call comes from the clan that set the mission.
+        int clan = std::clamp(player->mafia_state().active_mission->clan, 0,
+                              static_cast<int>(mafia_actors.size()) - 1);
         ctx.state.ui().push<MafiaState>(
-            MafiaState{.id = mafia_actors[0]->id(),
+            MafiaState{.id = mafia_actors[clan]->id(),
                        .mode = MafiaMode::MissionOverdue,
                        .restaurant_id = std::nullopt});
         return CommandResult::success().add_message(

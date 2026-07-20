@@ -34,12 +34,6 @@ enum class ActorType {
   NONE,
 };
 
-constexpr uint8_t TALKING_STATE_1 = 0;
-constexpr uint8_t TALKING_STATE_2 = 1;
-constexpr uint8_t TALKING_STATE_3 = 2;
-constexpr uint8_t TALKING_STATE_4 = 3;
-constexpr uint8_t HAPPY_STATE = 3;
-constexpr uint8_t ANGRY_STATE = 4;
 constexpr uint8_t BLINKING_EYE_STATE = 5;
 
 using ActorId = int;

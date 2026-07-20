@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <array>
 #include <unordered_map>
 #include "core/common/Ids.h"
 #include "core/finance/Ledger.h"
@@ -77,6 +78,20 @@ public:
   const Ledger& ledger() const noexcept { return ledger_; }
   void restore_ledger(Ledger l) { ledger_ = std::move(l); }
 
+  // Rolling daily-profit series for the daily-profits screen (index
+  // daily_profit_days_max-1 = most recent day).
+  // In normal play record_daily_profit appends each day's ledger and on load
+  // it's restored directly.
+  static constexpr int daily_profit_days_max = 30;
+  void record_daily_profit(Money profit);
+  void set_daily_profit_history(
+      const std::array<int64_t, daily_profit_days_max>& history, int days);
+  const std::array<int64_t, daily_profit_days_max>&
+  daily_profit_history() const {
+    return daily_profit_history_;
+  }
+  int daily_profit_days() const { return daily_profit_days_; }
+
 private:
   void post(const JournalEntry& je);
 
@@ -84,4 +99,6 @@ private:
   std::vector<Loan> loans_;
   std::unordered_map<uint8_t, int> restaurant_data_;
   int64_t cached_cash_ = 0;
+  std::array<int64_t, daily_profit_days_max> daily_profit_history_{};
+  int daily_profit_days_ = 0;
 };

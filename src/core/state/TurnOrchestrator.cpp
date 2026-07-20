@@ -494,6 +494,16 @@ TurnOrchestrator::finish_end_of_turn(const turn::FinishTurn& step) {
     gs_->milestones().check_milestone_events(*current_player, is_eow);
   }
 
+  // The day's restaurant revenue is now booked, so append this player's net for
+  // today to the rolling series the daily-profits screen reads.
+  if (current_player) {
+    const GameDate& date = gs_->time().current_date();
+    Money day_profit =
+        -current_player->financials().total_receipts(date, date) -
+        current_player->financials().total_expenditures(date, date);
+    current_player->financials().record_daily_profit(day_profit);
+  }
+
   if (gs_->active_player()->is_human_controlled()) {
     gs_->status().freeze_header(gs_->active_player()->id());
   }

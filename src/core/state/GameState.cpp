@@ -646,13 +646,18 @@ void GameState::check_mafia_events() {
   if (mafia_actors.empty()) {
     return;
   }
-  int mafia_id = mafia_actors[0]->id();
   const auto& date = time_.current_date();
+
+  // A mafia call must come from the clan the player dealt with.
+  auto clan_actor_id = [&](int clan) {
+    int idx = std::clamp(clan, 0, static_cast<int>(mafia_actors.size()) - 1);
+    return mafia_actors[idx]->id();
+  };
 
   // Loan repayment check
   auto& loan = player->mafia_state().loan;
   if (loan && date >= loan->due_date) {
-    ui_.push<MafiaState>(MafiaState{.id = mafia_id,
+    ui_.push<MafiaState>(MafiaState{.id = clan_actor_id(loan->clan),
                                     .mode = MafiaMode::LoanRepaymentDue,
                                     .restaurant_id = std::nullopt});
     return;
@@ -689,19 +694,19 @@ void GameState::check_mafia_events() {
     // player already picked up the package, the window passing is expected.
     if (mission->mission_type == MafiaMissionType::Package &&
         !mission->pickup_done && mission->pickup.has_passed(time_)) {
-      ui_.push<MafiaState>(MafiaState{.id = mafia_id,
+      ui_.push<MafiaState>(MafiaState{.id = clan_actor_id(mission->clan),
                                       .mode = MafiaMode::MissionOverdue,
                                       .restaurant_id = std::nullopt});
       return;
     }
     if (date > mission->deadline && !mission->completed) {
-      ui_.push<MafiaState>(MafiaState{.id = mafia_id,
+      ui_.push<MafiaState>(MafiaState{.id = clan_actor_id(mission->clan),
                                       .mode = MafiaMode::MissionOverdue,
                                       .restaurant_id = std::nullopt});
       return;
     }
     if (date >= mission->deadline && mission->completed) {
-      ui_.push<MafiaState>(MafiaState{.id = mafia_id,
+      ui_.push<MafiaState>(MafiaState{.id = clan_actor_id(mission->clan),
                                       .mode = MafiaMode::MissionDeadlineReached,
                                       .restaurant_id = std::nullopt});
       return;

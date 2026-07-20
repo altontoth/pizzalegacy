@@ -54,6 +54,10 @@ struct MafiaMission {
   int quantity = 0;
   Money cash_amount{0};
 
+  // Which mafia clan gave the mission: the index of the actor within the
+  // city's mafia actors (city->actors(ActorType::MAFIA)).
+  int clan = 0;
+
   // Package/Weapon: pickup and dropoff locations with date/time
   MissionLocation pickup;
   MissionLocation dropoff;
@@ -72,6 +76,9 @@ struct MafiaMission {
 struct MafiaLoan {
   Money amount{0};
   GameDate due_date{1995, 3, 1};
+  // Mafia clan owed (ordinal within the city's mafia actors), so the repayment
+  // call comes from the right face.
+  int clan = 0;
 };
 
 struct MafiaPlayerState {
