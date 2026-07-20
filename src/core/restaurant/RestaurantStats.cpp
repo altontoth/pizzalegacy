@@ -59,17 +59,12 @@ std::vector<DailyStats>
 RestaurantStats::current_week(const GameDate& current_date) const {
   std::vector<DailyStats> result;
 
-  // Get day of week (1=Monday, 7=Sunday)
-  unsigned dow = current_date.day_of_week();
+  int days_into_week = current_date.week_day_index();
 
-  // Days to go back to Monday (0 if today is Monday)
-  int days_since_monday = (dow == 0) ? 6 : dow - 1;
-
-  // Get history from Monday to yesterday
-  if (days_since_monday > 0 && !history.empty()) {
+  if (days_into_week > 0 && !history.empty()) {
     size_t history_size = history.size();
-    size_t start_idx = (history_size > static_cast<size_t>(days_since_monday))
-                           ? history_size - days_since_monday
+    size_t start_idx = (history_size > static_cast<size_t>(days_into_week))
+                           ? history_size - days_into_week
                            : 0;
     result.insert(result.end(), history.begin() + start_idx, history.end());
   }

@@ -142,7 +142,11 @@ public:
 
   bool is_sunday() const { return day_of_week() == 7; }
   bool is_saturday() const { return day_of_week() == 6; }
-  bool is_end_of_week() const { return is_saturday(); }
+  // The original's week is just a running 7-day counter from game start, not
+  // the calendar weekday: index 0 is the first day of the week, 6 is end of
+  // week.
+  int week_day_index() const { return days_since(game_start_date) % 7; }
+  bool is_end_of_week() const { return week_day_index() == 6; }
   bool is_end_of_month() const { return *this == month_end(); }
   bool is_end_of_year() const { return month() == 12 && day() == 31; }
   GameDate start_of_year() const {
