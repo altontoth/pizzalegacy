@@ -13,20 +13,19 @@
 #include "engine/geom/Spaces.h"
 #include "factories/FloorPatternFactory.h"
 #include "factories/FurnitureFactory.h"
+#include "resources/util/ByteReader.h"
 #include "resources/util/FileUtils.h"
 
 #include <algorithm>
-#include <fstream>
-#include <iostream>
 
 std::unique_ptr<RestaurantLayout>
 RestaurantLayoutFactory::create_layout(const std::string& filename) {
+  return create_layout(fileutils::read_bytes(filename));
+}
 
-  std::ifstream is = fileutils::open(filename);
-  if (!is) {
-    std::cerr << "Failed to open file: " << filename << "\n";
-    return nullptr;
-  }
+std::unique_ptr<RestaurantLayout>
+RestaurantLayoutFactory::create_layout(std::span<const uint8_t> bytes) {
+  fileutils::ByteReader is{bytes};
 
   uint8_t width = is.get();
   uint8_t height = is.get();
@@ -39,18 +38,18 @@ RestaurantLayoutFactory::create_layout(const std::string& filename) {
   uint8_t kitchen_entrance_offset = is.get(); // 0 is immediately after
                                               // horizontal wall bit, 1 is one
                                               // down, etc.
-  uint8_t u3 = is.get();
-  uint8_t u4 = is.get();
-  uint8_t u5 = is.get();
+  is.get();                                   // u3
+  is.get();                                   // u4
+  is.get();                                   // u5
   auto rl = std::make_unique<RestaurantLayout>(
       Size{width, height}, Size{k_width, k_height}, door_offset,
       kitchen_entrance_offset);
   uint8_t floor_vendor = is.get() - 1;
   std::array<uint8_t, 4> tile_pattern;
   std::array<uint8_t, 6> popularity_raw;
-  is.read((char*)tile_pattern.data(), 4);
-  is.read((char*)popularity_raw.data(), 6);
-  is.ignore(19);
+  is.read(tile_pattern.data(), 4);
+  is.read(popularity_raw.data(), 6);
+  is.skip(19);
   FloorPattern fp;
   fp.vendor_id = floor_vendor;
   fp.tile_indices = tile_pattern;
@@ -130,7 +129,7 @@ RestaurantLayoutFactory::create_layout(const std::string& filename) {
   for (int i = 0; i < furniture_count; i++) {
     uint8_t furniture_id = is.get();
     uint8_t rotation = is.get();
-    is.seekg(2, std::ios::cur);
+    is.skip(2);
     char high = is.get();
     char low = is.get();
     uint16_t x_coord = math::two_bytes_to_uint16(low, high) * 2;
@@ -151,7 +150,7 @@ RestaurantLayoutFactory::create_layout(const std::string& filename) {
   for (int i = 0; i < oven_count; i++) {
     uint8_t furniture_id = is.get();
     uint8_t rotation = is.get();
-    is.seekg(2, std::ios::cur);
+    is.skip(2);
     char high = is.get();
     char low = is.get();
     uint16_t x_coord = math::two_bytes_to_uint16(low, high) * 2;

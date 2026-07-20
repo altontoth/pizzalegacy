@@ -121,6 +121,19 @@ std::ifstream open(const std::string& raw_file_path, std::ios::openmode mode) {
   return is;
 }
 
+std::vector<uint8_t> read_bytes(const std::string& file_path) {
+  std::ifstream is = open(file_path);
+  is.seekg(0, std::ios::end);
+  auto size = is.tellg();
+  is.seekg(0, std::ios::beg);
+  std::vector<uint8_t> bytes(size > 0 ? static_cast<std::size_t>(size) : 0);
+  if (!bytes.empty()) {
+    is.read(reinterpret_cast<char*>(bytes.data()),
+            static_cast<std::streamsize>(bytes.size()));
+  }
+  return bytes;
+}
+
 std::vector<std::string> load_text_lines(const std::string& path,
                                          bool skip_empty) {
   auto file = open(path);

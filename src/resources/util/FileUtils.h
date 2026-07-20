@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <optional>
@@ -23,6 +24,7 @@ struct FileEntry {
 
 std::ifstream open(const std::string& file_path,
                    std::ios::openmode mode = std::ios::binary);
+std::vector<uint8_t> read_bytes(const std::string& file_path);
 std::vector<std::string> load_text_lines(const std::string& path,
                                          bool skip_empty = false);
 std::vector<FileEntry>

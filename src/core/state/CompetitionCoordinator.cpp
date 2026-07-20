@@ -85,7 +85,7 @@ void CompetitionCoordinator::run_monthly_competition_chain(
           auto get_bob_size =
               make_ingredient_bob_size_fn<Bob, core::food::Topping>(
                   zutaten_bob);
-          auto canonical = PizzaFactory::create_pizza(
+          auto canonical = PizzaFactory::create_competition_pizza(
               pizza_index, get_bob_size, gs_->customer_taste_profiles());
           if (!canonical) {
             Logger::warn("run_monthly_competition: failed to load pizza {}",

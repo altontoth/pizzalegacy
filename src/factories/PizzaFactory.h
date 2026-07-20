@@ -6,7 +6,11 @@
 
 #pragma once
 
+#include <cstdint>
 #include <memory>
+#include <optional>
+#include <span>
+#include "core/food/CanonicalPizza.h"
 #include "core/food/CustomerTasteProfiles.h"
 #include "core/food/Pizza.h"
 #include "engine/Size.h"
@@ -15,11 +19,29 @@ using BobSizeFn = std::function<Size(int ingredient_id, int state)>;
 
 class PizzaFactory {
 public:
+  // Load a recipe from a .pc file, taking its canonical slot from the digits
+  // in the filename.
   static std::unique_ptr<core::food::Pizza>
   create_pizza(const std::string& filename, const BobSizeFn& get_size,
                const core::food::CustomerTasteProfiles& taste_profiles);
 
+  // Load a canonical recipe from its own file.
   static std::unique_ptr<core::food::Pizza>
-  create_pizza(int recipe_id, const BobSizeFn& get_size,
+  create_pizza(core::food::CanonicalPizza canonical, const BobSizeFn& get_size,
                const core::food::CustomerTasteProfiles& taste_profiles);
+
+  // Parse a recipe from an in-memory .pc-format buffer. A canonical slot
+  // supplies that slot's name and marks the pizza canonical; nullopt reads the
+  // name from the buffer and leaves it a user recipe.
+  static std::unique_ptr<core::food::Pizza>
+  create_pizza(std::span<const uint8_t> bytes,
+               std::optional<core::food::CanonicalPizza> canonical,
+               const BobSizeFn& get_size,
+               const core::food::CustomerTasteProfiles& taste_profiles);
+
+  // Load the reference recipe a competition judges against, from recipe file
+  // r/r<recipe_number>.pc. These sit beyond the canonical range.
+  static std::unique_ptr<core::food::Pizza> create_competition_pizza(
+      int recipe_number, const BobSizeFn& get_size,
+      const core::food::CustomerTasteProfiles& taste_profiles);
 };

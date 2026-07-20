@@ -7,6 +7,7 @@
 #pragma once
 
 #include <array>
+#include <optional>
 #include <string>
 #include <string_view>
 #include "engine/FormatCompat.h"
@@ -33,6 +34,14 @@ enum class CanonicalPizza {
 
 constexpr int to_index(CanonicalPizza id) { return static_cast<int>(id); }
 constexpr int CANON_COUNT = static_cast<int>(CanonicalPizza::COUNT);
+
+// The canonical slot an index names, or nullopt if it falls outside the range.
+constexpr std::optional<CanonicalPizza> canonical_from_index(int index) {
+  if (index < 0 || index >= CANON_COUNT) {
+    return std::nullopt;
+  }
+  return static_cast<CanonicalPizza>(index);
+}
 
 inline std::string filename_for(CanonicalPizza id) {
   return compat::format("r/r{}.pc", to_index(id));

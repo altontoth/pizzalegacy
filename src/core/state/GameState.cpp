@@ -1196,7 +1196,7 @@ void GameState::load_initial_pizzas(GameContext& context,
 
     // Create pizza from disk
     auto pizza =
-        PizzaFactory::create_pizza(i, get_bob_size, customer_taste_profiles_);
+        PizzaFactory::create_pizza(cid, get_bob_size, customer_taste_profiles_);
     if (!pizza) {
       Logger::warn("Failed to load canonical pizza {}", i);
       continue;

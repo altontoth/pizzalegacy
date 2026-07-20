@@ -488,7 +488,6 @@ set(PLEGACY_HEADERS
     src/engine/SDL_include.h
     src/engine/Size.h
     src/engine/TypedPoint.h
-    src/engine/Version.h
     src/engine/adapters/SDLRectAdapter.h
     src/engine/audio/AudioManager.h
     src/engine/audio/VocDecoder.h
@@ -560,6 +559,7 @@ set(PLEGACY_HEADERS
     src/resources/Vga.h
     src/resources/VgaLoader.h
     src/resources/VgaManager.h
+    src/resources/util/ByteReader.h
     src/resources/util/FileUtils.h
     src/resources/util/Platform.h
     src/resources/util/TextEncoding.h

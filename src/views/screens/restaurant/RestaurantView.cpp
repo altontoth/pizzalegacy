@@ -1559,8 +1559,8 @@ void RestaurantView::challenge_start(CompetitionFlow flow) {
   auto& zutaten_bob = context_.bob->get("bob/zutaten.bob");
   auto get_bob_size =
       make_ingredient_bob_size_fn<Bob, core::food::Topping>(zutaten_bob);
-  auto canonical = PizzaFactory::create_pizza(pizza_index, get_bob_size,
-                                              state_.customer_taste_profiles());
+  auto canonical = PizzaFactory::create_competition_pizza(
+      pizza_index, get_bob_size, state_.customer_taste_profiles());
   if (!canonical) {
     Logger::warn("Challenge: failed to load pizza {}", pizza_index);
     return;

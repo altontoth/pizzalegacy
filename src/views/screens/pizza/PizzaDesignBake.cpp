@@ -8,6 +8,7 @@
 // post-judging bookkeeping.
 
 #include "core/events/LeventId.h"
+#include "core/food/CanonicalPizza.h"
 #include "core/state/GameState.h"
 #include "engine/Logger.h"
 #include "engine/ui/ICursorManager.h"
@@ -97,16 +98,16 @@ void PizzaDesign::on_design_finished() {
   if (bake_->canonical_id) {
     auto get_bob_size =
         make_ingredient_bob_size_fn<Bob, core::food::Topping>(zutaten_bob_);
-    int pizza_index = static_cast<int>(*bake_->canonical_id);
     auto canonical_pizza = PizzaFactory::create_pizza(
-        pizza_index, get_bob_size, state_.customer_taste_profiles());
+        *bake_->canonical_id, get_bob_size, state_.customer_taste_profiles());
 
     if (canonical_pizza) {
       bake_->working.finalize_against(*canonical_pizza,
                                       state_.customer_taste_profiles());
     }
     else {
-      Logger::warn("Failed to load canonical pizza {}", pizza_index);
+      Logger::warn("Failed to load canonical pizza {}",
+                   core::food::to_string(*bake_->canonical_id));
     }
   }
   else {
