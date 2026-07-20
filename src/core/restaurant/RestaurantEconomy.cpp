@@ -172,9 +172,7 @@ Popularity RestaurantEconomy::calculate_furniture_popularity(
       }
     }
 
-    int result_value = floor_pop + furniture_pop / 2;
-
-    result[demographic] = result_value;
+    result[demographic] = floor_pop + furniture_pop;
   }
 
   return result;
@@ -196,7 +194,8 @@ Popularity RestaurantEconomy::calculate_furniture_appeal_popularity(
       value += (tv_channel_ - 1 == demo_index) ? 12 : -4;
     }
 
-    result[demographic] = std::clamp(value, 0, 150);
+    // Floor, furniture and media contributions are halved together.
+    result[demographic] = std::clamp(value / 2, 0, 150);
   }
 
   return result;

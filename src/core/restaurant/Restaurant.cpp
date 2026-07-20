@@ -1481,7 +1481,7 @@ void Restaurant::calculate_pizza_quality_rating(
   int total_quality = 0;
   int pizza_count = 0;
 
-  for (const auto& entry : menu_.entries()) {
+  for (auto& entry : menu_.entries()) {
     const auto* recipe = recipes.find(entry.recipe_id);
     if (!recipe) {
       continue;
@@ -1500,6 +1500,8 @@ void Restaurant::calculate_pizza_quality_rating(
     else {
       pizza_quality = base_sum;
     }
+
+    entry.quality_base = pizza_quality;
 
     total_quality += pizza_quality;
     pizza_count++;

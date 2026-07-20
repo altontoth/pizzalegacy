@@ -20,6 +20,11 @@ struct MenuEntry {
   core::RecipeId recipe_id;
   Money price{0};
 
+  // This pizza's quality contribution, recomputed by
+  // Restaurant::calculate_pizza_quality_rating. Feeds both the restaurant's
+  // overall rating and the demand ratio in PizzaDemand. 20 until first rated.
+  int quality_base = 20;
+
   // Local tuning (per-restaurant factors). Start with neutral values:
   // Multiplies base popularity from the Pizza (1.0 = unchanged)
   std::array<float, static_cast<size_t>(ConsumerType::Count)>

@@ -49,14 +49,13 @@ int PizzaDemand::calculate(const MenuEntry& menu_entry,
   }
 
   // District ratio: modulates appeal based on district economics.
-  constexpr int BASE_CUSTOMER_VALUE = 20;
+  const int base_value = menu_entry.quality_base;
   int demo_base = district.demographic_base();
   if (demo_base == 0) {
     demo_base = 1;
   }
-  int adjusted = BASE_CUSTOMER_VALUE - demo_base;
-  adjusted =
-      BASE_CUSTOMER_VALUE + (adjusted * district.demographic_factor()) / 200;
+  int adjusted = base_value - demo_base;
+  adjusted = base_value + (adjusted * district.demographic_factor()) / 200;
   double ratio = static_cast<double>(adjusted) / demo_base;
 
   // Price/income penalty (can go negative for cheap pizzas = bonus)
@@ -144,7 +143,13 @@ int PizzaDemand::calculate_price_income_modifier(Money price,
     penalty = pow_result - adjustment;
   }
 
-  return static_cast<int>(penalty);
+  // The original converts the overflowing x87 result to INT_MIN, which is then
+  // absorbed by the final demand clamp. Avoid undefined double-to-int
+  // conversion in C++ while preserving the same observable result for extreme
+  // prices. I doubt we can get here with the $50 price limit on pizzas but just
+  // to be sure.
+  constexpr double penalty_limit = 100000.0;
+  return static_cast<int>(std::clamp(penalty, -penalty_limit, penalty_limit));
 }
 
 } // namespace core::restaurant
