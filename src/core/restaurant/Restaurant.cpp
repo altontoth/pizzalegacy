@@ -1226,7 +1226,6 @@ void Restaurant::eod_batch_order_fulfillment(class GameState& game_state) {
   int remaining_demand = total_orders;
 
   auto demand_grams = calculate_daily_ingredient_demand_grams(recipes);
-  daily_ingredient_demand_cache_ = demand_grams;
 
   if (remaining_demand > 0) {
     // Supplies: check if ingredient stock covers total demand
@@ -1283,6 +1282,8 @@ void Restaurant::eod_batch_order_fulfillment(class GameState& game_state) {
     });
   }
 
+  core::food::IngredientDemand day_demand_grams{};
+
   for (const auto& entry : menu_entries) {
     int predicted = get_predicted_daily_orders(entry.recipe_id);
     if (predicted == 0) {
@@ -1297,6 +1298,9 @@ void Restaurant::eod_batch_order_fulfillment(class GameState& game_state) {
     }
 
     auto requirements = get_recipe_requirements_grams(*recipe);
+    for (const auto& [ingredient_type, qty_grams] : requirements) {
+      day_demand_grams[ingredient_type] += qty_grams * predicted;
+    }
 
     for (int order_idx = 0; order_idx < predicted; order_idx++) {
       stats_.today.orders_generated++;
@@ -1359,6 +1363,13 @@ void Restaurant::eod_batch_order_fulfillment(class GameState& game_state) {
           stats_.today.ingredient_costs + ingredient_cost;
       stats_.today.record_sale(entry.recipe_id, order_price, ingredient_cost);
     }
+  }
+
+  // Demand cache: written from the day's orders like the original (in grams)
+  for (int i = 0; i < max_ingredient_count; ++i) {
+    int grams = day_demand_grams[i];
+    daily_ingredient_demand_cache_[i] =
+        grams > 0 ? std::min((grams / 1000) + 1, 250) * 1000 : 0;
   }
 
   if (total_orders > 0) {

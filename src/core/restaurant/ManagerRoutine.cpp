@@ -141,9 +141,7 @@ void ManagerRoutine::do_shopping() {
     return;
   }
 
-  const auto& recipes = player->recipes();
-  auto daily_demand =
-      restaurant_.calculate_daily_ingredient_demand_grams(recipes);
+  const auto& daily_demand = restaurant_.daily_ingredient_demand_cache();
 
   static constexpr std::array<float, 5> difficulty_multipliers = {
       0.6f, 0.8f, 1.0f, 1.5f, 1.9f};

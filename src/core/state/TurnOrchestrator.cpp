@@ -862,8 +862,7 @@ void TurnOrchestrator::deliver_depot_stock(core::PlayerId player_id) {
       continue;
     }
 
-    auto demand =
-        rest->calculate_daily_ingredient_demand_grams(player->recipes());
+    const auto& demand = rest->daily_ingredient_demand_cache();
 
     for (int i = 0; i < max_ingredient_count; ++i) {
       int needed = demand[i] * 2;

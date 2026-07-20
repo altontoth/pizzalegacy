@@ -690,8 +690,7 @@ void Player::process_contracts(GameState& game_state) {
     // deliver_as_required: top up to 2x daily demand beyond ordered amount
     Money extra_cost{0};
     if (c.deliver_as_required) {
-      auto demand =
-          restaurant->calculate_daily_ingredient_demand_grams(recipes_);
+      const auto& demand = restaurant->daily_ingredient_demand_cache();
       for (const auto& item : c.items) {
         int daily_grams = demand[item.type];
         int current_grams =
