@@ -353,8 +353,8 @@ void AnimatedStats::render_reputation(const RenderContext& ctx) {
   constexpr int WT = LegacyConstants::WOOD_BORDER_HEIGHT_TOP;
 
   context_.font->render_text_onto(*ctx.surface, "restaurant popularity",
-                                  ViewPoint{192, 32}, FontFace::ASTANDAR, 0,
-                                  AlignX::Center);
+                                  ViewPoint{192, 18}, FontFace::ASTANDAR, 240,
+                                  AlignX::CenterPoint);
 
   static constexpr std::array<Blitmap4Icon, 8> COMP_ICONS = {
       Blitmap4Icon::ALARM_CLOCK,     // 0: WaitingTime
@@ -432,8 +432,8 @@ void AnimatedStats::render_pizza_quality(const RenderContext& ctx) {
   constexpr int WT = LegacyConstants::WOOD_BORDER_HEIGHT_TOP;
 
   context_.font->render_text_onto(*ctx.surface, "quality of pizzas",
-                                  ViewPoint{192, 32}, FontFace::ASTANDAR, 0,
-                                  AlignX::Center);
+                                  ViewPoint{192, 18}, FontFace::ASTANDAR, 240,
+                                  AlignX::CenterPoint);
 
   static constexpr std::array<Blitmap4Icon, 4> QUALITY_ICONS = {
       Blitmap4Icon::INGREDIENTS, // 0: ingredient quality

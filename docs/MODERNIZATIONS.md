@@ -75,6 +75,13 @@ in effect.
   ingredient and furniture order count, switch between candidate cards in the
   staff screen and when selecting characters when creating a new game.
 
+### Animated stats titles always visible
+
+* In the original the 'restaurant popularity' and 'quality of pizza' titles on
+  these respective animated stats screen are only visible for the first frame,
+  any animation afterwards lacks these titles. In Pizza Legacy they are always
+  visible.
+
 ## Life quality improvements option
 
 We have a new option to optionally make some more improvements:
