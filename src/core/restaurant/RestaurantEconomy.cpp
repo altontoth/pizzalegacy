@@ -87,17 +87,11 @@ void RestaurantEconomy::calculate_competitive_strength(
         }
       }
 
-      bool apply_penalty = false;
+      if (canonical_count > 0) {
+        avg_canonical_imitation_ = imitation_sum / canonical_count;
+      }
 
-      if (canonical_count < 3) {
-        apply_penalty = true;
-      }
-      else {
-        int avg_imitation = imitation_sum / canonical_count;
-        if (avg_imitation < 30) {
-          apply_penalty = true;
-        }
-      }
+      bool apply_penalty = canonical_count < 3 || avg_canonical_imitation_ < 30;
 
       if (apply_penalty) {
         threshold /= 8;
@@ -300,6 +294,8 @@ void RestaurantEconomy::calculate_demand_with_competition(
       // Competition affects us - scale down proportionally
       customer_count = (prop_demand * our_base_demand) / comp_score;
     }
+
+    customer_count = (customer_count * avg_canonical_imitation_) / 100;
 
     customer_counts_[demo] = customer_count;
   }

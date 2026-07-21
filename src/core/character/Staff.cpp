@@ -113,30 +113,7 @@ void Staff::adjust_health(int change) {
   character_.health(static_cast<uint8_t>(new_health));
 }
 
-int Staff::pizzas_per_day() const {
-  int base = character_.pizzas_per_day();
-
-  // Role-specific skill bonus
-  int skill_bonus = 0;
-  switch (job_role_) {
-  case core::character::JobRole::CHEF:
-    skill_bonus = character_.cooking() / 2;
-    break;
-  case core::character::JobRole::WAITER:
-    skill_bonus = (character_.dexterity() + character_.serving()) / 4;
-    break;
-  case core::character::JobRole::MANAGER:
-    // Managers don't get a bonus
-    [[fallthrough]];
-  default:
-    skill_bonus = 0;
-    break;
-  }
-
-  int total = base + skill_bonus;
-
-  return total;
-}
+int Staff::pizzas_per_day() const { return character_.pizzas_per_day(); }
 
 void Staff::pizzas_per_day(int ppd) { character_.pizzas_per_day(ppd); }
 

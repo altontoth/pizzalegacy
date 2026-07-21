@@ -347,7 +347,7 @@ int Restaurant::calculate_daily_chef_throughput() const {
     if (cook.has_value() && !cook->is_away()) {
       int contribution = cook->pizzas_per_day();
       if (cook->is_late()) {
-        contribution /= 2;
+        contribution = (contribution * 80) / 100;
       }
       total += contribution;
     }
@@ -361,7 +361,7 @@ int Restaurant::calculate_daily_waiter_throughput() const {
     if (waiter.has_value() && !waiter->is_away()) {
       int contribution = waiter->pizzas_per_day();
       if (waiter->is_late()) {
-        contribution /= 2;
+        contribution = (contribution * 80) / 100;
       }
       total += contribution;
     }
@@ -415,11 +415,14 @@ int Restaurant::calculate_seating_capacity(
     }
   }
 
-  int seating_time = static_cast<int>(service_data->avg_seating_time);
+  const float seating_time = service_data->avg_seating_time;
 
-  int capacity = (seating_time > 0 && seat_count > 0)
-                     ? (operating_minutes_per_day() * seat_count) / seating_time
-                     : 0;
+  int capacity =
+      (seating_time > 0.0f && seat_count > 0)
+          ? static_cast<int>(
+                static_cast<float>(operating_minutes_per_day() * seat_count) /
+                seating_time)
+          : 0;
 
   return capacity;
 }
@@ -514,11 +517,16 @@ ProductionScreenData Restaurant::get_production_screen_data(
   int base_baked = (analysis.d_oven < 160) ? analysis.d_oven / 16 : 10;
   data.baked_pizza_count = (base_baked * analysis.waiter_work) / 100;
 
-  // North (order slips)
+  // North (order slips). The +1 floor is the original's, and the closed check
+  // below deliberately runs after it.
   int base_slips = (analysis.d_seating < 160) ? analysis.d_seating / 16 : 10;
   int max_util = std::max(analysis.stock_util, analysis.chef_util);
-  data.order_count =
-      std::min(((base_slips * max_util * max_util) / 10000) + 1, 11);
+  data.order_count = ((base_slips * max_util * max_util) / 10000) + 1;
+
+  if (!wants_open_ || forced_days_remaining_ > 0) {
+    data.order_count = 0;
+    data.baked_pizza_count = 0;
+  }
 
   // East (ovens + pizza stacks)
   if (layout_) {
@@ -627,7 +635,7 @@ ServiceTimeData Restaurant::calculate_service_time_data() const {
   // Staff/equipment only -- no demographics. Used for popularity Component 0.
   float kitchen_time = std::max(data.avg_chef_time, data.avg_oven_time);
   float service_time_float = kitchen_time + data.avg_waiter_time;
-  data.service_time_minutes = static_cast<int>(std::lround(service_time_float));
+  data.service_time_minutes = static_cast<int>(service_time_float);
 
   if (data.service_time_minutes < 2) {
     data.service_time_minutes = 30;
@@ -769,36 +777,29 @@ int Restaurant::calculate_stock_capacity(
     return 0;
   }
 
-  // Initialize pizza weights based on predicted daily orders
-  std::vector<float> pizza_weights(pizza_count);
-  float total_demand = 0.0f;
+  // Pizza weights are whole orders throughout, requantised on every pass.
+  std::vector<int> pizza_weights(pizza_count);
+  int total_demand = 0;
 
   for (int i = 0; i < pizza_count; i++) {
     const auto& entry = menu_entries[i];
 
     int orders = get_predicted_daily_orders(entry.recipe_id);
 
-    if (orders == 0) {
-      auto it = stats_.yesterday.pizza_sales.find(entry.recipe_id);
-      orders = (it != stats_.yesterday.pizza_sales.end())
-                   ? it->second.count_sold
-                   : 0;
-    }
-
-    pizza_weights[i] = static_cast<float>(orders * 2);
+    pizza_weights[i] = orders * 2;
     total_demand += pizza_weights[i];
 
     Logger::debug("[Stock Capacity] Pizza {} (recipe {}): orders={}, weight={}",
                   i, entry.recipe_id.value, orders, pizza_weights[i]);
   }
 
-  // No demand data: default weight of 100 per pizza
-  if (total_demand < 1.0f) {
+  // Only when the whole menu forecasts nothing; a single pizza at zero keeps it
+  if (total_demand < 1) {
     Logger::debug("[Stock Capacity] No demand data, using default weights");
     for (int i = 0; i < pizza_count; i++) {
-      pizza_weights[i] = 100.0f;
+      pizza_weights[i] = 100;
     }
-    total_demand = 100.0f * static_cast<float>(pizza_count);
+    total_demand = 100 * pizza_count;
   }
 
   Logger::debug("[Stock Capacity] Initial total demand: {}", total_demand);
@@ -824,7 +825,8 @@ int Restaurant::calculate_stock_capacity(
       for (int ing_idx = 0; ing_idx < max_ingredient_count; ing_idx++) {
         int grams_needed = pizza_ingredients[pizza_idx][ing_idx];
         if (grams_needed > 0) {
-          ingredient_demand[ing_idx] += grams_needed * pizza_weights[pizza_idx];
+          ingredient_demand[ing_idx] +=
+              static_cast<float>(grams_needed * pizza_weights[pizza_idx]);
         }
       }
     }
@@ -866,7 +868,7 @@ int Restaurant::calculate_stock_capacity(
                     bottleneck_ingredient);
       for (int pizza_idx = 0; pizza_idx < pizza_count; pizza_idx++) {
         if (pizza_ingredients[pizza_idx][bottleneck_ingredient] > 0) {
-          pizza_weights[pizza_idx] = 0.0f;
+          pizza_weights[pizza_idx] = 0;
         }
       }
     }
@@ -881,18 +883,17 @@ int Restaurant::calculate_stock_capacity(
 
       for (int pizza_idx = 0; pizza_idx < pizza_count; pizza_idx++) {
         if (pizza_ingredients[pizza_idx][bottleneck_ingredient] > 0) {
-          pizza_weights[pizza_idx] *= scale;
+          pizza_weights[pizza_idx] = static_cast<int>(
+              static_cast<float>(pizza_weights[pizza_idx]) * scale);
         }
       }
     }
   }
 
-  float total_capacity = 0.0f;
+  int final_capacity = 0;
   for (int i = 0; i < pizza_count; i++) {
-    total_capacity += pizza_weights[i];
+    final_capacity += pizza_weights[i];
   }
-
-  int final_capacity = static_cast<int>(total_capacity);
 
   Logger::debug(
       "[Stock Capacity] {} - Raw capacity: {}, Bottleneck iterations: {}",
