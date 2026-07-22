@@ -690,6 +690,7 @@ json daily_stats_to_json(const core::restaurant::DailyStats& stats) {
   json j;
 
   // Order tracking
+  j["guests"] = stats.guests;
   j["orders_generated"] = stats.orders_generated;
   j["orders_fulfilled"] = stats.orders_fulfilled;
   j["orders_lost"] = stats.orders_lost;
@@ -749,6 +750,7 @@ core::restaurant::DailyStats json_to_daily_stats(const json& j) {
   core::restaurant::DailyStats stats;
 
   // Order tracking
+  stats.guests = j.value("guests", 0);
   stats.orders_generated = j.value("orders_generated", 0);
   stats.orders_fulfilled = j.value("orders_fulfilled", 0);
   stats.orders_lost = j.value("orders_lost", 0);

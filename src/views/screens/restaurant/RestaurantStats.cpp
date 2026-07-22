@@ -449,10 +449,10 @@ void RestaurantStats::render_week_review(const RenderContext& ctx) {
 
     // Guests
     context_.font->render_line_onto(
-        *ctx.surface, compat::format("{}", stats.orders_generated),
+        *ctx.surface, compat::format("{}", stats.guests),
         ViewPoint{guests_x, row_y}, FontFace::PIZ_NUMB, dark_text,
         AlignX::RightEdge);
-    total_guests += stats.orders_generated;
+    total_guests += stats.guests;
 
     // Pizzas
     context_.font->render_line_onto(
@@ -511,7 +511,7 @@ void RestaurantStats::render_week_review(const RenderContext& ctx) {
       AlignX::RightEdge);
 
   // Average percent
-  int avg_percent = (total_percent + 3) / 7;
+  int avg_percent = total_percent / 7;
   context_.font->render_line_onto(
       *ctx.surface, compat::format("{}", avg_percent),
       ViewPoint{percentage_x, totals_y}, FontFace::PIZ_NUMB, dark_text,

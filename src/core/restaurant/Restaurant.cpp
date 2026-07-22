@@ -1158,6 +1158,10 @@ void Restaurant::end_of_day(GameState& game_state) {
   }
 
   economy_.calculate_demand_with_competition(*this, game_state);
+  stats_.today.guests = 0;
+  for (auto ct : ALL_CONSUMER_TYPES) {
+    stats_.today.guests += economy_.customer_counts()[ct];
+  }
   calculate_daily_pizza_sales_distribution(game_state);
   eod_batch_order_fulfillment(game_state);
 
