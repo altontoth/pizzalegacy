@@ -118,7 +118,7 @@ void StaffEvents::apply_event_effect(StaffEventData::Type type, Staff& staff,
                            staff.character().last_name()),
         .severity = StatusSeverity::Warning,
         .scope = StatusScope::Restaurant,
-        .delay_blocks = 2,
+        .delay_blocks = 6,
     });
     break;
   }
