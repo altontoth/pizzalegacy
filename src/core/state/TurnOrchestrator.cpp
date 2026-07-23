@@ -604,6 +604,10 @@ void TurnOrchestrator::build_turn_pipeline(
       new_player && new_player->is_human_controlled();
   auto start_time = new_player_is_human ? new_player->start_of_day_time()
                                         : Restaurant::DEFAULT_OPENING_TIME;
+  // A custom start-of-day applies to a single day.
+  if (new_player_is_human) {
+    new_player->start_of_day_hour(Player::default_start_of_day_hour);
+  }
 
   bool is_end_of_week = gs_->time().current_date().is_end_of_week();
   bool is_end_of_month = gs_->time().current_date().is_end_of_month();

@@ -45,6 +45,7 @@ public:
   void character(core::character::Character character);
   core::time::TimeOfDay start_of_day_time() const;
   core::time::TimeOfDay end_of_day_time() const;
+  static constexpr uint8_t default_start_of_day_hour = 9;
   uint8_t start_of_day_hour() const { return start_of_day_hour_; }
   void start_of_day_hour(uint8_t h) { start_of_day_hour_ = h; }
   bool is_human_controlled() const;
@@ -212,7 +213,7 @@ private:
   std::array<Money, 52> liquidity_snapshots_{};
   Awards awards_;
   std::optional<int> holiday_days_left_;
-  uint8_t start_of_day_hour_{9};
+  uint8_t start_of_day_hour_{default_start_of_day_hour};
 
   // days until next restaurant expansion check
   int ai_expansion_cooldown_{3};
