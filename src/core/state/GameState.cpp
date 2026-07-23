@@ -822,6 +822,10 @@ init::Config& GameState::initializer() {
 
 void GameState::finalize_initialization(GameContext& context) {
   context_ = &context;
+
+  // Static newspaper article/template data
+  article_database_.load_articles();
+
   if (!initializer_) {
     return;
   }
@@ -900,9 +904,6 @@ void GameState::finalize_initialization(GameContext& context) {
       ai::init_ai_menu(*player);
     }
   }
-
-  // Load article database
-  article_database_.load_articles();
 
   // We start at 9 in the morning on the first day, so 9 times 6 time blocks:
   time_.time_blocks(9 * 6);

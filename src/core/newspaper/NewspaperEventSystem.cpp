@@ -62,11 +62,16 @@ void NewspaperEventSystem::daily_update(GameState& state, City& city) {
     ns.article_id = 0;
   }
 
-  // If no article, pick random flavor text from ARTIKEL0.E (1-50)
   if (ns.article_id == 0) {
-    ns.article_id = engine::random::rand_between(1, 50);
-    ns.cooldown = NewspaperState::FALLBACK_COOLDOWN;
+    seed_flavor_article(ns);
   }
+}
+
+void NewspaperEventSystem::seed_flavor_article(NewspaperState& ns) {
+  ns.article_id = static_cast<uint8_t>(
+      engine::random::rand_between(NewspaperState::FLAVOR_ARTICLE_FIRST,
+                                   NewspaperState::FLAVOR_ARTICLE_LAST));
+  ns.cooldown = NewspaperState::FALLBACK_COOLDOWN;
 }
 
 void NewspaperEventSystem::schedule_event(int slot, NewspaperEvent event,

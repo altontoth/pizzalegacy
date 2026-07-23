@@ -25,6 +25,10 @@ public:
   static constexpr int EVENT_COOLDOWN = 4;
   static constexpr int FALLBACK_COOLDOWN = 10;
 
+  // Inclusive id range of the flavor articles in ARTIKEL0.E
+  static constexpr uint8_t FLAVOR_ARTICLE_FIRST = 1;
+  static constexpr uint8_t FLAVOR_ARTICLE_LAST = 50;
+
   void mark_as_read() { cooldown = 0; }
 
   void clear() {

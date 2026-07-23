@@ -764,9 +764,6 @@ void SaveGameManager::json_to_state(const json& j, GameState& state,
     }
   }
 
-  // Reload article database (needed for newspaper display after load)
-  state.article_database().load_articles();
-
   // Restore shown message history (clear slate first, then load from save)
   if (j.contains("shown_messages")) {
     for (const auto& [pid_str, entries_json] : j["shown_messages"].items()) {

@@ -211,6 +211,9 @@ public:
   // Generate a random ingredient trend event (debug use).
   bool generate_ingredient_event(GameState& state, City& city);
 
+  // Put a random filler article from ARTIKEL0.E on the front page.
+  static void seed_flavor_article(NewspaperState& ns);
+
 private:
   // Returns true if event fired and set an article (caller should exit early).
   // Returns false if event was suppressed (e.g. heat wave in wrong season).

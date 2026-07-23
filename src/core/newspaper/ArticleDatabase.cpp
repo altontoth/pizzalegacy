@@ -15,6 +15,9 @@ namespace core::newspaper {
 ArticleDatabase::ArticleDatabase() {}
 
 void ArticleDatabase::load_articles() {
+  articles_.clear();
+  ingredient_templates_.clear();
+
   // Load the two main article files
   parse_article_file("Z/ARTIKEL0.E", 0); // Flavor text articles
   parse_article_file("Z/ARTIKEL1.E", 1); // Event-driven articles

@@ -9,10 +9,10 @@
 #include <cassert>
 #include "core/city/City.h"
 #include "core/newspaper/ArticleDatabase.h"
+#include "core/newspaper/NewspaperEventSystem.h"
 #include "core/newspaper/NewspaperState.h"
 #include "core/state/GameState.h"
 #include "core/util/GameContext.h"
-#include "engine/Random.h"
 #include "gfx/Blit.h"
 #include "gfx/Draw.h"
 #include "resources/FontManager.h"
@@ -37,10 +37,9 @@ Newspaper::Newspaper(GameContext& context, GameState& state)
   auto& db = state.article_database();
 
   // If no article has been generated yet (e.g. first day in a new city),
-  // seed a random flavor article so the newspaper isn't blank.
+  // seed one so the newspaper isn't blank.
   if (ns.article_id == 0) {
-    ns.article_id = engine::random::rand_between(1, 50);
-    ns.cooldown = core::newspaper::NewspaperState::FALLBACK_COOLDOWN;
+    core::newspaper::NewspaperEventSystem::seed_flavor_article(ns);
   }
 
   if (ns.is_ingredient_article()) {
