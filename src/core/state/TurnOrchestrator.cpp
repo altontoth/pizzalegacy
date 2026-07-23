@@ -149,8 +149,10 @@ void TurnOrchestrator::end_of_turn() {
           turn::MonthlyRestaurantInvoice{in_scope_ids[i]});
     }
     // Delay is so that humans can see the amount of cash they have change live,
-    // per restaurant that gets processed (even if automatic reports is off).
-    if (interactive && i + 1 < in_scope_ids.size()) {
+    // per restaurant that gets processed. With automatic reports off the
+    // report screens already pace the pipeline.
+    if (interactive && gs_->options().automatic_report &&
+        i + 1 < in_scope_ids.size()) {
       turn_pipeline_.emplace_back(
           turn::Delay{delay_frames_between_restaurants});
     }

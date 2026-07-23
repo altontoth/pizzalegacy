@@ -98,9 +98,12 @@ CityView::CityView(GameContext& context, GameState& state, core::CityId id)
       status_controller_(state.status()), camctrl_{context.input, camera_} {
 
   state_.active_city(id);
-  state_.resume_time_advancement();
   city_ = state_.active_city();
-  state_.turn().prevent_auto_end_of_turn(false);
+  // Keep time paused and events deferred while the end-of-turn pipeline runs.
+  if (!state_.turn().is_processing_end_of_turn()) {
+    state_.resume_time_advancement();
+    state_.turn().prevent_auto_end_of_turn(false);
+  }
 
   if (auto* player = state_.active_player()) {
     state_.on_city_entered(id, *player);

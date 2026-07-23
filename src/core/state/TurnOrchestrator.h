@@ -58,6 +58,9 @@ public:
   [[nodiscard]] bool is_auto_end_of_turn_prevented() const {
     return prevent_auto_end_of_turn_;
   }
+  [[nodiscard]] bool is_processing_end_of_turn() const {
+    return processing_end_of_turn_;
+  }
 
   // Mayor inspection events deferred from EOD to the next day.
   struct DeferredInspectionEvent {
