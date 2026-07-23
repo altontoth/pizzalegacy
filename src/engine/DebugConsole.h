@@ -8,6 +8,7 @@
 #include <deque>
 #include <functional>
 #include <string>
+#include <vector>
 #include "engine/Logger.h"
 
 // Forward declarations
@@ -15,7 +16,8 @@ class GameState;
 class GameContext;
 namespace debug::command {
 class CommandRegistry;
-}
+struct CommandResult;
+} // namespace debug::command
 
 enum class ConsoleLineType { Command, Result, Output };
 
@@ -33,6 +35,9 @@ public:
   // Execute a command line (delegates to registry)
   void execute_command(const std::string& line);
 
+  // Execute a command from already separated arguments, e.g. argv
+  void execute_command(const std::vector<std::string>& args);
+
   // history
   [[nodiscard]] const std::deque<ConsoleLine>& lines() const { return lines_; }
 
@@ -46,6 +51,7 @@ public:
 
 private:
   void add_line(ConsoleLineType, std::string text);
+  void report_result(const debug::command::CommandResult& result);
 
   debug::command::CommandRegistry* registry_{nullptr};
   GameState* state_{nullptr};

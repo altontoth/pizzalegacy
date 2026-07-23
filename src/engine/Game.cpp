@@ -114,7 +114,7 @@ Game::Game(LaunchOptions opts)
       filename_(opts.viewer_target.value_or("")),
       config_path_(std::move(opts.config_path)),
       game_path_override_(std::move(opts.game_path)),
-      startup_console_line_(std::move(opts.console_line)),
+      startup_console_args_(std::move(opts.console_args)),
       vga_viewer_path_(std::move(opts.vga_viewer)),
       bob_viewer_path_(std::move(opts.bob_viewer)) {}
 
@@ -295,8 +295,8 @@ void Game::run() {
 
   // If provided, run a console line immediately (no need to open the UI
   // console, save some time during development)
-  if (startup_console_line_) {
-    debug_console.execute_command(*startup_console_line_);
+  if (startup_console_args_) {
+    debug_console.execute_command(*startup_console_args_);
   }
 
   Renderer renderer(sdl_, display_height_);

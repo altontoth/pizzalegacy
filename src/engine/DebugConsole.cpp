@@ -29,12 +29,39 @@ void DebugConsole::execute_command(const std::string& line) {
     return;
   }
 
-  auto result = registry_->execute(line, *state_, *context_);
+  report_result(registry_->execute(line, *state_, *context_));
+}
 
+void DebugConsole::execute_command(const std::vector<std::string>& args) {
+  std::string display;
+  for (const auto& arg : args) {
+    if (!display.empty()) {
+      display += ' ';
+    }
+    display += arg;
+  }
+  add_line(ConsoleLineType::Command, "> " + display);
+
+  if (args.empty()) {
+    add_line(ConsoleLineType::Result, "");
+    return;
+  }
+
+  if (!registry_ || !state_ || !context_) {
+    add_line(ConsoleLineType::Result, "Console not initialized");
+    return;
+  }
+
+  report_result(registry_->execute(args, *state_, *context_));
+}
+
+void DebugConsole::report_result(const debug::command::CommandResult& result) {
   if (result.error_message) {
     add_line(ConsoleLineType::Result, *result.error_message);
+    Logger::warn("console: {}", *result.error_message);
     if (result.error_suggestion) {
       add_line(ConsoleLineType::Result, *result.error_suggestion);
+      Logger::warn("console: {}", *result.error_suggestion);
     }
   }
   else {

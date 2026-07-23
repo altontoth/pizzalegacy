@@ -7,6 +7,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 #include "engine/SDLSession.h"
 #include "engine/SDL_include.h"
 
@@ -36,9 +37,9 @@ public:
     std::optional<std::string> game_path; // --game-path
     std::optional<std::string>
         viewer_target; // positional <file|fonts|pal|char>
-    std::optional<std::string>
-        console_line;             // "console <...>" joined into a single line
-    std::optional<bool> crt_mode; // --crt to force CRT mode
+    // "console <...>", one entry per argv word
+    std::optional<std::vector<std::string>> console_args;
+    std::optional<bool> crt_mode;          // --crt to force CRT mode
     std::optional<std::string> vga_viewer; // --vga <path>
     std::optional<std::string> bob_viewer; // --bob <path>
   };
@@ -97,7 +98,7 @@ private:
   std::string filename_;
   std::string config_path_;
   std::optional<std::string> game_path_override_;
-  std::optional<std::string> startup_console_line_;
+  std::optional<std::vector<std::string>> startup_console_args_;
   std::optional<std::string> vga_viewer_path_;
   std::optional<std::string> bob_viewer_path_;
 };

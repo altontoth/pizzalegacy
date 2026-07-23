@@ -144,8 +144,11 @@ CommandRegistry::get_help(const std::string& command_path) const {
 
 CommandResult CommandRegistry::execute(const std::string& line,
                                        GameState& state, GameContext& context) {
-  // Tokenize the input
-  auto tokens = CommandTokenizer::tokenize_simple(line);
+  return execute(CommandTokenizer::tokenize_simple(line), state, context);
+}
+
+CommandResult CommandRegistry::execute(const std::vector<std::string>& tokens,
+                                       GameState& state, GameContext& context) {
   if (tokens.empty()) {
     return CommandResult::invalid_syntax("No command entered");
   }

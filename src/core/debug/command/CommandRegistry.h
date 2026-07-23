@@ -43,9 +43,14 @@ public:
   // Generate help text
   std::vector<std::string> get_help(const std::string& command_path = "") const;
 
-  // Execute a command from a string
+  // Execute a command from a string; the line is split into tokens, honouring
+  // quotes and backslash escapes
   CommandResult execute(const std::string& line, GameState& state,
                         GameContext& context);
+
+  // Execute a command from already separated arguments, e.g. argv
+  CommandResult execute(const std::vector<std::string>& tokens,
+                        GameState& state, GameContext& context);
 
 private:
   std::unordered_map<std::string, CommandDef> commands_;

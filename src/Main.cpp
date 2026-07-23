@@ -9,8 +9,8 @@
 #include <iostream>
 #include <memory>
 #include <optional>
-#include <sstream>
 #include <string>
+#include <vector>
 
 #include "engine/Game.h"
 #include "engine/SDL_include.h"
@@ -96,21 +96,17 @@ static Game::LaunchOptions parse_args(int argc, char* argv[]) {
       opts.bob_viewer = argv[++i];
     }
     else if (arg == "console") {
-      // Join the rest into a single console line.
-      std::ostringstream oss;
-      bool first = true;
+      // The rest is the console command, one argument per word as the shell
+      // split it.
+      std::vector<std::string> args;
       for (int j = i + 1; j < argc; ++j) {
-        if (!first) {
-          oss << ' ';
-        }
-        oss << argv[j];
-        first = false;
+        args.emplace_back(argv[j]);
       }
-      if (first) { // nothing followed 'console'
+      if (args.empty()) {
         std::cerr << "error: 'console' requires a command.\n";
         usage(argv[0], 2);
       }
-      opts.console_line = oss.str();
+      opts.console_args = std::move(args);
       // 'console' subcommand consumes the rest; ignore any other positionals.
       break;
     }
