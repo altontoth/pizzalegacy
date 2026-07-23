@@ -19,7 +19,7 @@
 constexpr int ticks_per_logo = 50;
 
 Intro::Intro(GameContext& context, GameState& state)
-    : View(context, state),
+    : View(context, state), busy_cursor_(context),
       listener_(context_.input->register_listener(*this)) {
 
   // std::vector<std::pair<int, std::vector<int>>> credit_mapping_;
@@ -93,12 +93,16 @@ bool Intro::on_action(const input::ActionEvent& ev) {
 void Intro::tick() {
   ++passed_ticks_;
 
-  // Initialize audio on the second tick so the Microprose logo has been
-  // rendered and presented at least once before we stall.
-  if (passed_ticks_ == 2 && !audio_initialized_) {
-    context_.audio->init();
-    context_.audio->load_default_assets();
-    audio_initialized_ = true;
+  busy_cursor_.tick();
+
+  // Request on the first tick so the Microprose logo has been rendered and
+  // presented at least once before audio initialization stalls the loop.
+  if (passed_ticks_ == 1) {
+    busy_cursor_.run([this] {
+      context_.audio->init();
+      context_.audio->load_default_assets();
+      audio_initialized_ = true;
+    });
   }
 
   // Hold on the first logo until audio is ready.

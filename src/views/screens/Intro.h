@@ -10,6 +10,7 @@
 #include "engine/input/InputListener.h"
 #include "engine/input/ListenerToken.h"
 #include "views/base/View.h"
+#include "views/ui/BusyCursor.h"
 
 enum class Logo {
   NONE = 0,
@@ -32,6 +33,7 @@ public:
   bool on_action(const input::ActionEvent& ev) override;
 
 private:
+  views::ui::BusyCursor busy_cursor_;
   uint32_t passed_ticks_{0};
   bool audio_initialized_{false};
   int current_credit_line_{0};

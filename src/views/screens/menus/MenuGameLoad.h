@@ -10,6 +10,7 @@
 #include <vector>
 #include "resources/util/FileUtils.h"
 #include "views/base/Menu.h"
+#include "views/ui/BusyCursor.h"
 
 struct FileEntry;
 class SaveFileInfoBox;
@@ -17,6 +18,7 @@ class SaveFileInfoBox;
 class MenuGameLoad : public Menu {
 public:
   MenuGameLoad(GameContext& context, GameState& state);
+  void tick() override;
 
 private:
   Surface background() const override;
@@ -25,6 +27,7 @@ private:
   void load_selected_file();
   void delete_selected_file();
 
+  views::ui::BusyCursor busy_cursor_;
   std::vector<fileutils::FileEntry> save_files_;
   int scroll_offset_ = 0;
   std::string selected_file_;

@@ -36,7 +36,8 @@ using namespace views::ui::menu;
 constexpr int MAX_VISIBLE_FILES = 12;
 
 MenuGameLoad::MenuGameLoad(GameContext& context, GameState& state)
-    : Menu(context, state, ViewPoint{SAVE_BOX_OFFSET_X, SAVE_BOX_OFFSET_Y}, 0) {
+    : Menu(context, state, ViewPoint{SAVE_BOX_OFFSET_X, SAVE_BOX_OFFSET_Y}, 0),
+      busy_cursor_(context) {
 
   load_save_files();
 
@@ -115,6 +116,11 @@ MenuGameLoad::MenuGameLoad(GameContext& context, GameState& state)
       sel_style));
 }
 
+void MenuGameLoad::tick() {
+  Menu::tick();
+  busy_cursor_.tick();
+}
+
 void MenuGameLoad::load_save_files() {
   auto sort = sort_by_date_ ? fileutils::FileSortOrder::LastModified
                             : fileutils::FileSortOrder::Alphabetical;
@@ -134,15 +140,17 @@ void MenuGameLoad::load_selected_file() {
     return;
   }
 
-  Logger::info("Loading save file: {}", selected_file_);
+  busy_cursor_.run([this] {
+    Logger::info("Loading save file: {}", selected_file_);
 
-  if (save::SaveGameManager::load(state_, context_, selected_file_)) {
-    Logger::info("Successfully loaded: {}", selected_file_);
-  }
-  else {
-    Logger::warn("Failed to load: {}", selected_file_);
-    context_.popup->create<AlertPopup>("Failed to load save file.");
-  }
+    if (save::SaveGameManager::load(state_, context_, selected_file_)) {
+      Logger::info("Successfully loaded: {}", selected_file_);
+    }
+    else {
+      Logger::warn("Failed to load: {}", selected_file_);
+      context_.popup->create<AlertPopup>("Failed to load save file.");
+    }
+  });
 }
 
 void MenuGameLoad::delete_selected_file() {

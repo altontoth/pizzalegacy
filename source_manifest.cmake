@@ -195,6 +195,7 @@ set(GAME_PLEGACY_SOURCES
     src/views/screens/stock/IngredientOrderScreen.cpp
     src/views/screens/stock/IngredientSupplierList.cpp
     src/views/screens/stock/StockMain.cpp
+    src/views/ui/BusyCursor.cpp
     src/views/ui/CardSlider.cpp
     src/views/ui/DemographicRenderer.cpp
     src/views/ui/DropdownDecoration.cpp
@@ -666,6 +667,7 @@ set(PLEGACY_HEADERS
     src/views/screens/stock/IngredientOrderScreen.h
     src/views/screens/stock/IngredientSupplierList.h
     src/views/screens/stock/StockMain.h
+    src/views/ui/BusyCursor.h
     src/views/ui/CardSlider.h
     src/views/ui/ClickResult.h
     src/views/ui/DemographicRenderer.h

@@ -6,6 +6,12 @@
 
 #pragma once
 
+#include <cstdint>
+#include "engine/geom/Spaces.h"
+
+// Gray background color of the sheet
+constexpr uint8_t ICON_BACKGROUND = 249;
+
 constexpr int ICONS_PER_ROW = 16;
 constexpr int ICONS_PER_COLUMN = 6;
 constexpr int ICON_WIDTH = 32;
@@ -109,3 +115,10 @@ enum class Icon {
   POT,            // bake pizza
   CAPACITY,       // capacity
 };
+
+// Where the icon sits in gfx/icons.vga
+constexpr ViewRect icon_rect(Icon icon) {
+  return ViewRect{(static_cast<int>(icon) % ICONS_PER_ROW) * ICON_WIDTH,
+                  (static_cast<int>(icon) / ICONS_PER_ROW) * ICON_HEIGHT,
+                  ICON_WIDTH, ICON_HEIGHT};
+}

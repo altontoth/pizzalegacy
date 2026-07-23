@@ -59,9 +59,7 @@ Surface Button::make_button_surface(VgaManager* vga, Icon icon, ButtonType type,
     out.blit(button_blitmap, bg_loc);
   }
 
-  ViewRect icon_loc{(static_cast<int>(icon) % ICONS_PER_ROW) * ICON_WIDTH,
-                    (static_cast<int>(icon) / ICONS_PER_ROW) * ICON_HEIGHT,
-                    ICON_WIDTH, ICON_HEIGHT};
+  ViewRect icon_loc = icon_rect(icon);
 
   // figure out where inside the button to blit the icon
   ViewPoint dst{12, 14};
