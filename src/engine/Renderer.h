@@ -45,9 +45,11 @@ public:
 private:
   void update_cache(Renderable* layer, const gfx::Surface& source_surface);
   void ensure_backbuffer(int w, int h);
-  void ensure_present_surface(int w, int h);
-  void draw_software_cursor(SDL_Surface* dst, const gfx::Surface& sprite,
-                            ScreenPoint pos, bool centered) const;
+  // Returns true when the surface was (re)created.
+  bool ensure_present_surface(int w, int h);
+  // Returns the rect the cursor was drawn into.
+  SDL_Rect draw_software_cursor(SDL_Surface* dst, const gfx::Surface& sprite,
+                                ScreenPoint pos, bool centered) const;
   SDL_Surface* apply_crt_scaling(SDL_Surface* source) const;
 
   std::unordered_map<Renderable*, SDL_Surface_unique_ptr> cache_;
@@ -61,6 +63,7 @@ private:
   // This allows us to re-present when only the cursor changed.
   const gfx::Surface* last_cursor_sprite_{nullptr};
   ScreenPoint last_cursor_pos_{};
+  SDL_Rect last_cursor_rect_{};
   bool force_recompose_ = false;
   std::unordered_map<Renderable*, std::unique_ptr<Surface>> layer_surfaces_;
   std::vector<LayerInfo> layers_;

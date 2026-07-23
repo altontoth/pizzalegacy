@@ -120,13 +120,25 @@ void Renderer::render() {
   // cursor-free.
   SDL_Surface* composited = backbuffer_.get();
   if (cursor_sprite) {
-    ensure_present_surface(backbuffer_->w, backbuffer_->h);
+    const bool recreated =
+        ensure_present_surface(backbuffer_->w, backbuffer_->h);
+    // If only the cursor changed, frame_with_cursor_ still holds the
+    // current frame and just the old cursor rect needs restoring.
+    const bool cursor_only =
+        !frame_changed && !recreated && last_cursor_sprite_;
     SDL_SetSurfaceBlendMode(backbuffer_.get(), SDL_BLENDMODE_NONE);
-    SDL_BlitSurface(backbuffer_.get(), nullptr, frame_with_cursor_.get(),
-                    nullptr);
+    if (cursor_only) {
+      SDL_BlitSurface(backbuffer_.get(), &last_cursor_rect_,
+                      frame_with_cursor_.get(), &last_cursor_rect_);
+    }
+    else {
+      SDL_BlitSurface(backbuffer_.get(), nullptr, frame_with_cursor_.get(),
+                      nullptr);
+    }
     SDL_SetSurfaceBlendMode(backbuffer_.get(), SDL_BLENDMODE_BLEND);
-    draw_software_cursor(frame_with_cursor_.get(), *cursor_sprite, cursor_pos,
-                         cursor_->software_cursor_centered());
+    last_cursor_rect_ =
+        draw_software_cursor(frame_with_cursor_.get(), *cursor_sprite,
+                             cursor_pos, cursor_->software_cursor_centered());
     composited = frame_with_cursor_.get();
   }
   last_cursor_sprite_ = cursor_sprite;
@@ -145,19 +157,20 @@ void Renderer::render() {
   SDL_RenderPresent(sdl_.renderer.get());
 }
 
-void Renderer::ensure_present_surface(int w, int h) {
+bool Renderer::ensure_present_surface(int w, int h) {
   if (frame_with_cursor_ && frame_with_cursor_->w == w &&
       frame_with_cursor_->h == h) {
-    return;
+    return false;
   }
   frame_with_cursor_.reset(SDL_CreateSurface(w, h, SDL_PIXELFORMAT_RGBA8888));
   if (!frame_with_cursor_) {
     fatal(SDL_GetError());
   }
+  return true;
 }
 
-void Renderer::draw_software_cursor(SDL_Surface* dst, const Surface& sprite,
-                                    ScreenPoint pos, bool centered) const {
+SDL_Rect Renderer::draw_software_cursor(SDL_Surface* dst, const Surface& sprite,
+                                        ScreenPoint pos, bool centered) const {
   SDL_Surface_unique_ptr sdl_sprite = to_sdl_surface(sprite);
 
   // The logical display height may differ from SCREEN_HEIGHT due to CRT
@@ -171,6 +184,7 @@ void Renderer::draw_software_cursor(SDL_Surface* dst, const Surface& sprite,
 
   SDL_Rect dest = {x, y, sdl_sprite->w, sdl_sprite->h};
   SDL_BlitSurface(sdl_sprite.get(), nullptr, dst, &dest);
+  return dest;
 }
 
 void Renderer::clear_layers() {
