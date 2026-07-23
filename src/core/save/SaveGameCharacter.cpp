@@ -8,6 +8,7 @@
 #include <array>
 #include <cstdint>
 #include <ctime>
+#include "core/character/Awards.h"
 #include "core/character/InsurancePlayerState.h"
 #include "core/character/Player.h"
 #include "core/food/IngredientCategoryType.h"
@@ -189,6 +190,13 @@ json player_to_json(const Player& player) {
   j["social_score"] = player.social_status().social_score();
   j["underworld_score"] = player.social_status().underworld_score();
 
+  j["score"] = player.score();
+  json awards_array = json::array();
+  for (const auto& level : player.awards()) {
+    awards_array.push_back(static_cast<int>(level));
+  }
+  j["awards"] = awards_array;
+
   j["mafia_state"] = mafia_state_to_json(player.mafia_state());
   j["insurance_state"] = insurance_state_to_json(player.insurance_state());
 
@@ -365,6 +373,20 @@ json_to_player(const json& j, GameContext& context,
   }
   if (j.contains("underworld_score")) {
     player->social_status().underworld_score(j["underworld_score"]);
+  }
+  if (j.contains("score")) {
+    player->add_score(j["score"].get<int>());
+  }
+  if (j.contains("awards")) {
+    int category = 0;
+    for (const auto& level : j["awards"]) {
+      if (category >= static_cast<int>(AwardCategory::Count)) {
+        break;
+      }
+      player->award(static_cast<AwardCategory>(category),
+                    static_cast<AwardLevel>(level.get<int>()));
+      ++category;
+    }
   }
   if (j.contains("mafia_state")) {
     player->mafia_state() = json_to_mafia_state(j["mafia_state"]);
