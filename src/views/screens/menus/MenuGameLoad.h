@@ -19,6 +19,7 @@ class MenuGameLoad : public Menu {
 public:
   MenuGameLoad(GameContext& context, GameState& state);
   void tick() override;
+  void render(const RenderContext& ctx) override;
 
 private:
   Surface background() const override;

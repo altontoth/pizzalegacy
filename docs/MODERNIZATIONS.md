@@ -82,6 +82,16 @@ in effect.
   ingredient and furniture order count, switch between candidate cards in the
   staff screen and when selecting characters when creating a new game.
 
+### Busy cursor and activity captions
+
+* When the game is busy and not accepting input (ending a turn, autosaving,
+  loading a save, initializing audio) the cursor changes to a padlock and a
+  short caption in the bottom left corner says what is happening ("Ending
+  turn...", "Saving...", "Loading..."). The original didn't need this: in 1994
+  your HDD or floppy LED (and drive noise) told you the machine was working.
+  On silent modern hardware a stalled frame reads as a hang, so Pizza Legacy
+  provides that feedback on screen instead.
+
 ### Animated stats titles always visible
 
 * In the original the 'restaurant popularity' and 'quality of pizza' titles on

@@ -9,6 +9,7 @@
 #include "core/common/Ids.h"
 #include "core/time/TimeOfDay.h"
 
+#include <string_view>
 #include <variant>
 #include <vector>
 
@@ -120,13 +121,20 @@ struct Autosave {
   static constexpr const char* name = "Autosave";
 };
 
+// Changes the caption the turn lock layer shows for the following steps.
+struct SetActivity {
+  static constexpr const char* name = "SetActivity";
+  std::string_view label;
+};
+
 using Step =
     std::variant<ProcessRestaurant, Delay, FinishTurn, TickCities,
                  EndOfWeekProcessing, EndOfYearProcessing, EndOfMonthProcessing,
                  AnnualCompetition, MonthlyCompetition, FadeTransition,
                  AdvanceDate, SetTimeOfDay, PreparePlayerTurn, ResumeTime,
                  CityStartOfDay, PlayerTurnCard, WeeklyReports,
-                 MonthlyRestaurantInvoice, MonthlyInvoice, Autosave>;
+                 MonthlyRestaurantInvoice, MonthlyInvoice, Autosave,
+                 SetActivity>;
 
 inline const char* step_name(const Step& step) {
   return std::visit([]<typename T>(const T&) { return T::name; }, step);

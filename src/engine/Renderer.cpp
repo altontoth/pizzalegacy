@@ -204,7 +204,8 @@ void Renderer::clear_layers_preserve_backbuffer() {
 }
 
 void Renderer::update_cache(Renderable* layer, const Surface& surface) {
-  cache_[layer] = to_sdl_surface(surface, fade_factor_);
+  cache_[layer] =
+      to_sdl_surface(surface, layer->ignore_fade() ? 1.0f : fade_factor_);
 }
 
 void Renderer::ensure_backbuffer(int w, int h) {

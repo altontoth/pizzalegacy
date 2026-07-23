@@ -20,5 +20,7 @@ public:
   virtual void tick() = 0;
   virtual std::vector<LayerInfo> get_layers() = 0;
   virtual bool preserve_background() const { return false; }
+  // Composite at full brightness during palette fades.
+  virtual bool ignore_fade() const { return false; }
   virtual ~Renderable() = default;
 };

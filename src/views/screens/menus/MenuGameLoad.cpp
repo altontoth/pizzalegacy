@@ -140,17 +140,25 @@ void MenuGameLoad::load_selected_file() {
     return;
   }
 
-  busy_cursor_.run([this] {
-    Logger::info("Loading save file: {}", selected_file_);
+  busy_cursor_.run(
+      [this] {
+        Logger::info("Loading save file: {}", selected_file_);
 
-    if (save::SaveGameManager::load(state_, context_, selected_file_)) {
-      Logger::info("Successfully loaded: {}", selected_file_);
-    }
-    else {
-      Logger::warn("Failed to load: {}", selected_file_);
-      context_.popup->create<AlertPopup>("Failed to load save file.");
-    }
-  });
+        if (save::SaveGameManager::load(state_, context_, selected_file_)) {
+          Logger::info("Successfully loaded: {}", selected_file_);
+        }
+        else {
+          Logger::warn("Failed to load: {}", selected_file_);
+          context_.popup->create<AlertPopup>("Failed to load save file.");
+        }
+      },
+      "Loading...");
+  mark_dirty();
+}
+
+void MenuGameLoad::render(const RenderContext& ctx) {
+  Menu::render(ctx);
+  busy_cursor_.render_onto(*ctx.surface);
 }
 
 void MenuGameLoad::delete_selected_file() {

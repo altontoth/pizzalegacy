@@ -104,11 +104,14 @@ void Intro::tick() {
   // Request on the first tick so the Microprose logo has been rendered and
   // presented at least once before audio initialization stalls the loop.
   if (passed_ticks_ == 1) {
-    busy_cursor_.run([this] {
-      context_.audio->init();
-      context_.audio->load_default_assets();
-      audio_initialized_ = true;
-    });
+    busy_cursor_.run(
+        [this] {
+          context_.audio->init();
+          context_.audio->load_default_assets();
+          audio_initialized_ = true;
+        },
+        "Loading...");
+    mark_dirty();
   }
 
   // Hold on the first logo until audio is ready.
@@ -192,4 +195,5 @@ void Intro::render(const RenderContext& ctx) {
   default:
     break;
   }
+  busy_cursor_.render_onto(*ctx.surface);
 }

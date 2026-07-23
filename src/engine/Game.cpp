@@ -41,6 +41,7 @@
 #include "views/layers/DebugLayer.h"
 #include "views/layers/PauseLayer.h"
 #include "views/layers/TooltipLayer.h"
+#include "views/layers/TurnLockLayer.h"
 #include "views/screens/StatusDisplay.h"
 #include "views/ui/PopupManager.h"
 #include "views/ui/TurnPresenterView.h"
@@ -252,6 +253,9 @@ void Game::run() {
 
   OverlayManager overlays;
   overlays.push<TooltipLayer>(context, state, *tooltip_manager_);
+
+  // Before PopupManager: its per-frame popup items must outrank the lock.
+  overlays.push<TurnLockLayer>(context, state);
 
   auto& popup_mgr = overlays.push<PopupManager>(context);
   context.popup = &popup_mgr;

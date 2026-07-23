@@ -31,7 +31,8 @@ using namespace views::ui::menu;
 constexpr int MAX_VISIBLE_FILES = 12;
 
 MenuSaveAsGame::MenuSaveAsGame(GameContext& context, GameState& state)
-    : Menu(context, state, ViewPoint{SAVE_BOX_OFFSET_X, SAVE_BOX_OFFSET_Y}, 0) {
+    : Menu(context, state, ViewPoint{SAVE_BOX_OFFSET_X, SAVE_BOX_OFFSET_Y}, 0),
+      busy_cursor_(context) {
 
   load_save_files();
 
@@ -95,18 +96,8 @@ void MenuSaveAsGame::save_to_file(const std::string& filename) {
     save_to_existing_file(filename);
   }
   else {
-    // New file, save directly
     Logger::info("Saving new file: {}", filename);
-    if (save::SaveGameManager::save(state_, context_, filename)) {
-      Logger::info("Successfully saved: {}", filename);
-      // Pop twice to get back to DiskMenu (not just to the save menu)
-      state_.ui().pop();
-      state_.ui().pop();
-    }
-    else {
-      Logger::warn("Failed to save: {}", filename);
-      // TODO: Show error popup to user
-    }
+    perform_save(filename);
   }
 }
 
@@ -116,21 +107,40 @@ void MenuSaveAsGame::save_to_existing_file(const std::string& filename) {
       "Overwrite old file?", [this, filename](bool confirmed) {
         if (confirmed) {
           Logger::info("Overwriting file: {}", filename);
-          if (save::SaveGameManager::save(state_, context_, filename)) {
-            Logger::info("Successfully saved: {}", filename);
-            // Pop twice to get back to DiskMenu (not just to the save menu)
-            state_.ui().pop();
-            state_.ui().pop();
-          }
-          else {
-            Logger::warn("Failed to save: {}", filename);
-            // TODO: Show error popup to user
-          }
+          perform_save(filename);
         }
         else {
           Logger::info("Save cancelled by user");
         }
       });
+}
+
+void MenuSaveAsGame::perform_save(const std::string& filename) {
+  busy_cursor_.run(
+      [this, filename] {
+        if (save::SaveGameManager::save(state_, context_, filename)) {
+          Logger::info("Successfully saved: {}", filename);
+          // Pop twice to get back to DiskMenu (not just to the save menu)
+          state_.ui().pop();
+          state_.ui().pop();
+        }
+        else {
+          Logger::warn("Failed to save: {}", filename);
+          // TODO: Show error popup to user
+        }
+      },
+      "Saving...");
+  mark_dirty();
+}
+
+void MenuSaveAsGame::tick() {
+  Menu::tick();
+  busy_cursor_.tick();
+}
+
+void MenuSaveAsGame::render(const RenderContext& ctx) {
+  Menu::render(ctx);
+  busy_cursor_.render_onto(*ctx.surface);
 }
 
 Surface MenuSaveAsGame::background() const {

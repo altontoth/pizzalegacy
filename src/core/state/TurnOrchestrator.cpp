@@ -550,15 +550,29 @@ TurnOrchestrator::finish_end_of_turn(const turn::FinishTurn& step) {
 }
 
 void TurnOrchestrator::advance_pipeline() {
+  pipeline_waiting_for_player_ = false;
   while (!turn_pipeline_.empty()) {
     turn::Step step = std::move(turn_pipeline_.front());
     turn_pipeline_.pop_front();
     Logger::debug("TurnPipeline: step {} ({} remaining)", turn::step_name(step),
                   turn_pipeline_.size());
     if (execute_pipeline_step(step) == turn::StepResult::Waiting) {
+      // Delay and FadeTransition wait on timers, every other waiting step
+      // waits on the player.
+      pipeline_waiting_for_player_ =
+          !std::holds_alternative<turn::Delay>(step) &&
+          !std::holds_alternative<turn::FadeTransition>(step);
       return;
     }
   }
+}
+
+bool TurnOrchestrator::is_pipeline_blocking_input() const {
+  if (pipeline_waiting_for_player_) {
+    return false;
+  }
+  return processing_end_of_turn_ || !turn_pipeline_.empty() ||
+         pipeline_delay_frames_ > 0;
 }
 
 void TurnOrchestrator::next_player() {
@@ -667,6 +681,12 @@ void TurnOrchestrator::build_turn_pipeline(
       break;
     }
     if (autosave_due) {
+      // The Delay guarantees a frame with the new caption reaches the screen
+      // before the save stalls the loop. Two ticks: the lock layer samples
+      // the label before the pipeline advances within a tick, so the first
+      // tick after SetActivity still renders the old caption.
+      turn_pipeline_.push_back(turn::SetActivity{autosave_activity});
+      turn_pipeline_.push_back(turn::Delay{2});
       turn_pipeline_.push_back(turn::Autosave{});
     }
   }
@@ -855,6 +875,12 @@ TurnOrchestrator::execute_pipeline_step(const turn::Step& step) {
             if (gs_->context_) {
               save::SaveGameManager::autosave(*gs_, *gs_->context_);
             }
+            pipeline_activity_ = end_turn_activity;
+            return StepResult::Done;
+          },
+
+          [&](const turn::SetActivity& s) {
+            pipeline_activity_ = s.label;
             return StepResult::Done;
           },
       },

@@ -15,6 +15,7 @@
 #include <array>
 #include <deque>
 #include <string>
+#include <string_view>
 #include <vector>
 
 class City;
@@ -60,6 +61,14 @@ public:
   }
   [[nodiscard]] bool is_processing_end_of_turn() const {
     return processing_end_of_turn_;
+  }
+  // True while the turn pipeline is running and not parked on a step that
+  // waits for player input; the turn lock layer blocks pointer interaction
+  // while set.
+  [[nodiscard]] bool is_pipeline_blocking_input() const;
+  // Caption the turn lock layer shows while input is blocked.
+  [[nodiscard]] std::string_view pipeline_activity() const {
+    return pipeline_activity_;
   }
 
   // Mayor inspection events deferred from EOD to the next day.
@@ -162,6 +171,14 @@ private:
   // True from end_of_turn() until FinishTurn runs; gates deferred event
   // delivery in fire_due_events().
   bool processing_end_of_turn_{false};
+  // True while the pipeline is parked on a step that waits for player input
+  // (report screens, competitions, invoices); timer waits (Delay,
+  // FadeTransition) leave it false.
+  bool pipeline_waiting_for_player_{false};
+
+  static constexpr std::string_view end_turn_activity = "Ending turn...";
+  static constexpr std::string_view autosave_activity = "Saving...";
+  std::string_view pipeline_activity_{end_turn_activity};
 
   bool should_end_of_turn_{false};
   bool suppress_end_of_turn_reports_{false};

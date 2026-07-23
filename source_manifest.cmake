@@ -126,6 +126,7 @@ set(GAME_PLEGACY_SOURCES
     src/views/layers/ConsoleLayer.cpp
     src/views/layers/DebugLayer.cpp
     src/views/layers/PauseLayer.cpp
+    src/views/layers/TurnLockLayer.cpp
     src/views/screens/Advertising.cpp
     src/views/screens/AnimatedStats.cpp
     src/views/screens/CookbookReminder.cpp
@@ -595,6 +596,7 @@ set(PLEGACY_HEADERS
     src/views/layers/DebugLayer.h
     src/views/layers/PauseLayer.h
     src/views/layers/TooltipLayer.h
+    src/views/layers/TurnLockLayer.h
     src/views/screens/ActorView.h
     src/views/screens/ActorView.inl
     src/views/screens/Advertising.h
