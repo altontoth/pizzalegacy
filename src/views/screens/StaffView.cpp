@@ -1005,8 +1005,7 @@ Surface StaffView::create_training_card(const Staff& staff) {
   auto courses = TrainingFactory::trainings_by_skill(skill_for_job(job_));
 
   // Column-header row.
-  context_.font->render_text_onto(card,
-                                  "course name    scores     costs      days",
+  context_.font->render_line_onto(card, "course name    scores  costs days",
                                   ViewPoint{TRAINING_TEXT_X, TRAINING_LIST_Y},
                                   FontFace::PIZ_NUMB, TEXT_COLOR_BLACK);
 
