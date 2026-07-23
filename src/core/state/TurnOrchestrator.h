@@ -172,6 +172,9 @@ private:
 
   std::vector<DeferredStaffEvent> deferred_staff_events_;
   bool showing_deferred_staff_event_{false};
+  // Set while end_of_turn() drains un-fired staff events; the dialog chain
+  // re-enters end_of_turn() when it empties.
+  bool flush_staff_events_then_end_turn_{false};
 
   std::vector<DeferredManagerAlert> deferred_manager_alerts_;
 

@@ -74,8 +74,7 @@ bool TurnOrchestrator::is_player_day_over() const {
 void TurnOrchestrator::prevent_auto_end_of_turn(bool prevent) {
   prevent_auto_end_of_turn_ = prevent;
   if (!prevent_auto_end_of_turn_) {
-    // Show any staff event dialogs for today (or earlier if they ended the
-    // day before 10am then)
+    // Show any staff event dialogs for today
     if (!showing_deferred_staff_event_ && !deferred_staff_events_.empty() &&
         gs_->time().is_past_time(10, 0)) {
       show_next_deferred_staff_event();
@@ -97,6 +96,17 @@ void TurnOrchestrator::end_of_turn() {
                      !current_player->is_on_holiday() &&
                      !current_player->is_in_jail() &&
                      !suppress_end_of_turn_reports_;
+
+  // Ending the turn flushes staff event dialogs that have not fired yet
+  // (before 10:00): the original jumps the clock to the day-end block and
+  // runs the staff event check there, so events never carry to the next day.
+  if (interactive && !showing_deferred_staff_event_ &&
+      !deferred_staff_events_.empty()) {
+    flush_staff_events_then_end_turn_ = true;
+    show_next_deferred_staff_event();
+    return;
+  }
+
   suppress_end_of_turn_reports_ = false;
   if (!interactive) {
     gs_->status().suppress(true);
@@ -182,7 +192,8 @@ TurnOrchestrator::process_restaurant_step(const turn::ProcessRestaurant& step) {
       deferred_mayor_inspections_.push_back({*insp, restaurant->id()});
     }
 
-    // Queue staff event dialogs for next day at 10:00
+    // Queue staff event dialogs for the next day: delivered at 10:00, or
+    // flushed by that day's End Turn if it comes first.
     // Replace any existing queued event for the same staff member so that
     // only the most recent event survives
     for (auto& ev : restaurant->take_pending_staff_events()) {
@@ -225,6 +236,11 @@ TurnOrchestrator::process_restaurant_step(const turn::ProcessRestaurant& step) {
 void TurnOrchestrator::show_next_deferred_staff_event() {
   if (deferred_staff_events_.empty()) {
     showing_deferred_staff_event_ = false;
+    if (flush_staff_events_then_end_turn_) {
+      flush_staff_events_then_end_turn_ = false;
+      end_of_turn();
+      return;
+    }
     // The dialog chain may have been started from the
     // prevent_auto_end_of_turn setter, which deferred the end-of-turn
     // check. Now that all dialogs are done, check if we should end the turn.
