@@ -7,6 +7,7 @@
 #pragma once
 
 #include <optional>
+#include <vector>
 #include "core/Demographics.h"
 #include "core/finance/Money.h"
 #include "core/food/Ingredient.h"
@@ -41,11 +42,12 @@ public:
   static int calculate_ingredient_popularity(const core::food::Pizza& pizza,
                                              const City& city);
 
-  // Get the primary ingredient ID (the one with the highest weight * intensity
-  // score for that category) of a given category from a pizza.
-  static std::optional<food::IngredientType>
-  get_primary_ingredient_for_category(const core::food::Pizza& pizza,
-                                      IngredientCategory category);
+  // The pizza's four defining ingredients: the highest scoring by total amount
+  // on the pizza times intensity, taken across all categories, so one category
+  // can supply several. Fewer than four entries when the pizza has fewer
+  // distinct ingredients.
+  static std::vector<food::IngredientType>
+  find_primary_ingredients(const core::food::Pizza& pizza);
 
   // Calculate price/income demand modifier.
   // - Higher prices reduce demand

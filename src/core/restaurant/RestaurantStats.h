@@ -27,13 +27,15 @@ struct PizzaSalesData {
   Money ingredient_cost{0};
   Money profit{0};
 
-  void record_demand() { count_ordered++; }
+  void record_demand(int count = 1) { count_ordered += count; }
 
-  void add_sale(Money price, Money cost) {
-    count_sold++;
-    revenue = revenue + price;
-    ingredient_cost = ingredient_cost + cost;
-    profit = profit + (price - cost);
+  void add_sale(Money price, Money cost) { add_sales(1, price, cost); }
+
+  void add_sales(int count, Money price_each, Money cost_each) {
+    count_sold += count;
+    revenue = revenue + Money{price_each.cents * count};
+    ingredient_cost = ingredient_cost + Money{cost_each.cents * count};
+    profit = profit + Money{(price_each.cents - cost_each.cents) * count};
   }
 };
 
@@ -100,9 +102,14 @@ struct DailyStats {
     pizza_sales[pizza_id].add_sale(price, cost);
   }
 
-  void record_order(Money price) {
-    total_order_value = total_order_value + price;
-    order_value_count++;
+  void record_sales(core::RecipeId pizza_id, int count, Money price_each,
+                    Money cost_each) {
+    pizza_sales[pizza_id].add_sales(count, price_each, cost_each);
+  }
+
+  void record_order(Money price, int count = 1) {
+    total_order_value = total_order_value + Money{price.cents * count};
+    order_value_count += count;
   }
 
   Money avg_order_value() const {

@@ -378,11 +378,10 @@ public:
     return operating_blocks_per_day() * core::time::MINUTES_PER_BLOCK;
   }
 
-  core::food::IngredientDemand calculate_daily_ingredient_demand_grams(
-      const core::food::PlayerRecipes& recipes) const;
-
-  // Daily ingredient demand as of the last end-of-day, in grams, for the stock
-  // screen. No live calculation to match original behavior.
+  // Daily ingredient demand as of the last end-of-day, in grams. Depot
+  // delivery, manager restocking and the stock screen all key off this stored
+  // snapshot rather than today's menu, so an ingredient dropped from the menu
+  // keeps its last value. See pt_asm/docs/DAILY_INGREDIENT_DEMAND.md.
   const core::food::IngredientDemand& daily_ingredient_demand_cache() const {
     return daily_ingredient_demand_cache_;
   }

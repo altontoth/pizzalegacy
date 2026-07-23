@@ -6,10 +6,14 @@
 
 #include "core/restaurant/PizzaDemand.h"
 #include <algorithm>
-#include <array>
 #include <cmath>
+#include <cstdint>
+#include <optional>
+#include <vector>
 #include "core/city/City.h"
 #include "core/city/District.h"
+#include "core/food/IngredientArray.h"
+#include "core/food/IngredientType.h"
 #include "core/food/Pizza.h"
 #include "core/food/PlayerRecipes.h"
 #include "core/restaurant/Menu.h"
@@ -62,9 +66,9 @@ int PizzaDemand::calculate(const MenuEntry& menu_entry,
   int price_penalty =
       calculate_price_income_modifier(menu_entry.price, district);
 
-  // Final: appeal * district_ratio - price_penalty
-  int result =
-      static_cast<int>(static_cast<double>(demand) * ratio) - price_penalty;
+  // Final: appeal * district_ratio - price_penalty, truncated once at the end.
+  int result = static_cast<int>(
+      std::trunc((static_cast<double>(demand) * ratio) - price_penalty));
 
   // [Life improvement] Guarantee a small random minimum demand for any pizza
   // on the menu. The original's aggressive demographic scoring (100 - 4*sum)
@@ -79,47 +83,55 @@ int PizzaDemand::calculate(const MenuEntry& menu_entry,
 
 int PizzaDemand::calculate_ingredient_popularity(const core::food::Pizza& pizza,
                                                  const City& city) {
-  // Sums trend values for primary ingredient of each category (0-3)
   int total = 0;
-
-  // Check each ingredient category
-  static constexpr std::array<IngredientCategory, 4> categories = {
-      IngredientCategory::VEGETABLES, IngredientCategory::MEAT,
-      IngredientCategory::FRUIT, IngredientCategory::CHEESE};
-
-  for (auto category : categories) {
-    auto ingredient_type = get_primary_ingredient_for_category(pizza, category);
-    if (ingredient_type.has_value()) {
-      // Get trend value from city
-      total += city.ingredient_trend_system().get_trend(*ingredient_type);
-    }
+  for (auto ingredient_type : find_primary_ingredients(pizza)) {
+    total += city.ingredient_trend_system().get_trend(ingredient_type);
   }
-
   return std::clamp(total, -125, 125);
 }
 
-std::optional<food::IngredientType>
-PizzaDemand::get_primary_ingredient_for_category(const core::food::Pizza& pizza,
-                                                 IngredientCategory category) {
-  // Find the ingredient with the highest weight * intensity for this category.
-  // The "primary" ingredient is the one with the most impact (weight *
-  // intensity).
-  int best_score = 0;
-  std::optional<food::IngredientType> best_ingredient;
-
+std::vector<food::IngredientType>
+PizzaDemand::find_primary_ingredients(const core::food::Pizza& pizza) {
+  // Score every ingredient by the total amount of it on the pizza times its
+  // intensity, then take the four highest.
+  core::food::IngredientArray<int> grams{};
+  core::food::IngredientArray<int> intensity{};
   for (const auto& topping : pizza.toppings()) {
-    if (topping && topping->ingredient() &&
-        topping->ingredient()->category() == category) {
-      // Calculate impact score: weight x intensity
-      int score = topping->weight() * topping->ingredient()->intensity();
-      if (score > best_score) {
-        best_score = score;
-        best_ingredient = topping->ingredient_type();
-      }
+    if (!topping || !topping->ingredient()) {
+      continue;
     }
+    auto ingredient_type = topping->ingredient_type();
+    grams[ingredient_type] += topping->weight();
+    intensity[ingredient_type] = topping->ingredient()->intensity();
   }
 
-  return best_ingredient;
+  constexpr int primary_ingredient_count = 4;
+  std::vector<food::IngredientType> primary;
+  std::vector<bool> taken(max_ingredient_count, false);
+
+  for (int slot = 0; slot < primary_ingredient_count; ++slot) {
+    int best_score = 0;
+    std::optional<food::IngredientType> best;
+    for (int i = 0; i < max_ingredient_count; ++i) {
+      if (taken[i] ||
+          !core::food::is_valid_ingredient_id(static_cast<uint8_t>(i))) {
+        continue;
+      }
+      auto ingredient_type = static_cast<food::IngredientType>(i);
+      int score = grams[ingredient_type] * intensity[ingredient_type];
+      if (score > best_score) {
+        best_score = score;
+        best = ingredient_type;
+      }
+    }
+    if (!best) {
+      break;
+    }
+    taken[static_cast<int>(*best)] = true;
+    primary.push_back(*best);
+  }
+
+  return primary;
 }
 
 int PizzaDemand::calculate_price_income_modifier(Money price,
@@ -134,13 +146,15 @@ int PizzaDemand::calculate_price_income_modifier(Money price,
   double income_curve = 8.0 - (income / 25.0); // Higher income = lower curve
   double income_exp = (income / 250.0) + 1.3;  // Higher income = higher exp
 
-  double pow_result = std::pow(income_exp, price_norm);
+  // The curve is truncated to an integer before the cheap-pizza bonus, and the
+  // result of that subtraction is truncated again.
+  double penalty = std::trunc(std::pow(income_exp, price_norm));
+
 
   // When price_norm <= income_curve, cheap pizzas get a demand bonus
-  double penalty = pow_result;
   if (price_norm <= income_curve) {
     double adjustment = (income_curve - price_norm) * 5.0;
-    penalty = pow_result - adjustment;
+    penalty = std::trunc(penalty - adjustment);
   }
 
   // The original converts the overflowing x87 result to INT_MIN, which is then

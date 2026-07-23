@@ -7,9 +7,14 @@
 #include "core/restaurant/Restaurant.h"
 
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <cmath>
 #include <cstdint>
+#include <optional>
+#include <string>
+#include <utility>
+#include <vector>
 #include "core/Demographics.h"
 #include "core/character/Staff.h"
 #include "core/city/City.h"
@@ -1189,11 +1194,32 @@ void Restaurant::eod_batch_order_fulfillment(class GameState& game_state) {
   Money total_revenue{0};
   Money total_ingredient_cost{0};
 
-  int capacity_used = 0;
+  // The day's menu lines: how many were ordered and what one pizza consumes.
+  struct MenuLine {
+    core::RecipeId recipe_id;
+    Money price;
+    std::vector<std::pair<core::food::IngredientType, int>> per_pizza;
+    int orders;
+  };
+  std::vector<MenuLine> lines;
 
   for (const auto& entry : menu_entries) {
     int predicted = get_predicted_daily_orders(entry.recipe_id);
     total_orders += predicted;
+    if (predicted == 0) {
+      continue;
+    }
+
+    const auto* recipe = recipes.find(entry.recipe_id);
+    if (!recipe) {
+      lost_to_ingredients += predicted;
+      continue;
+    }
+
+    stats_.today.pizza_sales[entry.recipe_id].record_demand(predicted);
+    stats_.today.record_order(entry.price, predicted);
+    lines.push_back({entry.recipe_id, entry.price,
+                     get_recipe_requirements_grams(*recipe), predicted});
   }
 
   // Staff shortage augmentation: if the manager is present and staff_shortage
@@ -1224,94 +1250,173 @@ void Restaurant::eod_batch_order_fulfillment(class GameState& game_state) {
   int effective_capacity =
       std::min({oven_capacity, chef_capacity, waiter_capacity});
 
-  core::food::IngredientDemand day_demand_grams{};
-
-  for (const auto& entry : menu_entries) {
-    int predicted = get_predicted_daily_orders(entry.recipe_id);
-    if (predicted == 0) {
-      continue;
+  auto total_ordered = [&lines]() {
+    int total = 0;
+    for (const auto& line : lines) {
+      total += line.orders;
     }
+    return total;
+  };
 
-    const auto* recipe = recipes.find(entry.recipe_id);
-    if (!recipe) {
-      lost_to_ingredients += predicted;
-      stats_.today.orders_lost += predicted;
-      continue;
+  auto requirement_grams = [&lines]() {
+    core::food::IngredientDemand need{};
+    for (const auto& line : lines) {
+      for (const auto& [ingredient_type, qty_grams] : line.per_pizza) {
+        need[ingredient_type] += qty_grams * line.orders;
+      }
     }
+    return need;
+  };
 
-    auto requirements = get_recipe_requirements_grams(*recipe);
-    for (const auto& [ingredient_type, qty_grams] : requirements) {
-      day_demand_grams[ingredient_type] += qty_grams * predicted;
-    }
+  // Unconstrained demand, taken before any scaling: the demand cache records
+  // what the day wanted, so a shortage does not ratchet tomorrow's reorder
+  // down. See pt_asm/docs/DAILY_INGREDIENT_DEMAND.md.
+  const core::food::IngredientDemand day_demand_grams = requirement_grams();
 
-    for (int order_idx = 0; order_idx < predicted; order_idx++) {
-      stats_.today.orders_generated++;
-      stats_.today.pizza_sales[entry.recipe_id].record_demand();
-
-      stats_.today.record_order(entry.price);
-
-      if (capacity_used >= effective_capacity) {
-        lost_to_capacity++;
-        stats_.today.orders_lost++;
-        stats_.today.lost_due_to_capacity++;
-        continue;
-      }
-
-      if (!inventory_.can_fulfill_recipe(requirements)) {
-        lost_to_ingredients++;
-        stats_.today.orders_lost++;
-        stats_.today.lost_due_to_ingredients++;
-        continue;
-      }
-
-      if (!inventory_.consume_recipe(requirements)) {
-        lost_to_ingredients++;
-        stats_.today.orders_lost++;
-        stats_.today.lost_due_to_ingredients++;
-        continue;
-      }
-
-      Money ingredient_cost{0};
-      for (const auto& [ingredient_type, qty_grams] : requirements) {
-        const auto& stock = inventory_.get_stock(ingredient_type);
-        Money this_cost =
-            Money{(stock.weighted_avg_cost.cents * qty_grams) / 1000};
-        ingredient_cost = ingredient_cost + this_cost;
-
-        stats_.today.ingredients_used_grams += qty_grams;
-
-        int ing_id = static_cast<int>(ingredient_type);
-        for (int cat_idx = 0; cat_idx < 4; ++cat_idx) {
-          auto category = static_cast<IngredientCategory>(cat_idx);
-          if (ing_id >= core::food::CategoryRegistry::start_id(category) &&
-              ing_id < core::food::CategoryRegistry::end_id(category)) {
-            stats_.today.ingredient_costs_by_category[cat_idx] =
-                stats_.today.ingredient_costs_by_category[cat_idx] + this_cost;
-            break;
-          }
+  // Cut the day back to what the stock and the day's throughput support.
+  // Shortages are resolved one ingredient at a time, worst first, by scaling
+  // every menu line that uses it and then recomputing the requirement, as the
+  // original does. Capacity caps the day's total and is redistributed across
+  // the menu by a single ratio, after which the stock check runs again.
+  constexpr int max_fulfillment_passes = 8;
+  for (int pass = 0; pass < max_fulfillment_passes; ++pass) {
+    while (true) {
+      const auto need = requirement_grams();
+      std::optional<core::food::IngredientType> worst;
+      int worst_shortfall = 0;
+      for (int i = 0; i < max_ingredient_count; ++i) {
+        if (!core::food::is_valid_ingredient_id(static_cast<uint8_t>(i))) {
+          continue;
+        }
+        auto ingredient_type = static_cast<core::food::IngredientType>(i);
+        int shortfall = need[ingredient_type] -
+                        inventory_.get_stock(ingredient_type).quantity;
+        if (shortfall > worst_shortfall) {
+          worst_shortfall = shortfall;
+          worst = ingredient_type;
         }
       }
+      if (!worst) {
+        break;
+      }
 
-      total_fulfilled++;
-      capacity_used++;
-      stats_.today.orders_fulfilled++;
+      const int available = inventory_.get_stock(*worst).quantity;
+      const int required = need[*worst];
+      const int before = total_ordered();
+      for (auto& line : lines) {
+        bool uses_worst =
+            std::any_of(line.per_pizza.begin(), line.per_pizza.end(),
+                        [&](const auto& r) { return r.first == *worst; });
+        if (!uses_worst) {
+          continue;
+        }
+        // Truncating: a short line always loses at least one order, so the
+        // recheck below cannot see the same shortfall twice.
+        line.orders =
+            available == 0
+                ? 0
+                : static_cast<int>(
+                      (static_cast<int64_t>(line.orders) * available) /
+                      required);
+      }
+      lost_to_ingredients += before - total_ordered();
+    }
 
-      Money order_price = entry.price;
-      total_revenue = total_revenue + order_price;
-      total_ingredient_cost = total_ingredient_cost + ingredient_cost;
+    const int total = total_ordered();
+    if (total <= effective_capacity) {
+      break;
+    }
+    for (auto& line : lines) {
+      line.orders = static_cast<int>(
+          ((static_cast<int64_t>(line.orders) * effective_capacity) +
+           (total / 2)) /
+          total);
+    }
+    // Hand back what the per-line rounding dropped.
+    if (total_ordered() > 0) {
+      std::size_t i = 0;
+      while (total_ordered() < effective_capacity) {
+        if (lines[i].orders > 0) {
+          lines[i].orders++;
+        }
+        i = (i + 1) % lines.size();
+      }
+    }
+    lost_to_capacity += total - total_ordered();
+  }
 
-      stats_.today.revenue = stats_.today.revenue + order_price;
-      stats_.today.ingredient_costs =
-          stats_.today.ingredient_costs + ingredient_cost;
-      stats_.today.record_sale(entry.recipe_id, order_price, ingredient_cost);
+  // Price each line from the pre-consumption weighted average cost.
+  for (const auto& line : lines) {
+    if (line.orders == 0) {
+      continue;
+    }
+
+    Money cost_each{0};
+    for (const auto& [ingredient_type, qty_grams] : line.per_pizza) {
+      const auto& stock = inventory_.get_stock(ingredient_type);
+      Money this_cost =
+          Money{(stock.weighted_avg_cost.cents * qty_grams) / 1000};
+      cost_each = cost_each + this_cost;
+
+      stats_.today.ingredients_used_grams +=
+          static_cast<int64_t>(qty_grams) * line.orders;
+
+      int ing_id = static_cast<int>(ingredient_type);
+      for (int cat_idx = 0; cat_idx < 4; ++cat_idx) {
+        auto category = static_cast<IngredientCategory>(cat_idx);
+        if (ing_id >= core::food::CategoryRegistry::start_id(category) &&
+            ing_id < core::food::CategoryRegistry::end_id(category)) {
+          stats_.today.ingredient_costs_by_category[cat_idx] =
+              stats_.today.ingredient_costs_by_category[cat_idx] +
+              Money{this_cost.cents * line.orders};
+          break;
+        }
+      }
+    }
+
+    Money line_revenue = Money{line.price.cents * line.orders};
+    Money line_cost = Money{cost_each.cents * line.orders};
+
+    total_fulfilled += line.orders;
+    total_revenue = total_revenue + line_revenue;
+    total_ingredient_cost = total_ingredient_cost + line_cost;
+
+    stats_.today.orders_fulfilled += line.orders;
+    stats_.today.revenue = stats_.today.revenue + line_revenue;
+    stats_.today.ingredient_costs = stats_.today.ingredient_costs + line_cost;
+    stats_.today.record_sales(line.recipe_id, line.orders, line.price,
+                              cost_each);
+  }
+
+  // Bulk consumption, clamped so stock never goes negative.
+  const auto consumed = requirement_grams();
+  for (int i = 0; i < max_ingredient_count; ++i) {
+    if (!core::food::is_valid_ingredient_id(static_cast<uint8_t>(i))) {
+      continue;
+    }
+    auto ingredient_type = static_cast<core::food::IngredientType>(i);
+    int grams = std::min(consumed[ingredient_type],
+                         inventory_.get_stock(ingredient_type).quantity);
+    if (grams > 0) {
+      inventory_.consume_ingredient(ingredient_type, grams);
     }
   }
 
-  // Demand cache: written from the day's orders like the original (in grams)
+  stats_.today.orders_generated = total_orders;
+  stats_.today.lost_due_to_ingredients = lost_to_ingredients;
+  stats_.today.lost_due_to_capacity = lost_to_capacity;
+  stats_.today.orders_lost = lost_to_ingredients + lost_to_capacity;
+
+  // Demand cache: written from the day's orders like the original (in grams).
+  // An ingredient with no demand today keeps its previous value; the cache
+  // only ever decays when the stale entry is overwritten.
   for (int i = 0; i < max_ingredient_count; ++i) {
     int grams = day_demand_grams[i];
+    if (grams == 0) {
+      continue;
+    }
     daily_ingredient_demand_cache_[i] =
-        grams > 0 ? std::min((grams / 1000) + 1, 250) * 1000 : 0;
+        (grams > 250000 ? 250 : (grams / 1000) + 1) * 1000;
   }
 
   // Shortage warning, from what the day actually lost; only the most binding
@@ -1364,17 +1469,6 @@ void Restaurant::eod_batch_order_fulfillment(class GameState& game_state) {
 
   stats_.end_of_day(effective_capacity);
   calculate_pizza_quality_rating(recipes);
-
-  Logger::info(
-      "[Economy] {} - End of Day: {} orders ({} fulfilled, {} lost: "
-      "capacity={}, ingredients={}), Revenue: ${:.2f}, Costs: ${:.2f}, "
-      "Profit: ${:.2f}, Capacity: {}/{} ({}%)",
-      name_, total_orders, total_fulfilled,
-      lost_to_capacity + lost_to_ingredients, lost_to_capacity,
-      lost_to_ingredients, total_revenue.cents / 100.0,
-      total_ingredient_cost.cents / 100.0,
-      (total_revenue.cents - total_ingredient_cost.cents) / 100.0,
-      capacity_used, effective_capacity, fulfillment_rate_);
 }
 
 int Restaurant::calculate_average_cook_quality() const {
@@ -1554,56 +1648,6 @@ std::optional<bool> Restaurant::update_star_rating() {
                name_, star_rating_, pizza_quality_rating_, award_threshold,
                loss_threshold);
   return std::nullopt;
-}
-
-core::food::IngredientDemand
-Restaurant::calculate_daily_ingredient_demand_grams(
-    const core::food::PlayerRecipes& recipes) const {
-  core::food::IngredientDemand demand_grams{};
-
-  const auto& menu_entries = menu_.entries();
-  if (menu_entries.empty()) {
-    Logger::debug("[Restaurant] {} - No menu items, returning zero demand",
-                  name_);
-    return demand_grams;
-  }
-
-  int total_predicted = 0;
-  for (const auto& entry : menu_entries) {
-    const auto* recipe = recipes.find(entry.recipe_id);
-    if (!recipe) {
-      Logger::debug("[Restaurant] {} - Recipe not found for id {}", name_,
-                    entry.recipe_id.value);
-      continue;
-    }
-
-    int predicted_orders = get_predicted_daily_orders(entry.recipe_id);
-
-    // Default to yesterday's sales or 10 if no forecast yet
-    if (predicted_orders == 0) {
-      auto it = stats_.yesterday.pizza_sales.find(entry.recipe_id);
-      predicted_orders = (it != stats_.yesterday.pizza_sales.end())
-                             ? it->second.count_sold
-                             : 10;
-    }
-
-    total_predicted += predicted_orders;
-
-    const auto& pizza = recipe->pizza();
-
-    for (const auto& topping : pizza.toppings()) {
-      int weight = topping->weight();
-      demand_grams[topping->ingredient_type()] += weight * predicted_orders;
-    }
-  }
-
-  if (id().value == 0) {
-    Logger::debug("[Restaurant] {} - Ingredient demand calculated for {} "
-                  "predicted pizzas across {} menu items",
-                  name_, total_predicted, menu_entries.size());
-  }
-
-  return demand_grams;
 }
 
 std::vector<std::pair<core::food::IngredientType, int>>
@@ -1840,6 +1884,8 @@ void Restaurant::calculate_daily_pizza_sales_distribution(
   update_menu_factor(recipes, city, district);
 
   std::vector<float> pizza_total_sales(pizza_count, 0.0f);
+  std::vector<std::array<int, 6>> demand_scores(
+      static_cast<std::size_t>(pizza_count));
   predicted_daily_orders_.clear();
 
   for (int demographic = 0; demographic < 6; demographic++) {
@@ -1856,6 +1902,7 @@ void Restaurant::calculate_daily_pizza_sales_distribution(
           entry, recipes, city, district, demo_type);
 
       pizza_demand_scores[pizza_idx] = static_cast<float>(demand);
+      demand_scores[pizza_idx][demographic] = demand;
       total_demand += static_cast<float>(demand);
     }
 
@@ -1887,16 +1934,6 @@ void Restaurant::calculate_daily_pizza_sales_distribution(
     predicted_daily_orders_[entry.recipe_id] = predicted;
     total_predicted += predicted;
   }
-
-  Logger::debug("[Restaurant] {} - Sales distribution: {} total across {} "
-                "pizzas, menu_factor=[{},{},{},{},{},{}]",
-                name_, total_predicted, pizza_count,
-                economy_.menu_factor()[ConsumerType::Children],
-                economy_.menu_factor()[ConsumerType::YoungPeople],
-                economy_.menu_factor()[ConsumerType::BlueCollar],
-                economy_.menu_factor()[ConsumerType::WhiteCollar],
-                economy_.menu_factor()[ConsumerType::BusinessPeople],
-                economy_.menu_factor()[ConsumerType::SeniorCitizens]);
 }
 
 void Restaurant::calculate_popularity(const Player& player, const City& city,
@@ -1955,11 +1992,13 @@ void Restaurant::calculate_popularity(const Player& player, const City& city,
   // Furnishing: also seems disabled in the original
   popularity_.furnishing = 0;
 
-  // DemandFulfillment: the original recomputes -((100 - fulfillment) >> 3), but
-  // the daily tick zeroes the fulfillment byte before popularity is computed an
-  // only rewrites it after order fulfillment, so the input is always 0. The
-  // re-open path skips the zeroing and uses the previous operating day's rate;
-  // not replicated because it's a small temporary effect anyway.
+  // DemandFulfillment: the original computes -((100 - fulfillment) >> 3), but
+  // the daily tick zeroes the fulfillment byte before popularity is computed
+  // and only rewrites it after order fulfillment, so the input is always 0.
+  // I verrified in bochs that the stored component is -12.
+  // The one exception is the player-initiated re-open dialog, which recomputes
+  // with the last operating day's rate until the next daily tick overwrites
+  // it; not replicating that because the effect is tiny.
   constexpr int ambient_penalty = -12;
   popularity_.demand_fulfillment = ambient_penalty;
 

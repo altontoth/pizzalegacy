@@ -320,10 +320,16 @@ void RestaurantEconomy::calculate_demand_with_competition(
     rejection_rate_ = 0;
   }
 
-  // Calculate final demand ratio
+  // Local share: Calculate our share of demand relative to nearby competition.
+  // With no competitors, competition_scores stays at 100 per demographic,
+  // giving a baseline denominator of 600.
+  int total_base_demand = 0;
+  for (int strength : competitive_strength_) {
+    total_base_demand += strength;
+  }
   int demand_ratio_calc = 0;
   if (total_competition > 0) {
-    demand_ratio_calc = (total_popularity_ * 100) / total_competition;
+    demand_ratio_calc = (total_base_demand * 100) / total_competition;
   }
   demand_ratio_ = std::clamp(demand_ratio_calc, 0, 100);
 }

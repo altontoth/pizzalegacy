@@ -874,37 +874,39 @@ void TurnOrchestrator::deliver_depot_stock(core::PlayerId player_id) {
 
     const auto& demand = rest->daily_ingredient_demand_cache();
 
-    for (int i = 0; i < max_ingredient_count; ++i) {
-      int needed = demand[i] * 2;
-      if (needed <= 0) {
-        continue;
+    // The whole sweep runs four times, each pass re-testing days of supply and
+    // shipping another half day. From empty that converges on two days' stock.
+    constexpr int delivery_passes = 4;
+    constexpr int min_days_of_supply = 2;
+    constexpr int grams_per_kg = 1000;
+
+    for (int pass = 0; pass < delivery_passes; ++pass) {
+      for (int i = 0; i < max_ingredient_count; ++i) {
+        int demand_grams = demand[i];
+        if (demand_grams <= 0) {
+          continue;
+        }
+
+        auto ing_type = static_cast<core::food::IngredientType>(i);
+        auto& depot_stock = depot.get_stock(ing_type);
+        if (depot_stock.quantity <= 0) {
+          continue;
+        }
+
+        int current = rest->inventory().get_stock(ing_type).quantity;
+        if (current / demand_grams >= min_days_of_supply) {
+          continue;
+        }
+
+        int ship =
+            std::max((demand_grams / grams_per_kg) / 2, 1) * grams_per_kg;
+        int transfer = std::min(ship, depot_stock.quantity);
+        int quality = depot_stock.weighted_avg_quality;
+        Money cost = depot_stock.weighted_avg_cost;
+
+        depot_stock.consume(transfer);
+        rest->inventory().add_ingredient(ing_type, transfer, quality, cost);
       }
-
-      auto ing_type = static_cast<core::food::IngredientType>(i);
-      auto& depot_stock = depot.get_stock(ing_type);
-
-      constexpr int grams_per_kg = 1000;
-      int current_raw = rest->inventory().get_stock(ing_type).quantity;
-      int current = (current_raw / grams_per_kg) * grams_per_kg;
-      int shortfall = needed - current;
-
-      if (depot_stock.quantity <= 0) {
-        continue;
-      }
-
-      // We just top up the stock until it's at 2x yesterday's demand
-      if (shortfall <= 0) {
-        continue;
-      }
-
-      int shortfall_rounded =
-          ((shortfall + grams_per_kg - 1) / grams_per_kg) * grams_per_kg;
-      int transfer = std::min(shortfall_rounded, depot_stock.quantity);
-      int quality = depot_stock.weighted_avg_quality;
-      Money cost = depot_stock.weighted_avg_cost;
-
-      depot_stock.consume(transfer);
-      rest->inventory().add_ingredient(ing_type, transfer, quality, cost);
     }
   }
 
