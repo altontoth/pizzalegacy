@@ -468,6 +468,7 @@ set(PLEGACY_HEADERS
     src/engine/DebugConsole.h
     src/engine/DebugLabel.h
     src/engine/DisplayConstants.h
+    src/engine/Endian.h
     src/engine/Fatal.h
     src/engine/FormatCompat.h
     src/engine/FpsManager.h

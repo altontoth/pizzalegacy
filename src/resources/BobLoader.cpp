@@ -9,8 +9,8 @@
 #include <cstddef>
 #include <fstream>
 #include <vector>
+#include "engine/Endian.h"
 #include "engine/Fatal.h"
-#include "engine/Math.h"
 #include "resources/util/FileUtils.h"
 
 std::unique_ptr<Bob> BobLoader::load(const std::string& filename) {
@@ -28,8 +28,8 @@ std::unique_ptr<Bob> BobLoader::load(const std::string& filename) {
   }
 
   // Parse the header (state_count, etc.)
-  auto state_count = static_cast<std::size_t>(
-      math::two_bytes_to_uint16(raw_data[0], raw_data[1]));
+  auto state_count =
+      static_cast<std::size_t>(endian::u16le(raw_data[0], raw_data[1]));
 
   const std::size_t file_header_size = 6;
   const std::size_t frame_header_size = 7;

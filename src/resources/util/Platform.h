@@ -7,14 +7,12 @@
 #pragma once
 
 #include <string>
-#include "engine/Math.h"
 
 namespace platform {
 
 enum class AssetFormat { ENGLISH, GERMAN };
 void init_asset_format();
 AssetFormat asset_format();
-Endian endianness();
 const char* asset_format_string();
 bool can_toggle_format();
 AssetFormat alternate_format();

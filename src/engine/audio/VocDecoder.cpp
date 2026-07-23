@@ -8,6 +8,7 @@
 
 #include <cstring>
 
+#include "engine/Endian.h"
 #include "engine/Fatal.h"
 #include "engine/Logger.h"
 
@@ -19,18 +20,6 @@ constexpr size_t VOC_MAGIC_SIZE = 20; // Including the \x1A terminator
 // Block types
 constexpr uint8_t BLOCK_TERMINATOR = 0;
 constexpr uint8_t BLOCK_SOUND_DATA = 1;
-
-// Helper to read uint16_t in little-endian format
-inline uint16_t read_uint16_le(const uint8_t* data) {
-  return static_cast<uint16_t>(data[0]) | (static_cast<uint16_t>(data[1]) << 8);
-}
-
-// Helper to read 24-bit block size
-inline uint32_t read_block_size(const uint8_t* data) {
-  return static_cast<uint32_t>(data[0]) |
-         (static_cast<uint32_t>(data[1]) << 8) |
-         (static_cast<uint32_t>(data[2]) << 16);
-}
 } // anonymous namespace
 
 VocAudioData VocDecoder::decode(const std::vector<uint8_t>& voc_data,
@@ -46,7 +35,7 @@ VocAudioData VocDecoder::decode(const std::vector<uint8_t>& voc_data,
   }
 
   // Read datablock offset (uint16_t at offset 20)
-  uint16_t datablock_offset = read_uint16_le(voc_data.data() + 20);
+  uint16_t datablock_offset = endian::read_u16le(voc_data.data() + 20);
 
   if (datablock_offset >= voc_data.size()) {
     fatal("VOC datablock offset out of bounds");
@@ -73,7 +62,7 @@ VocAudioData VocDecoder::decode(const std::vector<uint8_t>& voc_data,
     if (pos + 3 > voc_data.size()) {
       fatal("VOC block size truncated");
     }
-    uint32_t block_size = read_block_size(voc_data.data() + pos);
+    uint32_t block_size = endian::read_u24le(voc_data.data() + pos);
     pos += 3;
 
     if (pos + block_size > voc_data.size()) {

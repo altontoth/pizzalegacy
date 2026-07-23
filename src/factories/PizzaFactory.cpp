@@ -12,12 +12,12 @@
 #include "core/food/CanonicalPizza.h"
 #include "core/food/Topping.h"
 #include "core/util/LegacyConstants.h"
+#include "engine/Endian.h"
 #include "engine/FormatCompat.h"
 #include "engine/Logger.h"
 #include "engine/geom/Spaces.h"
 #include "resources/util/ByteReader.h"
 #include "resources/util/FileUtils.h"
-#include "resources/util/Platform.h"
 
 std::unique_ptr<core::food::Pizza> PizzaFactory::create_pizza(
     const std::string& filename, const BobSizeFn& get_size,
@@ -103,16 +103,12 @@ std::unique_ptr<core::food::Pizza> PizzaFactory::create_pizza(
   uint16_t salty_raw;
   uint16_t hot_raw;
 
-  auto endianness = platform::endianness();
-
   uint8_t stat_bytes[8];
   r.read(stat_bytes, 8);
-  fat_raw = math::two_bytes_to_uint16(stat_bytes[0], stat_bytes[1], endianness);
-  sweet_raw =
-      math::two_bytes_to_uint16(stat_bytes[2], stat_bytes[3], endianness);
-  salty_raw =
-      math::two_bytes_to_uint16(stat_bytes[4], stat_bytes[5], endianness);
-  hot_raw = math::two_bytes_to_uint16(stat_bytes[6], stat_bytes[7], endianness);
+  fat_raw = endian::u16le(stat_bytes[0], stat_bytes[1]);
+  sweet_raw = endian::u16le(stat_bytes[2], stat_bytes[3]);
+  salty_raw = endian::u16le(stat_bytes[4], stat_bytes[5]);
+  hot_raw = endian::u16le(stat_bytes[6], stat_bytes[7]);
 
   // Read 3 uint8_t values
   uint8_t appearance_raw = r.get();

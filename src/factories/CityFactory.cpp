@@ -21,6 +21,7 @@
 
 #include "core/city/District.h"
 #include "core/city/Property.h"
+#include "engine/Endian.h"
 #include "engine/Fatal.h"
 #include "engine/Logger.h"
 #include "resources/util/FileUtils.h"
@@ -69,7 +70,6 @@ std::unique_ptr<City> CityFactory::create_city(
     core::CityId cid,
     const std::vector<std::pair<uint8_t, int>>& player_chars) {
   CityFactory factory;
-  factory.e = Endian::Little;
   auto id = cid.value;
   factory.load_color_definition();
   factory.load_city_data(id);
@@ -220,7 +220,7 @@ void CityFactory::load_ingredient_prices(std::ifstream& is) {
   for (int i = 0; i < 90; ++i) {
     uint8_t low = is.get();
     uint8_t high = is.get();
-    uint16_t price = math::two_bytes_to_uint16(low, high);
+    uint16_t price = endian::u16le(low, high);
     ingredient_base_prices_[i] = Money{static_cast<int64_t>(price)};
     // Logger::debug("base price for ingredient index {} is {}", i, price);
   }
@@ -255,7 +255,7 @@ void CityFactory::load_suppliers(std::ifstream& is, int supplier_count) {
     char c1 = is.get();
     char c2 = is.get();
 
-    int minimum_contract_amount = math::two_bytes_to_uint16(c1, c2);
+    int minimum_contract_amount = endian::u16le(c1, c2);
 
     is.seekg(201, std::ios_base::cur);
 

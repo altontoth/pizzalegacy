@@ -8,7 +8,6 @@
 
 #include <algorithm>
 #include <array>
-#include <bit>
 #include <ctime>
 #include <filesystem>
 #include <fstream>
@@ -37,6 +36,7 @@
 #include "core/state/GameState.h"
 #include "core/time/GameTime.h"
 #include "core/util/GameContext.h"
+#include "engine/Endian.h"
 #include "engine/Logger.h"
 #include "engine/Random.h"
 
@@ -60,47 +60,6 @@ constexpr uint16_t HIGH_SCORE_HEADER_VERSION = 1;
 constexpr uint32_t MAX_METADATA_SIZE = 1024 * 1024;
 
 namespace {
-
-// Reverses all 8 bytes: byte 0 <-> byte 7, byte 1 <-> byte 6, etc.
-// Used for little-endian <-> big-endian conversion on big-endian hosts.
-uint64_t bswap64(uint64_t v) noexcept {
-  return ((v & 0xFF00000000000000ULL) >> 56) |
-         ((v & 0x00FF000000000000ULL) >> 40) |
-         ((v & 0x0000FF0000000000ULL) >> 24) |
-         ((v & 0x000000FF00000000ULL) >> 8) |
-         ((v & 0x00000000FF000000ULL) << 8) |
-         ((v & 0x0000000000FF0000ULL) << 24) |
-         ((v & 0x000000000000FF00ULL) << 40) |
-         ((v & 0x00000000000000FFULL) << 56);
-}
-
-uint64_t to_le64(uint64_t v) noexcept {
-  if constexpr (std::endian::native == std::endian::little) {
-    return v;
-  }
-  return bswap64(v);
-}
-
-uint64_t from_le64(uint64_t v) noexcept { return to_le64(v); }
-
-uint16_t to_le16(uint16_t v) noexcept {
-  if constexpr (std::endian::native == std::endian::little) {
-    return v;
-  }
-  return static_cast<uint16_t>((v >> 8) | (v << 8));
-}
-
-uint16_t from_le16(uint16_t v) noexcept { return to_le16(v); }
-
-uint32_t to_le32(uint32_t v) noexcept {
-  if constexpr (std::endian::native == std::endian::little) {
-    return v;
-  }
-  return ((v & 0xFF000000U) >> 24) | ((v & 0x00FF0000U) >> 8) |
-         ((v & 0x0000FF00U) << 8) | ((v & 0x000000FFU) << 24);
-}
-
-uint32_t from_le32(uint32_t v) noexcept { return to_le32(v); }
 
 // Extract the load-menu metadata fields from a full save document.
 json metadata_from_save_json(const json& j) {
@@ -185,11 +144,12 @@ bool SaveGameManager::save(const GameState& state, const GameContext& context,
 
     SaveHeader hdr;
     std::memcpy(hdr.magic, "PLSAVE", 6);
-    hdr.version = to_le16(SAVE_HEADER_VERSION);
-    hdr.size = to_le64(static_cast<uint64_t>(json_str.size()));
+    hdr.version = endian::to_le16(SAVE_HEADER_VERSION);
+    hdr.size = endian::to_le64(static_cast<uint64_t>(json_str.size()));
     std::memcpy(out.data(), &hdr, sizeof(hdr));
 
-    const uint32_t meta_len = to_le32(static_cast<uint32_t>(meta_str.size()));
+    const uint32_t meta_len =
+        endian::to_le32(static_cast<uint32_t>(meta_str.size()));
     std::memcpy(out.data() + sizeof(SaveHeader), &meta_len, sizeof(meta_len));
     std::memcpy(out.data() + sizeof(SaveHeader) + sizeof(uint32_t),
                 meta_str.data(), meta_str.size());
@@ -309,7 +269,7 @@ SaveGameManager::read_save_json(const std::string& filename) {
       return std::nullopt;
     }
 
-    uint64_t decompressed_size = from_le64(hdr.size);
+    uint64_t decompressed_size = endian::from_le64(hdr.size);
 
     if (decompressed_size == 0 || decompressed_size > MAX_SAVE_SIZE) {
       Logger::warn("Save file has invalid decompressed size ({}): {}",
@@ -318,7 +278,7 @@ SaveGameManager::read_save_json(const std::string& filename) {
     }
 
     size_t payload_offset = sizeof(SaveHeader);
-    if (from_le16(hdr.version) >= 2) {
+    if (endian::from_le16(hdr.version) >= 2) {
       if (compressed.size() < payload_offset + sizeof(uint32_t)) {
         Logger::warn("Save file truncated (no metadata length): {}", filename);
         return std::nullopt;
@@ -326,7 +286,7 @@ SaveGameManager::read_save_json(const std::string& filename) {
       uint32_t meta_len = 0;
       std::memcpy(&meta_len, compressed.data() + payload_offset,
                   sizeof(meta_len));
-      meta_len = from_le32(meta_len);
+      meta_len = endian::from_le32(meta_len);
       payload_offset += sizeof(uint32_t) + meta_len;
       if (meta_len > MAX_METADATA_SIZE || compressed.size() < payload_offset) {
         Logger::warn("Save file has invalid metadata block: {}", filename);
@@ -370,7 +330,8 @@ std::optional<json> read_metadata_block(const std::string& full_path) {
   if (!file.read(reinterpret_cast<char*>(&hdr), sizeof(hdr))) {
     return std::nullopt;
   }
-  if (std::memcmp(hdr.magic, "PLSAVE", 6) != 0 || from_le16(hdr.version) < 2) {
+  if (std::memcmp(hdr.magic, "PLSAVE", 6) != 0 ||
+      endian::from_le16(hdr.version) < 2) {
     return std::nullopt;
   }
 
@@ -378,7 +339,7 @@ std::optional<json> read_metadata_block(const std::string& full_path) {
   if (!file.read(reinterpret_cast<char*>(&meta_len), sizeof(meta_len))) {
     return std::nullopt;
   }
-  meta_len = from_le32(meta_len);
+  meta_len = endian::from_le32(meta_len);
   if (meta_len == 0 || meta_len > MAX_METADATA_SIZE) {
     return std::nullopt;
   }
@@ -919,7 +880,7 @@ std::vector<HighScoreEntry> SaveGameManager::load_high_scores() {
       return {};
     }
 
-    uint64_t decompressed_size = from_le64(hdr.size);
+    uint64_t decompressed_size = endian::from_le64(hdr.size);
     if (decompressed_size == 0 || decompressed_size > MAX_SAVE_SIZE) {
       return {};
     }
@@ -983,8 +944,8 @@ bool SaveGameManager::add_high_score(HighScoreEntry entry) {
 
     SaveHeader hdr;
     std::memcpy(hdr.magic, HIGH_SCORE_MAGIC.data(), 6);
-    hdr.version = to_le16(HIGH_SCORE_HEADER_VERSION);
-    hdr.size = to_le64(static_cast<uint64_t>(json_str.size()));
+    hdr.version = endian::to_le16(HIGH_SCORE_HEADER_VERSION);
+    hdr.size = endian::to_le64(static_cast<uint64_t>(json_str.size()));
     std::memcpy(compressed.data(), &hdr, sizeof(hdr));
 
     std::string full_path = get_full_path(std::string(HIGH_SCORE_FILENAME));

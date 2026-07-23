@@ -7,8 +7,8 @@
 #include "factories/RestaurantLayoutFactory.h"
 #include "core/restaurant/FloorPattern.h"
 #include "core/util/LegacyConstants.h"
+#include "engine/Endian.h"
 #include "engine/Logger.h"
-#include "engine/Math.h"
 #include "engine/Size.h"
 #include "engine/geom/Spaces.h"
 #include "factories/FloorPatternFactory.h"
@@ -141,10 +141,10 @@ RestaurantLayoutFactory::create_layout(std::span<const uint8_t> bytes) {
     is.skip(2);
     char high = is.get();
     char low = is.get();
-    uint16_t x_coord = math::two_bytes_to_uint16(low, high) * 2;
+    uint16_t x_coord = endian::u16le(low, high) * 2;
     high = is.get();
     low = is.get();
-    uint16_t y_coord = math::two_bytes_to_uint16(low, high) * 2;
+    uint16_t y_coord = endian::u16le(low, high) * 2;
     // If this is 0xFF then it means not linked; PlacedFurniture will turn this
     // into an empty optional
     uint16_t linked_id = is.get();
@@ -162,10 +162,10 @@ RestaurantLayoutFactory::create_layout(std::span<const uint8_t> bytes) {
     is.skip(2);
     char high = is.get();
     char low = is.get();
-    uint16_t x_coord = math::two_bytes_to_uint16(low, high) * 2;
+    uint16_t x_coord = endian::u16le(low, high) * 2;
     high = is.get();
     low = is.get();
-    uint16_t y_coord = math::two_bytes_to_uint16(low, high) * 2;
+    uint16_t y_coord = endian::u16le(low, high) * 2;
     uint16_t linked_id = is.get();
     const Furniture* f =
         FurnitureFactory::create_furniture((FurnitureType)furniture_id);

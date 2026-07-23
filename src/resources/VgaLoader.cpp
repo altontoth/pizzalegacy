@@ -13,8 +13,8 @@
 #include <iostream>
 #include <vector>
 
+#include "engine/Endian.h"
 #include "engine/Fatal.h"
-#include "engine/Math.h"
 #include "resources/AssetMetadata.h"
 #include "resources/Vga.h"
 
@@ -52,8 +52,8 @@ Surface VgaLoader::load(const std::string& filename) {
   int rle_threshold = static_cast<uint8_t>(raw_buffer[length]) - 1;
 
   // Determine width and height
-  auto width = math::two_bytes_to_uint16(raw_buffer[0], raw_buffer[1]);
-  auto height = math::two_bytes_to_uint16(raw_buffer[2], raw_buffer[3]);
+  auto width = endian::u16le(raw_buffer[0], raw_buffer[1]);
+  auto height = endian::u16le(raw_buffer[2], raw_buffer[3]);
 
   // Make sure this looks like a valid VGA file (some files are not displayed as
   // is but are rather collections of smaller images that can together be bigger

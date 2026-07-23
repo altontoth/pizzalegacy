@@ -18,15 +18,6 @@ int64_t round_up_power10(int64_t v) {
   return p;
 }
 
-uint16_t two_bytes_to_uint16(unsigned char a, unsigned char b, Endian e) {
-  uint8_t byte1 = a;
-  uint8_t byte2 = b;
-  if (e == Endian::Big) {
-    return (byte1 << 8) | byte2;
-  }
-  return (byte2 << 8) | byte1;
-}
-
 uint32_t sum_bytes(std::span<const std::byte> data) {
   uint32_t s = 0;
   for (auto b : data) {

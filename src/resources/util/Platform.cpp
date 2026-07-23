@@ -24,8 +24,6 @@ void init_asset_format() {
 
 AssetFormat asset_format() { return g_asset_format; }
 
-Endian endianness() { return Endian::Little; }
-
 const char* asset_format_string() {
   return (asset_format() == AssetFormat::GERMAN) ? "german" : "english";
 }

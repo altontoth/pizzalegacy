@@ -20,7 +20,6 @@
 #include "core/settings/InsuranceSettings.h"
 #include "core/settings/MafiaSettings.h"
 #include "core/supply/FoodSupplier.h"
-#include "engine/Math.h"
 
 class Property;
 
@@ -68,7 +67,6 @@ private:
   int data_length_ = 0;
   std::array<uint8_t, 300> district_bez_;
   IngredientPrices ingredient_base_prices_;
-  Endian e{Endian::Little};
 
   void load_map_data(int city_id);
   void load_city_data(int city_id);

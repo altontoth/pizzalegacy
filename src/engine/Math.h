@@ -9,13 +9,9 @@
 #include <cstdint>
 #include <span>
 
-enum class Endian { Little, Big };
-
 namespace math {
 
 int64_t round_up_power10(int64_t v);
-
-uint16_t two_bytes_to_uint16(uint8_t a, uint8_t b, Endian e = Endian::Little);
 
 // Fancy schmancy constexpr template for optimal performance :D
 // This thing just rounds up to the specified power of ten,
