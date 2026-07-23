@@ -138,7 +138,6 @@ void MenuGameLoad::load_selected_file() {
 
   if (save::SaveGameManager::load(state_, context_, selected_file_)) {
     Logger::info("Successfully loaded: {}", selected_file_);
-    state_.ui().replace_top<CityViewState>(state_.active_city_id());
   }
   else {
     Logger::warn("Failed to load: {}", selected_file_);

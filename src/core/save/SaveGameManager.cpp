@@ -357,6 +357,10 @@ bool SaveGameManager::load(GameState& state, GameContext& context,
     json_to_state(j, state, context);
     state.finalize_initialization(context);
 
+    // Land in the city view for the loaded city
+    state.ui().pop_to_root();
+    state.ui().replace_top<CityViewState>(state.active_city_id());
+
     Logger::info("Load completed successfully");
     return true;
   }
