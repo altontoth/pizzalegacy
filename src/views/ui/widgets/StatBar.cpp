@@ -44,6 +44,9 @@ StatBar::StatBar(BlitmapManager* bm, FontManager* f)
 gfx::Surface StatBar::create_stat_bar(const std::string_view& label,
                                       int value) {
   constexpr int BUFFER_PIXELS = 4;
+  constexpr int MAX_VALUE = 100;
+
+  value = std::min(value, MAX_VALUE);
 
   gfx::Surface final_surf = bar_empty_.clone();
 

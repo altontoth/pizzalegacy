@@ -11,6 +11,7 @@
 #include <set>
 #include <utility>
 #include "core/food/Ingredient.h"
+#include "engine/Logger.h"
 
 constexpr int MAX_SCORE = 100;
 
@@ -23,8 +24,11 @@ constexpr int PIZZA_CENTER_Y = 117 * 2;
 constexpr int APPEARANCE_DISTANCE_THRESHOLD = 60 * 2;
 constexpr int APPEARANCE_PENALTY_DIVISOR = 8;
 
-// Weight thresholds for normality
+// The dough counts toward the mass the flavours are diluted into, but not
+// toward the normality weight thresholds.
 constexpr int DOUGH_BASELINE_WEIGHT = 250;
+
+// Weight thresholds for normality
 constexpr int WEIGHT_THRESHOLD_LIGHT = 700;
 constexpr int WEIGHT_THRESHOLD_VERY_LIGHT = 400;
 
@@ -240,7 +244,7 @@ Flavors Pizza::calculate_flavor_percentages() const {
   int sum_salty = 0;
   int sum_hot = 0;
 
-  int total_weight = 250; // dough baseline
+  int total_weight = DOUGH_BASELINE_WEIGHT;
 
   for (const auto& ut : toppings()) {
     if (!ut) {
@@ -262,21 +266,20 @@ Flavors Pizza::calculate_flavor_percentages() const {
     total_weight += w;
   }
 
-  auto bucket10 = [total_weight](int s) -> int {
+  // The original keeps each taste as 0-10 and truncates the ratio; we store it
+  // scaled to 0-100.
+  auto taste = [total_weight](int s) -> int {
     if (total_weight <= 0) {
       return 0;
     }
-    const double v = static_cast<double>(s) / static_cast<double>(total_weight);
-    int b = static_cast<int>(std::lround(v * 10.0)); // round to nearest
-    b = (b / 10) * 10;
-    return std::clamp(b, 0, 100);
+    return std::clamp(s / total_weight, 0, 10) * 10;
   };
 
   Flavors out;
-  out.fat = bucket10(sum_fat);
-  out.sweet = bucket10(sum_sweet);
-  out.salty = bucket10(sum_salty);
-  out.hot = bucket10(sum_hot);
+  out.fat = taste(sum_fat);
+  out.sweet = taste(sum_sweet);
+  out.salty = taste(sum_salty);
+  out.hot = taste(sum_hot);
   return out;
 }
 
@@ -365,7 +368,7 @@ int Pizza::calculate_normality() const {
 
   // Count unique ingredient types
   std::set<std::string> ingredient_types;
-  int total_weight = DOUGH_BASELINE_WEIGHT;
+  int total_weight = 0;
 
   for (const auto& topping : toppings_) {
     if (!topping) {
@@ -382,8 +385,7 @@ int Pizza::calculate_normality() const {
 
   int ingredient_type_count = static_cast<int>(ingredient_types.size());
   // Logger::debug("  Unique ingredient categories: {}", ingredient_type_count);
-  // Logger::debug("  Total weight: {}g (dough={}g + toppings)", total_weight,
-  //               DOUGH_BASELINE_WEIGHT);
+  // Logger::debug("  Topping weight: {}g", total_weight);
   // Logger::debug("  Starting normality: {}", normality);
 
   // If ingredient type count < NORMALITY_MIN_CATEGORIES: reduce by percentage
@@ -482,10 +484,8 @@ void Pizza::calculate_demographic_scores(
     si = std::max(0, si);
 
     int scaling_factor = is_user_recipe ? normality : imitation;
-    int demographic_score = (si * scaling_factor) / 100;
-
-    popularity_[demo] =
-        static_cast<uint8_t>(std::clamp(demographic_score, 0, 100));
+    // Scores above 100 are meaningful and feed the demand.
+    popularity_[demo] = (si * scaling_factor) / 100;
   }
 }
 

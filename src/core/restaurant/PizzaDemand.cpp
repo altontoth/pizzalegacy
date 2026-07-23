@@ -9,6 +9,7 @@
 #include <cmath>
 #include <cstdint>
 #include <optional>
+#include <string>
 #include <vector>
 #include "core/city/City.h"
 #include "core/city/District.h"
@@ -18,6 +19,8 @@
 #include "core/food/PlayerRecipes.h"
 #include "core/restaurant/Menu.h"
 #include "core/util/ConfigManager.h"
+#include "engine/FormatCompat.h"
+#include "engine/Logger.h"
 #include "engine/Random.h"
 
 namespace core::restaurant {

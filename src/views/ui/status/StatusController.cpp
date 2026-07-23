@@ -8,10 +8,14 @@
 
 #include <array>
 #include <string>
+#include <string_view>
 #include <utility>
 #include "core/character/Player.h"
+#include "core/city/City.h"
 #include "core/city/District.h"
+#include "core/city/IngredientTrendSystem.h"
 #include "core/city/Property.h"
+#include "core/restaurant/PizzaDemand.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/status/StatusHub.h"
 
@@ -19,6 +23,25 @@ template <class... Ts> struct Overload : Ts... {
   using Ts::operator()...;
 };
 template <class... Ts> Overload(Ts...) -> Overload<Ts...>;
+
+namespace {
+// Label bands for an ingredient's popularity trend.
+std::string_view trend_label(int trend) {
+  if (trend <= -30) {
+    return "MEGA-OUT";
+  }
+  if (trend <= -9) {
+    return "OUT";
+  }
+  if (trend <= 9) {
+    return "NEUTRAL";
+  }
+  if (trend <= 30) {
+    return "IN";
+  }
+  return "MEGA-IN";
+}
+} // namespace
 
 void StatusController::show_city_default(const CityCtx& c) {
   emit_baseline(build_city_default(c));
@@ -397,8 +420,10 @@ StatusDisplayRecipe StatusController::build_pizza(const PizzaCtx& pctx) {
   r.add_two_column("appearance:", std::to_string(p->appearance()));
   r.add_two_column("refinement:", std::to_string(p->refinement()));
 
-  // Trend is hardcoded to 0 for now (TODO: implement trend calculation)
-  r.add_two_column("trend:", "0");
+  const int trend =
+      core::restaurant::PizzaDemand::calculate_ingredient_popularity(
+          *p, *pctx.state->active_city());
+  r.add_two_column("trend:", std::to_string(trend));
 
   // Display normality for user recipes, imitation for canonical recipes
   if (p->origin() == core::food::Origin::User) {
@@ -425,8 +450,10 @@ StatusDisplayRecipe StatusController::build_topping(const ToppingCtx& tctx) {
   r.add_header(compat::format("sweet: {}", ingredient->sweet()));
   r.add_header(compat::format("salty: {}", ingredient->salty()));
   r.add_header(compat::format("hot  : {}", ingredient->hot()));
-  r.add_header(compat::format("trend: {}", "TODO"));
-  r.add_header(compat::format("({})", "NEUTRAL"));
+  const auto& trends = tctx.state->active_city()->ingredient_trend_system();
+  const int trend = trends.get_trend(ingredient->type());
+  r.add_header(compat::format("trend: {}", trend));
+  r.add_header(compat::format("({})", trend_label(trend)));
 
   return r;
 }
