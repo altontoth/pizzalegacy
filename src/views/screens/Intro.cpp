@@ -15,6 +15,7 @@
 #include "gfx/ColorIndex.h"
 #include "resources/FontManager.h"
 #include "resources/util/FileUtils.h"
+#include "views/ui/PopupManager.h"
 
 constexpr int ticks_per_logo = 50;
 
@@ -80,6 +81,11 @@ Intro::~Intro() {
 }
 
 bool Intro::on_action(const input::ActionEvent& ev) {
+  // Skipping the intro swallows every key, so ignore input while a popup owns
+  // the keyboard.
+  if (context_.popup->freezes_view()) {
+    return false;
+  }
   if (!ev.state.released) {
     return false;
   }
@@ -137,6 +143,8 @@ void Intro::render(const RenderContext& ctx) {
   const uint8_t text_color = 1;
   switch (logo_sequence_[current_logo_index_]) {
   case Logo::MPLOGO: {
+    // Make sure we have a black background
+    ctx.surface->fill(gfx::ColorIndex{251});
     gfx::blit::blit_with_palette(*ctx.surface,
                                  context_.vga->get("gfx/mplogolo"));
   } break;
@@ -147,7 +155,7 @@ void Intro::render(const RenderContext& ctx) {
                                     FontFace::MENU, text_color, AlignX::Center);
     break;
   case Logo::TITEL1:
-    ctx.surface->fill(gfx::ColorIndex{24});
+    ctx.surface->fill(gfx::ColorIndex{31});
     gfx::blit::blit_with_palette(*ctx.surface, context_.vga->get("gfx/titel1"));
     break;
   case Logo::TITEL2:
@@ -155,7 +163,7 @@ void Intro::render(const RenderContext& ctx) {
     gfx::blit::blit_with_palette(*ctx.surface, context_.vga->get("gfx/titel2"));
     break;
   case Logo::CYBER:
-    ctx.surface->fill(gfx::ColorIndex{16});
+    ctx.surface->fill(gfx::ColorIndex{15});
     gfx::blit::blit_with_palette(*ctx.surface, context_.vga->get("gfx/cyber"));
     context_.font->render_text_onto(
         *ctx.surface, "V3.0",
