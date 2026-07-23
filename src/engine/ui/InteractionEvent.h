@@ -36,6 +36,9 @@ struct InteractionEvent {
   ViewPoint local;
   // For Scroll events: positive = up/away, negative = down/toward:
   int scroll_delta = 0;
+  // For Scroll events on a sideways wheel: positive = right, negative = left.
+  // macOS reports shift + vertical wheel here too.
+  int scroll_delta_x = 0;
   // For DragMove: pointer movement since the previous frame:
   ViewPoint delta;
 };

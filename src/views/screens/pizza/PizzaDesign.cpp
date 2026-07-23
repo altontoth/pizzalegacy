@@ -388,8 +388,9 @@ void PizzaDesign::create_input_panel() {
     const auto& recipes = player->recipes();
 
     // Rebuild rows same as the list does (TODO maybe refactor this)
-    auto rows =
-        build_recipe_list_rows(recipes, state_.restaurants_for(player->id()));
+    auto rows = build_recipe_list_rows(
+        recipes,
+        state_.restaurants_in_city(player->id(), state_.active_city_id()));
     rows.emplace_back(
         RecipeListRow({.name = "<NEW>"})); // last entry, not selectable
 

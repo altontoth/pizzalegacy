@@ -69,6 +69,13 @@ in effect.
   use RMB to increase and LMB to decrease. In Pizza Legacy I've normalized this
   to always use LMB for increasing and RMB for decreasing.
 
+### Faster ordering in depots
+
+* While increasing or decreasing the count in the depot ingredienet interface,
+  you can press Shift to add 5 per tick, Control to add 50 per tick and
+  Control+Shift to add 100 per tick, for later game when you have a lot of
+  restaurants and need to order a lot.
+
 ### Mouse scroll wheel
 
 * In various screens you can now use the mouse wheel, for example to change the

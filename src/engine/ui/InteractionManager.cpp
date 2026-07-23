@@ -225,6 +225,7 @@ void InteractionManager::process(const SDL_Event& e) {
     }
 
     int scroll_delta = static_cast<int>(e.wheel.y);
+    int scroll_delta_x = static_cast<int>(e.wheel.x);
 
     if (normal_id != 0) {
       auto* item = lookup_item(normal_id);
@@ -235,6 +236,7 @@ void InteractionManager::process(const SDL_Event& e) {
         ie.pos = p;
         ie.local = ViewPoint{p.x - item->rect.x, p.y - item->rect.y};
         ie.scroll_delta = scroll_delta;
+        ie.scroll_delta_x = scroll_delta_x;
         item->callback(ie);
       }
     }
@@ -249,6 +251,7 @@ void InteractionManager::process(const SDL_Event& e) {
           ie.pos = p;
           ie.local = ViewPoint{p.x - item->rect.x, p.y - item->rect.y};
           ie.scroll_delta = scroll_delta;
+          ie.scroll_delta_x = scroll_delta_x;
           item->callback(ie);
         }
       }

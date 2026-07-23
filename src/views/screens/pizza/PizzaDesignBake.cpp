@@ -30,8 +30,9 @@ using pizza_design::find_row_by_key;
 
 void PizzaDesign::on_bake_pressed() {
   auto* player = state_.active_player();
-  auto rows = build_recipe_list_rows(player->recipes(),
-                                     state_.restaurants_for(player->id()));
+  auto rows = build_recipe_list_rows(
+      player->recipes(),
+      state_.restaurants_in_city(player->id(), state_.active_city_id()));
   rows.push_back(RecipeListRow{.name = "<NEW>"}); // last is <NEW>
 
   const auto* sel = find_row_by_key(rows, *active_key_);

@@ -152,9 +152,15 @@ void DepotIngredientOrderScreen::register_ingredient_row(ViewRect row_rect,
           }
           break;
         }
-        case views::ui::InteractionEvent::Type::Scroll:
-          handle_scroll(i, ie.scroll_delta);
+        case views::ui::InteractionEvent::Type::Scroll: {
+          // A sideways wheel orders in big steps; so does shift + wheel, which
+          // most platforms report vertically and macOS reports sideways.
+          const bool sideways = ie.scroll_delta == 0 && ie.scroll_delta_x != 0;
+          const bool shift = context_.input->modifier_down(input::Mod::Shift);
+          handle_scroll(i, sideways ? ie.scroll_delta_x : ie.scroll_delta,
+                        sideways || shift);
           break;
+        }
         default:
           break;
         }
@@ -434,12 +440,27 @@ void DepotIngredientOrderScreen::set_up_input_panel() {
                            });
 }
 
+int DepotIngredientOrderScreen::step_for_modifiers(bool dual_button) const {
+  const bool shift = context_.input->modifier_down(input::Mod::Shift);
+  const bool ctrl = context_.input->modifier_down(input::Mod::Ctrl);
+
+  if (shift && ctrl) {
+    return FASTEST_STEP;
+  }
+  if (ctrl) {
+    return FASTER_STEP;
+  }
+  if (shift || dual_button) {
+    return FAST_STEP;
+  }
+  return NORMAL_STEP;
+}
+
 void DepotIngredientOrderScreen::handle_button_press(size_t ingredient_index,
                                                      bool is_left_button) {
   auto& batch = ingredients_.at(ingredient_index);
   auto& c = batch.count;
-  bool shift_held = context_.input->modifier_down(input::Mod::Shift);
-  int step = shift_held ? FAST_STEP : NORMAL_STEP;
+  int step = step_for_modifiers(left_button_held_ && right_button_held_);
 
   if (is_left_button) {
     if (is_sell_ && !check_depot_quality(batch)) {
@@ -478,10 +499,10 @@ void DepotIngredientOrderScreen::handle_button_release(bool is_left_button) {
 }
 
 void DepotIngredientOrderScreen::handle_scroll(size_t ingredient_index,
-                                               int delta) {
+                                               int delta, bool fast) {
   auto& batch = ingredients_.at(ingredient_index);
   auto& c = batch.count;
-  int step = std::max(1, std::abs(delta));
+  int step = std::max(1, std::abs(delta)) * (fast ? FASTEST_STEP : NORMAL_STEP);
 
   if (delta > 0) {
     if (is_sell_ && !check_depot_quality(batch)) {
@@ -503,9 +524,7 @@ void DepotIngredientOrderScreen::update_held_button_repeat() {
 
   button_held_frames_++;
 
-  bool shift_held = context_.input->modifier_down(input::Mod::Shift);
-  bool fast = (left_button_held_ && right_button_held_) || shift_held;
-  int step = fast ? FAST_STEP : NORMAL_STEP;
+  int step = step_for_modifiers(left_button_held_ && right_button_held_);
 
   if (button_held_frames_ >= REPEAT_DELAY &&
       (button_held_frames_ - REPEAT_DELAY) % REPEAT_RATE_SINGLE == 0) {

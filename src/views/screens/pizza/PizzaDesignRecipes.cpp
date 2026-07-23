@@ -56,8 +56,9 @@ void PizzaDesign::draw_recipes(const RenderContext& ctx) {
 
   auto* player = state_.active_player();
   const auto& recipes = player->recipes();
-  auto rows =
-      build_recipe_list_rows(recipes, state_.restaurants_for(player->id()));
+  auto rows = build_recipe_list_rows(
+      recipes,
+      state_.restaurants_in_city(player->id(), state_.active_city_id()));
 
   // Append <NEW> entry
   rows.emplace_back(RecipeListRow({.name = "<NEW>"}));

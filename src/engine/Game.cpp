@@ -550,6 +550,7 @@ void Game::handle_events(LoopState& loop_state) {
       if (event.type == SDL_EVENT_MOUSE_WHEEL &&
           loop_state.game_state.options().scroll_zoom_inverted) {
         event.wheel.y = -event.wheel.y;
+        event.wheel.x = -event.wheel.x;
       }
       interaction_manager_->process(event);
       input_manager_->process(event);

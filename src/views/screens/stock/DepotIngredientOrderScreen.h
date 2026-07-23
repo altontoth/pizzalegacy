@@ -45,7 +45,9 @@ private:
   void handle_button_press(size_t ingredient_index, bool is_left_button);
   void handle_button_release(bool is_left_button);
   void update_held_button_repeat();
-  void handle_scroll(size_t ingredient_index, int delta);
+  // Step size for a click or held button, from the modifiers currently down
+  int step_for_modifiers(bool dual_button) const;
+  void handle_scroll(size_t ingredient_index, int delta, bool fast);
   int max_increment_for(size_t ingredient_index) const;
 
   StatusController status_controller_;
@@ -64,6 +66,11 @@ private:
   int button_held_frames_{0};
   static constexpr int REPEAT_DELAY = 6;
   static constexpr int REPEAT_RATE_SINGLE = 2;
-  static constexpr int FAST_STEP = 5;
   static constexpr int NORMAL_STEP = 1;
+  // Shift, or both mouse buttons at once
+  static constexpr int FAST_STEP = 5;
+  // Ctrl
+  static constexpr int FASTER_STEP = 50;
+  // Shift + ctrl, or a sideways wheel notch
+  static constexpr int FASTEST_STEP = 100;
 };
