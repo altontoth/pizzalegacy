@@ -8,6 +8,7 @@
 #include "engine/geom/Spaces.h"
 #include "gfx/Draw.h"
 #include "resources/FontManager.h"
+#include "resources/util/TextEncoding.h"
 
 constexpr int CHAR_BOX_W = 224;
 constexpr int CHAR_BOX_H = 224;
@@ -124,9 +125,7 @@ bool CharacterSelectionBox::on_interaction(views::ui::InteractionEvent ie) {
 
 bool CharacterSelectionBox::on_text(const input::TextEvent& ev) {
   new_name_.append(ev.text);
-  if (new_name_.size() > max_name_length) {
-    new_name_.resize(max_name_length); // trim extra characters
-  }
+  text::truncate_utf8(new_name_, max_name_length);
   mark_dirty();
   return true;
 }
@@ -147,7 +146,7 @@ bool CharacterSelectionBox::on_action(const input::ActionEvent& ev) {
     break;
   case input::Action::Backspace:
     if (new_name_.length() > 0) {
-      new_name_.pop_back();
+      text::pop_back_utf8(new_name_);
     }
     break;
   case input::Action::EraseLine:

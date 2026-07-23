@@ -24,6 +24,24 @@ const std::set<uint32_t> unicode_whitespace = {
     0x00A0, // No-Break Space
 };
 
+namespace {
+
+// Decodes the codepoint starting at `pos` and advances it. Malformed bytes
+// yield U+FFFD so that arbitrary user input can still be measured and drawn.
+uint32_t next_codepoint(std::string_view text, std::size_t& pos) {
+  const char* it = text.data() + pos;
+  const char* end = text.data() + text.size();
+  utf8::utfchar32_t cp = 0;
+  if (utf8::internal::validate_next(it, end, cp) != utf8::internal::UTF8_OK) {
+    ++pos;
+    return 0xFFFD;
+  }
+  pos = static_cast<std::size_t>(it - text.data());
+  return static_cast<uint32_t>(cp);
+}
+
+} // namespace
+
 Font::Font(FontFace face, FontData data)
     : face_(face), data_(std::move(data)) {}
 
@@ -144,11 +162,9 @@ RenderedTextMetrics Font::size_text(std::string_view text,
                                     const TextStyle& style) {
   RenderedTextMetrics metrics;
 
-  auto it = utf8::iterator(text.begin(), text.begin(), text.end());
-  auto it_end = utf8::iterator(text.end(), text.begin(), text.end());
-
-  while (it != it_end) {
-    uint32_t cp = remap_character(*it);
+  std::size_t pos = 0;
+  while (pos < text.size()) {
+    uint32_t cp = remap_character(next_codepoint(text, pos));
     auto glyph_it = data_.glyphs.find(cp);
     if (glyph_it == data_.glyphs.end()) {
       uint32_t substitute_codepoint = substitute_character(cp);
@@ -161,15 +177,12 @@ RenderedTextMetrics Font::size_text(std::string_view text,
 
       // We need one fewer space between characters than number of
       // characters in our string (3 chars == 2 spaces, etc):
-      auto next_it = it;
-      next_it++;
-      if (next_it != it_end) {
+      if (pos < text.size()) {
         metrics.width += get_character_spacing(style);
       }
       metrics.width += char_width;
       metrics.height = std::max(metrics.height, (int)glyph_it->second.height);
     }
-    it++;
   }
 
   // Inflate width/height to include the shadow's offset if enabled.
@@ -235,13 +248,11 @@ RenderedTextMetrics Font::render_line_onto(Surface& target,
 
   // We'll render twice if shadow is enabled; first shadow then foreground
   auto render_pass = [&](ViewPoint pos, uint8_t color) {
-    auto it = utf8::iterator(text.begin(), text.begin(), text.end());
-    auto it_end = utf8::iterator(text.end(), text.begin(), text.end());
-
     ViewPoint cur = pos;
 
-    while (it != it_end) {
-      uint32_t cp = remap_character(*it);
+    std::size_t offset = 0;
+    while (offset < text.size()) {
+      uint32_t cp = remap_character(next_codepoint(text, offset));
       auto g_it = data_.glyphs.find(cp);
       if (g_it == data_.glyphs.end()) {
         cp = substitute_character(cp);
@@ -272,13 +283,10 @@ RenderedTextMetrics Font::render_line_onto(Surface& target,
         cur.x += advance_width;
 
         // Only add spacing if NOT the last character
-        auto next_it = it;
-        ++next_it;
-        if (next_it != it_end) {
+        if (offset < text.size()) {
           cur.x += get_character_spacing(style);
         }
       }
-      ++it;
     }
   };
 

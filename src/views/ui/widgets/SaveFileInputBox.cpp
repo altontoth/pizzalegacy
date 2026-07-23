@@ -9,6 +9,7 @@
 #include "engine/geom/Spaces.h"
 #include "gfx/Draw.h"
 #include "resources/FontManager.h"
+#include "resources/util/TextEncoding.h"
 
 constexpr int SAVE_BOX_W = 224;
 constexpr int SAVE_BOX_H = 216;
@@ -250,7 +251,7 @@ bool SaveFileInputBox::on_action(const input::ActionEvent& ev) {
     break;
   case input::Action::Backspace:
     if (new_filename_.length() > 0) {
-      new_filename_.pop_back();
+      text::pop_back_utf8(new_filename_);
     }
     break;
   case input::Action::EraseLine:

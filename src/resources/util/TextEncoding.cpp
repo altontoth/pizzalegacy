@@ -70,4 +70,27 @@ std::string read_iso8859_1_string(std::istream& is, std::size_t field_size) {
   return iso8859_1_to_utf8(buf);
 }
 
+void pop_back_utf8(std::string& s) {
+  if (s.empty()) {
+    return;
+  }
+
+  auto it = s.end();
+  try {
+    utf8::prior(it, s.begin());
+  }
+  catch (const utf8::exception&) {
+    it = s.end() - 1;
+  }
+  s.erase(it, s.end());
+}
+
+void truncate_utf8(std::string& s, std::size_t max_bytes) {
+  if (s.size() <= max_bytes) {
+    return;
+  }
+  s.resize(max_bytes);
+  s.erase(utf8::find_invalid(s.begin(), s.end()), s.end());
+}
+
 } // namespace text

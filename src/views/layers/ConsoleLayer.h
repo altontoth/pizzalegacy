@@ -49,6 +49,7 @@ private:
   std::optional<input::TextSession> text_session_;
   input::ListenerToken listener_;
 
+  static constexpr std::size_t MAX_INPUT_BYTES = 1024;
   static constexpr int console_height_ = 200;
   static constexpr int font_line_height_ = 6;
 };

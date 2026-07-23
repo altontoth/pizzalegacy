@@ -7,6 +7,7 @@
 #include "views/ui/popups/TextInputPopup.h"
 #include "engine/input/InputManager.h"
 #include "gfx/Surface.h"
+#include "resources/util/TextEncoding.h"
 
 TextInputPopup::TextInputPopup(const GameContext& context, std::string text,
                                int max_characters, callback_t cb)
@@ -40,17 +41,9 @@ void TextInputPopup::render(Surface& surface, ViewPoint origin) {
 }
 
 bool TextInputPopup::on_text(const input::TextEvent& ev) {
-  if (max_characters_ > 0 &&
-      static_cast<int>(input_text_.size() + ev.text.size()) > max_characters_) {
-    const auto remaining =
-        std::max(0, max_characters_ - static_cast<int>(input_text_.size()));
-    if (remaining <= 0) {
-      return true;
-    }
-    input_text_.append(ev.text.begin(), ev.text.begin() + remaining);
-  }
-  else {
-    input_text_ += ev.text;
+  input_text_ += ev.text;
+  if (max_characters_ > 0) {
+    text::truncate_utf8(input_text_, static_cast<std::size_t>(max_characters_));
   }
   mark_dirty();
   return true;
@@ -95,7 +88,7 @@ void TextInputPopup::cancel() {
 
 void TextInputPopup::backspace() {
   if (!input_text_.empty()) {
-    input_text_.pop_back();
+    text::pop_back_utf8(input_text_);
   }
   mark_dirty();
 }

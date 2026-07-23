@@ -12,6 +12,7 @@
 #include "engine/ui/InteractionEvent.h"
 #include "gfx/Draw.h"
 #include "resources/FontManager.h"
+#include "resources/util/TextEncoding.h"
 #include "views/base/ViewDefs.h"
 
 ConsoleLayer::ConsoleLayer(GameContext& ctx, GameState& st, DebugConsole& dc)
@@ -149,6 +150,7 @@ bool ConsoleLayer::on_text(const input::TextEvent& ev) {
   }
 
   input_ += ev.text;
+  text::truncate_utf8(input_, MAX_INPUT_BYTES);
   mark_dirty();
   return true;
 }
@@ -193,7 +195,7 @@ bool ConsoleLayer::on_action(const input::ActionEvent& ev) {
 
   case input::Action::Backspace:
     if (!input_.empty()) {
-      input_.pop_back();
+      text::pop_back_utf8(input_);
       mark_dirty();
     }
     return true;
