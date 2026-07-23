@@ -177,6 +177,10 @@ public:
   int restaurant_count_for_player_in_city(core::PlayerId pid,
                                           core::CityId city) const;
   Restaurant* restaurant(core::RestaurantId r_id) const;
+  std::vector<Restaurant*> restaurants_in_city(core::PlayerId pid,
+                                               core::CityId city) const;
+  std::vector<Restaurant*> restaurant_cycle(core::PlayerId pid,
+                                            core::RestaurantId from) const;
   std::optional<core::RestaurantId>
   next_restaurant(core::PlayerId pid, core::RestaurantId from) const;
   std::optional<core::RestaurantId>

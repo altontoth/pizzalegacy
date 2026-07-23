@@ -85,6 +85,8 @@ RestaurantView::RestaurantView(GameContext& context, GameState& state,
     state_.pause_time_advancement();
   }
 
+  kitchen_view_ = r_state.kitchen_view;
+
   // Check if we're placing ovens. If so, start in kitchen view.
   // Also check if we're placing regular furniture while the restaurant is open,
   // in which case we need to close it temporarily.
@@ -137,16 +139,10 @@ RestaurantView::RestaurantView(GameContext& context, GameState& state,
   // Update buttons based on whether we have furniture to place
   placement_.update_buttons();
 
-  // Set up camera with proper world size
+  // Set up camera with proper world size. Alignment handles small rooms;
+  // scroll handles large ones.
   camera_.view_size(Size{MAIN_PANEL_WIDTH, MAIN_PANEL_HEIGHT});
-  camera_.world_size(Size{background_width_, background_height_});
-  camera_.align(Camera::Align::Start, Camera::Align::End);
-
-  // Initialize scroll to show the bottom of the restaurant (where entrance is)
-  // Alignment handles small restaurants; scroll handles large ones
-  const int init_x = 0;
-  const int init_y = std::max(0, background_height_ - MAIN_PANEL_HEIGHT);
-  camera_.scroll(WorldPoint{init_x, init_y});
+  apply_view_camera();
 
   camctrl_.tile_grid(RESTAURANT_TILE_WIDTH, RESTAURANT_TILE_HEIGHT);
   camctrl_.reset();
@@ -249,9 +245,10 @@ bool RestaurantView::on_action(const input::ActionEvent& ev) {
       state_.city_view_view_state(cvs);
     }
 
-    state_.ui().push<RestaurantViewState>(RestaurantViewState{
+    state_.ui().replace_top<RestaurantViewState>(RestaurantViewState{
         .id = rid,
         .mode = view_mode_,
+        .kitchen_view = kitchen_view_,
     });
   };
 
@@ -560,8 +557,13 @@ void RestaurantView::toggle_kitchen_view() {
 
   // Recalculate background size for the new view
   calculate_background_dimensions();
+  apply_view_camera();
 
-  // Update camera with new world size
+  camctrl_.reset();
+  mark_dirty();
+}
+
+void RestaurantView::apply_view_camera() {
   camera_.world_size(Size{background_width_, background_height_});
 
   // Set alignment based on view:
@@ -581,9 +583,6 @@ void RestaurantView::toggle_kitchen_view() {
     const int init_y = std::max(0, background_height_ - MAIN_PANEL_HEIGHT);
     camera_.scroll(WorldPoint{0, init_y});
   }
-
-  camctrl_.reset();
-  mark_dirty();
 }
 
 void RestaurantView::calculate_background_dimensions() {

@@ -72,6 +72,7 @@ private:
            view_mode_ == RestaurantViewMode::PLAYER_NEW_FURNITURE;
   }
   void toggle_kitchen_view();
+  void apply_view_camera();
   void calculate_background_dimensions();
   void set_up_buttons();
 

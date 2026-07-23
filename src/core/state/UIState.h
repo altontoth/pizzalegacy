@@ -94,6 +94,7 @@ struct RestaurantViewState {
   RestaurantViewMode mode;
   std::optional<SupplierType> return_to_supplier_type = std::nullopt;
   bool reopen_restaurant = false;
+  bool kitchen_view = false;
 };
 struct PizzaDesignState {
   PizzaDesignMode initial_mode;

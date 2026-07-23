@@ -1155,9 +1155,27 @@ restaurant_index(const std::vector<Restaurant*>& list,
 }
 } // namespace
 
+std::vector<Restaurant*>
+GameState::restaurants_in_city(core::PlayerId pid, core::CityId city) const {
+  std::vector<Restaurant*> list;
+  for (auto* rest : restaurants_for(pid)) {
+    if (rest->property().city().id() == city) {
+      list.push_back(rest);
+    }
+  }
+  return list;
+}
+
+std::vector<Restaurant*>
+GameState::restaurant_cycle(core::PlayerId pid, core::RestaurantId from) const {
+  const auto* current = restaurant(from);
+  return restaurants_in_city(pid, current ? current->property().city().id()
+                                          : active_city_);
+}
+
 std::optional<core::RestaurantId>
 GameState::next_restaurant(core::PlayerId pid, core::RestaurantId from) const {
-  auto list = restaurants_for(pid);
+  auto list = restaurant_cycle(pid, from);
   if (list.empty()) {
     return std::nullopt;
   }
@@ -1170,7 +1188,7 @@ GameState::next_restaurant(core::PlayerId pid, core::RestaurantId from) const {
 
 std::optional<core::RestaurantId>
 GameState::prev_restaurant(core::PlayerId pid, core::RestaurantId from) const {
-  auto list = restaurants_for(pid);
+  auto list = restaurant_cycle(pid, from);
   if (list.empty()) {
     return std::nullopt;
   }
