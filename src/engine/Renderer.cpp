@@ -133,11 +133,9 @@ void Renderer::render() {
   last_cursor_pos_ = cursor_pos;
 
   SDL_Surface* final_surface = composited;
-  SDL_Surface_unique_ptr scaled_surface;
 
   if (display_height_ == DisplayConstants::CRT_DISPLAY_HEIGHT) {
-    scaled_surface = apply_crt_scaling(composited);
-    final_surface = scaled_surface.get();
+    final_surface = apply_crt_scaling(composited);
   }
 
   SDL_UpdateTexture(sdl_.texture.get(), nullptr, final_surface->pixels,
@@ -258,15 +256,14 @@ SDL_Surface_unique_ptr Renderer::to_sdl_surface(const Surface& src,
 void Renderer::with_current_frame(
     std::function<void(SDL_Surface*)> callback) const {
   if (display_height_ == DisplayConstants::CRT_DISPLAY_HEIGHT) {
-    auto scaled = apply_crt_scaling(backbuffer_.get());
-    callback(scaled.get());
+    callback(apply_crt_scaling(backbuffer_.get()));
   }
   else {
     callback(backbuffer_.get());
   }
 }
 
-SDL_Surface_unique_ptr Renderer::apply_crt_scaling(SDL_Surface* source) const {
+SDL_Surface* Renderer::apply_crt_scaling(SDL_Surface* source) const {
   // 640x400 -> 640x1200 (nearest) -> 640x480 (bilinear)
   // Thanks to https://www.youtube.com/watch?v=YvckyWxHAIw (DOS Gaming Aspect
   // Ratio - 320x200) which talks about why this is a good way to do it
@@ -274,48 +271,49 @@ SDL_Surface_unique_ptr Renderer::apply_crt_scaling(SDL_Surface* source) const {
   const int source_width = source->w;
   const int source_height = source->h;
 
-  // Stage 1: nearest-neighbor 3x vertical upscale
-  SDL_Surface* intermediate = SDL_CreateSurface(
-      source_width, INTERMEDIATE_HEIGHT, SDL_PIXELFORMAT_RGBA8888);
-  if (!intermediate) {
-    fatal(SDL_GetError());
+  if (!crt_intermediate_ || crt_intermediate_->w != source_width ||
+      crt_intermediate_->h != INTERMEDIATE_HEIGHT) {
+    crt_intermediate_.reset(SDL_CreateSurface(source_width, INTERMEDIATE_HEIGHT,
+                                              SDL_PIXELFORMAT_RGBA8888));
+    if (!crt_intermediate_) {
+      fatal(SDL_GetError());
+    }
   }
-
-  SDL_LockSurface(source);
-  SDL_LockSurface(intermediate);
-
-  auto* src_pixels = static_cast<uint32_t*>(source->pixels);
-  auto* int_pixels = static_cast<uint32_t*>(intermediate->pixels);
-
-  for (int y = 0; y < source_height; ++y) {
-    for (int dy = 0; dy < 3; ++dy) {
-      int dest_y = (y * 3) + dy;
-      for (int x = 0; x < source_width; ++x) {
-        int_pixels[(dest_y * source_width) + x] =
-            src_pixels[(y * source_width) + x];
-      }
+  if (!crt_scaled_ || crt_scaled_->w != source_width ||
+      crt_scaled_->h != display_height_) {
+    crt_scaled_.reset(SDL_CreateSurface(source_width, display_height_,
+                                        SDL_PIXELFORMAT_RGBA8888));
+    if (!crt_scaled_) {
+      fatal(SDL_GetError());
     }
   }
 
-  SDL_UnlockSurface(intermediate);
+  // Stage 1: nearest-neighbor 3x vertical upscale
+  SDL_LockSurface(source);
+  SDL_LockSurface(crt_intermediate_.get());
+
+  const auto* src_pixels = static_cast<const uint8_t*>(source->pixels);
+  auto* int_pixels = static_cast<uint8_t*>(crt_intermediate_->pixels);
+  const std::size_t row_bytes = static_cast<std::size_t>(source_width) * 4;
+
+  for (int y = 0; y < source_height; ++y) {
+    const uint8_t* src_row = src_pixels + (y * source->pitch);
+    for (int dy = 0; dy < 3; ++dy) {
+      std::memcpy(int_pixels + (((y * 3) + dy) * crt_intermediate_->pitch),
+                  src_row, row_bytes);
+    }
+  }
+
+  SDL_UnlockSurface(crt_intermediate_.get());
   SDL_UnlockSurface(source);
 
   // Stage 2: bilinear downscale to display height
-  SDL_Surface* final = SDL_CreateSurface(source_width, display_height_,
-                                         SDL_PIXELFORMAT_RGBA8888);
-  if (!final) {
-    SDL_DestroySurface(intermediate);
-    fatal(SDL_GetError());
-  }
-
   SDL_Rect int_rect = {0, 0, source_width, INTERMEDIATE_HEIGHT};
   SDL_Rect final_rect = {0, 0, source_width, display_height_};
-  SDL_StretchSurface(intermediate, &int_rect, final, &final_rect,
-                     SDL_SCALEMODE_LINEAR);
+  SDL_StretchSurface(crt_intermediate_.get(), &int_rect, crt_scaled_.get(),
+                     &final_rect, SDL_SCALEMODE_LINEAR);
 
-  SDL_DestroySurface(intermediate);
-
-  return SDL_Surface_unique_ptr(final);
+  return crt_scaled_.get();
 }
 
 bool Renderer::tick_fade() {

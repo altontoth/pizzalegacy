@@ -84,7 +84,7 @@ endif()
 #  Compiler diagnostics & sanitizers
 # -----------------------------------------------------
 
-if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     add_compile_options(
         -Wall
         -Wextra
@@ -128,6 +128,30 @@ elseif(MSVC)
     add_link_options(
         $<$<CONFIG:Debug>:/DEBUG>
     )
+endif()
+
+# ---------------------------------------------------------
+#  Auto-vectorization reports
+# -----------------------------------------------------
+
+# Remarks only fire in optimized configs; Debug compiles at -O0.
+option(PLEGACY_VECTORIZE_REPORT "Emit per-loop auto-vectorization remarks for game targets (Clang/GCC)" OFF)
+
+set(VECTORIZE_REPORT_FLAGS "")
+if(PLEGACY_VECTORIZE_REPORT)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        set(VECTORIZE_REPORT_FLAGS
+            $<$<NOT:$<CONFIG:Debug>>:-Rpass=loop-vectorize>
+            $<$<NOT:$<CONFIG:Debug>>:-Rpass-missed=loop-vectorize>
+            $<$<NOT:$<CONFIG:Debug>>:-Rpass-analysis=loop-vectorize>
+        )
+    elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        set(VECTORIZE_REPORT_FLAGS
+            $<$<NOT:$<CONFIG:Debug>>:-fopt-info-vec-all>
+        )
+    else()
+        message(WARNING "PLEGACY_VECTORIZE_REPORT has no equivalent for ${CMAKE_CXX_COMPILER_ID}; ignoring")
+    endif()
 endif()
 
 # ---------------------------------------------------------
@@ -317,6 +341,11 @@ add_dependencies(game_plegacy check_dependency_rule)
 add_executable(plegacy
     ${ENGINE_PLEGACY_SOURCES}
 )
+
+if(VECTORIZE_REPORT_FLAGS)
+    target_compile_options(game_plegacy PRIVATE ${VECTORIZE_REPORT_FLAGS})
+    target_compile_options(plegacy PRIVATE ${VECTORIZE_REPORT_FLAGS})
+endif()
 
 # Windows-specific: embed the application icon + version info and set the output name
 if(WIN32)

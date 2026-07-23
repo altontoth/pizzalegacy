@@ -203,24 +203,7 @@ void Surface::blit(const Surface& src, ViewRect s, ViewPoint d,
 /* Blit masked, so respect transparency */
 void Surface::blit_masked(const Surface& src, ViewPoint dst,
                           uint8_t transparent) {
-  for (int sy = 0; sy < src.height_; ++sy) {
-    int dy = dst.y + sy;
-    if (dy < 0 || dy >= height_) {
-      continue;
-    }
-
-    for (int sx = 0; sx < src.width_; ++sx) {
-      int dx = dst.x + sx;
-      if (dx < 0 || dx >= width_) {
-        continue;
-      }
-
-      uint8_t pixel = src.pixels_[sy * src.pitch_ + sx];
-      if (pixel != transparent) {
-        pixels_[dy * pitch_ + dx] = pixel;
-      }
-    }
-  }
+  blit(src, {0, 0, src.width_, src.height_}, dst, transparent);
 }
 
 uint8_t Surface::get(ViewPoint p) const {

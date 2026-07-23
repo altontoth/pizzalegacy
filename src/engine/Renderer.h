@@ -48,13 +48,15 @@ private:
   void ensure_present_surface(int w, int h);
   void draw_software_cursor(SDL_Surface* dst, const gfx::Surface& sprite,
                             ScreenPoint pos, bool centered) const;
-  SDL_Surface_unique_ptr apply_crt_scaling(SDL_Surface* source) const;
+  SDL_Surface* apply_crt_scaling(SDL_Surface* source) const;
 
   std::unordered_map<Renderable*, SDL_Surface_unique_ptr> cache_;
   SDL_Surface_unique_ptr backbuffer_;
   // Copy with the software cursor on top
   SDL_Surface_unique_ptr frame_with_cursor_;
-  SDL_Surface_unique_ptr intermediate_buffer_;
+  // Reused by apply_crt_scaling
+  mutable SDL_Surface_unique_ptr crt_intermediate_;
+  mutable SDL_Surface_unique_ptr crt_scaled_;
   CursorManager* cursor_{nullptr};
   // This allows us to re-present when only the cursor changed.
   const gfx::Surface* last_cursor_sprite_{nullptr};
