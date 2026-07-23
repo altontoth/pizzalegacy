@@ -982,7 +982,10 @@ void RestaurantView::rebuild_guest_cache() {
       const ConsumerType demo = pick_weighted_demographic(customer_counts);
       CharacterController controller;
       controller.set_customer_type(demo);
-      controller.set_eating(false); // waiter delivers pizza to start eating
+      // Directly seated guests are mid-visit, so most already have a pizza.
+      int preseated_eating_percent = 60 + engine::random::rand_max_n(25);
+      controller.set_eating(
+          engine::random::rand_percentage_chance(preseated_eating_percent));
       const int gt = pick_guest_type(demo);
       controller.set_guest_type(gt);
       controller.set_face_index(pick_face_index(gt));
