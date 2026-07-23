@@ -226,8 +226,10 @@ void DepotIngredientOrderScreen::draw_ingredient_list(
           ViewPoint{price_x, y}, FontFace::CSTANDAR, text_color,
           AlignX::RightEdge);
       int city_supply = supplier_ ? supplier_->stock(batch.ingredient_type) : 0;
+      int projected_supply =
+          is_sell_ ? city_supply + batch.count : city_supply - batch.count;
       context_.font->render_text_onto(
-          *ctx.surface, std::to_string(city_supply - batch.count),
+          *ctx.surface, std::to_string(projected_supply),
           ViewPoint{header_suppl_x, y}, FontFace::CSTANDAR, text_color,
           AlignX::RightEdge);
       context_.font->render_text_onto(
