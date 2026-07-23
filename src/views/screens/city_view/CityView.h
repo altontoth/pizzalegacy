@@ -79,7 +79,6 @@ private:
   WorldPoint world_pos_of_index(int index) const;
 
   // Tabs
-  void show_tabs(const RenderContext& ctx);
   void render_tabs(const RenderContext& ctx);
   void update_tab_positions();
   void set_active_tab(CityViewTabType type);
@@ -162,6 +161,8 @@ private:
   PaletteHandle palette_;
   std::vector<gfx::Color> season_palette_;
   std::optional<Surface> far_map_cache_;
+  std::optional<Surface> medium_map_cache_;
+  std::optional<Surface> tabs_cache_;
   StatusController status_controller_;
   Camera camera_;
   CameraController camctrl_;

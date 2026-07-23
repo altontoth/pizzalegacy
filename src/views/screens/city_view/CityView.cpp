@@ -737,74 +737,29 @@ void CityView::render_map_zoom_close(const RenderContext& ctx) {
 void CityView::render_map_zoom_medium(const RenderContext& ctx) {
   // World is always in close scale (32-pixel tiles = 5120x3840 world space)
   // But at medium we render with smaller tile graphics (8x8 from the source)
-  const int world_tile_w = BASE_MAP_TILE_WIDTH * BASE_MAP_ZOOM_MULTIPLIER;
-  const int world_tile_h = BASE_MAP_TILE_HEIGHT * BASE_MAP_ZOOM_MULTIPLIER;
-
-  const auto visible = camera_.visible_world_rect();
-
-  // first tile index in view
-  const int first_tx =
-      std::clamp(visible.x / world_tile_w, 0, MAP_TILES_PER_ROW - 1);
-  const int first_ty =
-      std::clamp(visible.y / world_tile_h, 0, MAP_TILES_PER_COLUMN - 1);
-
-  // how many tiles to cover the panel (+2 to cover partials on right/bottom)
-  const int tiles_x = (visible.w / world_tile_w) + 2;
-  const int tiles_y = (visible.h / world_tile_h) + 2;
-
-  const PxOffset tab_offset{TABBED_VIEW_OFFSET_X, TABBED_VIEW_OFFSET_Y};
-
-  for (int ty = 0; ty < tiles_y; ++ty) {
-    const int map_y = first_ty + ty;
-    if (map_y >= MAP_TILES_PER_COLUMN) {
-      break;
-    }
-
-    for (int tx = 0; tx < tiles_x; ++tx) {
-      const int map_x = first_tx + tx;
-      if (map_x >= MAP_TILES_PER_ROW) {
-        break;
-      }
-
-      const int i = (map_y * MAP_TILES_PER_ROW) + map_x;
-      if (i >= city_->data_length()) {
-        continue;
-      }
-
+  if (!medium_map_cache_) {
+    Surface medium_map({MAP_TILES_PER_ROW * BASE_MAP_TILE_WIDTH,
+                        MAP_TILES_PER_COLUMN * BASE_MAP_TILE_HEIGHT},
+                       palette_);
+    for (int i = 0; i < city_->data_length(); ++i) {
       const uint8_t type = city_->type(i);
-      const ViewRect src = landsym_source_rect(type);
-
-      // Convert world tile position to view space for rendering
-      const WorldPoint tile_world_pos = {map_x * world_tile_w,
-                                         map_y * world_tile_h};
-      const ViewPoint dest_pos_before_offset =
-          camera_.world_to_view(tile_world_pos);
-      const ViewPoint dest_pos = dest_pos_before_offset + tab_offset;
-
-      // Viewport bounds (camera view area with tab offset) and tile rect in
-      // view space
-      const auto view_sz = camera_.view_size();
-      const ViewRect viewport{TABBED_VIEW_OFFSET_X, TABBED_VIEW_OFFSET_Y,
-                              view_sz.w, view_sz.h};
-      const ViewRect tile_rect{dest_pos.x, dest_pos.y, src.w, src.h};
-
-      // Calculate intersection (clipped region)
-      const auto clipped_opt = intersect_rect(viewport, tile_rect);
-      if (!clipped_opt) {
-        continue; // No intersection, skip this tile
-      }
-      const auto clipped = *clipped_opt;
-
-      // Adjust source rect to match clipped region
-      const int src_offset_x = clipped.x - tile_rect.x;
-      const int src_offset_y = clipped.y - tile_rect.y;
-
-      const ViewRect src_clipped{src.x + src_offset_x, src.y + src_offset_y,
-                                 clipped.w, clipped.h};
-
-      ctx.surface->blit(tiles_medium_, src_clipped, clipped.point());
+      const ViewPoint pos{(i % MAP_TILES_PER_ROW) * BASE_MAP_TILE_WIDTH,
+                          (i / MAP_TILES_PER_ROW) * BASE_MAP_TILE_HEIGHT};
+      medium_map.blit(tiles_medium_, landsym_source_rect(type), pos);
     }
+    medium_map_cache_ = std::move(medium_map);
   }
+
+  // One cache pixel covers zoom_multiplier world pixels.
+  const auto visible = camera_.visible_world_rect();
+  const ViewRect src{visible.x / BASE_MAP_ZOOM_MULTIPLIER,
+                     visible.y / BASE_MAP_ZOOM_MULTIPLIER,
+                     visible.w / BASE_MAP_ZOOM_MULTIPLIER,
+                     visible.h / BASE_MAP_ZOOM_MULTIPLIER};
+  const PxOffset tab_offset{TABBED_VIEW_OFFSET_X, TABBED_VIEW_OFFSET_Y};
+  const ViewPoint dest =
+      camera_.world_to_view(WorldPoint{visible.x, visible.y}) + tab_offset;
+  ctx.surface->blit(*medium_map_cache_, src, dest);
 }
 
 void CityView::render_map_zoom_far(const RenderContext& ctx) {
@@ -864,10 +819,6 @@ void CityView::render_map_data(const RenderContext& ctx) {
     render_map_zoom_far(ctx);
     break;
   }
-}
-
-void CityView::show_tabs(const RenderContext& ctx) {
-  ctx.surface->blit_raw(context_.vga->get("gfx/back21"));
 }
 
 WorldPoint CityView::world_pos_of_index(int index) const {
@@ -1079,6 +1030,7 @@ void CityView::update_tab_positions() {
     }
   }
 
+  tabs_cache_.reset();
   mark_dirty();
 }
 
@@ -1096,35 +1048,44 @@ void CityView::set_active_tab(CityViewTabType type) {
 }
 
 void CityView::render_tabs(const RenderContext& ctx) {
-  show_tabs(ctx);
+  if (!tabs_cache_) {
+    Surface tabs({ctx.surface->width(), ctx.surface->height()}, palette_);
+    tabs.blit_raw(context_.vga->get("gfx/back21"));
 
-  const std::array<uint8_t, 3> colors = {246, 249, 251};
+    const std::array<uint8_t, 3> colors = {246, 249, 251};
 
-  int index = 0;
-  for (const CityViewTab& tab : tabs_) {
-    ViewRect r = tab.rect();
-    uint8_t color_idx = colors[index++];
+    int index = 0;
+    for (const CityViewTab& tab : tabs_) {
+      const ViewRect r = tab.rect();
+      const uint8_t color_idx = colors[index++];
 
-    std::string tab_label;
-    switch (tab.type()) {
-    case CityViewTabType::MAP:
-      tab_label = "MAP";
-      break;
-    case CityViewTabType::DISTRICTS:
-      tab_label = "DISTRICTS";
-      break;
-    case CityViewTabType::CONTROL:
-      tab_label = "CONTROL";
-      break;
+      std::string tab_label;
+      switch (tab.type()) {
+      case CityViewTabType::MAP:
+        tab_label = "MAP";
+        break;
+      case CityViewTabType::DISTRICTS:
+        tab_label = "DISTRICTS";
+        break;
+      case CityViewTabType::CONTROL:
+        tab_label = "CONTROL";
+        break;
+      }
+      const int text_color = 240;
+
+      tabs.fill_rect(r, color_idx);
+      context_.font->render_text_onto(tabs, tab_label,
+                                      r.point() + PxOffset{12, 6},
+                                      FontFace::CSTANDAR, text_color);
     }
-    const int text_color = 240;
+    tabs_cache_ = std::move(tabs);
+  }
 
-    ctx.surface->fill_rect(r, color_idx);
-    context_.font->render_text_onto(*ctx.surface, tab_label,
-                                    r.point() + PxOffset{12, 6},
-                                    FontFace::CSTANDAR, text_color);
+  ctx.surface->blit_raw(*tabs_cache_);
 
-    // register interactions with the tab:
+  // register interactions with the tabs:
+  for (const CityViewTab& tab : tabs_) {
+    const ViewRect r = tab.rect();
     interactions_.create_frame_item(
         r, compat::format("citytab_{}", magic_enum::enum_name(tab.type())),
         [this, ttype = tab.type()](views::ui::InteractionEvent ev) {
