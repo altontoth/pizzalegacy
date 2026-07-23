@@ -46,14 +46,18 @@ namespace fs = std::filesystem;
 
 constexpr uint64_t MAX_SAVE_SIZE = 256ULL * 1024 * 1024; // 256 MB sanity cap
 
+// Save file layout: SaveHeader, then (version >= 2) a uint32 length followed
+// by that many bytes of uncompressed metadata JSON, then the zlib payload.
 struct SaveHeader {
   char magic[6];    // "PLSAVE"
-  uint16_t version; // little-endian; currently 1
+  uint16_t version; // little-endian
   uint64_t size;    // uncompressed payload size, little-endian
 };
 static_assert(sizeof(SaveHeader) == 16);
 
-constexpr uint16_t SAVE_HEADER_VERSION = 1;
+constexpr uint16_t SAVE_HEADER_VERSION = 2;
+constexpr uint16_t HIGH_SCORE_HEADER_VERSION = 1;
+constexpr uint32_t MAX_METADATA_SIZE = 1024 * 1024;
 
 namespace {
 
@@ -77,18 +81,44 @@ uint64_t to_le64(uint64_t v) noexcept {
   return bswap64(v);
 }
 
-uint64_t from_le64(uint64_t v) noexcept {
-  if constexpr (std::endian::native == std::endian::little) {
-    return v;
-  }
-  return bswap64(v);
-}
+uint64_t from_le64(uint64_t v) noexcept { return to_le64(v); }
 
 uint16_t to_le16(uint16_t v) noexcept {
   if constexpr (std::endian::native == std::endian::little) {
     return v;
   }
   return static_cast<uint16_t>((v >> 8) | (v << 8));
+}
+
+uint16_t from_le16(uint16_t v) noexcept { return to_le16(v); }
+
+uint32_t to_le32(uint32_t v) noexcept {
+  if constexpr (std::endian::native == std::endian::little) {
+    return v;
+  }
+  return ((v & 0xFF000000U) >> 24) | ((v & 0x00FF0000U) >> 8) |
+         ((v & 0x0000FF00U) << 8) | ((v & 0x000000FFU) << 24);
+}
+
+uint32_t from_le32(uint32_t v) noexcept { return to_le32(v); }
+
+// Extract the load-menu metadata fields from a full save document.
+json metadata_from_save_json(const json& j) {
+  json meta;
+  meta["saved_at"] = j.value("saved_at", "Unknown");
+  if (j.contains("time") && j["time"].contains("display")) {
+    meta["game_date"] = j["time"]["display"];
+  }
+  json names = json::array();
+  if (j.contains("players")) {
+    for (const auto& p : j["players"]) {
+      names.push_back(p.is_null() ? "" : p.value("name", ""));
+    }
+  }
+  meta["player_names"] = names;
+  meta["active_player"] = j.value("active_player", -1);
+  meta["active_city"] = j.value("active_city", -1);
+  return meta;
 }
 
 } // namespace
@@ -132,11 +162,20 @@ bool SaveGameManager::save(const GameState& state, const GameContext& context,
       return false;
     }
 
+    const std::string meta_str = metadata_from_save_json(j).dump(-1);
+    if (meta_str.size() > MAX_METADATA_SIZE) {
+      Logger::warn("Save metadata too large ({} bytes)", meta_str.size());
+      return false;
+    }
+
+    const size_t payload_offset =
+        sizeof(SaveHeader) + sizeof(uint32_t) + meta_str.size();
+
     uLongf bound = compressBound(static_cast<uLong>(json_str.size()));
-    std::vector<Bytef> compressed(sizeof(SaveHeader) + bound);
+    std::vector<Bytef> out(payload_offset + bound);
     uLongf compressed_size = bound;
     int zret =
-        compress2(compressed.data() + sizeof(SaveHeader), &compressed_size,
+        compress2(out.data() + payload_offset, &compressed_size,
                   reinterpret_cast<const Bytef*>(json_str.data()),
                   static_cast<uLong>(json_str.size()), Z_DEFAULT_COMPRESSION);
     if (zret != Z_OK) {
@@ -148,7 +187,12 @@ bool SaveGameManager::save(const GameState& state, const GameContext& context,
     std::memcpy(hdr.magic, "PLSAVE", 6);
     hdr.version = to_le16(SAVE_HEADER_VERSION);
     hdr.size = to_le64(static_cast<uint64_t>(json_str.size()));
-    std::memcpy(compressed.data(), &hdr, sizeof(hdr));
+    std::memcpy(out.data(), &hdr, sizeof(hdr));
+
+    const uint32_t meta_len = to_le32(static_cast<uint32_t>(meta_str.size()));
+    std::memcpy(out.data() + sizeof(SaveHeader), &meta_len, sizeof(meta_len));
+    std::memcpy(out.data() + sizeof(SaveHeader) + sizeof(uint32_t),
+                meta_str.data(), meta_str.size());
 
     std::string full_path = get_full_path(filename);
     std::string tmp_path = full_path + ".tmp";
@@ -160,8 +204,8 @@ bool SaveGameManager::save(const GameState& state, const GameContext& context,
         return false;
       }
       file.write(
-          reinterpret_cast<const char*>(compressed.data()),
-          static_cast<std::streamsize>(sizeof(SaveHeader) + compressed_size));
+          reinterpret_cast<const char*>(out.data()),
+          static_cast<std::streamsize>(payload_offset + compressed_size));
     }
 
     std::error_code ec;
@@ -273,12 +317,29 @@ SaveGameManager::read_save_json(const std::string& filename) {
       return std::nullopt;
     }
 
+    size_t payload_offset = sizeof(SaveHeader);
+    if (from_le16(hdr.version) >= 2) {
+      if (compressed.size() < payload_offset + sizeof(uint32_t)) {
+        Logger::warn("Save file truncated (no metadata length): {}", filename);
+        return std::nullopt;
+      }
+      uint32_t meta_len = 0;
+      std::memcpy(&meta_len, compressed.data() + payload_offset,
+                  sizeof(meta_len));
+      meta_len = from_le32(meta_len);
+      payload_offset += sizeof(uint32_t) + meta_len;
+      if (meta_len > MAX_METADATA_SIZE || compressed.size() < payload_offset) {
+        Logger::warn("Save file has invalid metadata block: {}", filename);
+        return std::nullopt;
+      }
+    }
+
     std::string json_str(static_cast<size_t>(decompressed_size), '\0');
     auto dest_len = static_cast<uLongf>(decompressed_size);
     int zret =
         uncompress(reinterpret_cast<Bytef*>(json_str.data()), &dest_len,
-                   compressed.data() + sizeof(SaveHeader),
-                   static_cast<uLong>(compressed.size() - sizeof(SaveHeader)));
+                   compressed.data() + payload_offset,
+                   static_cast<uLong>(compressed.size() - payload_offset));
     if (zret != Z_OK) {
       Logger::warn("Decompression failed for {}: {}", filename, zret);
       return std::nullopt;
@@ -296,13 +357,60 @@ SaveGameManager::read_save_json(const std::string& filename) {
   }
 }
 
-std::optional<SaveMetadata>
-SaveGameManager::read_save_metadata(const std::string& filename) {
-  auto maybe_j = read_save_json(filename);
-  if (!maybe_j) {
+namespace {
+
+// Read the uncompressed metadata block of a version >= 2 save.
+std::optional<json> read_metadata_block(const std::string& full_path) {
+  std::ifstream file(full_path, std::ios::binary);
+  if (!file.is_open()) {
     return std::nullopt;
   }
-  const json& j = *maybe_j;
+
+  SaveHeader hdr;
+  if (!file.read(reinterpret_cast<char*>(&hdr), sizeof(hdr))) {
+    return std::nullopt;
+  }
+  if (std::memcmp(hdr.magic, "PLSAVE", 6) != 0 || from_le16(hdr.version) < 2) {
+    return std::nullopt;
+  }
+
+  uint32_t meta_len = 0;
+  if (!file.read(reinterpret_cast<char*>(&meta_len), sizeof(meta_len))) {
+    return std::nullopt;
+  }
+  meta_len = from_le32(meta_len);
+  if (meta_len == 0 || meta_len > MAX_METADATA_SIZE) {
+    return std::nullopt;
+  }
+
+  std::string meta_str(meta_len, '\0');
+  if (!file.read(meta_str.data(), meta_len)) {
+    return std::nullopt;
+  }
+  return json::parse(meta_str);
+}
+
+} // namespace
+
+std::optional<SaveMetadata>
+SaveGameManager::read_save_metadata(const std::string& filename) {
+  std::optional<json> maybe_meta;
+  try {
+    maybe_meta = read_metadata_block(get_full_path(filename));
+  }
+  catch (...) {
+    return std::nullopt;
+  }
+
+  if (!maybe_meta) {
+    // Version 1 save: the metadata lives only in the full document.
+    auto maybe_j = read_save_json(filename);
+    if (!maybe_j) {
+      return std::nullopt;
+    }
+    maybe_meta = metadata_from_save_json(*maybe_j);
+  }
+  const json& m = *maybe_meta;
 
   SaveMetadata meta;
 
@@ -312,25 +420,19 @@ SaveGameManager::read_save_metadata(const std::string& filename) {
         meta.display_name.substr(0, meta.display_name.size() - 7);
   }
 
-  meta.saved_at = j.value("saved_at", "Unknown");
+  meta.saved_at = m.value("saved_at", "Unknown");
+  meta.game_date = m.value("game_date", "");
 
-  if (j.contains("time") && j["time"].contains("display")) {
-    meta.game_date = j["time"]["display"].get<std::string>();
-  }
-
-  if (j.contains("players")) {
+  if (m.contains("player_names")) {
+    const auto& names = m["player_names"];
     for (size_t i = 0;
-         i < j["players"].size() && i < static_cast<size_t>(NUMBER_OF_PLAYERS);
-         ++i) {
-      const auto& p = j["players"][i];
-      if (!p.is_null()) {
-        meta.player_names[i] = p.value("name", "");
-      }
+         i < names.size() && i < static_cast<size_t>(NUMBER_OF_PLAYERS); ++i) {
+      meta.player_names[i] = names[i].get<std::string>();
     }
   }
 
-  meta.active_player = j.value("active_player", -1);
-  meta.active_city = j.value("active_city", -1);
+  meta.active_player = m.value("active_player", -1);
+  meta.active_city = m.value("active_city", -1);
 
   return meta;
 }
@@ -881,7 +983,7 @@ bool SaveGameManager::add_high_score(HighScoreEntry entry) {
 
     SaveHeader hdr;
     std::memcpy(hdr.magic, HIGH_SCORE_MAGIC.data(), 6);
-    hdr.version = to_le16(SAVE_HEADER_VERSION);
+    hdr.version = to_le16(HIGH_SCORE_HEADER_VERSION);
     hdr.size = to_le64(static_cast<uint64_t>(json_str.size()));
     std::memcpy(compressed.data(), &hdr, sizeof(hdr));
 
