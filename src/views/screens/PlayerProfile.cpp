@@ -203,23 +203,9 @@ Surface PlayerProfile::create_overview(const Player* player) {
   const ViewPoint first_name_pos{160, 68};
   const ViewPoint last_name_pos{160, 108};
   auto* font = context_.font;
-  std::string full_name = player->name();
-  std::string first_name;
-  std::string last_name;
-
-  // Find the first space in the name; original just splits on the first space,
-  // it seems, so we match that behavior. If the name is too long, so be it
-  // (just overflow like the original).
-  size_t space_pos = full_name.find(' ');
-
-  if (space_pos != std::string_view::npos) {
-    // Split name at the first space
-    first_name = full_name.substr(0, space_pos);
-    last_name = full_name.substr(space_pos + 1);
-  }
-  else {
-    last_name = full_name;
-  }
+  const auto& character = player->character();
+  const std::string& first_name = character.first_name();
+  const std::string& last_name = character.last_name();
 
   if (!first_name.empty()) {
     font->render_text_onto(s, first_name, first_name_pos, FontFace::ASTANDAR,
@@ -405,7 +391,7 @@ Surface PlayerProfile::create_character_values(const Player* player) {
   font->render_line_onto(char_val, "Character values", {headers_x, y},
                          FontFace::PIZ_NUMB, text_color);
   y += line_height;
-  font->render_line_onto(char_val, player->name(), {headers_x, y},
+  font->render_line_onto(char_val, character.name(), {headers_x, y},
                          FontFace::PIZ_NUMB, text_color);
   y += line_height;
   font->render_line_onto(char_val, compat::format("{} Years", character.age()),
