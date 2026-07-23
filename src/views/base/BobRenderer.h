@@ -26,6 +26,8 @@ public:
   Size size(const BobRenderable& renderable) const;
 
 private:
+  int frame_index(const BobRenderable& renderable) const;
+
   std::string graphics_file_;
   std::optional<PaletteHandle> palette_;
   mutable std::unordered_map<int, Surface> images_;

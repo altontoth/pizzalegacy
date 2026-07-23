@@ -18,20 +18,25 @@ BobRenderer::BobRenderer(const std::string& graphics_file, BobManager* bm,
     : graphics_file_(graphics_file), palette_(palette),
       bob_(bm->get(graphics_file)) {}
 
-Surface& BobRenderer::image(const BobRenderable& renderable) const {
-  std::size_t bob_state = renderable.bob_state();
+int BobRenderer::frame_index(const BobRenderable& renderable) const {
+  const int bob_state = renderable.bob_state();
   const auto& bobs = renderable.bobs();
 
-  if (bob_state >= bobs.size()) {
-    fatal("Invalid render state");
+  if (bob_state < 0 || static_cast<std::size_t>(bob_state) >= bobs.size()) {
+    fatal(compat::format("Invalid render state with {} bigger than {} for {}",
+                         bob_state, bobs.size(), graphics_file_));
   }
-  int frame_index = bobs[bob_state];
+  return bobs[bob_state];
+}
+
+Surface& BobRenderer::image(const BobRenderable& renderable) const {
+  const int frame = frame_index(renderable);
 
   // Check if we already cached a Surface for this frame
-  auto it = images_.find(frame_index);
+  auto it = images_.find(frame);
   if (it == images_.end()) {
-    auto bob_surface = bob_.frame(frame_index, palette_);
-    auto result = images_.emplace(frame_index, std::move(bob_surface));
+    auto bob_surface = bob_.frame(frame, palette_);
+    auto result = images_.emplace(frame, std::move(bob_surface));
     return result.first->second;
   }
   return it->second;
@@ -61,7 +66,5 @@ void BobRenderer::render(const BobRenderable& renderable,
 }
 
 Size BobRenderer::size(const BobRenderable& renderable) const {
-  std::size_t bob_state = renderable.bob_state();
-  const auto& bobs = renderable.bobs();
-  return bob_.size(bobs[bob_state]);
+  return bob_.size(frame_index(renderable));
 }

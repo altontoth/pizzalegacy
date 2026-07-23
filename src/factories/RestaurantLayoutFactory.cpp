@@ -18,6 +18,15 @@
 
 #include <algorithm>
 
+namespace {
+// Rotation is stored as 240 plus the rotation index. A few layout files carry
+// bytes outside that range; those items are placed unrotated.
+int decode_rotation(uint8_t raw) {
+  const int rotation = raw - 240;
+  return (rotation >= 0 && rotation < 4) ? rotation : 0;
+}
+} // namespace
+
 std::unique_ptr<RestaurantLayout>
 RestaurantLayoutFactory::create_layout(const std::string& filename) {
   return create_layout(fileutils::read_bytes(filename));
@@ -143,7 +152,7 @@ RestaurantLayoutFactory::create_layout(std::span<const uint8_t> bytes) {
         FurnitureFactory::create_furniture((FurnitureType)furniture_id);
     auto pf = std::make_unique<PlacedFurniture>(
         f, core::FurnitureId{i}, legacy_coords_to_map(x_coord, y_coord),
-        core::FurnitureId{linked_id}, rotation - 240);
+        core::FurnitureId{linked_id}, decode_rotation(rotation));
     rl->place_furniture(std::move(pf));
   }
   // Iterate ovens:
@@ -163,7 +172,7 @@ RestaurantLayoutFactory::create_layout(std::span<const uint8_t> bytes) {
     auto pf = std::make_unique<PlacedFurniture>(
         f, core::FurnitureId{i + furniture_count},
         legacy_kitchen_coords_to_map(x_coord, y_coord),
-        core::FurnitureId{linked_id}, rotation > 0 ? rotation - 240 : 0);
+        core::FurnitureId{linked_id}, decode_rotation(rotation));
     // Logger::debug("Oven at raw {},{} is placed at {}", x_coord, y_coord,
     //              pf->origin());
     rl->place_kitchen_furniture(std::move(pf));
