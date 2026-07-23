@@ -22,7 +22,9 @@
 #include "engine/Logger.h"
 
 #include <algorithm>
+#include <array>
 #include <iostream>
+#include <optional>
 #include <ranges>
 #include <utility>
 
@@ -133,7 +135,7 @@ void Player::end_of_day(GameState& game_state) {
   }
 
   // Update advertising campaigns (decrement days_remaining, remove expired)
-  update_campaigns();
+  update_campaigns(active_city_id);
 
   // Daily health/energy drain based on start time
   {
@@ -372,26 +374,28 @@ bool Player::has_active_campaign(core::CityId city,
   return slot.has_value() && slot->days_remaining > 0;
 }
 
-void Player::update_campaigns() {
-  for (auto& [city, slots] : campaigns_) {
-    for (auto& campaign_opt : slots) {
-      if (campaign_opt.has_value()) {
-        campaign_opt->days_remaining--;
-        if (campaign_opt->days_remaining <= 0) {
-          campaign_opt.reset();
-        }
-      }
-    }
-  }
-
-  // Once a campaign expires its channel's effectiveness decays toward zero; an
-  // active campaign holds its channel at the rate set in add_campaign.
+void Player::update_campaigns(core::CityId city) {
+  // Campaigns expiring today do not begin losing effectiveness until the next
+  // daily update.
   constexpr int decay_per_day = 8;
-  for (auto& [city, eff] : ad_effectiveness_) {
-    for (int ch = 0; ch < 4; ++ch) {
-      if (!has_active_campaign(city, static_cast<AdvertisingChannel>(ch))) {
-        eff[ch] = static_cast<uint8_t>(std::max(0, eff[ch] - decay_per_day));
+  auto slots = campaigns_.find(city);
+  auto eff_entry = ad_effectiveness_.find(city);
+
+  for (int ch = 0; ch < 4; ++ch) {
+    std::optional<AdvertisingCampaign>* campaign =
+        slots != campaigns_.end() ? &slots->second[ch] : nullptr;
+    bool running = campaign != nullptr && campaign->has_value() &&
+                   (*campaign)->days_remaining > 0;
+    if (running) {
+      (*campaign)->days_remaining--;
+      if ((*campaign)->days_remaining <= 0) {
+        campaign->reset();
       }
+      continue;
+    }
+    if (eff_entry != ad_effectiveness_.end()) {
+      auto& eff = eff_entry->second;
+      eff[ch] = static_cast<uint8_t>(std::max(0, eff[ch] - decay_per_day));
     }
   }
 }

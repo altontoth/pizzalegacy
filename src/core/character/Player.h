@@ -109,9 +109,7 @@ public:
   std::optional<AdvertisingCampaign>
   get_campaign(core::CityId city, AdvertisingChannel channel) const;
   bool has_active_campaign(core::CityId city, AdvertisingChannel channel) const;
-  // Called daily: decrements days_remaining, drops expired campaigns, and
-  // decays the post-expiry advertising effectiveness toward zero.
-  void update_campaigns();
+  void update_campaigns(core::CityId city);
   int advertising_effectiveness_sum(core::CityId city) const;
 
   // Cumulative gross turnover (sales revenue) per city, shown on the competitor
