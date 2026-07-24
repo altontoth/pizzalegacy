@@ -292,7 +292,11 @@ void Game::run() {
       .toggle_fullscreen =
           [this, &loop_state] {
             loop_state.fullscreen = !loop_state.fullscreen;
-            SDL_SetWindowFullscreen(sdl_.window.get(), loop_state.fullscreen);
+            if (!SDL_SetWindowFullscreen(sdl_.window.get(),
+                                         loop_state.fullscreen)) {
+              Logger::warn("Failed to set fullscreen {}: {}",
+                           loop_state.fullscreen, SDL_GetError());
+            }
           }};
   global_actions_ =
       std::make_unique<GlobalActionHandler>(*input_manager_, std::move(cb));
@@ -306,8 +310,12 @@ void Game::run() {
   Renderer renderer(sdl_, display_height_);
   renderer.set_cursor_manager(cursor_manager_.get());
   cursor_manager_->software_mode(state.options().software_cursor);
-  SDL_SetRenderVSync(sdl_.renderer.get(),
-                     state.options().vsync ? 1 : SDL_RENDERER_VSYNC_DISABLED);
+  if (!SDL_SetRenderVSync(
+          sdl_.renderer.get(),
+          state.options().vsync ? 1 : SDL_RENDERER_VSYNC_DISABLED)) {
+    Logger::warn("Failed to set vsync {}: {}", state.options().vsync,
+                 SDL_GetError());
+  }
 
   // The shared status panel outlives every screen transition and survives a
   // game load (its hub subscription is preserved), so it is created once here.
@@ -347,8 +355,10 @@ void Game::run() {
     }
     if (state.options().vsync != vsync) {
       vsync = state.options().vsync;
-      SDL_SetRenderVSync(sdl_.renderer.get(),
-                         vsync ? 1 : SDL_RENDERER_VSYNC_DISABLED);
+      if (!SDL_SetRenderVSync(sdl_.renderer.get(),
+                              vsync ? 1 : SDL_RENDERER_VSYNC_DISABLED)) {
+        Logger::warn("Failed to set vsync {}: {}", vsync, SDL_GetError());
+      }
     }
 
     if (!current_view_) {
@@ -662,8 +672,12 @@ bool Game::init(int display_height, ConfigManager& config_manager) {
       config_manager.options().resolution, display_height);
   SDL_Window* window = nullptr;
   SDL_Renderer* renderer_handle = nullptr;
-  SDL_CreateWindowAndRenderer("Pizza Legacy", win_w, win_h,
-                              SDL_WINDOW_RESIZABLE, &window, &renderer_handle);
+  if (!SDL_CreateWindowAndRenderer("Pizza Legacy", win_w, win_h,
+                                   SDL_WINDOW_RESIZABLE, &window,
+                                   &renderer_handle)) {
+    Logger::warn("Failed to create window/renderer: {}", SDL_GetError());
+    return false;
+  }
   sdl_.window.reset(window);
   sdl_.renderer.reset(renderer_handle);
   SDL_SetWindowPosition(sdl_.window.get(), SDL_WINDOWPOS_CENTERED,
