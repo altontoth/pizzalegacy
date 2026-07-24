@@ -64,6 +64,15 @@ void ManagerRoutine::queue_alert(std::string message, int display_block) {
 }
 
 void ManagerRoutine::run_daily() {
+  using core::character::JobRole;
+
+  // Yesterday's shortage flags are cleared every morning, whether or not
+  // there is a manager around to report them.
+  auto filled_in_as = restaurant_.manager_filled_in_as();
+  auto shortage = restaurant_.manager_staff_shortage();
+  restaurant_.set_manager_filled_in_as(JobRole::NONE);
+  restaurant_.set_manager_staff_shortage(JobRole::NONE);
+
   auto& manager = restaurant_.manager();
   if (!manager) {
     return;
@@ -76,7 +85,13 @@ void ManagerRoutine::run_daily() {
     return;
   }
 
-  report_previous_day_shortages();
+  // A shortage report ends the manager's day: no shopping, no price changes,
+  // no turnover check, no staff influence.
+  if (report_previous_day_shortages(filled_in_as, shortage)) {
+    Logger::info("[Manager] {} - Shortage reported, no further duties today",
+                 restaurant_.name());
+    return;
+  }
 
   // Activity gate: motivation% chance to be active today
   if (!rand_percentage_chance(manager->character().motivation())) {
@@ -87,44 +102,50 @@ void ManagerRoutine::run_daily() {
 
   do_shopping();
 
-  // High management = more likely to continue.
-  int laziness = 100 - manager->character().management();
-  if (rand_percentage_chance(laziness)) {
+  // High management apparently trusts the existing setup (?) and skips the
+  // hands-on price/turnover/staff duties
+  if (rand_percentage_chance(manager->character().management())) {
     Logger::info("[Manager] {} - Manager skipped remaining duties",
                  restaurant_.name());
     return;
   }
 
   do_price_adjustment();
-  do_turnover_monitoring();
+
+  // A turnover report likewise ends the day, skipping staff influence.
+  if (do_turnover_monitoring()) {
+    return;
+  }
 
   // Staff behavior influence
   ManagerFeedback feedback(&restaurant_);
   feedback.daily_adjustments();
 }
 
-void ManagerRoutine::report_previous_day_shortages() {
+bool ManagerRoutine::report_previous_day_shortages(
+    core::character::JobRole filled_in_as, core::character::JobRole shortage) {
   using core::character::JobRole;
 
-  auto filled_in_as = restaurant_.manager_filled_in_as();
+  // The fill-in report wins when both are set.
   if (filled_in_as != JobRole::NONE) {
     const std::string_view role =
         (filled_in_as == JobRole::CHEF) ? "cooks" : "waiters";
     queue_alert(compat::format("Boss! Yesterday in restaurant {} I had to help "
                                "out our {} with their work!",
                                restaurant_.name(), role));
-    restaurant_.set_manager_filled_in_as(JobRole::NONE);
+    return true;
   }
 
-  auto shortage = restaurant_.manager_staff_shortage();
   if (shortage != JobRole::NONE) {
     const std::string_view role =
         (shortage == JobRole::CHEF) ? "cooks" : "waiters";
     queue_alert(
         compat::format("Boss! In restaurant {} we haven't got enough {}!",
                        restaurant_.name(), role));
-    restaurant_.set_manager_staff_shortage(JobRole::NONE);
+    return true;
   }
+
+  return false;
 }
 
 // Counts ingredients in the given category that have less than three days'
@@ -190,9 +211,7 @@ void ManagerRoutine::do_shopping() {
   float difficulty_mult =
       difficulty_multipliers[game_state_.difficulty_level() - 1];
 
-  for (int cat_index = 0; cat_index < Restaurant::NUM_INGREDIENT_CATEGORIES;
-       ++cat_index) {
-    auto category = static_cast<IngredientCategory>(cat_index);
+  for (auto category : ALL_INGREDIENT_CATEGORIES) {
     const auto& range = category_range(category);
 
     int shortage_count = count_category_shortages(restaurant_, category);
@@ -211,7 +230,7 @@ void ManagerRoutine::do_shopping() {
 
     // Find the preferred supplier, falling back to first available
     const FoodSupplier* supplier = nullptr;
-    auto preferred_id = restaurant_.preferred_suppliers()[cat_index];
+    auto preferred_id = restaurant_.preferred_suppliers()[category];
     for (const auto& s : city.suppliers()) {
       if (s->category() != category) {
         continue;
@@ -364,16 +383,16 @@ void ManagerRoutine::do_price_adjustment() {
   }
 }
 
-void ManagerRoutine::do_turnover_monitoring() {
+bool ManagerRoutine::do_turnover_monitoring() {
   const auto& settings = restaurant_.manager_settings();
-  if (settings.turnover_decrease == ManagerReaction::DoNothing &&
-      settings.turnover_increase == ManagerReaction::DoNothing) {
-    return;
+  if (settings.turnover_decrease != ManagerReaction::CallMe &&
+      settings.turnover_increase != ManagerReaction::CallMe) {
+    return false;
   }
 
   const auto& manager = restaurant_.manager();
   if (!manager) {
-    return;
+    return false;
   }
   int management = manager->character().management();
 
@@ -381,36 +400,44 @@ void ManagerRoutine::do_turnover_monitoring() {
   const auto& traded = restaurant_.stats().yesterday;
   const auto& previous = restaurant_.stats().day_before_yesterday;
 
-  int revenue_diff =
-      static_cast<int>(traded.revenue.cents - previous.revenue.cents);
+  auto revenue_diff = traded.revenue - previous.revenue;
 
   if (management > 60) {
     // Profit-aware mode: subtract the cost change from the revenue change
-    int cost_diff = static_cast<int>(traded.ingredient_costs.cents -
-                                     previous.ingredient_costs.cents);
+    auto cost_diff = traded.ingredient_costs - previous.ingredient_costs;
     revenue_diff -= cost_diff;
   }
 
-  // Thresholds in cents.
-  // TODO REVIEW: the original tests the decrease setting against a $500 rise
-  // and the increase setting against anything below a $200 rise, so one of the
-  // two setting labels or the two strings is swapped there. Ours requires a
-  // $200 fall for the second test, making it the rarer of the two.
-  constexpr int INCREASE_THRESHOLD = 50000;
-  constexpr int DECREASE_THRESHOLD = 20000;
+  // Thresholds are on the day-over-day change, not on the level: anything
+  // below +$200, including weak growth, reads as a downturn, and $200 to $500
+  // is a dead band that reports nothing.
+  constexpr auto strong_rise = 500_usd;
+  constexpr auto weak_growth = 200_usd;
 
   const char* trend_word = (management > 60) ? "profit" : "turnover";
 
-  if (settings.turnover_decrease == ManagerReaction::CallMe &&
-      revenue_diff > INCREASE_THRESHOLD) {
+  // Original game bug (present in both PT.EXE and PC.EXE): the setting labelled
+  // "turnover decrease" gates the *rise* message and "turnover increase" gates
+  // the *fall* one. With fix_legacy_bugs each setting reacts to the trend it
+  // names.
+  const bool swapped = !game_state_.options().fix_legacy_bugs;
+  const ManagerReaction rise_setting =
+      swapped ? settings.turnover_decrease : settings.turnover_increase;
+  const ManagerReaction fall_setting =
+      swapped ? settings.turnover_increase : settings.turnover_decrease;
+
+  if (rise_setting == ManagerReaction::CallMe && revenue_diff > strong_rise) {
     queue_alert(compat::format("Boss! In restaurant no. {} the {} is going up.",
                                restaurant_.id().value, trend_word));
+    return true;
   }
 
-  if (settings.turnover_increase == ManagerReaction::CallMe &&
-      revenue_diff < -DECREASE_THRESHOLD) {
+  if (fall_setting == ManagerReaction::CallMe && revenue_diff < weak_growth) {
     queue_alert(
         compat::format("Boss! In restaurant no. {} the {} is going down.",
                        restaurant_.id().value, trend_word));
+    return true;
   }
+
+  return false;
 }

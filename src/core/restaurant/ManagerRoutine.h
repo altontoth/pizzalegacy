@@ -7,6 +7,7 @@
 #pragma once
 
 #include <string>
+#include "core/character/Character.h"
 #include "core/food/IngredientCategoryType.h"
 
 class GameState;
@@ -27,10 +28,12 @@ private:
                                       IngredientCategory category);
   void queue_shortage_warning(IngredientCategory category, int shortage_count);
 
-  void report_previous_day_shortages();
+  // A true return means a "Boss! ..." alert went out, which ends the day.
+  bool report_previous_day_shortages(core::character::JobRole filled_in_as,
+                                     core::character::JobRole shortage);
   void do_shopping();
   void do_price_adjustment();
-  void do_turnover_monitoring();
+  bool do_turnover_monitoring();
 
   // Alerts are raised at day start but held until opening time; the shopping
   // warnings come out one category per 10-minute block after that.

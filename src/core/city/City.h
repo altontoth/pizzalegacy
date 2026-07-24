@@ -178,10 +178,6 @@ public:
     return ingredient_trend_system_;
   }
 
-  const core::food::IngredientTrends& ingredient_trends() const {
-    return ingredient_trend_system_.trends();
-  }
-
   // Spoilage rate (normal = 1, heat wave = 8)
   void spoilage_rate(int rate) { spoilage_rate_ = rate; }
   int spoilage_rate() const { return spoilage_rate_; }

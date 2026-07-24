@@ -13,6 +13,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 #include "core/Demographics.h"
@@ -1219,32 +1220,72 @@ void Restaurant::eod_batch_order_fulfillment(class GameState& game_state) {
                      get_recipe_requirements_grams(*recipe), predicted});
   }
 
-  // Staff shortage augmentation: if the manager is present and staff_shortage
-  // is ActYourself, the manager fills in for the deficient role.
-  if (manager_ && !manager_->is_away()) {
-    const auto& settings = manager_settings_;
-    if (settings.staff_shortage == ManagerReaction::ActYourself) {
-      int manager_capacity = manager_->pizzas_per_day();
-      if (chef_capacity < total_orders && chef_capacity <= waiter_capacity) {
-        chef_capacity += manager_capacity;
-        manager_filled_in_as_ = core::character::JobRole::CHEF;
-      }
-      else if (waiter_capacity < total_orders) {
-        waiter_capacity += manager_capacity;
-        manager_filled_in_as_ = core::character::JobRole::WAITER;
-      }
+  // Ovens, then cooks, then waiters, each clamping the demand the next one
+  // sees. A manager acting themselves adds their own daily output to
+  // whichever staff role is short, and can cover both in the same day.
+  // Availability is not consulted: a manager away on a course still works the
+  // floor here, and the fill-in then goes unreported next morning because the
+  // manager routine bails on the same absence. Bit weird but that is my
+  // understanding of how the original works.
+  const int manager_capacity = manager_ ? manager_->pizzas_per_day() : 0;
+  const bool manager_fills_in = manager_ && manager_settings_.staff_shortage ==
+                                                ManagerReaction::ActYourself;
+  const bool manager_reports =
+      manager_ && manager_settings_.staff_shortage == ManagerReaction::CallMe;
+
+  // Each role with not enough capacity reports it
+  auto post_shortage = [this, &game_state](std::string_view text) {
+    std::string message{text};
+    if (ConfigManager::instance()->options().qol_improvements) {
+      message = compat::format("{}: {}", name_, text);
     }
-    else if (settings.staff_shortage == ManagerReaction::CallMe) {
-      if (chef_capacity < total_orders) {
-        manager_staff_shortage_ = core::character::JobRole::CHEF;
-      }
-      if (waiter_capacity < total_orders) {
-        manager_staff_shortage_ = core::character::JobRole::WAITER;
-      }
+    constexpr int status_color_yellow = 16;
+    game_state.status().post_direct(StatusMsg{
+        .payload = std::move(message),
+        .severity = StatusSeverity::Warning,
+        .scope = StatusScope::Restaurant,
+        .color = status_color_yellow,
+    });
+  };
+
+  int fulfillable_orders = total_orders;
+
+  if (oven_capacity < fulfillable_orders) {
+    fulfillable_orders = oven_capacity;
+    post_shortage("Too few ovens to satisfy present demand!");
+  }
+
+  if (chef_capacity < fulfillable_orders) {
+    // The shortage is recorded from the raw capacity, so a manager who covers
+    // the whole gap still leaves it set.
+    if (manager_reports) {
+      manager_staff_shortage_ = core::character::JobRole::CHEF;
+    }
+    if (manager_fills_in) {
+      chef_capacity += manager_capacity;
+      manager_filled_in_as_ = core::character::JobRole::CHEF;
+    }
+    if (chef_capacity < fulfillable_orders) {
+      fulfillable_orders = chef_capacity;
+      post_shortage("Too few cooks to satisfy present demand!");
     }
   }
 
-  int effective_capacity =
+  if (waiter_capacity < fulfillable_orders) {
+    if (manager_reports) {
+      manager_staff_shortage_ = core::character::JobRole::WAITER;
+    }
+    if (manager_fills_in) {
+      waiter_capacity += manager_capacity;
+      manager_filled_in_as_ = core::character::JobRole::WAITER;
+    }
+    if (waiter_capacity < fulfillable_orders) {
+      fulfillable_orders = waiter_capacity;
+      post_shortage("Too few waiters to satisfy present demand!");
+    }
+  }
+
+  const int effective_capacity =
       std::min({oven_capacity, chef_capacity, waiter_capacity});
 
   auto total_ordered = [&lines]() {
@@ -1320,19 +1361,19 @@ void Restaurant::eod_batch_order_fulfillment(class GameState& game_state) {
     }
 
     const int total = total_ordered();
-    if (total <= effective_capacity) {
+    if (total <= fulfillable_orders) {
       break;
     }
     for (auto& line : lines) {
       line.orders = static_cast<int>(
-          ((static_cast<int64_t>(line.orders) * effective_capacity) +
+          ((static_cast<int64_t>(line.orders) * fulfillable_orders) +
            (total / 2)) /
           total);
     }
     // Hand back what the per-line rounding dropped.
     if (total_ordered() > 0) {
       std::size_t i = 0;
-      while (total_ordered() < effective_capacity) {
+      while (total_ordered() < fulfillable_orders) {
         if (lines[i].orders > 0) {
           lines[i].orders++;
         }
@@ -1416,34 +1457,8 @@ void Restaurant::eod_batch_order_fulfillment(class GameState& game_state) {
         (grams > 250000 ? 250 : (grams / 1000) + 1) * 1000;
   }
 
-  // Shortage warning, from what the day actually lost; only the most binding
-  // constraint fires, capacity taking precedence over supplies.
-  std::string shortage_msg;
-  if (lost_to_capacity > 0) {
-    if (oven_capacity <= chef_capacity && oven_capacity <= waiter_capacity) {
-      shortage_msg = "Too few ovens to satisfy present demand!";
-    }
-    else if (chef_capacity <= waiter_capacity) {
-      shortage_msg = "Too few cooks to satisfy present demand!";
-    }
-    else {
-      shortage_msg = "Too few waiters to satisfy present demand!";
-    }
-  }
-  else if (lost_to_ingredients > 0) {
-    shortage_msg = "There aren't enough supplies to satisfy demand!";
-  }
-  if (!shortage_msg.empty()) {
-    if (ConfigManager::instance()->options().qol_improvements) {
-      shortage_msg = compat::format("{}: {}", name_, shortage_msg);
-    }
-    constexpr int status_color_yellow = 16;
-    game_state.status().post_direct(StatusMsg{
-        .payload = std::move(shortage_msg),
-        .severity = StatusSeverity::Warning,
-        .scope = StatusScope::Restaurant,
-        .color = status_color_yellow,
-    });
+  if (lost_to_ingredients > 0) {
+    post_shortage("There aren't enough supplies to satisfy demand!");
   }
 
   if (total_orders > 0) {
@@ -1680,22 +1695,6 @@ Popularity Restaurant::calculate_menu_popularity(
 
 Popularity Restaurant::calculate_furniture_appeal_popularity() const {
   return economy_.calculate_furniture_appeal_popularity(*this);
-}
-
-int Restaurant::calculate_trend_appeal(const City& city) const {
-  int total = 0;
-  const auto& trends = city.ingredient_trends();
-
-  for (int category = 0; category < NUM_INGREDIENT_CATEGORIES; category++) {
-    auto ingredient_id = top_ingredients_[category];
-    if (!ingredient_id) {
-      continue;
-    }
-
-    total += trends[*ingredient_id];
-  }
-
-  return std::clamp(total, -125, 125);
 }
 
 // The part of the day-start the original re-derives whenever the city view is

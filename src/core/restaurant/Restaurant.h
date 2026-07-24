@@ -16,6 +16,7 @@ struct RestaurantLoader;
 #include <vector>
 
 #include "core/character/Staff.h"
+#include "core/food/IngredientCategoryType.h"
 #include "core/item/Item.h"
 #include "core/restaurant/Menu.h"
 #include "core/restaurant/RestaurantEconomy.h"
@@ -441,15 +442,12 @@ public:
   void first_inspection_pending(bool v) { first_inspection_pending_ = v; }
   bool first_inspection_pending() const { return first_inspection_pending_; }
 
-  static constexpr int NUM_INGREDIENT_CATEGORIES = 4;
-
   // Manager shopping: preferred supplier ID per ingredient category.
   // If not set manager picks first available supplier.
-  std::array<std::optional<int>, NUM_INGREDIENT_CATEGORIES>&
-  preferred_suppliers() {
+  IngredientCategoryArray<std::optional<int>>& preferred_suppliers() {
     return preferred_suppliers_;
   }
-  const std::array<std::optional<int>, NUM_INGREDIENT_CATEGORIES>&
+  const IngredientCategoryArray<std::optional<int>>&
   preferred_suppliers() const {
     return preferred_suppliers_;
   }
@@ -468,12 +466,6 @@ public:
   void set_manager_staff_shortage(core::character::JobRole role) {
     manager_staff_shortage_ = role;
   }
-
-  auto& top_ingredients() { return top_ingredients_; }
-  const auto& top_ingredients() const { return top_ingredients_; }
-
-  // Trend appeal bonus (-125 to +125) from top 4 trending ingredients
-  int calculate_trend_appeal(const class City& city) const;
 
   // Calculates all 8 popularity components. Component 7 (UnexpectedEvents)
   // flows into total_popularity() => competitive_strength => customer demand.
@@ -553,10 +545,6 @@ private:
   int sabotage_contamination_{0};
   int contamination_{0};
 
-  // Top ingredient per category (veg, meat, fruit, cheese)
-  std::array<std::optional<int>, NUM_INGREDIENT_CATEGORIES> top_ingredients_{
-      std::nullopt, std::nullopt, std::nullopt, std::nullopt};
-
   // 8 popularity component scores; total feeds into economy_ for demand
   RestaurantPopularity popularity_{};
 
@@ -578,9 +566,7 @@ private:
   // Decremented each start_of_day; at 0 the restaurant is eligible to open.
   int forced_days_remaining_{0};
 
-  std::array<std::optional<int>, NUM_INGREDIENT_CATEGORIES>
-      preferred_suppliers_{std::nullopt, std::nullopt, std::nullopt,
-                           std::nullopt};
+  IngredientCategoryArray<std::optional<int>> preferred_suppliers_{};
 
   core::character::JobRole manager_filled_in_as_{
       core::character::JobRole::NONE};
