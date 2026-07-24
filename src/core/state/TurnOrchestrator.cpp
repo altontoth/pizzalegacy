@@ -275,8 +275,9 @@ void TurnOrchestrator::show_next_deferred_staff_event() {
 }
 
 void TurnOrchestrator::queue_manager_alert(core::RestaurantId rid,
-                                           std::string message) {
-  deferred_manager_alerts_.push_back({rid, std::move(message)});
+                                           std::string message,
+                                           int display_block) {
+  deferred_manager_alerts_.push_back({rid, std::move(message), display_block});
 }
 
 void TurnOrchestrator::queue_mayor_award(const MayorAwardEvent& ev) {
@@ -284,12 +285,18 @@ void TurnOrchestrator::queue_mayor_award(const MayorAwardEvent& ev) {
 }
 
 void TurnOrchestrator::show_next_deferred_manager_alert() {
-  if (deferred_manager_alerts_.empty()) {
+  int block = gs_->time().current_block_of_day();
+  auto due = std::ranges::find_if(deferred_manager_alerts_,
+                                  [block](const DeferredManagerAlert& a) {
+                                    return a.display_block <= block;
+                                  });
+  if (due == deferred_manager_alerts_.end()) {
     return;
   }
 
-  auto alert = deferred_manager_alerts_.front();
-  deferred_manager_alerts_.erase(deferred_manager_alerts_.begin());
+  auto alert = *due;
+  deferred_manager_alerts_.erase(due);
+  showing_manager_alert_ = true;
 
   auto* restaurant = gs_->restaurant(alert.restaurant_id);
   const RawRenderable* manager_pic = nullptr;
@@ -302,7 +309,7 @@ void TurnOrchestrator::show_next_deferred_manager_alert() {
 
   gs_->turn_presenter().show_manager_alert(
       std::move(alert.message), manager_pic,
-      [this]() { show_next_deferred_manager_alert(); });
+      [this]() { showing_manager_alert_ = false; });
 }
 
 void TurnOrchestrator::trigger_mayor_inspection(core::RestaurantId rid,
@@ -421,9 +428,10 @@ void TurnOrchestrator::fire_due_events() {
   // turns (gated in GameState::update()).
   const auto& time = gs_->time();
 
-  // Fire manager call-me alerts at 9:00.
+  // Fire manager call-me alerts, one per time block from each alert's own
+  // due block onwards.
   if (!processing_end_of_turn_ && !prevent_auto_end_of_turn_ &&
-      !deferred_manager_alerts_.empty() && time.is_past_time(9, 0)) {
+      !showing_manager_alert_ && !deferred_manager_alerts_.empty()) {
     show_next_deferred_manager_alert();
   }
 

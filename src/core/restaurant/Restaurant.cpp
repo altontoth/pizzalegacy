@@ -1169,9 +1169,6 @@ void Restaurant::end_of_day(GameState& game_state) {
   }
   calculate_daily_pizza_sales_distribution(game_state);
   eod_batch_order_fulfillment(game_state);
-
-  core::restaurant::ManagerRoutine manager_routine(*this, game_state);
-  manager_routine.run_daily();
 }
 
 void Restaurant::eod_batch_order_fulfillment(class GameState& game_state) {
@@ -1701,7 +1698,9 @@ int Restaurant::calculate_trend_appeal(const City& city) const {
   return std::clamp(total, -125, 125);
 }
 
-void Restaurant::start_of_day(GameState& game_state) {
+// The part of the day-start the original re-derives whenever the city view is
+// entered: stock spoils, then the manager reacts to what is left.
+void Restaurant::degrade_stock_and_run_manager(GameState& game_state) {
   Money rotten_value{0};
   for (const auto& [ingredient_type, book_value] :
        inventory_.apply_daily_degradation(property_.city().spoilage_rate())) {
@@ -1725,6 +1724,13 @@ void Restaurant::start_of_day(GameState& game_state) {
                                     AccountingScope::Operational);
     }
   }
+
+  core::restaurant::ManagerRoutine manager_routine(*this, game_state);
+  manager_routine.run_daily();
+}
+
+void Restaurant::start_of_day(GameState& game_state) {
+  degrade_stock_and_run_manager(game_state);
 
   // Tick down forced closures. On re-open you get the reputation hit.
   if (forced_days_remaining_ > 0) {

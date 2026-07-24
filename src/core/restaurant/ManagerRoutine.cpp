@@ -19,6 +19,7 @@
 #include "core/state/GameState.h"
 #include "core/status/StatusHub.h"
 #include "core/supply/FoodSupplier.h"
+#include "core/time/TimeOfDay.h"
 #include "engine/Logger.h"
 #include "engine/Random.h"
 
@@ -34,24 +35,32 @@ static constexpr Money price_adjust_down = 40_c;
 struct CategoryRange {
   int start;
   int count;
-  const char* name;
 };
 static constexpr std::array<CategoryRange, 4> CATEGORY_RANGES{{
-    {.start = 0, .count = 22, .name = "vegetables"},
-    {.start = 24, .count = 17, .name = "meat"},
-    {.start = 48, .count = 13, .name = "fruit"},
-    {.start = 72, .count = 13, .name = "cheese"},
+    {.start = 0, .count = 22},
+    {.start = 24, .count = 17},
+    {.start = 48, .count = 13},
+    {.start = 72, .count = 13},
 }};
+
+namespace {
+const CategoryRange& category_range(IngredientCategory category) {
+  return CATEGORY_RANGES[static_cast<int>(category)];
+}
+
+constexpr int opening_block = Restaurant::DEFAULT_OPENING_TIME.to_block();
+} // namespace
 
 ManagerRoutine::ManagerRoutine(Restaurant& restaurant, GameState& game_state)
     : restaurant_(restaurant), game_state_(game_state) {}
 
 void ManagerRoutine::queue_alert(std::string message) {
-  if (alert_queued_) {
-    return;
-  }
-  alert_queued_ = true;
-  game_state_.turn().queue_manager_alert(restaurant_.id(), std::move(message));
+  queue_alert(std::move(message), opening_block);
+}
+
+void ManagerRoutine::queue_alert(std::string message, int display_block) {
+  game_state_.turn().queue_manager_alert(restaurant_.id(), std::move(message),
+                                         display_block);
 }
 
 void ManagerRoutine::run_daily() {
@@ -118,6 +127,39 @@ void ManagerRoutine::report_previous_day_shortages() {
   }
 }
 
+// Counts ingredients in the given category that have less than three days'
+// worth of stock based on cached daily demand. Ingredients with no daily
+// demand are ignored.
+int ManagerRoutine::count_category_shortages(const Restaurant& restaurant,
+                                             IngredientCategory category) {
+  const auto& range = category_range(category);
+  const auto& daily_demand = restaurant.daily_ingredient_demand_cache();
+
+  int shortage_count = 0;
+  for (int i = 0; i < range.count; ++i) {
+    auto ingredient_type =
+        static_cast<core::food::IngredientType>(range.start + i);
+    int daily_grams = daily_demand[ingredient_type];
+    if (daily_grams <= 0) {
+      continue;
+    }
+    int current = restaurant.inventory().get_stock(ingredient_type).quantity;
+    if (current < daily_grams * 3) {
+      ++shortage_count;
+    }
+  }
+  return shortage_count;
+}
+
+void ManagerRoutine::queue_shortage_warning(IngredientCategory category,
+                                            int shortage_count) {
+  std::string_view order_word = (shortage_count == 1) ? "order" : "orders";
+  queue_alert(compat::format("Boss! We urgently need {} {} of {} for {}",
+                             shortage_count, order_word, to_string(category),
+                             restaurant_.name()),
+              opening_block + static_cast<int>(category));
+}
+
 void ManagerRoutine::do_shopping() {
   if (!restaurant_.wants_open()) {
     return;
@@ -150,8 +192,22 @@ void ManagerRoutine::do_shopping() {
 
   for (int cat_index = 0; cat_index < Restaurant::NUM_INGREDIENT_CATEGORIES;
        ++cat_index) {
-    const auto& range = CATEGORY_RANGES[cat_index];
     auto category = static_cast<IngredientCategory>(cat_index);
+    const auto& range = category_range(category);
+
+    int shortage_count = count_category_shortages(restaurant_, category);
+    if (shortage_count == 0) {
+      continue;
+    }
+
+    if (settings.supply_shortage == ManagerReaction::CallMe) {
+      queue_shortage_warning(category, shortage_count);
+      continue;
+    }
+
+    if (!settings.shopping_if_needed) {
+      continue;
+    }
 
     // Find the preferred supplier, falling back to first available
     const FoodSupplier* supplier = nullptr;
@@ -168,36 +224,6 @@ void ManagerRoutine::do_shopping() {
       }
     }
     if (!supplier) {
-      continue;
-    }
-
-    int shortage_count = 0;
-    for (int i = 0; i < range.count; ++i) {
-      auto ingredient_type =
-          static_cast<core::food::IngredientType>(range.start + i);
-      int daily_grams = daily_demand[ingredient_type];
-      if (daily_grams <= 0) {
-        continue;
-      }
-      int current = restaurant_.inventory().get_stock(ingredient_type).quantity;
-      if (current < daily_grams * 3) {
-        ++shortage_count;
-      }
-    }
-
-    if (shortage_count == 0) {
-      continue;
-    }
-
-    if (settings.supply_shortage == ManagerReaction::CallMe) {
-      std::string_view order_word = (shortage_count == 1) ? "order" : "orders";
-      queue_alert(compat::format("Boss! We urgently need {} {} of {} for {}",
-                                 shortage_count, order_word, range.name,
-                                 restaurant_.name()));
-      continue;
-    }
-
-    if (!settings.shopping_if_needed) {
       continue;
     }
 
@@ -255,8 +281,8 @@ void ManagerRoutine::do_shopping() {
           .payload = compat::format(
               "Your manager goes shopping for {} and buys {} at {} for {} "
               "with {}% discount",
-              restaurant_.name(), range.name, supplier->name(), category_total,
-              best_discount),
+              restaurant_.name(), to_string(category), supplier->name(),
+              category_total, best_discount),
           .severity = StatusSeverity::Info,
           .scope = StatusScope::Restaurant,
       });
@@ -286,14 +312,14 @@ void ManagerRoutine::do_price_adjustment() {
     }
   }
 
-  // Smart per-pizza adjustment pass
-  const auto& today = restaurant_.stats().today;
+  // Smart per-pizza adjustment pass, over the last settled day.
+  const auto& traded = restaurant_.stats().yesterday;
 
   for (auto& entry : restaurant_.menu().entries()) {
-    auto it = today.pizza_sales.find(entry.recipe_id);
-    int sold = (it != today.pizza_sales.end()) ? it->second.count_sold : 0;
+    auto it = traded.pizza_sales.find(entry.recipe_id);
+    int sold = (it != traded.pizza_sales.end()) ? it->second.count_sold : 0;
     int ordered =
-        (it != today.pizza_sales.end()) ? it->second.count_ordered : 0;
+        (it != traded.pizza_sales.end()) ? it->second.count_ordered : 0;
 
     // Gate: if management > 70, skip when there is unmet demand.
     if (ordered != sold && management > 70) {
@@ -315,7 +341,7 @@ void ManagerRoutine::do_price_adjustment() {
     int price_cents = static_cast<int>(entry.price.cents);
     int revenue_estimate = demand_figure * price_cents;
 
-    if (management > 60 && it != today.pizza_sales.end() && sold > 0) {
+    if (management > 60 && it != traded.pizza_sales.end() && sold > 0) {
       // High-management: factor in per-portion costs for a more accurate
       // profit signal. Dampens the revenue estimate.
       int cost_per_portion =
@@ -351,20 +377,25 @@ void ManagerRoutine::do_turnover_monitoring() {
   }
   int management = manager->character().management();
 
-  const auto& today = restaurant_.stats().today;
-  const auto& yesterday = restaurant_.stats().yesterday;
+  // The last settled day against the one before it.
+  const auto& traded = restaurant_.stats().yesterday;
+  const auto& previous = restaurant_.stats().day_before_yesterday;
 
   int revenue_diff =
-      static_cast<int>(today.revenue.cents - yesterday.revenue.cents);
+      static_cast<int>(traded.revenue.cents - previous.revenue.cents);
 
   if (management > 60) {
     // Profit-aware mode: subtract the cost change from the revenue change
-    int cost_diff = static_cast<int>(today.ingredient_costs.cents -
-                                     yesterday.ingredient_costs.cents);
+    int cost_diff = static_cast<int>(traded.ingredient_costs.cents -
+                                     previous.ingredient_costs.cents);
     revenue_diff -= cost_diff;
   }
 
   // Thresholds in cents.
+  // TODO REVIEW: the original tests the decrease setting against a $500 rise
+  // and the increase setting against anything below a $200 rise, so one of the
+  // two setting labels or the two strings is swapped there. Ours requires a
+  // $200 fall for the second test, making it the rarer of the two.
   constexpr int INCREASE_THRESHOLD = 50000;
   constexpr int DECREASE_THRESHOLD = 20000;
 

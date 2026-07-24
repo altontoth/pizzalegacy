@@ -71,22 +71,24 @@ public:
     return pipeline_activity_;
   }
 
-  // Mayor inspection events deferred from EOD to the next day.
+  // Mayor inspection events
   struct DeferredInspectionEvent {
     bool is_first;
     core::RestaurantId restaurant_id;
   };
 
-  // Staff event dialogs deferred from EOD to the next day.
+  // Staff event dialogs
   struct DeferredStaffEvent {
     core::restaurant::StaffEventData event;
     core::RestaurantId restaurant_id;
   };
 
-  // Manager call-me alerts deferred from EOD to the next day.
+  // Manager call-me alerts. Each carries the time block it is due, and at most
+  // one is delivered per block.
   struct DeferredManagerAlert {
     core::RestaurantId restaurant_id;
     std::string message;
+    int display_block;
   };
 
   // Protection racket offers rolled during the day-end flush, delivered on
@@ -97,7 +99,8 @@ public:
     bool first_contact;
   };
 
-  void queue_manager_alert(core::RestaurantId rid, std::string message);
+  void queue_manager_alert(core::RestaurantId rid, std::string message,
+                           int display_block);
   void queue_mayor_award(const MayorAwardEvent& ev);
 
   // Queue a mayor inspection and show it immediately (debug use).
@@ -194,6 +197,7 @@ private:
   bool flush_staff_events_then_end_turn_{false};
 
   std::vector<DeferredManagerAlert> deferred_manager_alerts_;
+  bool showing_manager_alert_{false};
 
   std::vector<DeferredRacketOffer> deferred_racket_offers_;
 

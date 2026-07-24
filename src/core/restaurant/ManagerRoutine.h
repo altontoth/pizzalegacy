@@ -7,6 +7,7 @@
 #pragma once
 
 #include <string>
+#include "core/food/IngredientCategoryType.h"
 
 class GameState;
 class Restaurant;
@@ -22,16 +23,22 @@ public:
   void run_daily();
 
 private:
+  static int count_category_shortages(const Restaurant& restaurant,
+                                      IngredientCategory category);
+  void queue_shortage_warning(IngredientCategory category, int shortage_count);
+
   void report_previous_day_shortages();
   void do_shopping();
   void do_price_adjustment();
   void do_turnover_monitoring();
 
+  // Alerts are raised at day start but held until opening time; the shopping
+  // warnings come out one category per 10-minute block after that.
   void queue_alert(std::string message);
+  void queue_alert(std::string message, int display_block);
 
   Restaurant& restaurant_;
   GameState& game_state_;
-  bool alert_queued_{false};
 };
 
 } // namespace core::restaurant
