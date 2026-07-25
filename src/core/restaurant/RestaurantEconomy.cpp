@@ -219,9 +219,12 @@ void RestaurantEconomy::calculate_demand_with_competition(
   int strongest_x = 0;
   int strongest_y = 0;
 
-  // Scan all competitors (all players x their restaurants)
+  // Competition is per-city. Every city reuses the same tile grid, so scanning
+  // other cities would count a restaurant whose coordinates land in the search
+  // box as a phantom competitor.
   for (auto& player : game_state.players()) {
-    auto player_restaurants = game_state.restaurants_for(player->id());
+    auto player_restaurants =
+        game_state.restaurants_in_city(player->id(), city.id());
 
     for (auto* comp_restaurant : player_restaurants) {
       if (comp_restaurant->id() == restaurant.id()) {

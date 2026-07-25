@@ -453,7 +453,8 @@ void GameState::process_mayor_award_event(const MayorAwardEvent& award_event) {
           continue;
         }
         int score = 0;
-        for (auto* rest : restaurants_for(all_players[i]->id())) {
+        for (auto* rest :
+             restaurants_in_city(all_players[i]->id(), city->id())) {
           for (int v : rest->economy().furniture_appeal()) {
             score += v;
           }
@@ -471,7 +472,8 @@ void GameState::process_mayor_award_event(const MayorAwardEvent& award_event) {
         if (!all_players[i] || !mayor_office.fee_paid(i)) {
           continue;
         }
-        for (auto* rest : restaurants_for(all_players[i]->id())) {
+        for (auto* rest :
+             restaurants_in_city(all_players[i]->id(), city->id())) {
           int t = rest->calculate_service_time_minutes();
           if (t > 0 && (best_time < 0 || t < best_time)) {
             best_time = t;
@@ -753,12 +755,7 @@ std::optional<GameState::RacketOffer> GameState::roll_protection_racket() {
     return std::nullopt;
   }
 
-  std::vector<Restaurant*> candidates;
-  for (auto* restaurant : restaurants_for(player->id())) {
-    if (restaurant->property().city().id() == city->id()) {
-      candidates.push_back(restaurant);
-    }
-  }
+  auto candidates = restaurants_in_city(player->id(), city->id());
   if (candidates.empty()) {
     return std::nullopt;
   }
@@ -1339,9 +1336,8 @@ GameState::total_ingredient_need_for_player(core::PlayerId player_id,
                                             core::CityId city) const {
   core::food::IngredientDemand demand_grams{};
 
-  for (auto* restaurant : restaurants_for(player_id)) {
-    if (!restaurant || restaurant->property().city().id() != city ||
-        !restaurant->wants_open()) {
+  for (auto* restaurant : restaurants_in_city(player_id, city)) {
+    if (!restaurant || !restaurant->wants_open()) {
       continue;
     }
 

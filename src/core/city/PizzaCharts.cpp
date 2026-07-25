@@ -73,7 +73,10 @@ void PizzaCharts::build(GameState& game_state) {
     }
 
     if (player->is_human_controlled()) {
-      // Human: aggregate pizza sales across all restaurants over last 7 days
+      // The chart is one global top-10 across every city, matching the
+      // original's single unk_9CA40 table: humans contribute per restaurant
+      // (all cities), AI per menu slot. Only the per-City previous-position
+      // diff makes the rendered arrows differ between cities.
       std::unordered_map<core::RecipeId, int, core::RecipeId::Hasher>
           sales_by_recipe;
 

@@ -60,9 +60,9 @@ void MilestoneTracker::check_milestone_events(Player& player,
   int64_t total_ingredients_today = 0;
 
   const auto active_city_id = gs_->active_city_id();
-  auto city_restaurants = gs_->restaurants_for(pid);
+  auto city_restaurants = gs_->restaurants_in_city(pid, active_city_id);
   for (auto* rest : city_restaurants) {
-    if (!rest || rest->property().city().id() != active_city_id) {
+    if (!rest) {
       continue;
     }
     const auto& yesterday = rest->stats().yesterday;

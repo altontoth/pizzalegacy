@@ -138,12 +138,7 @@ Restaurant* RealEstate::create_restaurant(Player& player, Property& property) {
   int kitchen_h = engine::random::rand_max_n(8) + 12;
   auto restaurant_id = gs_->next_restaurant_id_++;
   core::CityId city_id = property.city().id();
-  int in_city = 0;
-  for (const auto* existing : gs_->restaurants_for(player.id())) {
-    if (existing->property().city().id() == city_id) {
-      ++in_city;
-    }
-  }
+  int in_city = gs_->restaurant_count_for_player_in_city(player.id(), city_id);
   auto restaurant_name = player.name() + " No. " + std::to_string(in_city + 1);
   property.restaurant_id(restaurant_id);
 

@@ -923,8 +923,8 @@ void TurnOrchestrator::deliver_depot_stock(core::PlayerId player_id) {
   }
 
   std::vector<core::RestaurantId> city_rest_ids;
-  for (auto* r : gs_->restaurants_for(player_id)) {
-    if (r && r->property().city().id() == city.id()) {
+  for (auto* r : gs_->restaurants_in_city(player_id, city.id())) {
+    if (r) {
       city_rest_ids.push_back(r->id());
     }
   }

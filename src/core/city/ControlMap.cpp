@@ -37,12 +37,7 @@ void ControlMap::build(const GameState& game_state, const City& city) {
       continue;
     }
 
-    for (auto* rest : game_state.restaurants_for(player->id())) {
-      // Only consider restaurants in this city
-      if (rest->property().city().id() != city.id()) {
-        continue;
-      }
-
+    for (auto* rest : game_state.restaurants_in_city(player->id(), city.id())) {
       int idx = rest->property().index();
       int tile_x = City::index_to_x(idx);
       int tile_y = City::index_to_y(idx);

@@ -224,8 +224,8 @@ void DepotIngredientCategoryView::draw_priorities(const RenderContext& ctx) {
 
   auto& depot =
       state_.active_city()->central_depot(state_.active_player()->id());
-  auto player_restaurants =
-      state_.restaurants_for(state_.active_player()->id());
+  auto player_restaurants = state_.restaurants_in_city(
+      state_.active_player()->id(), state_.active_city()->id());
 
   std::vector<core::RestaurantId> restaurant_ids;
   restaurant_ids.reserve(player_restaurants.size());
