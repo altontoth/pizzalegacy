@@ -109,12 +109,6 @@ When the city map is fully zoomed out, the yellow dot highlighting whatever you
 selected to be highlighted will be double the size compared to the original,
 since often it can be hard to see otherwise.
 
-### Pizza demand
-We guarantee a small random minimum demand for any pizza on the menu. The
-original's aggressive demographic scoring causes most pizzas to get 0 demand
-for most demographics, making most of the 14 standard pizzas pointless to have
-on the menu.
-
 ### Shortage status message include restaurant name
 Messages like _Too few ovens to satisfy present demand!_ now include the restaurant name.
 

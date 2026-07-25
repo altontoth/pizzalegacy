@@ -18,10 +18,8 @@
 #include "core/food/Pizza.h"
 #include "core/food/PlayerRecipes.h"
 #include "core/restaurant/Menu.h"
-#include "core/util/ConfigManager.h"
 #include "engine/FormatCompat.h"
 #include "engine/Logger.h"
-#include "engine/Random.h"
 
 namespace core::restaurant {
 
@@ -72,14 +70,6 @@ int PizzaDemand::calculate(const MenuEntry& menu_entry,
   // Final: appeal * district_ratio - price_penalty, truncated once at the end.
   int result = static_cast<int>(
       std::trunc((static_cast<double>(demand) * ratio) - price_penalty));
-
-  // [Life improvement] Guarantee a small random minimum demand for any pizza
-  // on the menu. The original's aggressive demographic scoring (100 - 4*sum)
-  // causes most pizzas to get exactly 0 demand for most demographics, making
-  // most of the 14 canonical pizzas pointless to have on the menu.
-  if (ConfigManager::instance()->options().qol_improvements) {
-    result = std::max(result, engine::random::rand_max_n(3));
-  }
 
   return std::clamp(result, 0, 200);
 }
