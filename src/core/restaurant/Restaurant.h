@@ -382,7 +382,7 @@ public:
   // Daily ingredient demand as of the last end-of-day, in grams. Depot
   // delivery, manager restocking and the stock screen all key off this stored
   // snapshot rather than today's menu, so an ingredient dropped from the menu
-  // keeps its last value. See pt_asm/docs/DAILY_INGREDIENT_DEMAND.md.
+  // keeps its last value.
   const core::food::IngredientDemand& daily_ingredient_demand_cache() const {
     return daily_ingredient_demand_cache_;
   }

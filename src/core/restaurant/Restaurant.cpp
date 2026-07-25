@@ -1308,7 +1308,7 @@ void Restaurant::eod_batch_order_fulfillment(class GameState& game_state) {
 
   // Unconstrained demand, taken before any scaling: the demand cache records
   // what the day wanted, so a shortage does not ratchet tomorrow's reorder
-  // down. See pt_asm/docs/DAILY_INGREDIENT_DEMAND.md.
+  // down.
   const core::food::IngredientDemand day_demand_grams = requirement_grams();
 
   // Cut the day back to what the stock and the day's throughput support.
