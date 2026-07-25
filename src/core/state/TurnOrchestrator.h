@@ -187,9 +187,10 @@ private:
   // FadeTransition) leave it false.
   bool pipeline_waiting_for_player_{false};
 
-  static constexpr std::string_view end_turn_activity = "Ending turn...";
   static constexpr std::string_view autosave_activity = "Saving...";
-  std::string_view pipeline_activity_{end_turn_activity};
+  // Named only while a step blocks the loop; the lock layer draws no caption
+  // while it is empty.
+  std::string_view pipeline_activity_;
 
   bool should_end_of_turn_{false};
   bool suppress_end_of_turn_reports_{false};

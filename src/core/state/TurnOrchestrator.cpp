@@ -35,6 +35,23 @@
 #include "engine/Random.h"
 #include "factories/CharacterFactory.h"
 
+namespace {
+bool is_autosave_due(AutosaveFrequency frequency, bool is_end_of_week,
+                     bool is_end_of_month) {
+  switch (frequency) {
+  case AutosaveFrequency::Off:
+    return false;
+  case AutosaveFrequency::Daily:
+    return true;
+  case AutosaveFrequency::Weekly:
+    return is_end_of_week;
+  case AutosaveFrequency::Monthly:
+    return is_end_of_month;
+  }
+  return false;
+}
+} // namespace
+
 void TurnOrchestrator::request_end_of_turn() { should_end_of_turn_ = true; }
 
 void TurnOrchestrator::skip_to_next_player() {
@@ -151,6 +168,7 @@ void TurnOrchestrator::end_of_turn() {
   constexpr int delay_frames_between_restaurants = 2;
 
   turn_pipeline_.clear();
+  pipeline_activity_ = {};
   for (std::size_t i = 0; i < in_scope_ids.size(); ++i) {
     turn_pipeline_.emplace_back(
         turn::ProcessRestaurant{in_scope_ids[i], interactive});
@@ -654,6 +672,7 @@ void TurnOrchestrator::build_turn_pipeline(
   bool is_end_of_year = gs_->time().current_date().is_end_of_year();
 
   turn_pipeline_.clear();
+  pipeline_activity_ = {};
 
   if (wrapped) {
     turn_pipeline_.push_back(turn::TickCities{});
@@ -672,29 +691,19 @@ void TurnOrchestrator::build_turn_pipeline(
     if (is_end_of_month) {
       turn_pipeline_.push_back(turn::MonthlyCompetition{});
     }
+    const bool autosave_due = is_autosave_due(gs_->options().autosave_frequency,
+                                              is_end_of_week, is_end_of_month);
+    if (autosave_due) {
+      // Captioned ahead of the fade so the label reaches a rendered frame
+      // before the save stalls the loop.
+      turn_pipeline_.push_back(turn::SetActivity{autosave_activity});
+    }
+    // Steps from here up to PlayerTurnCard run in one drain at the fade
+    // midpoint; a step that waits ends that drain early and the fade-in
+    // reveals whatever view is still on top.
     turn_pipeline_.push_back(turn::FadeTransition{});
     turn_pipeline_.push_back(turn::AdvanceDate{start_time});
-    bool autosave_due = false;
-    switch (gs_->options().autosave_frequency) {
-    case AutosaveFrequency::Off:
-      break;
-    case AutosaveFrequency::Daily:
-      autosave_due = true;
-      break;
-    case AutosaveFrequency::Weekly:
-      autosave_due = is_end_of_week;
-      break;
-    case AutosaveFrequency::Monthly:
-      autosave_due = is_end_of_month;
-      break;
-    }
     if (autosave_due) {
-      // The Delay guarantees a frame with the new caption reaches the screen
-      // before the save stalls the loop. Two ticks: the lock layer samples
-      // the label before the pipeline advances within a tick, so the first
-      // tick after SetActivity still renders the old caption.
-      turn_pipeline_.push_back(turn::SetActivity{autosave_activity});
-      turn_pipeline_.push_back(turn::Delay{2});
       turn_pipeline_.push_back(turn::Autosave{});
     }
   }
@@ -897,7 +906,6 @@ TurnOrchestrator::execute_pipeline_step(const turn::Step& step) {
             if (gs_->context_) {
               save::SaveGameManager::autosave(*gs_, *gs_->context_);
             }
-            pipeline_activity_ = end_turn_activity;
             return StepResult::Done;
           },
 

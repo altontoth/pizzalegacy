@@ -8,6 +8,7 @@
 
 #include "core/common/Ids.h"
 #include "core/time/TimeOfDay.h"
+#include "engine/DisplayConstants.h"
 
 #include <string_view>
 #include <variant>
@@ -69,7 +70,7 @@ struct MonthlyCompetition {
 
 struct FadeTransition {
   static constexpr const char* name = "FadeTransition";
-  int frames{20};
+  int frames{default_fade_length};
 };
 
 struct AdvanceDate {

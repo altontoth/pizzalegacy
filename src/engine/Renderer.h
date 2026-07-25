@@ -21,7 +21,7 @@ class CursorManager;
 
 class Renderer {
 public:
-  enum class FadeState { NONE, FADING_OUT, FADING_IN };
+  enum class FadeState { NONE, FADING_OUT, FADED_OUT, FADING_IN };
 
   Renderer(const SDLContext& sdl, int display_height)
       : sdl_(sdl), display_height_(display_height) {}

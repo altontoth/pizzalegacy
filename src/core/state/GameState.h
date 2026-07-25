@@ -41,8 +41,6 @@
 class GameContext;
 class TurnPresenter;
 
-constexpr int default_fade_length = 15;
-
 class GameState {
   friend std::ostream& operator<<(std::ostream& os, const GameState& state);
   // The orchestrator and competition coordinator are halves of this class,

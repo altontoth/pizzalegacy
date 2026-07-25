@@ -20,6 +20,9 @@ inline constexpr int BPP = 32;
 
 } // namespace DisplayConstants
 
+// Ticks a screen fade takes in one direction, so a round trip is twice this.
+inline constexpr int default_fade_length = 12;
+
 enum class ScreenResolution { Res_640x400, Res_1280x800 };
 
 constexpr std::string_view to_string(ScreenResolution r) {

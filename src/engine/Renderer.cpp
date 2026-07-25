@@ -155,6 +155,10 @@ void Renderer::render() {
   SDL_RenderClear(sdl_.renderer.get());
   SDL_RenderTexture(sdl_.renderer.get(), sdl_.texture.get(), nullptr, nullptr);
   SDL_RenderPresent(sdl_.renderer.get());
+
+  if (fade_state_ == FadeState::FADING_OUT && fade_factor_ <= 0.0f) {
+    fade_state_ = FadeState::FADED_OUT;
+  }
 }
 
 bool Renderer::ensure_present_surface(int w, int h) {
@@ -332,7 +336,7 @@ SDL_Surface* Renderer::apply_crt_scaling(SDL_Surface* source) const {
 }
 
 bool Renderer::tick_fade() {
-  if (fade_state_ == FadeState::NONE) {
+  if (fade_state_ == FadeState::NONE || fade_state_ == FadeState::FADED_OUT) {
     return false;
   }
 
@@ -383,5 +387,5 @@ void Renderer::start_fade_in(int duration_frames) {
 bool Renderer::is_fading() const { return fade_state_ != FadeState::NONE; }
 
 bool Renderer::fade_out_complete() const {
-  return fade_state_ == FadeState::FADING_OUT && fade_factor_ <= 0.0f;
+  return fade_state_ == FadeState::FADED_OUT;
 }
