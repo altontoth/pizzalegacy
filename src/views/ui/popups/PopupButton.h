@@ -37,6 +37,14 @@ public:
   void set_painter(Painter p) { painter_ = std::move(p); }
   void set_rect(ViewRect r) { rect_ = r; }
 
+  // Invoke the click callback directly, as if the button were pressed. Used by
+  // BasePopup to map keyboard actions onto buttons.
+  void trigger() const {
+    if (on_click_) {
+      on_click_();
+    }
+  }
+
 private:
   ViewRect rect_;
   std::string text_;

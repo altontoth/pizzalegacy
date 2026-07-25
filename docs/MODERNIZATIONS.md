@@ -32,11 +32,13 @@ in effect.
 
 * Pressing Shift on the keyboard now speeds up scrolling.
 
-### Confirmation popup keyboard interaction
+### Popup keyboard interaction
 
 * You can respond to confirmation popups with "Y" or "Enter" to confirm and "N"
-  to decline. Did this specifically to make it easier to quit the game during
-  debugging since introducing the confirmation popup there.
+  or "Escape" to decline.
+* Alert popups can be dismissed with "Enter" or "Escape".
+* The number input popup responds to the Up and Down arrow keys to change the
+  value and then Enter to accept.
 
 ### Ingredient ordering speed
 

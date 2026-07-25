@@ -83,7 +83,6 @@ void configure_default_bindings(InputManager& in) {
 
   in.begin_section("Confirm popup");
   in.bind_button(chord("Y"), Action::ConfirmYes);
-  in.bind_button(chord("Enter"), Action::ConfirmYes);
   in.bind_button(chord("N"), Action::ConfirmNo);
 
   in.begin_section("Menu UI");

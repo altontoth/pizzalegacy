@@ -45,6 +45,9 @@ AlertPopup::AlertPopup(const GameContext& ctx, std::string text, callback_t cb,
   btn_ok_.set_rect({button_x_,
                     popup_height_ - button_height_ - button_bottom_margin_,
                     button_width_, button_height_});
+
+  add_shortcut(input::Action::SubmitInput, &btn_ok_);
+  add_shortcut(input::Action::Exit, &btn_ok_);
 }
 
 void AlertPopup::add_interactions(views::ui::InteractionContext ictx,

@@ -5,7 +5,6 @@
  */
 
 #include "views/ui/popups/ConfirmPopup.h"
-#include "engine/input/InputManager.h"
 #include "views/base/RawRenderer.h"
 
 ConfirmPopup::ConfirmPopup(const GameContext& ctx, std::string text,
@@ -30,7 +29,10 @@ ConfirmPopup::ConfirmPopup(const GameContext& ctx, std::string text,
                : 80,
            74, 38},
           "No", [this] { confirm(false); }) {
-  input_ = ctx.input->register_listener(*this);
+  add_shortcut(input::Action::ConfirmYes, &btn_yes_);
+  add_shortcut(input::Action::SubmitInput, &btn_yes_);
+  add_shortcut(input::Action::ConfirmNo, &btn_no_);
+  add_shortcut(input::Action::Exit, &btn_no_);
 }
 
 void ConfirmPopup::confirm(bool yes) {
@@ -38,22 +40,6 @@ void ConfirmPopup::confirm(bool yes) {
     cb_(yes);
   }
   finished();
-}
-
-bool ConfirmPopup::on_action(const input::ActionEvent& ev) {
-  if (ev.state.pressed) {
-    return false;
-  }
-  switch (ev.action) {
-  case input::Action::ConfirmYes:
-    confirm(true);
-    return true;
-  case input::Action::ConfirmNo:
-    confirm(false);
-    return true;
-  default:
-    return false;
-  }
 }
 
 void ConfirmPopup::add_interactions(views::ui::InteractionContext ictx,

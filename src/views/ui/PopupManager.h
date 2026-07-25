@@ -54,6 +54,7 @@ public:
   void clean() override;
   void mark_dirty() override;
   bool freezes_view() const override;
+  bool freezes_simulation() const override;
   ViewPoint origin() const;
 
   std::vector<LayerInfo> get_layers() override;

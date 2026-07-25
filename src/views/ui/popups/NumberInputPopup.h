@@ -5,13 +5,12 @@
  */
 
 #include "engine/input/InputListener.h"
-#include "engine/input/ListenerToken.h"
 #include "engine/input/TextSession.h"
 #include "resources/BobManager.h"
 #include "views/ui/popups/BasePopup.h"
 #include "views/ui/popups/PopupButton.h"
 
-class NumberInputPopup : public BasePopup, public input::InputListener {
+class NumberInputPopup : public BasePopup {
 public:
   using callback_t = std::function<void(int)>;
 
@@ -47,7 +46,6 @@ private:
 
   bool is_editing_ = false;
   std::string edit_buffer_;
-  input::ListenerToken listener_token_;
   input::TextSession text_session_;
 
   void start_editing();

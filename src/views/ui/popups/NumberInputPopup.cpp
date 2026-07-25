@@ -48,6 +48,10 @@ NumberInputPopup::NumberInputPopup(const GameContext& context,
         const PxOffset offset{7 + (pressed ? 1 : 0), 7 + (pressed ? 1 : 0)};
         target.blit_masked(down_arrow, top_left + offset);
       });
+
+  add_shortcut(input::Action::MoveUp, &btn_up_);
+  add_shortcut(input::Action::MoveDown, &btn_down_);
+  add_shortcut(input::Action::SubmitInput, &btn_ok_);
 }
 
 void NumberInputPopup::render(Surface& surface, ViewPoint origin) {
@@ -126,8 +130,11 @@ bool NumberInputPopup::on_text(const input::TextEvent& ev) {
 }
 
 bool NumberInputPopup::on_action(const input::ActionEvent& ev) {
-  if (!is_editing_ || ev.state.pressed) {
-    return false;
+  if (!is_editing_) {
+    return BasePopup::on_action(ev);
+  }
+  if (ev.state.pressed) {
+    return true;
   }
 
   switch (ev.action) {
@@ -154,7 +161,7 @@ bool NumberInputPopup::on_action(const input::ActionEvent& ev) {
     }
     return true;
   default:
-    return false;
+    return true;
   }
 }
 
@@ -164,7 +171,6 @@ void NumberInputPopup::start_editing() {
   }
   is_editing_ = true;
   edit_buffer_.clear();
-  listener_token_ = context_.input->register_listener(*this);
   text_session_ = context_.input->start_text_input(*this);
   mark_dirty();
 }
@@ -172,7 +178,6 @@ void NumberInputPopup::start_editing() {
 void NumberInputPopup::end_editing(bool accept_value) {
   is_editing_ = false;
   edit_buffer_.clear();
-  listener_token_.reset();
   text_session_ = input::TextSession(); // Reset to empty session
   mark_dirty();
 }

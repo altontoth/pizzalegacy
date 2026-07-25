@@ -107,6 +107,10 @@ void PopupManager::mark_dirty() {
 
 bool PopupManager::freezes_view() const { return active_popup_ != nullptr; }
 
+bool PopupManager::freezes_simulation() const {
+  return active_popup_ != nullptr;
+}
+
 ViewPoint PopupManager::origin() const {
   return active_popup_ ? active_origin_ : ViewPoint{0, 0};
 }

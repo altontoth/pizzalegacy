@@ -63,8 +63,12 @@ public:
 
   void window(SDL_Window* window) noexcept { window_ = window; }
 
+  enum class ListenerPriority { Normal, High };
+
   // Listener registration (delivered in order until consumed)
-  [[nodiscard]] ListenerToken register_listener(InputListener& l);
+  [[nodiscard]] ListenerToken
+  register_listener(InputListener& l,
+                    ListenerPriority priority = ListenerPriority::Normal);
   void unregister_listener(InputListener& l);
 
   // Text input session (IME-aware). Returns RAII token.

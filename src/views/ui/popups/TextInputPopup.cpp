@@ -13,7 +13,6 @@ TextInputPopup::TextInputPopup(const GameContext& context, std::string text,
                                int max_characters, callback_t cb)
     : BasePopup(context), prompt_text_(std::move(text)),
       max_characters_(max_characters), callback_(std::move(cb)) {
-  input_ = context.input->register_listener(*this);
   text_ = context.input->start_text_input(*this);
 }
 

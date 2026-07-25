@@ -5,7 +5,33 @@
  */
 
 #include "views/ui/popups/BasePopup.h"
+#include "engine/input/InputManager.h"
 #include "gfx/Draw.h"
+#include "views/ui/popups/PopupButton.h"
+
+BasePopup::BasePopup(const GameContext& context)
+    : font_(context.font), vga_(context.vga), bob_(context.bob) {
+  listener_token_ = context.input->register_listener(
+      *this, input::InputManager::ListenerPriority::High);
+}
+
+void BasePopup::add_shortcut(input::Action action, PopupButton* button) {
+  shortcuts_.emplace_back(action, button);
+}
+
+bool BasePopup::on_action(const input::ActionEvent& ev) {
+  for (const auto& [action, button] : shortcuts_) {
+    if (ev.action != action) {
+      continue;
+    }
+    // Fire on the press edge and swallow both edges.
+    if (ev.state.pressed && !is_finished()) {
+      button->trigger();
+    }
+    return true;
+  }
+  return false;
+}
 
 Surface BasePopup::text_button(const std::string& text, int width, int height,
                                bool mouse_down) {

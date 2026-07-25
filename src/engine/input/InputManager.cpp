@@ -120,9 +120,15 @@ InputManager::~InputManager() {
   }
 }
 
-ListenerToken InputManager::register_listener(InputListener& l) {
+ListenerToken InputManager::register_listener(InputListener& l,
+                                              ListenerPriority priority) {
   if (std::find(listeners_.begin(), listeners_.end(), &l) == listeners_.end()) {
-    listeners_.push_back(&l);
+    if (priority == ListenerPriority::High) {
+      listeners_.insert(listeners_.begin(), &l);
+    }
+    else {
+      listeners_.push_back(&l);
+    }
   }
   return ListenerToken{*this, l};
 }

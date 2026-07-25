@@ -5,13 +5,10 @@
  */
 
 #include "engine/DebugLabel.h"
-#include "engine/input/InputListener.h"
-#include "engine/input/ListenerToken.h"
 #include "engine/input/TextSession.h"
 #include "views/ui/popups/BasePopup.h"
 
 class TextInputPopup : public BasePopup,
-                       public input::InputListener,
                        public debug::AutoLabel<TextInputPopup> {
 public:
   using callback_t = std::function<void(std::string)>;
@@ -38,6 +35,5 @@ private:
   static constexpr int popup_width_ = 362;
   static constexpr int popup_height_ = 136;
 
-  input::ListenerToken input_;
   input::TextSession text_;
 };

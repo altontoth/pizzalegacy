@@ -12,7 +12,6 @@
 
 ChequePopup::ChequePopup(const GameContext& context, callback_t cb)
     : BasePopup(context), context_(context), callback_(std::move(cb)) {
-  listener_token_ = context_.input->register_listener(*this);
   text_session_ = context_.input->start_text_input(*this);
 }
 

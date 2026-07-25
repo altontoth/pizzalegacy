@@ -11,13 +11,11 @@
 #include <string>
 #include <string_view>
 
-#include "engine/input/InputListener.h"
-#include "engine/input/ListenerToken.h"
 #include "engine/input/TextSession.h"
 #include "gfx/PaletteHandle.h"
 #include "views/ui/popups/BasePopup.h"
 
-class ChequePopup : public BasePopup, public input::InputListener {
+class ChequePopup : public BasePopup {
 public:
   using callback_t = std::function<void(int amount, int account)>;
 
@@ -50,7 +48,6 @@ private:
   Field active_field_{Field::AMOUNT};
   std::string amount_buffer_;
   std::string account_buffer_;
-  input::ListenerToken listener_token_;
   input::TextSession text_session_;
 
   void confirm_amount();
