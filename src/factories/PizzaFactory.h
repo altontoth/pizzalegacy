@@ -44,4 +44,15 @@ public:
   static std::unique_ptr<core::food::Pizza> create_competition_pizza(
       int recipe_number, const BobSizeFn& get_size,
       const core::food::CustomerTasteProfiles& taste_profiles);
+
+  // Parse a recipe from an original .GAM save's recipe node. The node has its
+  // own field layout; only the 4-byte ingredient placement records match a .pc
+  // file. Canonical status and the stored stats come from the node itself.
+  static std::unique_ptr<core::food::Pizza> create_pizza_from_gam_node(
+      std::span<const uint8_t> node, const BobSizeFn& get_size,
+      const core::food::CustomerTasteProfiles& taste_profiles);
+
+  // The node's recipe UID, which the save's menu entries and pizza charts
+  // reference. Below CANON_COUNT it names that canonical slot.
+  static int gam_node_recipe_uid(std::span<const uint8_t> node);
 };

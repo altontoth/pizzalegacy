@@ -261,7 +261,7 @@ void AnimatedStats::draw_decorated_background(const RenderContext& ctx,
       6, {11});
 }
 
-// Shared thermometer rendering (from sub_34991)
+// Shared thermometer rendering, ported from the original.
 void AnimatedStats::draw_thermometer(const RenderContext& ctx) const {
   constexpr int WL = LegacyConstants::WOOD_BORDER_WIDTH_LEFT;
   constexpr int WT = LegacyConstants::WOOD_BORDER_HEIGHT_TOP;
@@ -654,7 +654,7 @@ void AnimatedStats::render_capacity(const RenderContext& ctx) {
   // Draw labels once both bars have finished animating.
   // If the bar is wide enough (>= 52 scaled units = 104px in 2x), the label
   // fits inside the bar; otherwise it appears just after the bar end.
-  // Mirrors the assembly threshold: sub_3578D(value) + 58 >= 0x6E.
+  // Mirrors the original's threshold: scaled bar width + 58 >= 110.
   if (anim_phase_ >= 3) {
     constexpr int LABEL_INSIDE_THRESHOLD = 104; // 52 scaled units * 2x
     constexpr int LABEL_INSIDE_X_OFFSET = 12;   // 6 original pixels * 2x

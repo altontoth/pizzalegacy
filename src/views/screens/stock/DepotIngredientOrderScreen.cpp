@@ -291,8 +291,8 @@ void DepotIngredientOrderScreen::place_order() {
       }
     }
 
-    // Supplies leave the books at their value; the sale price determines the
-    // gain or loss.
+    // Supplies is relieved of the full book value; the difference against the
+    // proceeds is the gain or loss on the disposal.
     auto* player = state_.active_player();
     auto date = state_.time().current_date();
     Money relieved{std::min(book_value.cents, total_cost.cents)};

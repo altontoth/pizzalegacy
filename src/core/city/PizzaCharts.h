@@ -20,14 +20,17 @@ struct PizzaChartEntry {
   int score{0};
 };
 
-// Global daily top-10 pizza ranking across all players and cities (the
-// original's single unk_9CA40 table). Rebuilt from human restaurant sales and
-// AI menu slot scores. Each City keeps its own instance so the previous-
-// position arrows diff against that city's last rebuild, but the ranked
-// contents are identical everywhere.
+// Global daily top-10 pizza ranking across all players and cities, matching the
+// original's single ranking table. Rebuilt from human restaurant sales and AI
+// menu slot scores. Each City keeps its own instance so the previous-position
+// arrows diff against that city's last rebuild, but the ranked contents are
+// identical everywhere.
 class PizzaCharts {
 public:
   void build(GameState& game_state);
+
+  // The 100 canonical AI pizza names (MARKT.E lines 51-150), indexed 0-based.
+  static const std::vector<std::string>& ai_pizza_names();
   [[nodiscard]] const std::vector<PizzaChartEntry>& entries() const {
     return entries_;
   }

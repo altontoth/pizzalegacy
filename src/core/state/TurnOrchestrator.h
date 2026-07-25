@@ -75,13 +75,13 @@ public:
     return pipeline_activity_;
   }
 
-  // Mayor inspection events
+  // Mayor inspection events deferred from EOD to the next day.
   struct DeferredInspectionEvent {
     bool is_first;
     core::RestaurantId restaurant_id;
   };
 
-  // Staff event dialogs
+  // Staff event dialogs deferred from EOD to the next day.
   struct DeferredStaffEvent {
     core::restaurant::StaffEventData event;
     core::RestaurantId restaurant_id;

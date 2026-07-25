@@ -54,7 +54,7 @@ public:
   Article format_ingredient_article(int category, int8_t polarity,
                                     std::string_view ingredient_name) const;
 
-  // Get image ID for an article (from byte_773A0 lookup table)
+  // Get image ID for an article, from the original's lookup table.
   int get_image_id(int file_id, int article_id) const;
 
 private:

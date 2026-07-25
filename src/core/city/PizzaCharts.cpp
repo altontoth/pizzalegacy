@@ -17,9 +17,7 @@
 #include "engine/Logger.h"
 #include "resources/util/FileUtils.h"
 
-namespace {
-
-const std::vector<std::string>& ai_pizza_names() {
+const std::vector<std::string>& PizzaCharts::ai_pizza_names() {
   static std::vector<std::string> names;
   if (!names.empty()) {
     return names;
@@ -54,8 +52,6 @@ const std::vector<std::string>& ai_pizza_names() {
   return names;
 }
 
-} // namespace
-
 void PizzaCharts::build(GameState& game_state) {
   // Collect scored entries from all players
   struct ScoredEntry {
@@ -74,9 +70,9 @@ void PizzaCharts::build(GameState& game_state) {
 
     if (player->is_human_controlled()) {
       // The chart is one global top-10 across every city, matching the
-      // original's single unk_9CA40 table: humans contribute per restaurant
-      // (all cities), AI per menu slot. Only the per-City previous-position
-      // diff makes the rendered arrows differ between cities.
+      // original's single table: humans contribute per restaurant (all cities),
+      // AI per menu slot. Only the per-City previous-position diff makes the
+      // rendered arrows differ between cities.
       std::unordered_map<core::RecipeId, int, core::RecipeId::Hasher>
           sales_by_recipe;
 

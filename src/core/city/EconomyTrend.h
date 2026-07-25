@@ -11,7 +11,7 @@
 
 constexpr int max_history = 60;
 
-// City-level macro-economic indicator (rise_or_fall_target in the original).
+// City-level macro-economic indicator.
 // Wanders randomly between -120 and +120 over cycles of 0-39 days.
 // Used by the control map: base_threshold = (40 - current/3) * 64
 // Also displayed on the Market Research inflation graph (60-day history).

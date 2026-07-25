@@ -32,7 +32,7 @@ private:
   void reset_animation();
   void navigate_to_restaurant(core::RestaurantId new_id) override;
 
-  // Shared thermometer + arrow rendering helpers (from sub_34991, sub_34A1D)
+  // Shared thermometer + arrow rendering helpers, ported from the original.
   void draw_thermometer(const RenderContext& ctx) const;
   void draw_thermometer_fill(const RenderContext& ctx, int fill_level) const;
   void draw_component_arrow(const RenderContext& ctx, ViewPoint arrow_pos,

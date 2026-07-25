@@ -631,4 +631,14 @@ void Pizza::set_disk_stats(const Flavors& flavors, int appearance,
   // Logger::debug("=== END SETTING DISK STATS ===");
 }
 
+void Pizza::set_saved_stats(int appearance, int refinement, int imitation,
+                            const CustomerTasteProfiles& taste_profiles) {
+  appearance_ = appearance;
+  refinement_ = refinement;
+  imitation_ = imitation;
+
+  calculate_judge_scores();
+  calculate_demographic_scores(taste_profiles);
+}
+
 } // namespace core::food

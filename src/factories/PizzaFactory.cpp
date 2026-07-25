@@ -19,6 +19,34 @@
 #include "resources/util/ByteReader.h"
 #include "resources/util/FileUtils.h"
 
+namespace {
+
+// Place one ingredient: the file stores its top-left in 320x200 space with the
+// wooden border; convert to a wall-relative center point.
+std::unique_ptr<core::food::Topping> make_topping(uint8_t ingredient_id,
+                                                  uint8_t state, uint8_t x_pos,
+                                                  uint8_t y_pos,
+                                                  const BobSizeFn& get_size) {
+  constexpr int x_offset = -LegacyConstants::WOOD_BORDER_WIDTH_LEFT;
+  constexpr int y_offset = -LegacyConstants::WOOD_BORDER_HEIGHT_TOP;
+  const int tl_x = (x_pos * 2) + x_offset;
+  const int tl_y = (y_pos * 2) + y_offset;
+  auto size = get_size(ingredient_id, state);
+  const WorldPoint center{tl_x + (size.w / 2), tl_y + (size.h / 2)};
+  return std::make_unique<core::food::Topping>(ingredient_id, state, center);
+}
+
+// Field offsets in a .GAM save's recipe node. User creations draw their UID
+// from a counter starting at 50, so anything below CANON_COUNT is canonical.
+constexpr std::size_t gam_uid = 0x17;
+constexpr std::size_t gam_name = 0x18;
+constexpr std::size_t gam_imitation = 0x41;
+constexpr std::size_t gam_appearance = 0x50; // refinement follows
+constexpr std::size_t gam_placed_count = 0x123;
+constexpr std::size_t gam_placements = 0x124;
+
+} // namespace
+
 std::unique_ptr<core::food::Pizza> PizzaFactory::create_pizza(
     const std::string& filename, const BobSizeFn& get_size,
     const core::food::CustomerTasteProfiles& taste_profiles) {
@@ -123,27 +151,14 @@ std::unique_ptr<core::food::Pizza> PizzaFactory::create_pizza(
   std::unique_ptr<core::food::Pizza> pizza =
       std::make_unique<core::food::Pizza>(pizza_name_str);
 
-  constexpr int x_offset = -LegacyConstants::WOOD_BORDER_WIDTH_LEFT;
-  constexpr int y_offset = -LegacyConstants::WOOD_BORDER_HEIGHT_TOP;
-
   // Read the position indices for each ingredient
   for (uint8_t i = 0; i < ingredient_count; ++i) {
     uint8_t ingredient_id = r.get();
     uint8_t state = r.get();
     uint8_t x_pos = r.get();
     uint8_t y_pos = r.get();
-
-    // File stores top-left in 320x200 and with wooden borders:
-    const int tl_x = (x_pos * 2) + x_offset;
-    const int tl_y = (y_pos * 2) + y_offset;
-
-    // We need the size to get to the center point:
-    auto size = get_size(ingredient_id, state);
-    const WorldPoint center{tl_x + (size.w / 2), tl_y + (size.h / 2)};
-
-    std::unique_ptr<core::food::Topping> t =
-        std::make_unique<core::food::Topping>(ingredient_id, state, center);
-    pizza->add_topping(std::move(t));
+    pizza->add_topping(
+        make_topping(ingredient_id, state, x_pos, y_pos, get_size));
   }
 
   uint8_t termination_bytes[4];
@@ -202,4 +217,58 @@ std::unique_ptr<core::food::Pizza> PizzaFactory::create_competition_pizza(
   return create_pizza(fileutils::read_bytes(filename),
                       core::food::canonical_from_index(recipe_number), get_size,
                       taste_profiles);
+}
+
+int PizzaFactory::gam_node_recipe_uid(std::span<const uint8_t> node) {
+  return node.size() > gam_uid ? node[gam_uid] : core::food::CANON_COUNT;
+}
+
+std::unique_ptr<core::food::Pizza> PizzaFactory::create_pizza_from_gam_node(
+    std::span<const uint8_t> node, const BobSizeFn& get_size,
+    const core::food::CustomerTasteProfiles& taste_profiles) {
+  fileutils::ByteReader r{node};
+
+  r.seek(gam_name);
+  std::string name;
+  constexpr std::size_t max_name_bytes = 32;
+  for (std::size_t i = 0; i < max_name_bytes && r.has_more(); ++i) {
+    char ch = static_cast<char>(r.get());
+    if (ch == '\0') {
+      break;
+    }
+    name.push_back(ch);
+  }
+
+  const int uid = gam_node_recipe_uid(node);
+
+  r.seek(gam_imitation);
+  const uint8_t imitation = r.get();
+
+  r.seek(gam_appearance);
+  const uint8_t appearance = r.get();
+  const uint8_t refinement = r.get();
+
+  r.seek(gam_placed_count);
+  uint8_t placed_count = r.get();
+
+  r.seek(gam_placements);
+  auto pizza = std::make_unique<core::food::Pizza>(name);
+  for (uint8_t i = 0; i < placed_count; ++i) {
+    uint8_t ingredient_id = r.get();
+    uint8_t state = r.get();
+    uint8_t x_pos = r.get();
+    uint8_t y_pos = r.get();
+    pizza->add_topping(
+        make_topping(ingredient_id, state, x_pos, y_pos, get_size));
+  }
+
+  if (uid < core::food::CANON_COUNT) {
+    pizza->set_origin(core::food::Origin::Canonical);
+  }
+
+  // Origin gates the appearance term in the demographic scores, so it must be
+  // set before the stats recompute below.
+  pizza->finalize(taste_profiles, name);
+  pizza->set_saved_stats(appearance, refinement, imitation, taste_profiles);
+  return pizza;
 }

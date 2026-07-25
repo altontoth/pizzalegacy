@@ -418,6 +418,11 @@ int Player::advertising_effectiveness_sum(core::CityId city) const {
   return total;
 }
 
+void Player::set_ad_effectiveness(core::CityId city,
+                                  const std::array<uint8_t, 4>& eff) {
+  ad_effectiveness_[city] = eff;
+}
+
 int Player::negotiation_skill() const {
   return (character_.charisma() + character_.intelligence()) / 2;
 }

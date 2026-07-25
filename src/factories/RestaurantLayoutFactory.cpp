@@ -139,8 +139,8 @@ RestaurantLayoutFactory::create_layout(std::span<const uint8_t> bytes) {
     uint8_t furniture_id = is.get();
     uint8_t rotation = is.get();
     is.skip(2);
-    char high = is.get();
-    char low = is.get();
+    uint8_t high = is.get();
+    uint8_t low = is.get();
     uint16_t x_coord = endian::u16le(low, high) * 2;
     high = is.get();
     low = is.get();
@@ -160,8 +160,8 @@ RestaurantLayoutFactory::create_layout(std::span<const uint8_t> bytes) {
     uint8_t furniture_id = is.get();
     uint8_t rotation = is.get();
     is.skip(2);
-    char high = is.get();
-    char low = is.get();
+    uint8_t high = is.get();
+    uint8_t low = is.get();
     uint16_t x_coord = endian::u16le(low, high) * 2;
     high = is.get();
     low = is.get();

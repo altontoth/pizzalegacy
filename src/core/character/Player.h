@@ -112,6 +112,9 @@ public:
   bool has_active_campaign(core::CityId city, AdvertisingChannel channel) const;
   void update_campaigns(core::CityId city);
   int advertising_effectiveness_sum(core::CityId city) const;
+  // Overwrite a city's live per-channel effectiveness (legacy save import).
+  void set_ad_effectiveness(core::CityId city,
+                            const std::array<uint8_t, 4>& eff);
 
   // Cumulative gross turnover (sales revenue) per city, shown on the competitor
   // "turnover in $" chart. Accumulated for both human and AI restaurants,

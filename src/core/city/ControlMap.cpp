@@ -85,6 +85,7 @@ void ControlMap::build(const GameState& game_state, const City& city) {
           int distance = std::abs(sample_x - rest.tile_x) +
                          std::abs(sample_y - rest.tile_y);
 
+          // Influence reaches rest.range (range_tiles + 1) inclusive
           if (distance > rest.range) {
             continue;
           }

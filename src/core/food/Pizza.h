@@ -77,6 +77,11 @@ public:
                       int normality,
                       const CustomerTasteProfiles& taste_profiles);
 
+  // Set the stats an original save's recipe node persists. Flavors and
+  // normality are recomputed from the toppings; only these three are stored.
+  void set_saved_stats(int appearance, int refinement, int imitation,
+                       const CustomerTasteProfiles& taste_profiles);
+
   // Calculates demographic popularity scores (0-100 for each of 6 groups).
   void
   calculate_demographic_scores(const CustomerTasteProfiles& taste_profiles);

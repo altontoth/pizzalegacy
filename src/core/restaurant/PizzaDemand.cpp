@@ -143,7 +143,6 @@ int PizzaDemand::calculate_price_income_modifier(Money price,
   // result of that subtraction is truncated again.
   double penalty = std::trunc(std::pow(income_exp, price_norm));
 
-
   // When price_norm <= income_curve, cheap pizzas get a demand bonus
   if (price_norm <= income_curve) {
     double adjustment = (income_curve - price_norm) * 5.0;
@@ -155,7 +154,7 @@ int PizzaDemand::calculate_price_income_modifier(Money price,
   // conversion in C++ while preserving the same observable result for extreme
   // prices. I doubt we can get here with the $50 price limit on pizzas but just
   // to be sure.
-  constexpr double penalty_limit = 100000.0;
+  constexpr double penalty_limit = 100'000.0;
   return static_cast<int>(std::clamp(penalty, -penalty_limit, penalty_limit));
 }
 

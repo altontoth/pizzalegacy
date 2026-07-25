@@ -419,7 +419,7 @@ void CityFactory::parse_phone_numbers(std::ifstream& is) {
   }
 }
 
-// Function to replicate sub_38DC0
+// Reproduces the original's phone-number transform.
 uint32_t CityFactory::transform_phone_number(uint32_t phoneNumber) {
   const uint32_t divisor = 1'000'000;
 

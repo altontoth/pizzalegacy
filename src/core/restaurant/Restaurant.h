@@ -477,6 +477,7 @@ public:
 
   int service_time_minutes() const { return service_time_minutes_; }
   int fulfillment_rate() const { return fulfillment_rate_; }
+  void fulfillment_rate(int rate) { fulfillment_rate_ = rate; } // for save/load
   Money last_weekly_profit() const { return last_weekly_profit_; }
   void last_weekly_profit(Money m) { last_weekly_profit_ = m; }
   ManagerSettings& manager_settings() { return manager_settings_; };

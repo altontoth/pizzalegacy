@@ -114,10 +114,10 @@ void SeatedCharacterRenderer::render_upper_body(
 }
 
 void SeatedCharacterRenderer::load_seeds() {
-  // Offsets from original at 1x, doubled to 2x for our rendering NOTE: In the
-  // original, all parts offset from the furniture base position. In our code,
-  // the "anchor" passed in is already the furniture position, so we apply each
-  // part's offset from that common base.
+  // Original offsets at 1x, doubled to 2x for our rendering.
+  // NOTE: In the original, all parts offset from the furniture base position.
+  // In our code, the "anchor" passed in is already the furniture position,
+  // so we apply each part's offset from that common base.
 
   // Head offsets
   std::array<int8_t, 4> x_head = {2, 6, 2, -26};

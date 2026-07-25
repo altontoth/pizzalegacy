@@ -1919,8 +1919,6 @@ void Restaurant::calculate_daily_pizza_sales_distribution(
     }
   }
 
-  int total_predicted = 0;
-
   for (int pizza_idx = 0; pizza_idx < pizza_count; pizza_idx++) {
     const auto& entry = menu_entries[pizza_idx];
     float sales = pizza_total_sales[pizza_idx];
@@ -1930,9 +1928,7 @@ void Restaurant::calculate_daily_pizza_sales_distribution(
       sales = static_cast<float>(250 + random_bonus);
     }
 
-    int predicted = static_cast<int>(sales);
-    predicted_daily_orders_[entry.recipe_id] = predicted;
-    total_predicted += predicted;
+    predicted_daily_orders_[entry.recipe_id] = static_cast<int>(sales);
   }
 }
 

@@ -363,8 +363,9 @@ void AttackScene::tick() {
   // Solo burglary timer.
   if (!defender_ && police_window_ == 0) {
     ++attack_elapsed_ticks_;
-    const int unk_9E6A7 = 0; // original only ever reads this, always 0
-    const int threshold = 250 - ((unk_9E6A7 / 34) + 2);
+    // The original scales this by a counter it only ever reads as zero.
+    constexpr int burglary_alarm_level = 0;
+    const int threshold = 250 - ((burglary_alarm_level / 34) + 2);
     if (attack_elapsed_ticks_ > threshold &&
         engine::random::rand_percentage_chance(4) &&
         engine::random::rand_percentage_chance(4)) {

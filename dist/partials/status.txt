@@ -1,11 +1,15 @@
 STATUS
 ------
-Free mode is now playable from start to finish. The full economic loop works:
-restaurants, staff, pizzas, competitors. The surrounding systems are running
-now too: random staff events, mayor award ceremonies, police and mafia
-interactions, pizza competitions, and all the financial and market research
-screens. You get points, you can get a high score and you can go bust. You can
-even win!
+Pizza Legacy is now feature-complete. Every major gameplay system has been
+implemented and the game can be played from start to finish. The full economic
+loop works: restaurants, staff, pizzas, competitors. The surrounding systems
+are all in place too: random staff events, mayor award ceremonies, police and
+mafia interactions, pizza competitions, and all the financial and market
+research screens. You get points, you can get a high score and you can go bust.
+You can even win!
+
+Development is currently focused on playtesting, balancing, bug fixing, and
+polish before the next stable release.
 
 See https://pizzalegacy.nl/ for details on the current status.
 

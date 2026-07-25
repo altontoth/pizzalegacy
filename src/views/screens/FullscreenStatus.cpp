@@ -29,7 +29,7 @@ struct BgColorEntry {
 // Indexed by ZwBackground cast to int (0-11). Entry 0 = NONE (unused).
 // When override_palette is true, palette slots 0xFD and 0xFE are programmed
 // at render time to near-white (RGB 60,60,60) and near-black (RGB 12,12,12).
-// This matches the original's sub_3B95E calls with 6-bit values 15/15/15 and
+// This matches the original's palette writes with 6-bit values 15/15/15 and
 // 3/3/3.
 constexpr std::array<BgColorEntry, 12> BG_COLOR_TABLE = {{
     {.override_palette = false, .fg = 0x00, .shadow = 0x00}, // 0: NONE (unused)
