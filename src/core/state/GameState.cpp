@@ -630,6 +630,23 @@ void GameState::on_city_entered(core::CityId city_id, const Player& player) {
   if (auto* p = this->player(player.id())) {
     p->mark_city_visited(city_id);
   }
+
+  // Travelling leaves the calls the restaurants back home queued for you
+  // behind. Re-entering the city view from a screen within the same city is
+  // not travel and keeps them.
+  if (status_queue_city_ && *status_queue_city_ != city_id) {
+    status_hub_.clear_queue();
+  }
+  status_queue_city_ = city_id;
+
+  // Restaurants outside the city the player woke up in start their day on
+  // arrival, as in the original. Re-entry later the same day is a no-op.
+  if (turn_.begin_restaurant_day(city_id, player.id())) {
+    for (auto* restaurant : restaurants_in_city(player.id(), city_id)) {
+      restaurant->start_of_day(*this);
+    }
+  }
+
   using core::events::LeventId;
   auto arrival = static_cast<LeventId>(
       static_cast<int>(LeventId::ArrivalInParis) + city_id.value);
@@ -908,13 +925,13 @@ void GameState::finalize_initialization(GameContext& context) {
   // We start at 9 in the morning on the first day, so 9 times 6 time blocks:
   time_.time_blocks(9 * 6);
 
-  // Run start_of_day for all restaurants so popularity, demographics, and
-  // economy metrics are initialized before the player's first turn.
+  // Seed popularity, demographics and economy metrics so they are populated
+  // before the first turn starts the first restaurant day.
   for (int i = 0; i < NUMBER_OF_PLAYERS; ++i) {
     active_player(core::PlayerId{i});
     for (auto* restaurant : restaurants_for(core::PlayerId{i})) {
       if (restaurant) {
-        restaurant->start_of_day(*this);
+        restaurant->recalculate_economy_metrics(*this);
       }
     }
   }

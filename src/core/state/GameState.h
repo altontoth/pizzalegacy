@@ -345,6 +345,8 @@ private:
   GameTime time_;
   core::PlayerId active_player_{0};
   core::CityId active_city_{-1};
+  // City whose restaurants the queued status notifications belong to.
+  std::optional<core::CityId> status_queue_city_;
   ViewPoint city_position_{ViewPoint{-1, -1}};
   std::optional<core::DistrictId> active_district_id_;
   // Per-player city view state, persisted across screen transitions.

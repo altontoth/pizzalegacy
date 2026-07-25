@@ -405,10 +405,9 @@ public:
   void ai_adjust_profit_days(int delta) { ai_profit_days_ += delta; }
   void ai_increment_profit_days() { ai_adjust_profit_days(1); }
 
+  // Runs once per day per restaurant: at the owner's turn start, or on arrival
+  // in its city, whichever comes first.
   void start_of_day(class GameState& game_state);
-  // The re-derivable slice of start_of_day, replayed when a legacy save is
-  // loaded into a day that has already started.
-  void degrade_stock_and_run_manager(class GameState& game_state);
   void end_of_day(class GameState& game_state);
   // Returns (and clears) player-facing staff event dialogs queued during
   // end_of_day.

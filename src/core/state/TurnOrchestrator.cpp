@@ -800,8 +800,22 @@ TurnOrchestrator::execute_pipeline_step(const turn::Step& step) {
           },
 
           [&](const turn::PreparePlayerTurn&) {
+            auto* player = gs_->active_player();
+            const bool is_human = player && player->is_human_controlled();
+            // Calls still queued when a turn ends are lost rather than carried
+            // into the next one.
+            gs_->status().clear_queue();
+            gs_->status_queue_city_ = gs_->active_city_;
+            // Human restaurants that are in scope are all in the active city,
+            // so the per-city guard keeps the city-view-entry trigger from
+            // running the day twice. AI has this single trigger, so no guard
+            // needed.
+            const bool run_day =
+                !is_human ||
+                begin_restaurant_day(gs_->active_city_, gs_->active_player_);
             for (auto* restaurant : gs_->restaurants_for(gs_->active_player_)) {
-              if (restaurant) {
+              if (run_day && restaurant &&
+                  is_restaurant_in_processing_scope(*restaurant, is_human)) {
                 restaurant->start_of_day(*gs_);
               }
             }
@@ -1073,6 +1087,9 @@ void TurnOrchestrator::process_depot_theft() {
 void TurnOrchestrator::end_of_day() {
 
   city_start_of_day_ran_.fill(false);
+  for (auto& per_player : restaurant_day_ran_) {
+    per_player.fill(false);
+  }
 
   tick_active_cities();
 
@@ -1111,6 +1128,16 @@ void TurnOrchestrator::end_of_day() {
       player->decay_competition_willingness();
     }
   }
+}
+
+bool TurnOrchestrator::begin_restaurant_day(core::CityId city,
+                                            core::PlayerId player) {
+  bool& ran = restaurant_day_ran_[city.value][player.value];
+  if (ran) {
+    return false;
+  }
+  ran = true;
+  return true;
 }
 
 void TurnOrchestrator::run_city_start_of_day(City& city) {

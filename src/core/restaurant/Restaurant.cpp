@@ -1697,9 +1697,18 @@ Popularity Restaurant::calculate_furniture_appeal_popularity() const {
   return economy_.calculate_furniture_appeal_popularity(*this);
 }
 
-// The part of the day-start the original re-derives whenever the city view is
-// entered: stock spoils, then the manager reacts to what is left.
-void Restaurant::degrade_stock_and_run_manager(GameState& game_state) {
+void Restaurant::start_of_day(GameState& game_state) {
+  // Tick down forced closures. On re-open you get the reputation hit.
+  if (forced_days_remaining_ > 0) {
+    --forced_days_remaining_;
+    if (forced_days_remaining_ == 0) {
+      add_reputation_damage(-30, 15);
+    }
+  }
+
+  decrement_protection_timer();
+
+  // Stock spoils first so the manager reacts to what is left of it.
   Money rotten_value{0};
   for (const auto& [ingredient_type, book_value] :
        inventory_.apply_daily_degradation(property_.city().spoilage_rate())) {
@@ -1726,20 +1735,6 @@ void Restaurant::degrade_stock_and_run_manager(GameState& game_state) {
 
   core::restaurant::ManagerRoutine manager_routine(*this, game_state);
   manager_routine.run_daily();
-}
-
-void Restaurant::start_of_day(GameState& game_state) {
-  degrade_stock_and_run_manager(game_state);
-
-  // Tick down forced closures. On re-open you get the reputation hit.
-  if (forced_days_remaining_ > 0) {
-    --forced_days_remaining_;
-    if (forced_days_remaining_ == 0) {
-      add_reputation_damage(-30, 15);
-    }
-  }
-
-  decrement_protection_timer();
 
   recalculate_economy_metrics(game_state);
 
