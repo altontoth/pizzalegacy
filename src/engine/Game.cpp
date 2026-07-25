@@ -343,6 +343,7 @@ void Game::run() {
   bool vsync = state.options().vsync;
   FpsManager fps(render_fps);
   uint32_t tick_accumulator_ms = 0;
+  bool did_initial_raise = false;
 
   while (!state.should_exit()) {
     uint64_t wall_ms = SDL_GetTicks();
@@ -481,6 +482,14 @@ void Game::run() {
     // For software cursor:
     cursor_manager_->cursor_position(last_mouse_pos_);
     renderer.render();
+
+    // Bring the window to the foreground. Raising only takes effect once the
+    // event queue has been drained at least once, which handle_events did at
+    // the top of this frame. https://github.com/libsdl-org/SDL/issues/13920
+    if (!did_initial_raise) {
+      did_initial_raise = true;
+      SDL_RaiseWindow(sdl_.window.get());
+    }
 
     SDL_SetWindowTitle(
         sdl_.window.get(),
@@ -682,10 +691,6 @@ bool Game::init(int display_height, ConfigManager& config_manager) {
   sdl_.renderer.reset(renderer_handle);
   SDL_SetWindowPosition(sdl_.window.get(), SDL_WINDOWPOS_CENTERED,
                         SDL_WINDOWPOS_CENTERED);
-
-  // Bring the window to the foreground; when I launch the game from
-  // Terminal.app it stays in the background otherwise.
-  SDL_RaiseWindow(sdl_.window.get());
 
   input_manager_->window(sdl_.window.get());
   cursor_manager_->window(sdl_.window.get());
