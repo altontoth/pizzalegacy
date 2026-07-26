@@ -94,6 +94,7 @@ public:
   std::array<Player*, NUMBER_OF_PLAYERS> players() const;
   Player* active_player() const; // returns active player
   Player* player(core::PlayerId player_id) const;
+  Player* restaurant_owner(const Restaurant& restaurant) const;
   void active_player(core::PlayerId player_id);
   void players(std::array<std::unique_ptr<Player>, NUMBER_OF_PLAYERS>);
 

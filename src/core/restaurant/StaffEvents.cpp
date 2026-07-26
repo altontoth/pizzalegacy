@@ -97,7 +97,7 @@ void StaffEvents::apply_event_effect(StaffEventData::Type type, Staff& staff,
     int theft_cents =
         rand_max_n(static_cast<int>(staff.payment().whole()) * 10) * 100;
     Money theft_amount{theft_cents};
-    if (auto* player = game_state.active_player()) {
+    if (auto* player = game_state.restaurant_owner(restaurant)) {
       player->financials().spend_cash(game_state.time().current_date(),
                                       Account::Others, theft_amount,
                                       restaurant.id());
@@ -154,13 +154,14 @@ void StaffEvents::apply_event_effect(StaffEventData::Type type, Staff& staff,
           ash_furn, layout->next_furniture_id(), removed->origin(),
           core::FurnitureId{UNLINKED_FURNITURE}, 0);
       layout->place_kitchen_furniture(std::move(ash));
-      auto* player = game_state.active_player();
-      player->make_insurance_claim(InsuranceType::FIRE);
+      if (auto* player = game_state.restaurant_owner(restaurant)) {
+        player->make_insurance_claim(InsuranceType::FIRE);
+      }
     }
     break;
   }
   case Type::SpillWine: {
-    if (auto* player = game_state.active_player()) {
+    if (auto* player = game_state.restaurant_owner(restaurant)) {
       player->financials().spend_cash(game_state.time().current_date(),
                                       Account::Others, Money{100000},
                                       restaurant.id());

@@ -80,6 +80,11 @@ Player* GameState::active_player() const {
   return players_[active_player_.value].get();
 }
 
+Player* GameState::restaurant_owner(const Restaurant& restaurant) const {
+  auto owner_id = restaurant.property().owner_or_tenant();
+  return owner_id ? player(*owner_id) : nullptr;
+}
+
 void GameState::post_insufficient_funds() {
   status_hub_.post_direct({
       .payload = "YOU DON'T HAVE ENOUGH MONEY!!!",

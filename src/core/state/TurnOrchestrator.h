@@ -149,6 +149,11 @@ private:
   bool is_restaurant_in_processing_scope(const Restaurant& rest,
                                          bool owner_is_human) const;
   void next_player();
+  // An event is deliverable when its restaurant belongs to the active player
+  bool can_deliver_to_active_player(core::RestaurantId rid) const;
+  bool has_deliverable_staff_event() const;
+  bool has_deliverable_inspection() const;
+
   void show_next_deferred_staff_event();
   void show_next_deferred_manager_alert();
   void show_next_deferred_inspection();

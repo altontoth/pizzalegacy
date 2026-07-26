@@ -118,7 +118,7 @@ void TurnOrchestrator::end_of_turn() {
   // (before 10:00): the original jumps the clock to the day-end block and
   // runs the staff event check there, so events never carry to the next day.
   if (interactive && !showing_deferred_staff_event_ &&
-      !deferred_staff_events_.empty()) {
+      has_deliverable_staff_event()) {
     flush_staff_events_then_end_turn_ = true;
     show_next_deferred_staff_event();
     return;
@@ -251,8 +251,38 @@ TurnOrchestrator::process_restaurant_step(const turn::ProcessRestaurant& step) {
   return turn::StepResult::Done;
 }
 
+bool TurnOrchestrator::can_deliver_to_active_player(
+    core::RestaurantId rid) const {
+  auto* restaurant = gs_->restaurant(rid);
+  if (!restaurant) {
+    // An entry whose restaurant is gone counts as deliverable so the dequeue
+    // path can discard it.
+    return true;
+  }
+  auto* owner = gs_->restaurant_owner(*restaurant);
+  return owner && owner->id() == gs_->active_player()->id();
+}
+
+bool TurnOrchestrator::has_deliverable_staff_event() const {
+  return std::ranges::any_of(
+      deferred_staff_events_, [this](const DeferredStaffEvent& d) {
+        return can_deliver_to_active_player(d.restaurant_id);
+      });
+}
+
+bool TurnOrchestrator::has_deliverable_inspection() const {
+  return std::ranges::any_of(
+      deferred_mayor_inspections_, [this](const DeferredInspectionEvent& d) {
+        return can_deliver_to_active_player(d.restaurant_id);
+      });
+}
+
 void TurnOrchestrator::show_next_deferred_staff_event() {
-  if (deferred_staff_events_.empty()) {
+  auto next = std::ranges::find_if(
+      deferred_staff_events_, [this](const DeferredStaffEvent& d) {
+        return can_deliver_to_active_player(d.restaurant_id);
+      });
+  if (next == deferred_staff_events_.end()) {
     showing_deferred_staff_event_ = false;
     if (flush_staff_events_then_end_turn_) {
       flush_staff_events_then_end_turn_ = false;
@@ -269,8 +299,8 @@ void TurnOrchestrator::show_next_deferred_staff_event() {
   }
   showing_deferred_staff_event_ = true;
 
-  auto deferred = deferred_staff_events_.front();
-  deferred_staff_events_.erase(deferred_staff_events_.begin());
+  auto deferred = *next;
+  deferred_staff_events_.erase(next);
 
   Logger::debug(
       "[staff_event] dequeue for display: rest={} role={} slot={} type={} "
@@ -348,7 +378,11 @@ void TurnOrchestrator::trigger_mayor_inspection(core::RestaurantId rid,
 }
 
 void TurnOrchestrator::show_next_deferred_inspection() {
-  if (deferred_mayor_inspections_.empty()) {
+  auto next = std::ranges::find_if(
+      deferred_mayor_inspections_, [this](const DeferredInspectionEvent& d) {
+        return can_deliver_to_active_player(d.restaurant_id);
+      });
+  if (next == deferred_mayor_inspections_.end()) {
     showing_deferred_inspection_ = false;
     if (is_player_day_over()) {
       request_end_of_turn();
@@ -371,8 +405,8 @@ void TurnOrchestrator::show_next_deferred_inspection() {
   }
   int mayor_id = mayor_actors[0]->id();
 
-  auto deferred = deferred_mayor_inspections_.front();
-  deferred_mayor_inspections_.erase(deferred_mayor_inspections_.begin());
+  auto deferred = *next;
+  deferred_mayor_inspections_.erase(next);
   showing_deferred_inspection_ = true;
 
   auto* restaurant = gs_->restaurant(deferred.restaurant_id);
@@ -481,7 +515,7 @@ void TurnOrchestrator::fire_due_events() {
   // Fire deferred staff event dialogs at 10:00 the next day.
   if (!processing_end_of_turn_ && !showing_deferred_staff_event_ &&
       !showing_deferred_inspection_ && !prevent_auto_end_of_turn_ &&
-      !deferred_staff_events_.empty() && time.is_past_time(10, 0)) {
+      has_deliverable_staff_event() && time.is_past_time(10, 0)) {
     show_next_deferred_staff_event();
   }
 
@@ -493,7 +527,7 @@ void TurnOrchestrator::fire_due_events() {
   // Fire deferred mayor inspection events at 10:00 (after staff events drain).
   if (!processing_end_of_turn_ && !showing_deferred_staff_event_ &&
       !showing_deferred_inspection_ && !prevent_auto_end_of_turn_ &&
-      !deferred_mayor_inspections_.empty() && time.is_past_time(10, 0)) {
+      has_deliverable_inspection() && time.is_past_time(10, 0)) {
     show_next_deferred_inspection();
   }
 
