@@ -105,6 +105,7 @@ public:
 
   void queue_manager_alert(core::RestaurantId rid, std::string message,
                            int display_block);
+  void drop_manager_alerts_outside(core::CityId city);
   void queue_mayor_award(const MayorAwardEvent& ev);
 
   // Queue a mayor inspection and show it immediately (debug use).

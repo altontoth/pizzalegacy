@@ -298,6 +298,15 @@ void TurnOrchestrator::queue_manager_alert(core::RestaurantId rid,
   deferred_manager_alerts_.push_back({rid, std::move(message), display_block});
 }
 
+void TurnOrchestrator::drop_manager_alerts_outside(core::CityId city) {
+  std::erase_if(deferred_manager_alerts_,
+                [this, city](const DeferredManagerAlert& alert) {
+                  auto* restaurant = gs_->restaurant(alert.restaurant_id);
+                  return !restaurant ||
+                         restaurant->property().city().id() != city;
+                });
+}
+
 void TurnOrchestrator::queue_mayor_award(const MayorAwardEvent& ev) {
   deferred_mayor_awards_.push_back(ev);
 }
@@ -812,9 +821,11 @@ TurnOrchestrator::execute_pipeline_step(const turn::Step& step) {
             auto* player = gs_->active_player();
             const bool is_human = player && player->is_human_controlled();
             // Calls still queued when a turn ends are lost rather than carried
-            // into the next one.
+            // into the next one. Runs before the start_of_day loop below,
+            // which queues the incoming player's alerts.
             gs_->status().clear_queue();
             gs_->status_queue_city_ = gs_->active_city_;
+            deferred_manager_alerts_.clear();
             // Human restaurants that are in scope are all in the active city,
             // so the per-city guard keeps the city-view-entry trigger from
             // running the day twice. AI has this single trigger, so no guard

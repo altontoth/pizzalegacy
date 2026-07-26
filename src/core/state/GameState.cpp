@@ -638,6 +638,7 @@ void GameState::on_city_entered(core::CityId city_id, const Player& player) {
   // not travel and keeps them.
   if (status_queue_city_ && *status_queue_city_ != city_id) {
     status_hub_.clear_queue();
+    turn_.drop_manager_alerts_outside(city_id);
   }
   status_queue_city_ = city_id;
 
