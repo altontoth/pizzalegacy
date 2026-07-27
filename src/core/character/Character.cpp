@@ -11,7 +11,9 @@
 namespace core::character {
 
 Character::Character(CharacterData* data)
-    : data_(data), age_(data_->age), popularity_(data_->popularity),
+    : data_(data), first_name_(data_->first_name), last_name_(data_->last_name),
+      charisma_(data_->charisma), dexterity_(data_->dexterity),
+      age_(data_->age), popularity_(data_->popularity),
       personality_(data_->personality), courage_(data_->courage),
       health_(data_->health), energy_(data_->energy),
       intelligence_(data_->intelligence), experience_(data_->experience),
@@ -35,6 +37,10 @@ CharacterData Character::to_character_data() const {
   CharacterData snapshot = *data_;
 
   // Override with current mutable runtime values
+  snapshot.first_name = first_name_;
+  snapshot.last_name = last_name_;
+  snapshot.charisma = charisma_;
+  snapshot.dexterity = dexterity_;
   snapshot.age = age_;
   snapshot.popularity = popularity_;
   snapshot.personality = personality_;

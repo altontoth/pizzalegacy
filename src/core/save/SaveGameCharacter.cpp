@@ -8,6 +8,7 @@
 #include <array>
 #include <cstdint>
 #include <ctime>
+#include <string>
 #include "core/character/Awards.h"
 #include "core/character/InsurancePlayerState.h"
 #include "core/character/Player.h"
@@ -24,14 +25,22 @@ namespace save {
 json character_to_json(const core::character::Character& character) {
   json j;
   j["id"] = character.id();
-  // Save character name for debugging/display
+  // The name is the character's own: a player may rename theirs.
   j["first_name"] = character.first_name();
   j["last_name"] = character.last_name();
   // Save dynamic values that can change
   j["age"] = character.age();
+  j["popularity"] = character.popularity();
   j["health"] = character.health();
   j["energy"] = character.energy();
+  j["intelligence"] = character.intelligence();
+  j["charisma"] = character.charisma();
+  j["dexterity"] = character.dexterity();
+  j["personality"] = character.personality();
+  j["courage"] = character.courage();
   j["experience"] = character.experience();
+  j["trustworthiness"] = character.trustworthiness();
+  j["honesty"] = character.honesty();
   j["cooking"] = character.cooking();
   j["serving"] = character.serving();
   j["management"] = character.management();
@@ -45,15 +54,47 @@ core::character::Character json_to_character(const json& j) {
   auto* char_data = CharacterFactory::create_character(char_id);
   core::character::Character character(char_data);
 
+  if (j.contains("first_name")) {
+    character.name(j["first_name"].get<std::string>(),
+                   j.value("last_name", std::string{}));
+  }
+
   // Restore dynamic values
   if (j.contains("age")) {
     character.age(j["age"].get<uint8_t>());
+  }
+  if (j.contains("popularity")) {
+    character.popularity(j["popularity"].get<uint8_t>());
   }
   if (j.contains("health")) {
     character.health(j["health"].get<uint8_t>());
   }
   if (j.contains("energy")) {
     character.energy(j["energy"].get<uint8_t>());
+  }
+  if (j.contains("intelligence")) {
+    character.intelligence(j["intelligence"].get<uint8_t>());
+  }
+  if (j.contains("charisma")) {
+    character.charisma(j["charisma"].get<uint8_t>());
+  }
+  if (j.contains("dexterity")) {
+    character.dexterity(j["dexterity"].get<uint8_t>());
+  }
+  if (j.contains("personality")) {
+    character.personality(j["personality"].get<uint8_t>());
+  }
+  if (j.contains("courage")) {
+    character.courage(j["courage"].get<uint8_t>());
+  }
+  if (j.contains("experience")) {
+    character.experience(j["experience"].get<uint8_t>());
+  }
+  if (j.contains("trustworthiness")) {
+    character.trustworthiness(j["trustworthiness"].get<uint8_t>());
+  }
+  if (j.contains("honesty")) {
+    character.honesty(j["honesty"].get<uint8_t>());
   }
   if (j.contains("cooking")) {
     character.cooking(j["cooking"].get<uint8_t>());

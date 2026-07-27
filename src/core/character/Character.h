@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "core/finance/Money.h"
@@ -135,8 +136,8 @@ public:
 
   // Getters for the basic stats:
   uint8_t id() const { return data_->id; };
-  const std::string& first_name() const { return data_->first_name; };
-  const std::string& last_name() const { return data_->last_name; };
+  const std::string& first_name() const { return first_name_; };
+  const std::string& last_name() const { return last_name_; };
   std::string name() const { return first_name() + " " + last_name(); };
   uint8_t age() const { return age_; };
   void age(uint8_t a) { age_ = a; };
@@ -144,8 +145,8 @@ public:
   uint8_t health() const { return health_; };
   uint8_t energy() const { return energy_; };
   uint8_t intelligence() const { return intelligence_; };
-  uint8_t charisma() const { return data_->charisma; };
-  uint8_t dexterity() const { return data_->dexterity; };
+  uint8_t charisma() const { return charisma_; };
+  uint8_t dexterity() const { return dexterity_; };
   uint8_t personality() const { return personality_; };
   uint8_t courage() const { return courage_; };
   uint8_t experience() const { return experience_; };
@@ -169,6 +170,16 @@ public:
   CharacterData to_character_data() const;
 
   // Setters for the things that can change:
+  void name(std::string first, std::string last) {
+    first_name_ = std::move(first);
+    last_name_ = std::move(last);
+  }
+  void popularity(uint8_t popularity) { popularity_ = popularity; };
+  void personality(uint8_t personality) { personality_ = personality; };
+  void courage(uint8_t courage) { courage_ = courage; };
+  void experience(uint8_t experience) { experience_ = experience; };
+  void charisma(uint8_t charisma) { charisma_ = charisma; };
+  void dexterity(uint8_t dexterity) { dexterity_ = dexterity; };
   void adjust_courage(int delta) {
     courage_ = static_cast<uint8_t>(std::clamp(courage_ + delta, 0, 255));
   }
@@ -203,7 +214,13 @@ public:
   void picture_data(std::vector<unsigned char>);
 
 private:
+  // The cast record holds the portrait and the values every copy of this
+  // character starts from; everything below it can drift per player.
   const CharacterData* data_;
+  std::string first_name_;
+  std::string last_name_;
+  uint8_t charisma_;
+  uint8_t dexterity_;
   uint8_t age_;
   uint8_t popularity_;
   uint8_t personality_;
