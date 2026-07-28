@@ -10,11 +10,39 @@
 #include "core/character/Player.h"
 #include "core/city/District.h"
 #include "core/city/Property.h"
+#include "core/finance/Money.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/state/GameState.h"
 #include "engine/Logger.h"
 
 namespace ai {
+
+// Cash per tier the AI needs to have before increasing furniture count
+constexpr Money furnishing_cash_per_tier = 1000_usd;
+
+// An empty restaurant is furnished in one go rather than piece by piece.
+constexpr int bare_restaurant = 10;
+
+void invest_in_restaurant(Restaurant& restaurant, Player& player) {
+  const auto& character = player.character();
+  if (!engine::random::rand_percentage_chance(character.management())) {
+    return;
+  }
+  // The money is just used as a condition
+  const Money required_cash = furnishing_cash_per_tier * restaurant.ai_tier() *
+                              character.courage() / 100;
+  if (player.cash_balance() < required_cash) {
+    return;
+  }
+  if (engine::random::rand_percentage_chance(restaurant.ai_furniture_count())) {
+    return;
+  }
+  const int step = restaurant.ai_furniture_count() < bare_restaurant
+                       ? opening_furniture_count
+                       : engine::random::rand_max_n(6) + 1;
+  restaurant.ai_layout(restaurant.ai_layout_index(),
+                       restaurant.ai_furniture_count() + step);
+}
 
 void process_restaurant_revenue(Restaurant& restaurant, Player& player) {
   // This is just +1 every day the restaurant is processed,

@@ -15,6 +15,7 @@
 #include "core/city/Property.h"
 #include "core/finance/Ledger.h"
 #include "core/finance/PlayerFinancials.h"
+#include "core/restaurant/AIEconomy.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/restaurant/RestaurantLayout.h"
 #include "core/state/GameState.h"
@@ -225,11 +226,17 @@ Restaurant* RealEstate::create_ai_starting_restaurant(Player& player,
     if (!engine::random::rand_percentage_chance(courage)) {
       continue;
     }
-    const bool big = engine::random::rand_percentage_chance(30);
-    const int idx4 = engine::random::rand_max_n(4);
-    const int layout_id = big ? ((idx4 * 2) + 1) : ((idx4 * 2) + 2);
-    auto* rest = create_restaurant_with_layout(player, city, layout_id, big);
+    // The AI furnishes from its own prebuilt restaurants, which carry their
+    // own size.
+    const int layout_index =
+        engine::random::rand_max_n(RestaurantLayoutFactory::ai_layout_count) +
+        1;
+    auto* rest = create_restaurant_with_layout(
+        player, city, /*layout_id=*/0, /*is_big=*/false,
+        RestaurantLayoutFactory::create_ai_layout(layout_index,
+                                                  ai::opening_furniture_count));
     if (rest) {
+      rest->ai_layout(layout_index, ai::opening_furniture_count);
       rest->open_for_business(*gs_);
     }
     return rest;
@@ -237,13 +244,13 @@ Restaurant* RealEstate::create_ai_starting_restaurant(Player& player,
   return nullptr;
 }
 
-Restaurant* RealEstate::create_restaurant_with_layout(Player& player,
-                                                      City& city, int layout_id,
-                                                      bool is_big) {
-  // Build the layout filename from the layout_id
-  std::string filename = compat::format("q/f{}.pc", layout_id);
-  std::unique_ptr<RestaurantLayout> layout = nullptr;
-  layout = RestaurantLayoutFactory::create_layout(filename);
+Restaurant* RealEstate::create_restaurant_with_layout(
+    Player& player, City& city, int layout_id, bool is_big,
+    std::unique_ptr<RestaurantLayout> layout) {
+  if (!layout) {
+    layout = RestaurantLayoutFactory::create_layout(
+        compat::format("q/f{}.pc", layout_id));
+  }
 
   if (!layout) {
     return nullptr;

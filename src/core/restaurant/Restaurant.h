@@ -405,6 +405,14 @@ public:
   void ai_adjust_profit_days(int delta) { ai_profit_days_ += delta; }
   void ai_increment_profit_days() { ai_adjust_profit_days(1); }
 
+  int ai_layout_index() const { return ai_layout_index_; }
+  // Furniture pieces placed, and the daily percentage chance of placing no
+  // more, so an AI restaurant fills up and then stops.
+  int ai_furniture_count() const { return ai_furniture_count_; }
+  // Rebuilds the layout from prebuilt restaurant `index`; false if there is no
+  // such restaurant, leaving the layout alone.
+  bool ai_layout(int index, int furniture_count);
+
   // Runs once per day per restaurant: at the owner's turn start, or on arrival
   // in its city, whichever comes first.
   void start_of_day(class GameState& game_state);
@@ -577,6 +585,8 @@ private:
   int ai_tier_{0};
   int ai_capacity_target_{0};
   int ai_profit_days_{0};
+  int ai_layout_index_{0};
+  int ai_furniture_count_{0};
 
   Money last_weekly_profit_;
 };

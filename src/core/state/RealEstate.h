@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <memory>
 #include <vector>
 
 #include "core/common/Ids.h"
@@ -16,10 +17,9 @@ class GameState;
 class Player;
 class Property;
 class Restaurant;
+class RestaurantLayout;
 
-// Property transactions (buying, renting, selling, ending leases) and the
-// restaurant creation they trigger. Split out of GameState for cohesion; it
-// works on GameState internals by design.
+// Property transactions and the restaurant creation they trigger.
 class RealEstate {
 public:
   explicit RealEstate(GameState& state) : gs_(&state) {}
@@ -34,11 +34,13 @@ public:
   bool end_property_lease(Property& property, Player& player);
 
   Restaurant* create_restaurant(Player& player, Property& property);
-  // Create a restaurant with a specific layout in a random available property
-  Restaurant* create_restaurant_with_layout(Player& player, City& city,
-                                            int layout_id, bool is_big);
-  // AI players start with a restaurant, gated by up to 8 courage% attempts
-  // matching the original algorithm.
+  // Create a restaurant with a specific layout in a random available property.
+  // Pass `layout` to furnish it from an existing RestaurantLayout (we'll ignore
+  // layout_id in that case).
+  Restaurant*
+  create_restaurant_with_layout(Player& player, City& city, int layout_id,
+                                bool is_big,
+                                std::unique_ptr<RestaurantLayout> layout = {});
   Restaurant* create_ai_starting_restaurant(Player& player, City& city);
 
 private:

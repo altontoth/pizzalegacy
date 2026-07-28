@@ -12,6 +12,9 @@ class GameState;
 
 namespace ai {
 
+// Furniture pieces an AI restaurant opens with.
+inline constexpr int opening_furniture_count = 20;
+
 // Initialize AI player's 10 menu slots with random recipes and production
 // values. Called once during game initialization. Matches original
 // ai_init_menu.
@@ -25,6 +28,9 @@ void update_ai_menu(Player& player, int restaurant_count);
 // instead they earn revenue proportional to customer demand and their
 // competitive strength (the original game's dual-economy model).
 void process_restaurant_revenue(Restaurant& restaurant, Player& player);
+
+// Daily chance for an AI restaurant to add a few more of its layout's items.
+void invest_in_restaurant(Restaurant& restaurant, Player& player);
 
 // Original aiEvaluateSingleRestaurant bankruptcy check:
 // If profit_days < -50 AND competitor_count > 3 AND two courage rolls pass,

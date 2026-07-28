@@ -39,6 +39,7 @@
 #include "engine/FormatCompat.h"
 #include "engine/Logger.h"
 #include "engine/Random.h"
+#include "factories/RestaurantLayoutFactory.h"
 
 Restaurant::Restaurant(Property& property, Size kitchen_size,
                        core::RestaurantId id, std::string name)
@@ -52,6 +53,16 @@ Restaurant::Restaurant(Property& property, Size kitchen_size,
 }
 
 Restaurant::~Restaurant() = default;
+
+bool Restaurant::ai_layout(int index, int furniture_count) {
+  ai_layout_index_ = index;
+  ai_furniture_count_ = furniture_count;
+  if (index < 1 || index > RestaurantLayoutFactory::ai_layout_count) {
+    return false;
+  }
+  layout_ = RestaurantLayoutFactory::create_ai_layout(index, furniture_count);
+  return true;
+}
 
 void Restaurant::init_ai_economy(const Player& player) {
   ai_tier_ = engine::random::rand_max_n(4) + 1;
@@ -190,7 +201,7 @@ void Restaurant::apply_sabotage(core::item::Item item) {
                effect.reputation_penalty);
 }
 
-Size Restaurant::size() const { return property_.size(); }
+Size Restaurant::size() const { return layout_->restaurant_size(); }
 
 Size Restaurant::kitchen_size() const { return kitchen_size_; }
 
@@ -1060,6 +1071,7 @@ void Restaurant::end_of_day(GameState& game_state) {
     economy_.calculate_demand_with_competition(*this, game_state);
 
     ai::process_restaurant_revenue(*this, *player);
+    ai::invest_in_restaurant(*this, *player);
     return;
   }
 

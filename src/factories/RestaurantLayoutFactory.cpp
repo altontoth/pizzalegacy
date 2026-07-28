@@ -7,7 +7,7 @@
 #include "factories/RestaurantLayoutFactory.h"
 #include "core/restaurant/FloorPattern.h"
 #include "core/util/LegacyConstants.h"
-#include "engine/Endian.h"
+#include "engine/FormatCompat.h"
 #include "engine/Logger.h"
 #include "engine/Size.h"
 #include "engine/geom/Spaces.h"
@@ -17,6 +17,7 @@
 #include "resources/util/FileUtils.h"
 
 #include <algorithm>
+#include <vector>
 
 namespace {
 // Rotation is stored as 240 plus the rotation index. A few layout files carry
@@ -25,11 +26,42 @@ int decode_rotation(uint8_t raw) {
   const int rotation = raw - 240;
   return (rotation >= 0 && rotation < 4) ? rotation : 0;
 }
+
+// Layout-file byte layout: a fixed header ending in the two record counts, then
+// the furniture records and the oven records, all one stride wide.
+constexpr std::size_t header_size = 41;
+constexpr std::size_t furniture_count_offset = 39;
+constexpr std::size_t record_size = 9;
 } // namespace
 
 std::unique_ptr<RestaurantLayout>
 RestaurantLayoutFactory::create_layout(const std::string& filename) {
   return create_layout(fileutils::read_bytes(filename));
+}
+
+std::unique_ptr<RestaurantLayout>
+RestaurantLayoutFactory::create_ai_layout(int index, int furniture_count) {
+  std::vector<uint8_t> file =
+      fileutils::read_bytes(compat::format("f/f{}.pc", index));
+  if (file.size() < header_size || furniture_count < 0 ||
+      furniture_count >= file[furniture_count_offset]) {
+    return create_layout(file);
+  }
+  // Keep the first furniture_count records, then all of the ovens.
+  const auto begin = static_cast<std::ptrdiff_t>(header_size);
+  const auto end = static_cast<std::ptrdiff_t>(file.size());
+  const auto kept = std::min(
+      begin + static_cast<std::ptrdiff_t>(furniture_count * record_size), end);
+  const auto all =
+      std::min(begin + static_cast<std::ptrdiff_t>(
+                           file[furniture_count_offset] * record_size),
+               end);
+
+  std::vector<uint8_t> buf(file.begin(), file.begin() + begin);
+  buf[furniture_count_offset] = static_cast<uint8_t>(furniture_count);
+  buf.insert(buf.end(), file.begin() + begin, file.begin() + kept);
+  buf.insert(buf.end(), file.begin() + all, file.end());
+  return create_layout(buf);
 }
 
 std::unique_ptr<RestaurantLayout>
@@ -138,13 +170,10 @@ RestaurantLayoutFactory::create_layout(std::span<const uint8_t> bytes) {
   for (int i = 0; i < furniture_count; i++) {
     uint8_t furniture_id = is.get();
     uint8_t rotation = is.get();
-    is.skip(2);
-    uint8_t high = is.get();
-    uint8_t low = is.get();
-    uint16_t x_coord = endian::u16le(low, high) * 2;
-    high = is.get();
-    low = is.get();
-    uint16_t y_coord = endian::u16le(low, high) * 2;
+    is.skip(3);
+    uint16_t x_coord = is.u16le() * 2;
+    // Y needs only a byte because the original biases it by 88.
+    uint16_t y_coord = is.get() * 2;
     // If this is 0xFF then it means not linked; PlacedFurniture will turn this
     // into an empty optional
     uint16_t linked_id = is.get();
@@ -159,13 +188,9 @@ RestaurantLayoutFactory::create_layout(std::span<const uint8_t> bytes) {
   for (int i = 0; i < oven_count; i++) {
     uint8_t furniture_id = is.get();
     uint8_t rotation = is.get();
-    is.skip(2);
-    uint8_t high = is.get();
-    uint8_t low = is.get();
-    uint16_t x_coord = endian::u16le(low, high) * 2;
-    high = is.get();
-    low = is.get();
-    uint16_t y_coord = endian::u16le(low, high) * 2;
+    is.skip(3);
+    uint16_t x_coord = is.u16le() * 2;
+    uint16_t y_coord = is.get() * 2;
     uint16_t linked_id = is.get();
     const Furniture* f =
         FurnitureFactory::create_furniture((FurnitureType)furniture_id);

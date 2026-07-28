@@ -297,6 +297,8 @@ json restaurant_to_json(const Restaurant& restaurant) {
   j["wants_open"] = restaurant.wants_open();
   j["ever_opened"] = restaurant.ever_opened();
   j["forced_days_remaining"] = restaurant.forced_days_remaining();
+  j["ai_layout_index"] = restaurant.ai_layout_index();
+  j["ai_furniture_count"] = restaurant.ai_furniture_count();
   j["kitchen_size"] = {{"w", restaurant.kitchen_size().w},
                        {"h", restaurant.kitchen_size().h}};
 
@@ -425,6 +427,11 @@ std::unique_ptr<Restaurant> json_to_restaurant(const json& j,
 
   auto restaurant =
       std::make_unique<Restaurant>(property, kitchen_size, rid, name);
+
+  if (j.contains("ai_layout_index")) {
+    restaurant->ai_layout(j["ai_layout_index"].get<int>(),
+                          j.value("ai_furniture_count", 0));
+  }
 
   // Restore open state
   if (j.contains("wants_open")) {
