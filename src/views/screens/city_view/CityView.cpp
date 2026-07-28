@@ -99,14 +99,15 @@ CityView::CityView(GameContext& context, GameState& state, core::CityId id)
 
   state_.active_city(id);
   city_ = state_.active_city();
+
+  if (auto* player = state_.active_player()) {
+    state_.on_city_entered(id, *player);
+  }
+
   // Keep time paused and events deferred while the end-of-turn pipeline runs.
   if (!state_.turn().is_processing_end_of_turn()) {
     state_.resume_time_advancement();
     state_.turn().prevent_auto_end_of_turn(false);
-  }
-
-  if (auto* player = state_.active_player()) {
-    state_.on_city_entered(id, *player);
   }
 
   for (int i = 0; i < city_->data_length(); ++i) {

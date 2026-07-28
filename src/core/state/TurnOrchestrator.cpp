@@ -328,13 +328,22 @@ void TurnOrchestrator::queue_manager_alert(core::RestaurantId rid,
   deferred_manager_alerts_.push_back({rid, std::move(message), display_block});
 }
 
-void TurnOrchestrator::drop_manager_alerts_outside(core::CityId city) {
+void TurnOrchestrator::drop_city_local_events_outside(core::CityId city) {
+  // Only drop the events for the active player
+  auto is_elsewhere = [this, city](core::RestaurantId rid) {
+    if (!can_deliver_to_active_player(rid)) {
+      return false;
+    }
+    auto* restaurant = gs_->restaurant(rid);
+    return !restaurant || restaurant->property().city().id() != city;
+  };
   std::erase_if(deferred_manager_alerts_,
-                [this, city](const DeferredManagerAlert& alert) {
-                  auto* restaurant = gs_->restaurant(alert.restaurant_id);
-                  return !restaurant ||
-                         restaurant->property().city().id() != city;
+                [&](const DeferredManagerAlert& alert) {
+                  return is_elsewhere(alert.restaurant_id);
                 });
+  std::erase_if(deferred_staff_events_, [&](const DeferredStaffEvent& ev) {
+    return is_elsewhere(ev.restaurant_id);
+  });
 }
 
 void TurnOrchestrator::queue_mayor_award(const MayorAwardEvent& ev) {

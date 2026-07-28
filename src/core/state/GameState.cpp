@@ -654,12 +654,11 @@ void GameState::on_city_entered(core::CityId city_id, const Player& player) {
     p->mark_city_visited(city_id);
   }
 
-  // Travelling leaves the calls the restaurants back home queued for you
-  // behind. Re-entering the city view from a screen within the same city is
-  // not travel and keeps them.
+  // Travelling leaves the calls and staff dialogs the restaurants back home
+  // queued for you behind.
   if (status_queue_city_ && *status_queue_city_ != city_id) {
     status_hub_.clear_queue();
-    turn_.drop_manager_alerts_outside(city_id);
+    turn_.drop_city_local_events_outside(city_id);
   }
   status_queue_city_ = city_id;
 
