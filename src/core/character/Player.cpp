@@ -86,17 +86,17 @@ void Player::end_of_day(GameState& game_state) {
 
   // AI daily evaluation
   if (!is_human_controlled()) {
-    // Cities with no human present are frozen, so nothing there is processed.
-    auto in_active_city = [&game_state](const Restaurant* rest) {
-      return rest && game_state.has_human_in_city(rest->property().city().id());
+    auto scope = game_state.simulated_cities_for(id_);
+    auto in_scope = [&scope](const Restaurant* rest) {
+      return rest && std::ranges::find(scope, rest->property().city().id()) !=
+                         scope.end();
     };
 
     // Closure check: evaluate each restaurant until one is closed.
     auto restaurants = game_state.restaurants_for(id_);
     bool closed_one = false;
     for (auto* rest : restaurants) {
-      if (in_active_city(rest) && rest->wants_open() &&
-          !rest->is_force_closed()) {
+      if (in_scope(rest) && rest->wants_open() && !rest->is_force_closed()) {
         if (ai::check_bankruptcy(*rest, *this, game_state)) {
           closed_one = true;
           break;
@@ -112,8 +112,8 @@ void Player::end_of_day(GameState& game_state) {
 
     // AI quality growth chance
     for (auto* rest : restaurants) {
-      if (in_active_city(rest) && rest->wants_open() &&
-          !rest->is_force_closed() && rest->economy().quality_rating() < 100 &&
+      if (in_scope(rest) && rest->wants_open() && !rest->is_force_closed() &&
+          rest->economy().quality_rating() < 100 &&
           engine::random::rand_percentage_chance(character_.courage())) {
         rest->economy().quality_rating(rest->economy().quality_rating() + 1);
       }

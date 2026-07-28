@@ -6,14 +6,12 @@
 
 #pragma once
 
-#include <optional>
 #include "core/city/CityViewCommon.h"
 #include "core/common/Ids.h"
 #include "engine/geom/Spaces.h"
 
 // Per-player city view state, persisted across screen transitions.
 struct CityViewMapState {
-  std::optional<core::CityId> city_id;
   WorldPoint scroll = WorldPoint{-1, -1};
   ZoomLevel zoom = ZoomLevel::FAR;
   CityViewTabType active_tab = CityViewTabType::MAP;

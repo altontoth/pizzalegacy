@@ -237,7 +237,7 @@ void GameState::active_city(core::CityId city_id) {
     city_initialised_[city_id.value] = true;
     initialise_city_for_ai(city);
   }
-  city_view_view_state_[active_player_.value].city_id = city_id;
+  player_city_[active_player_.value] = city_id;
   turn_.run_city_start_of_day(city);
 }
 
@@ -908,8 +908,10 @@ void GameState::finalize_initialization(GameContext& context) {
 
   // All players start in the same city.
   for (int i = 0; i < NUMBER_OF_PLAYERS; ++i) {
-    city_view_view_state_[i].city_id = cfg.city_id;
     if (players_[i]) {
+      if (players_[i]->is_human_controlled()) {
+        player_city_[i] = cfg.city_id;
+      }
       players_[i]->mark_city_visited(cfg.city_id);
     }
   }
@@ -1372,14 +1374,30 @@ int GameState::human_player_count() const {
   return h_count;
 }
 
-bool GameState::has_human_in_city(core::CityId city_id) const {
+std::vector<core::CityId> GameState::simulated_cities() const {
+  std::vector<core::CityId> cities;
   for (int i = 0; i < NUMBER_OF_PLAYERS; ++i) {
-    if (players_[i] && players_[i]->is_human_controlled() &&
-        city_view_view_state_[i].city_id == city_id) {
-      return true;
+    if (!players_[i] || !players_[i]->is_human_controlled() ||
+        !player_city_[i]) {
+      continue;
+    }
+    if (std::ranges::find(cities, *player_city_[i]) == cities.end()) {
+      cities.push_back(*player_city_[i]);
     }
   }
-  return false;
+  return cities;
+}
+
+std::vector<core::CityId>
+GameState::simulated_cities_for(core::PlayerId pid) const {
+  const auto& p = players_[pid.value];
+  if (p && !p->is_human_controlled()) {
+    return simulated_cities();
+  }
+  if (auto city = player_city_[pid.value]) {
+    return {*city};
+  }
+  return {};
 }
 
 bool GameState::bank_transfer(int account_number, Money amount,

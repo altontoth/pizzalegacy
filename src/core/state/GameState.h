@@ -281,7 +281,12 @@ public:
   GameMode game_mode() const;
   void game_mode(GameMode);
   int human_player_count() const;
-  bool has_human_in_city(core::CityId city_id) const;
+  // Cities the simulation runs in today: the ones a human player is in.
+  // Cities without a human stay dormant.
+  std::vector<core::CityId> simulated_cities() const;
+  // The subset a player's restaurants are simulated in: for a human the city
+  // they are currently in, for the AI it's all the ones a human is in.
+  std::vector<core::CityId> simulated_cities_for(core::PlayerId pid) const;
 
   // Target CV for mission mode; nullopt outside mission mode. Shared by all
   // players (the original copies the same target into every player's arrays).
@@ -354,7 +359,11 @@ private:
 
   GameTime time_;
   core::PlayerId active_player_{0};
+  // The city the simulation is currently working on, follows the active
+  // human player.
   core::CityId active_city_{-1};
+  // Where each human player is.
+  std::array<std::optional<core::CityId>, NUMBER_OF_PLAYERS> player_city_;
   // City whose restaurants the queued status notifications belong to.
   std::optional<core::CityId> status_queue_city_;
   ViewPoint city_position_{ViewPoint{-1, -1}};

@@ -176,7 +176,7 @@ private:
   void snapshot_weekly_profits(
       const std::vector<core::RestaurantId>& restaurant_ids);
   bool is_restaurant_in_processing_scope(const Restaurant& rest,
-                                         bool owner_is_human) const;
+                                         core::PlayerId owner) const;
   void next_player();
   // An event is deliverable when its restaurant belongs to the active player
   bool can_deliver_to_active_player(core::RestaurantId rid) const;

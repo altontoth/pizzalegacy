@@ -165,7 +165,6 @@ void TurnOrchestrator::end_of_turn() {
 
   // FinishTurn receives the full restaurant list for the weekly reports,
   // but only in-scope restaurants are actually processed.
-  const bool is_human = current_player->is_human_controlled();
   std::vector<core::RestaurantId> all_ids;
   std::vector<core::RestaurantId> in_scope_ids;
   for (auto* rest : gs_->restaurants_for(current_player->id())) {
@@ -173,7 +172,7 @@ void TurnOrchestrator::end_of_turn() {
       continue;
     }
     all_ids.push_back(rest->id());
-    if (is_restaurant_in_processing_scope(*rest, is_human)) {
+    if (is_restaurant_in_processing_scope(*rest, current_player->id())) {
       in_scope_ids.push_back(rest->id());
     }
   }
@@ -576,22 +575,18 @@ void TurnOrchestrator::fire_due_events() {
   }
 }
 
-// For human players we only process their currently active city, other cities
-// are frozen. AI players have no active city: their restaurants are
-// processed in every city where a human player is present.
 bool TurnOrchestrator::is_restaurant_in_processing_scope(
-    const Restaurant& rest, bool owner_is_human) const {
-  auto city_id = rest.property().city().id();
-  return owner_is_human ? city_id == gs_->active_city()->id()
-                        : gs_->has_human_in_city(city_id);
+    const Restaurant& rest, core::PlayerId owner) const {
+  auto cities = gs_->simulated_cities_for(owner);
+  return std::ranges::find(cities, rest.property().city().id()) != cities.end();
 }
 
 void TurnOrchestrator::snapshot_weekly_profits(
     const std::vector<core::RestaurantId>& restaurant_ids) {
-  const bool is_human = gs_->active_player()->is_human_controlled();
+  const auto owner = gs_->active_player()->id();
   for (auto rid : restaurant_ids) {
     auto* rest = gs_->restaurant(rid);
-    if (!rest || !is_restaurant_in_processing_scope(*rest, is_human)) {
+    if (!rest || !is_restaurant_in_processing_scope(*rest, owner)) {
       continue;
     }
     Money weekly_total;
@@ -634,8 +629,7 @@ TurnOrchestrator::finish_end_of_turn(const turn::FinishTurn& step) {
 
   // AI players don't have an active city
   if (gs_->active_player()->is_human_controlled()) {
-    if (auto next_city =
-            gs_->city_view_view_state_[gs_->active_player_.value].city_id) {
+    if (auto next_city = gs_->player_city_[gs_->active_player_.value]) {
       if (*next_city != gs_->active_city_) {
         gs_->active_city_ = *next_city;
         gs_->ui().push<CityViewState>(*next_city);
@@ -907,7 +901,8 @@ TurnOrchestrator::execute_pipeline_step(const turn::Step& step) {
                 begin_restaurant_day(gs_->active_city_, gs_->active_player_);
             for (auto* restaurant : gs_->restaurants_for(gs_->active_player_)) {
               if (run_day && restaurant &&
-                  is_restaurant_in_processing_scope(*restaurant, is_human)) {
+                  is_restaurant_in_processing_scope(*restaurant,
+                                                    gs_->active_player_)) {
                 restaurant->start_of_day(*gs_);
               }
             }
@@ -1081,22 +1076,11 @@ void TurnOrchestrator::deliver_depot_stock(core::PlayerId player_id) {
 }
 
 void TurnOrchestrator::tick_active_cities() {
-  // Tick each city that has at least one human player; cities without a
-  // human stay dormant (matching the original). AI players have no location
-  // of their own, their city_view_view_state_ entry is just the game's
-  // starting city. Each city ticks exactly once regardless of how many
-  // players share it. We use city_view_view_state_ rather than active_city_
-  // because it has already been switched to the next player's starting city.
-  std::array<bool, NUMBER_OF_CITIES> cities_to_tick{};
-  for (int i = 0; i < NUMBER_OF_PLAYERS; ++i) {
-    if (gs_->players_[i] && gs_->players_[i]->is_human_controlled() &&
-        gs_->city_view_view_state_[i].city_id) {
-      cities_to_tick[gs_->city_view_view_state_[i].city_id->value] = true;
-    }
-  }
-  for (int i = 0; i < NUMBER_OF_CITIES; ++i) {
-    if (cities_to_tick[i] && gs_->cities_[i]) {
-      gs_->cities_[i]->end_of_day(gs_->difficulty_level_);
+  // Cities without a human stay dormant, matching the original. Each city
+  // ticks exactly once regardless of how many players share it.
+  for (auto city_id : gs_->simulated_cities()) {
+    if (gs_->cities_[city_id.value]) {
+      gs_->cities_[city_id.value]->end_of_day(gs_->difficulty_level_);
     }
   }
 }
