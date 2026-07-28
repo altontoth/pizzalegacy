@@ -92,6 +92,11 @@ void configure_default_bindings(InputManager& in) {
   in.begin_section("Debug tooling, no assignment by default");
   in.declare_unbound(Action::ToggleConsole);
   in.declare_unbound(Action::ToggleDebug);
+  in.declare_unbound(Action::TimeScale1);
+  in.declare_unbound(Action::TimeScale2);
+  in.declare_unbound(Action::TimeScale3);
+  in.declare_unbound(Action::TimeScale5);
+  in.declare_unbound(Action::TimeScale10);
   in.declare_unbound(Action::LoadCanonicalRecipe);
   in.declare_unbound(Action::CycleBackward);
   in.declare_unbound(Action::CycleForward);

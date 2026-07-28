@@ -18,6 +18,7 @@ public:
     std::function<void()> request_exit;
     std::function<void()> request_screenshot;
     std::function<void()> toggle_fullscreen;
+    std::function<void(int)> set_time_scale;
   };
 
   GlobalActionHandler(input::InputManager& in, Callbacks cb);

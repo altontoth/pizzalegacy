@@ -297,6 +297,11 @@ void Game::run() {
               Logger::warn("Failed to set fullscreen {}: {}",
                            loop_state.fullscreen, SDL_GetError());
             }
+          },
+      .set_time_scale =
+          [&loop_state](int scale) {
+            loop_state.game_state.time_scale(scale);
+            Logger::info("Time scale set to {}x", scale);
           }};
   global_actions_ =
       std::make_unique<GlobalActionHandler>(*input_manager_, std::move(cb));
@@ -370,10 +375,11 @@ void Game::run() {
     handle_events(loop_state);
 
     // Logic runs independent of FPS
-    tick_accumulator_ms += context.clock.dt_ms;
+    const int time_scale = state.time_scale();
+    tick_accumulator_ms += context.clock.dt_ms * time_scale;
     int ticks_this_frame = 0;
     while (tick_accumulator_ms >= TICK_MS &&
-           ticks_this_frame < MAX_TICKS_PER_FRAME) {
+           ticks_this_frame < MAX_TICKS_PER_FRAME * time_scale) {
       tick_accumulator_ms -= TICK_MS;
       ++ticks_this_frame;
 

@@ -229,6 +229,10 @@ public:
   // is reached.
   void advance_time_blocks(int n);
 
+  // Debug fast-forward: how many simulation ticks run per unit of wall time
+  int time_scale() const { return time_scale_; }
+  void time_scale(int scale) { time_scale_ = scale; }
+
   int difficulty_level() const { return difficulty_level_; };
   void difficulty_level(int d) { difficulty_level_ = d; }
 
@@ -375,6 +379,7 @@ private:
   std::optional<core::mission::MissionTarget> mission_target_;
   std::optional<init::Config> initializer_;
   int difficulty_level_{1};
+  int time_scale_{1};
   bool quit_{false};
   core::RestaurantId next_restaurant_id_{0};
   std::vector<FurnitureBatch> furniture_placement_;

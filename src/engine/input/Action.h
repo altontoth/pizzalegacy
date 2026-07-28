@@ -17,6 +17,13 @@ enum class Action {
   TakeScreenshot,
   Exit,
 
+  // Debug fast-forward
+  TimeScale1,
+  TimeScale2,
+  TimeScale3,
+  TimeScale5,
+  TimeScale10,
+
   // List navigation
   PageUp,
   PageDown,

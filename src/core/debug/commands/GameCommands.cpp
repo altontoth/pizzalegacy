@@ -518,6 +518,44 @@ static CommandDef make_game_competition() {
       .add_subcommand(make_game_competition_monthly());
 }
 
+static CommandDef make_game_timescale() {
+  return CommandDef{
+      .name = "timescale",
+      .description = "Show or set the fast-forward multiplier",
+      .help_text = R"(Usage: game timescale [n]
+
+Runs simulation and animations at n times normal speed. Without an
+argument, shows the current multiplier.
+
+Example:
+  game timescale 5
+)",
+      .args =
+          {
+              ArgSpec{
+                  .name = "scale",
+                  .type = ArgType::Int,
+                  .optional = true,
+                  .default_provider = DefaultProvider::None,
+                  .description = "Speed multiplier (1-10)",
+              },
+          },
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        if (ctx.args.empty()) {
+          return CommandResult::success().add_message(
+              compat::format("Time scale is {}x", ctx.state.time_scale()));
+        }
+        const int scale = static_cast<int>(ctx.int_arg(0));
+        if (scale < 1 || scale > 10) {
+          return CommandResult::error("Scale must be in 1-10");
+        }
+        ctx.state.time_scale(scale);
+        return CommandResult::success().add_message(
+            compat::format("Time scale set to {}x", scale));
+      },
+  };
+}
+
 CommandDef make_game_commands() {
   return CommandDef{
       .name = "game",
@@ -532,7 +570,8 @@ CommandDef make_game_commands() {
       .add_subcommand(make_game_competition())
       .add_subcommand(make_game_end())
       .add_subcommand(make_game_levent())
-      .add_subcommand(make_game_mission());
+      .add_subcommand(make_game_mission())
+      .add_subcommand(make_game_timescale());
 }
 
 } // namespace debug::commands
