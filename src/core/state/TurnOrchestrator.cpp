@@ -717,6 +717,10 @@ void TurnOrchestrator::build_turn_pipeline(
   turn_pipeline_.clear();
   pipeline_activity_ = {};
 
+  const bool autosave_due =
+      wrapped && is_autosave_due(gs_->options().autosave_frequency,
+                                 is_end_of_week, is_end_of_month);
+
   if (wrapped) {
     turn_pipeline_.push_back(turn::TickCities{});
     if (is_end_of_week) {
@@ -734,8 +738,6 @@ void TurnOrchestrator::build_turn_pipeline(
     if (is_end_of_month) {
       turn_pipeline_.push_back(turn::MonthlyCompetition{});
     }
-    const bool autosave_due = is_autosave_due(gs_->options().autosave_frequency,
-                                              is_end_of_week, is_end_of_month);
     if (autosave_due) {
       // Captioned ahead of the fade so the label reaches a rendered frame
       // before the save stalls the loop.
@@ -746,9 +748,6 @@ void TurnOrchestrator::build_turn_pipeline(
     // reveals whatever view is still on top.
     turn_pipeline_.push_back(turn::FadeTransition{});
     turn_pipeline_.push_back(turn::AdvanceDate{start_time});
-    if (autosave_due) {
-      turn_pipeline_.push_back(turn::Autosave{});
-    }
   }
   else if (new_player_is_human) {
     turn_pipeline_.push_back(turn::SetTimeOfDay{start_time});
@@ -757,6 +756,11 @@ void TurnOrchestrator::build_turn_pipeline(
   turn_pipeline_.push_back(turn::PreparePlayerTurn{});
   turn_pipeline_.push_back(turn::ResumeTime{});
   turn_pipeline_.push_back(turn::CityStartOfDay{});
+  // Delay autosave until we're in a stable state where we expect a game to be
+  // saved.
+  if (autosave_due) {
+    turn_pipeline_.push_back(turn::Autosave{});
+  }
   turn_pipeline_.push_back(turn::PlayerTurnCard{});
 
   if (prev_is_human) {
@@ -1146,29 +1150,6 @@ void TurnOrchestrator::end_of_day() {
 
   tick_active_cities();
 
-  // Update AI menu slot history for pizza charts
-  for (auto& player : gs_->players_) {
-    if (player && !player->is_human_controlled()) {
-      int rest_count =
-          static_cast<int>(gs_->restaurants_for(player->id()).size());
-      ai::update_ai_menu(*player, rest_count);
-    }
-  }
-
-  // Rebuild pizza charts and control map for active city
-  if (auto* city = gs_->active_city()) {
-    city->pizza_charts().build(*gs_);
-    const auto& chart_entries = city->pizza_charts().entries();
-    if (!chart_entries.empty()) {
-      const auto& top = chart_entries[0];
-      gs_->message_manager_.schedule_message(
-          core::events::LeventId::PizzaReachedNo1InCharts, top.player_id,
-          gs_->time_.current_date());
-    }
-    city->control_map().build(*gs_, *city);
-    gs_->milestones().check_market_share_milestones(*city);
-  }
-
   gs_->milestones().check_world_domination();
 
   process_depot_theft();
@@ -1193,12 +1174,34 @@ bool TurnOrchestrator::begin_restaurant_day(core::CityId city,
   return true;
 }
 
+void TurnOrchestrator::skip_city_start_of_day(core::CityId city) {
+  city_start_of_day_ran_[city.value] = true;
+}
+
 void TurnOrchestrator::run_city_start_of_day(City& city) {
   int idx = city.id().value;
   if (city_start_of_day_ran_[idx]) {
     return;
   }
   city_start_of_day_ran_[idx] = true;
+
+  // Update AI menus for pizza charts
+  for (auto& player : gs_->players_) {
+    if (!player || player->is_human_controlled()) {
+      continue;
+    }
+    auto here = gs_->restaurants_in_city(player->id(), city.id());
+    ai::update_ai_menu(*player, static_cast<int>(here.size()));
+  }
+  city.pizza_charts().build(*gs_);
+  const auto& chart_entries = city.pizza_charts().entries();
+  if (!chart_entries.empty()) {
+    gs_->message_manager_.schedule_message(
+        core::events::LeventId::PizzaReachedNo1InCharts,
+        chart_entries[0].player_id, gs_->time_.current_date());
+  }
+  city.control_map().build(*gs_, city);
+  gs_->milestones().check_market_share_milestones(city);
 
   city.newspaper_event_system().daily_update(*gs_, city);
   city.mayor_office().start_of_day(gs_->time_.current_date(),

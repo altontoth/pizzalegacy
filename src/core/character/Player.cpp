@@ -124,6 +124,13 @@ void Player::end_of_day(GameState& game_state) {
   }
 
   // From here on only human players
+
+  // Open a fresh day in every recipe's sales history before this day's
+  // restaurants settle into it.
+  for (auto* recipe : recipes_.all_mut()) {
+    recipe->rotate_daily_sales();
+  }
+
   const auto active_city_id = game_state.active_city_id();
   const auto& current_date = game_state.time().current_date();
 

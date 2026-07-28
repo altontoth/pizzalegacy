@@ -130,6 +130,8 @@ json recipe_to_json(const core::food::Recipe& recipe) {
   // Save the pizza
   j["pizza"] = pizza_to_json(recipe.pizza());
 
+  j["daily_sales"] = recipe.daily_sales();
+
   return j;
 }
 
@@ -143,14 +145,20 @@ json_to_recipe(const json& j,
   std::string display_name = j["display_name"].get<std::string>();
   Pizza pizza = json_to_pizza(j["pizza"], taste_profiles);
 
-  // Check if this is a canonical recipe
-  if (!j["canonical_id"].is_null()) {
-    CanonicalPizza canonical_id =
-        static_cast<CanonicalPizza>(j["canonical_id"].get<int>());
-    return Recipe::canonical(id, canonical_id, std::move(display_name),
-                             std::move(pizza));
+  auto recipe = [&] {
+    if (!j["canonical_id"].is_null()) {
+      auto canonical_id =
+          static_cast<CanonicalPizza>(j["canonical_id"].get<int>());
+      return Recipe::canonical(id, canonical_id, std::move(display_name),
+                               std::move(pizza));
+    }
+    return Recipe::user(id, std::move(display_name), std::move(pizza));
+  }();
+
+  if (j.contains("daily_sales")) {
+    recipe.daily_sales(j["daily_sales"].get<Recipe::DailySales>());
   }
-  return Recipe::user(id, std::move(display_name), std::move(pizza));
+  return recipe;
 }
 
 } // namespace save

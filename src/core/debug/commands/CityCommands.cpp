@@ -6,12 +6,14 @@
 
 #include "core/debug/commands/CityCommands.h"
 
-#include <unordered_map>
+#include <algorithm>
+#include <string>
 #include "core/character/AiMenuSlot.h"
 #include "core/character/Player.h"
 #include "core/city/City.h"
 #include "core/city/PizzaCharts.h"
-#include "core/restaurant/Restaurant.h"
+#include "core/food/PlayerRecipes.h"
+#include "core/food/Recipe.h"
 #include "core/state/GameState.h"
 #include "core/util/Constants.h"
 #include "engine/FormatCompat.h"
@@ -132,39 +134,21 @@ Examples:
               rest_count));
 
           if (player->is_human_controlled()) {
-            // Show human pizza sales aggregated over 7 days
-            std::unordered_map<core::RecipeId, int, core::RecipeId::Hasher>
-                sales;
-            for (auto* restaurant : ctx.state.restaurants_for(player->id())) {
-              if (!restaurant) {
-                continue;
-              }
-              for (const auto& day : restaurant->stats().last_n_days(7)) {
-                for (const auto& [rid, sd] : day.pizza_sales) {
-                  sales[rid] += sd.count_sold;
-                }
-              }
+            auto recipes = player->recipes().all();
+            std::ranges::sort(recipes, [](const auto* a, const auto* b) {
+              return a->chart_score() > b->chart_score();
+            });
+            if (recipes.empty()) {
+              result.add_message("  (no recipes)");
             }
-
-            if (sales.empty()) {
-              result.add_message("  (no sales in last 7 days)");
-            }
-            else {
-              // Sort by score descending
-              std::vector<std::pair<core::RecipeId, int>> sorted(sales.begin(),
-                                                                 sales.end());
-              std::sort(sorted.begin(), sorted.end(),
-                        [](const auto& a, const auto& b) {
-                          return a.second > b.second;
-                        });
-              for (const auto& [rid, total] : sorted) {
-                const auto* recipe = player->recipes().find(rid);
-                std::string name =
-                    recipe ? std::string(recipe->display_name())
-                           : compat::format("(recipe {})", rid.value);
-                result.add_message(
-                    compat::format("  Score {:>5}  {}", total, name));
+            for (const auto* recipe : recipes) {
+              std::string days;
+              for (int sold : recipe->daily_sales()) {
+                days += compat::format("{:>5}", sold);
               }
+              result.add_message(compat::format("  Score {:>5} [{} ]  {}",
+                                                recipe->chart_score(), days,
+                                                recipe->display_name()));
             }
           }
           else {

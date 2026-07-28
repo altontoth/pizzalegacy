@@ -1436,6 +1436,9 @@ void Restaurant::eod_batch_order_fulfillment(class GameState& game_state) {
     stats_.today.ingredient_costs = stats_.today.ingredient_costs + line_cost;
     stats_.today.record_sales(line.recipe_id, line.orders, line.price,
                               cost_each);
+    if (auto* sold = player->recipes().find_mut(line.recipe_id)) {
+      sold->record_daily_sales(line.orders);
+    }
   }
 
   // Bulk consumption, clamped so stock never goes negative.

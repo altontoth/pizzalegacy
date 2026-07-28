@@ -38,6 +38,7 @@ std::unique_ptr<core::food::Topping> make_topping(uint8_t ingredient_id,
 
 // Field offsets in a .GAM save's recipe node. User creations draw their UID
 // from a counter starting at 50, so anything below CANON_COUNT is canonical.
+constexpr std::size_t gam_daily_sales = 0x08; // 7 u16, oldest first
 constexpr std::size_t gam_uid = 0x17;
 constexpr std::size_t gam_name = 0x18;
 constexpr std::size_t gam_imitation = 0x41;
@@ -221,6 +222,17 @@ std::unique_ptr<core::food::Pizza> PizzaFactory::create_competition_pizza(
 
 int PizzaFactory::gam_node_recipe_uid(std::span<const uint8_t> node) {
   return node.size() > gam_uid ? node[gam_uid] : core::food::CANON_COUNT;
+}
+
+core::food::Recipe::DailySales
+PizzaFactory::gam_node_daily_sales(std::span<const uint8_t> node) {
+  core::food::Recipe::DailySales sales{};
+  fileutils::ByteReader r{node};
+  r.seek(gam_daily_sales);
+  for (auto& day : sales) {
+    day = r.u16le();
+  }
+  return sales;
 }
 
 std::unique_ptr<core::food::Pizza> PizzaFactory::create_pizza_from_gam_node(

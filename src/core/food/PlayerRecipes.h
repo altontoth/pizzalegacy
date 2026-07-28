@@ -54,7 +54,10 @@ struct PlayerRecipes {
     if (it == user.end()) {
       return id;
     }
+    // Redesigning a pizza keeps it on the charts at its current place.
+    auto sales = it->daily_sales();
     *it = Recipe::user(id, std::move(name), std::move(designed));
+    it->daily_sales(sales);
     return id;
   }
 
@@ -62,12 +65,43 @@ struct PlayerRecipes {
     // Check if this pizza was created before, and if so, re-use its id:
     auto& current = canon[static_cast<int>(cp)];
     const core::RecipeId id = current.recipe ? current.recipe->id() : next_id++;
+    Recipe::DailySales sales =
+        current.recipe ? current.recipe->daily_sales() : Recipe::DailySales{};
     // Get the name from the canonical pizza list:
     auto name = std::string(canonical_pizza_names[to_index(cp)]);
     // Store it in the right slot
     canon[static_cast<int>(cp)] = CanonicalSlot{
         Recipe::canonical(id, cp, std::move(name), std::move(designed))};
+    canon[static_cast<int>(cp)].recipe->daily_sales(sales);
     return id;
+  }
+
+  std::vector<const Recipe*> all() const {
+    std::vector<const Recipe*> out;
+    out.reserve(recipe_count());
+    for (const auto& slot : canon) {
+      if (slot.created()) {
+        out.push_back(&slot.recipe.value());
+      }
+    }
+    for (const auto& recipe : user) {
+      out.push_back(&recipe);
+    }
+    return out;
+  }
+
+  std::vector<Recipe*> all_mut() {
+    std::vector<Recipe*> out;
+    out.reserve(recipe_count());
+    for (auto& slot : canon) {
+      if (slot.created()) {
+        out.push_back(&slot.recipe.value());
+      }
+    }
+    for (auto& recipe : user) {
+      out.push_back(&recipe);
+    }
+    return out;
   }
 
   const Recipe* find(core::RecipeId id) const {

@@ -153,9 +153,7 @@ void init_ai_menu(Player& player) {
   // Pre-warm the history buffer (4 passes, matching original)
   for (int w = 0; w < 4; ++w) {
     for (auto& slot : slots) {
-      if (slot.recipe_id != 0) {
-        slot.update(1); // Initial restaurant count = 1
-      }
+      slot.update(1); // Initial restaurant count = 1
     }
   }
 
@@ -167,9 +165,7 @@ void init_ai_menu(Player& player) {
 
 void update_ai_menu(Player& player, int restaurant_count) {
   for (auto& slot : player.ai_menu_slots()) {
-    if (slot.recipe_id != 0) {
-      slot.update(restaurant_count);
-    }
+    slot.update(restaurant_count);
   }
 }
 

@@ -13,20 +13,24 @@
 class GameState;
 
 struct PizzaChartEntry {
+  // A pizza whose owner no longer has it, which therefore matches nothing
+  // (can happen with legacy saves).
+  static constexpr int unresolved_ref = -1;
+
   uint8_t previous_position{0}; // 0 = new entry ("-")
   core::PlayerId player_id{0};
+  // Identifies the pizza: a recipe id for a human, a menu slot id for an AI.
+  int pizza_ref{unresolved_ref};
   std::string pizza_name;
   std::string player_name;
   int score{0};
 };
 
-// Global daily top-10 pizza ranking across all players and cities, matching the
-// original's single ranking table. Rebuilt from human restaurant sales and AI
-// menu slot scores. Each City keeps its own instance so the previous-position
-// arrows diff against that city's last rebuild, but the ranked contents are
-// identical everywhere.
 class PizzaCharts {
 public:
+  // The chart is a top {places}:
+  static constexpr int places = 10;
+
   void build(GameState& game_state);
 
   // The 100 canonical AI pizza names (MARKT.E lines 51-150), indexed 0-based.
@@ -34,17 +38,10 @@ public:
   [[nodiscard]] const std::vector<PizzaChartEntry>& entries() const {
     return entries_;
   }
-  [[nodiscard]] const std::vector<PizzaChartEntry>& previous() const {
-    return previous_;
-  }
 
   // For save/load only:
   void set_entries(std::vector<PizzaChartEntry> e) { entries_ = std::move(e); }
-  void set_previous(std::vector<PizzaChartEntry> p) {
-    previous_ = std::move(p);
-  }
 
 private:
   std::vector<PizzaChartEntry> entries_;
-  std::vector<PizzaChartEntry> previous_;
 };

@@ -734,7 +734,7 @@ void MarketResearch::render_pizza_charts(const RenderContext& ctx) {
 
   const int x = first_row.x;
   int y = first_row.y;
-  for (int i = 0; i < 10; ++i) {
+  for (int i = 0; i < PizzaCharts::places; ++i) {
     ViewPoint row_nr_pos{x, y};
     ViewPoint last_week_pos{x + 20, y};
     ViewPoint pizza_name_pos{x + 26, y};

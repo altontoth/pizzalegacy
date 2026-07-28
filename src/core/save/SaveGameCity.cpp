@@ -200,6 +200,7 @@ namespace {
 json pizza_chart_entry_to_json(const PizzaChartEntry& entry) {
   return {{"previous_position", entry.previous_position},
           {"player_id", entry.player_id.value},
+          {"pizza_ref", entry.pizza_ref},
           {"pizza_name", entry.pizza_name},
           {"player_name", entry.player_name},
           {"score", entry.score}};
@@ -209,6 +210,7 @@ PizzaChartEntry json_to_pizza_chart_entry(const json& j) {
   PizzaChartEntry e;
   e.previous_position = j.value("previous_position", uint8_t{0});
   e.player_id = core::PlayerId{j.value("player_id", 0)};
+  e.pizza_ref = j.value("pizza_ref", PizzaChartEntry::unresolved_ref);
   e.pizza_name = j.value("pizza_name", std::string{});
   e.player_name = j.value("player_name", std::string{});
   e.score = j.value("score", 0);
@@ -224,12 +226,6 @@ json pizza_charts_to_json(const PizzaCharts& charts) {
     entries_array.push_back(pizza_chart_entry_to_json(entry));
   }
   j["entries"] = entries_array;
-
-  json previous_array = json::array();
-  for (const auto& entry : charts.previous()) {
-    previous_array.push_back(pizza_chart_entry_to_json(entry));
-  }
-  j["previous"] = previous_array;
   return j;
 }
 
@@ -240,13 +236,6 @@ void json_to_pizza_charts(const json& j, PizzaCharts& charts) {
       entries.push_back(json_to_pizza_chart_entry(e));
     }
     charts.set_entries(std::move(entries));
-  }
-  if (j.contains("previous")) {
-    std::vector<PizzaChartEntry> previous;
-    for (const auto& e : j["previous"]) {
-      previous.push_back(json_to_pizza_chart_entry(e));
-    }
-    charts.set_previous(std::move(previous));
   }
 }
 

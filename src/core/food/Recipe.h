@@ -5,7 +5,10 @@
  */
 
 #pragma once
+#include <algorithm>
+#include <array>
 #include <cassert>
+#include <numeric>
 #include <string>
 #include "core/common/Ids.h"
 #include "core/food/CanonicalPizza.h"
@@ -15,6 +18,9 @@
 #include <string_view>
 
 namespace core::food {
+
+// How many days of history do we look at for the pizza charts
+inline constexpr int chart_history_days = 7;
 
 class Recipe {
 public:
@@ -53,6 +59,23 @@ public:
 
   void recreate(Pizza new_pizza) { pizza_ = std::move(new_pizza); }
 
+  // Pizzas sold per day across for every restaurant selling it (the sum is what
+  // is used for the pizza chart).
+  using DailySales = std::array<int, chart_history_days>;
+  const DailySales& daily_sales() const noexcept { return daily_sales_; }
+  void daily_sales(const DailySales& sales) noexcept { daily_sales_ = sales; }
+
+  int chart_score() const noexcept {
+    return std::accumulate(daily_sales_.begin(), daily_sales_.end(), 0);
+  }
+
+  void record_daily_sales(int count) noexcept { daily_sales_.back() += count; }
+
+  void rotate_daily_sales() noexcept {
+    std::ranges::rotate(daily_sales_, daily_sales_.begin() + 1);
+    daily_sales_.back() = 0;
+  }
+
   // Identity-based equality
   friend bool operator==(const Recipe& a, const Recipe& b) noexcept {
     return a.id_ == b.id_;
@@ -72,6 +95,7 @@ private:
   std::optional<CanonicalPizza> canonical_id_;
   std::string display_name_;
   Pizza pizza_;
+  DailySales daily_sales_{};
 };
 
 } // namespace core::food

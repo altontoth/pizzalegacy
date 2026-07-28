@@ -34,6 +34,7 @@
 #include "core/save/SaveGameRestaurant.h"
 #include "core/state/GameOptions.h"
 #include "core/state/GameState.h"
+#include "core/state/TurnOrchestrator.h"
 #include "core/time/GameTime.h"
 #include "core/util/GameContext.h"
 #include "engine/Endian.h"
@@ -494,6 +495,8 @@ json SaveGameManager::state_to_json(const GameState& state,
   // Save active IDs
   j["active_player"] = state.active_player()->id().value;
   j["active_city"] = state.active_city_id().value;
+  j["city_start_of_day_ran"] = state.turn().city_start_of_day_flags();
+  j["restaurant_day_ran"] = state.turn().restaurant_day_flags();
 
   if (state.active_restaurant()) {
     j["active_restaurant"] = state.active_restaurant()->id().value;
@@ -741,13 +744,6 @@ void SaveGameManager::json_to_state(const json& j, GameState& state,
     }
   }
 
-  // Set active city after cities are loaded
-  if (j.contains("active_city")) {
-    core::CityId cid{j["active_city"].get<int>()};
-    state.active_city(cid);
-    Logger::info("Set active city to {}", cid.value);
-  }
-
   // Load restaurants (after cities so properties are in correct state)
   if (j.contains("restaurants")) {
     for (const auto& rest_json : j["restaurants"]) {
@@ -777,6 +773,22 @@ void SaveGameManager::json_to_state(const json& j, GameState& state,
       // Add to game state
       state.add_restaurant(std::move(restaurant));
     }
+  }
+
+  // Making a city active runs its start of day unless it already ran, so we
+  // have to set these flags first.
+  if (j.contains("city_start_of_day_ran")) {
+    state.turn().city_start_of_day_flags(
+        j["city_start_of_day_ran"].get<TurnOrchestrator::CityDayFlags>());
+  }
+  if (j.contains("restaurant_day_ran")) {
+    state.turn().restaurant_day_flags(
+        j["restaurant_day_ran"].get<TurnOrchestrator::RestaurantDayFlags>());
+  }
+  if (j.contains("active_city")) {
+    core::CityId cid{j["active_city"].get<int>()};
+    state.active_city(cid);
+    Logger::info("Set active city to {}", cid.value);
   }
 
   // Set active restaurant after restaurants are loaded

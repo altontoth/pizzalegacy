@@ -13,6 +13,7 @@
 #include "core/food/CanonicalPizza.h"
 #include "core/food/CustomerTasteProfiles.h"
 #include "core/food/Pizza.h"
+#include "core/food/Recipe.h"
 #include "engine/Size.h"
 
 using BobSizeFn = std::function<Size(int ingredient_id, int state)>;
@@ -52,7 +53,11 @@ public:
       std::span<const uint8_t> node, const BobSizeFn& get_size,
       const core::food::CustomerTasteProfiles& taste_profiles);
 
-  // The node's recipe UID, which the save's menu entries and pizza charts
-  // reference. Below CANON_COUNT it names that canonical slot.
+  // The recipe UID, used for save games and pizza charts. If it's less than
+  // CANON_COUNT it's a canonical pizza.
   static int gam_node_recipe_uid(std::span<const uint8_t> node);
+
+  // The recipe's rolling daily-sold history, which scores it on the charts.
+  static core::food::Recipe::DailySales
+  gam_node_daily_sales(std::span<const uint8_t> node);
 };

@@ -54,9 +54,29 @@ public:
   // calendar day; also called by GameState when a city becomes active.
   void run_city_start_of_day(City& city);
 
+  // Mark a city's start-of-day as already done for today, so entering it does
+  // not run it.
+  void skip_city_start_of_day(core::CityId city);
+
   // Returns true if it ran (first time of the day), false for any subsequent
   // invocations.
   bool begin_restaurant_day(core::CityId city, core::PlayerId player);
+
+  using CityDayFlags = std::array<bool, NUMBER_OF_CITIES>;
+  using RestaurantDayFlags =
+      std::array<std::array<bool, NUMBER_OF_PLAYERS>, NUMBER_OF_CITIES>;
+  [[nodiscard]] const CityDayFlags& city_start_of_day_flags() const {
+    return city_start_of_day_ran_;
+  }
+  void city_start_of_day_flags(const CityDayFlags& flags) {
+    city_start_of_day_ran_ = flags;
+  }
+  [[nodiscard]] const RestaurantDayFlags& restaurant_day_flags() const {
+    return restaurant_day_ran_;
+  }
+  void restaurant_day_flags(const RestaurantDayFlags& flags) {
+    restaurant_day_ran_ = flags;
+  }
 
   [[nodiscard]] bool is_player_day_over() const;
   void prevent_auto_end_of_turn(bool prevent);
@@ -172,11 +192,10 @@ private:
 
   // cleared at start of each calendar day, set when run_city_start_of_day
   // fires
-  std::array<bool, NUMBER_OF_CITIES> city_start_of_day_ran_{};
+  CityDayFlags city_start_of_day_ran_{};
 
   // Make sure we run begin_restaurant_day only once per day.
-  std::array<std::array<bool, NUMBER_OF_PLAYERS>, NUMBER_OF_CITIES>
-      restaurant_day_ran_{};
+  RestaurantDayFlags restaurant_day_ran_{};
 
   // End-of-turn pipeline: built in end_of_turn() (restaurant steps) and
   // build_turn_pipeline() (day/turn boundary steps), drained by
