@@ -589,12 +589,13 @@ json SaveGameManager::state_to_json(const GameState& state,
     j["deferred_staff_events"] = staff_array;
   }
 
-  // Save deferred mayor events (queued at EOD, delivered at 10am next day)
+  // Save deferred mayor events (queued at EOD, delivered the next day)
   {
     json insp_array = json::array();
     for (const auto& ev : state.turn().deferred_mayor_inspections()) {
       insp_array.push_back({{"restaurant_id", ev.restaurant_id.value},
-                            {"is_first", ev.is_first}});
+                            {"is_first", ev.is_first},
+                            {"display_block", ev.display_block}});
     }
     j["deferred_mayor_inspections"] = insp_array;
 
@@ -824,7 +825,11 @@ void SaveGameManager::json_to_state(const json& j, GameState& state,
     for (const auto& ev : j["deferred_mayor_inspections"]) {
       core::RestaurantId rid{ev["restaurant_id"].get<int>()};
       bool is_first = ev["is_first"].get<bool>();
-      state.turn().restore_deferred_mayor_inspection(rid, is_first);
+      int display_block = ev.contains("display_block")
+                              ? ev["display_block"].get<int>()
+                              : TurnOrchestrator::roll_inspection_block();
+      state.turn().restore_deferred_mayor_inspection(rid, is_first,
+                                                     display_block);
     }
   }
   if (j.contains("deferred_mayor_awards")) {

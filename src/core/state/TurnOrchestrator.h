@@ -102,7 +102,13 @@ public:
   struct DeferredInspectionEvent {
     bool is_first;
     core::RestaurantId restaurant_id;
+    // Time block the mayor calls at, rolled by roll_inspection_block().
+    int display_block;
   };
+
+  // Rolls the block a queued inspection is delivered at: uniform between
+  // 9:00 and 13:50, as in the original.
+  static int roll_inspection_block();
 
   // Staff event dialogs deferred from EOD to the next day.
   struct DeferredStaffEvent {
@@ -146,9 +152,9 @@ public:
   deferred_mayor_inspections() const {
     return deferred_mayor_inspections_;
   }
-  void restore_deferred_mayor_inspection(core::RestaurantId rid,
-                                         bool is_first) {
-    deferred_mayor_inspections_.push_back({is_first, rid});
+  void restore_deferred_mayor_inspection(core::RestaurantId rid, bool is_first,
+                                         int display_block) {
+    deferred_mayor_inspections_.push_back({is_first, rid, display_block});
   }
   const std::vector<MayorAwardEvent>& deferred_mayor_awards() const {
     return deferred_mayor_awards_;

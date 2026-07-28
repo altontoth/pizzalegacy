@@ -52,6 +52,12 @@ bool is_autosave_due(AutosaveFrequency frequency, bool is_end_of_week,
 }
 } // namespace
 
+int TurnOrchestrator::roll_inspection_block() {
+  constexpr int earliest_block = 54; // 9:00
+  constexpr int block_span = 30;     // through 13:50
+  return earliest_block + engine::random::rand_max_n(block_span);
+}
+
 void TurnOrchestrator::request_end_of_turn() { should_end_of_turn_ = true; }
 
 void TurnOrchestrator::skip_to_next_player() {
@@ -108,6 +114,13 @@ void TurnOrchestrator::end_of_turn() {
   gs_->pause_time_advancement();
 
   auto* current_player = gs_->active_player();
+
+  // A mayor inspection undelivered by the end of this player's day is lost;
+  // the 60-119 day countdown to the next one was re-armed when it was queued.
+  std::erase_if(deferred_mayor_inspections_,
+                [this](const DeferredInspectionEvent& ev) {
+                  return can_deliver_to_active_player(ev.restaurant_id);
+                });
 
   bool interactive = current_player->is_human_controlled() &&
                      !current_player->is_on_holiday() &&
@@ -205,9 +218,10 @@ TurnOrchestrator::process_restaurant_step(const turn::ProcessRestaurant& step) {
   gs_->status().refresh_header();
 
   if (step.interactive) {
-    // Queue mayor inspection event for delivery next day at 10:00.
+    // Queue mayor inspection event for delivery next day.
     if (auto insp = restaurant->take_pending_inspection()) {
-      deferred_mayor_inspections_.push_back({*insp, restaurant->id()});
+      deferred_mayor_inspections_.push_back(
+          {*insp, restaurant->id(), roll_inspection_block()});
     }
 
     // Queue staff event dialogs for the next day: delivered at 10:00, or
@@ -271,10 +285,13 @@ bool TurnOrchestrator::has_deliverable_staff_event() const {
 }
 
 bool TurnOrchestrator::has_deliverable_inspection() const {
-  return std::ranges::any_of(
-      deferred_mayor_inspections_, [this](const DeferredInspectionEvent& d) {
-        return can_deliver_to_active_player(d.restaurant_id);
-      });
+  int block = gs_->time().current_block_of_day();
+  return std::ranges::any_of(deferred_mayor_inspections_,
+                             [this, block](const DeferredInspectionEvent& d) {
+                               return d.display_block <= block &&
+                                      can_deliver_to_active_player(
+                                          d.restaurant_id);
+                             });
 }
 
 void TurnOrchestrator::show_next_deferred_staff_event() {
@@ -344,6 +361,10 @@ void TurnOrchestrator::drop_city_local_events_outside(core::CityId city) {
   std::erase_if(deferred_staff_events_, [&](const DeferredStaffEvent& ev) {
     return is_elsewhere(ev.restaurant_id);
   });
+  std::erase_if(deferred_mayor_inspections_,
+                [&](const DeferredInspectionEvent& ev) {
+                  return is_elsewhere(ev.restaurant_id);
+                });
 }
 
 void TurnOrchestrator::queue_mayor_award(const MayorAwardEvent& ev) {
@@ -380,16 +401,20 @@ void TurnOrchestrator::show_next_deferred_manager_alert() {
 
 void TurnOrchestrator::trigger_mayor_inspection(core::RestaurantId rid,
                                                 bool is_first) {
-  deferred_mayor_inspections_.push_back({is_first, rid});
+  deferred_mayor_inspections_.push_back(
+      {is_first, rid, gs_->time().current_block_of_day()});
   if (!showing_deferred_inspection_) {
     show_next_deferred_inspection();
   }
 }
 
 void TurnOrchestrator::show_next_deferred_inspection() {
+  int block = gs_->time().current_block_of_day();
   auto next = std::ranges::find_if(
-      deferred_mayor_inspections_, [this](const DeferredInspectionEvent& d) {
-        return can_deliver_to_active_player(d.restaurant_id);
+      deferred_mayor_inspections_,
+      [this, block](const DeferredInspectionEvent& d) {
+        return d.display_block <= block &&
+               can_deliver_to_active_player(d.restaurant_id);
       });
   if (next == deferred_mayor_inspections_.end()) {
     showing_deferred_inspection_ = false;
@@ -533,10 +558,10 @@ void TurnOrchestrator::fire_due_events() {
     showing_deferred_inspection_ = false;
   }
 
-  // Fire deferred mayor inspection events at 10:00 (after staff events drain).
+  // Fire deferred mayor inspections, each from its own rolled block.
   if (!processing_end_of_turn_ && !showing_deferred_staff_event_ &&
       !showing_deferred_inspection_ && !prevent_auto_end_of_turn_ &&
-      has_deliverable_inspection() && time.is_past_time(10, 0)) {
+      has_deliverable_inspection()) {
     show_next_deferred_inspection();
   }
 
