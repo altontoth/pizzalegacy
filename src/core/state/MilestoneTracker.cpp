@@ -21,6 +21,22 @@
 #include "core/state/GameState.h"
 #include "core/util/Constants.h"
 
+namespace {
+
+// Cities the player holds a restaurant in, whether or not it ever opened.
+int owned_city_count(GameState& gs, core::PlayerId pid) {
+  std::array<bool, NUMBER_OF_CITIES> cities = {};
+  for (const auto* rest : gs.restaurants_for(pid)) {
+    const int city = rest->property().city().id().value;
+    if (city >= 0 && city < NUMBER_OF_CITIES) {
+      cities[city] = true;
+    }
+  }
+  return static_cast<int>(std::count(cities.begin(), cities.end(), true));
+}
+
+} // namespace
+
 void MilestoneTracker::check_milestone_events(Player& player,
                                               bool is_end_of_week) {
   using core::events::LeventId;
@@ -254,46 +270,67 @@ void MilestoneTracker::check_restaurant_milestones(const Player& player) {
   auto pid = player.id();
   auto date = gs_->time().current_date();
 
-  auto player_restaurants = gs_->restaurants_for(pid);
-  int count = 0;
-  std::array<bool, NUMBER_OF_CITIES> cities_present = {};
+  const bool fix_bugs = gs_->options().fix_legacy_bugs;
 
-  for (const auto* rest : player_restaurants) {
+  int opened_count = 0;
+  int open_count = 0;
+  std::array<bool, NUMBER_OF_CITIES> opened_cities = {};
+
+  for (const auto* rest : gs_->restaurants_for(pid)) {
     if (!rest->ever_opened()) {
       continue;
     }
-    count++;
-    int city_val = rest->property().city().id().value;
+    opened_count++;
+    if (rest->wants_open()) {
+      open_count++;
+    }
+    const int city_val = rest->property().city().id().value;
     if (city_val >= 0 && city_val < NUMBER_OF_CITIES) {
-      cities_present[city_val] = true;
+      opened_cities[city_val] = true;
     }
   }
 
-  if (count == 1) {
-    gs_->message_manager().schedule_message(LeventId::OpenedFirstRestaurant,
-                                            pid, date);
-  }
-  else if (count == 2) {
-    gs_->message_manager().schedule_message(LeventId::OpensSecondRestaurant,
-                                            pid, date);
-  }
-  else if (count == 5) {
+  if (opened_count >= 5) {
     gs_->message_manager().schedule_message(LeventId::HasFiveRestaurants, pid,
                                             date);
   }
-  int distinct_cities = static_cast<int>(
-      std::count(cities_present.begin(), cities_present.end(), true));
 
-  if (distinct_cities >= 2) {
-    gs_->message_manager().schedule_message(
-        LeventId::FirstRestaurantInOtherCity, pid, date);
-  }
-  if (distinct_cities >= NUMBER_OF_CITIES) {
-    gs_->message_manager().schedule_message(LeventId::OutletsInEveryWesternCity,
-                                            pid, date);
+  // The original counts restaurants currently open rather than ever opened,
+  // and skips events 30, 31 and 50 entirely once a third one is open. Event 50
+  // further needs the player to hold restaurants in exactly two cities, which
+  // is why it almost never appears in an original game.
+  const int count = fix_bugs ? opened_count : open_count;
+  if (fix_bugs || open_count < 3) {
+    if (count == 1) {
+      gs_->message_manager().schedule_message(LeventId::OpenedFirstRestaurant,
+                                              pid, date);
+    }
+    else if (count == 2) {
+      gs_->message_manager().schedule_message(LeventId::OpensSecondRestaurant,
+                                              pid, date);
+    }
+
+    const bool other_city =
+        fix_bugs
+            ? std::count(opened_cities.begin(), opened_cities.end(), true) >= 2
+            : owned_city_count(*gs_, pid) == 2;
+    if (other_city) {
+      gs_->message_manager().schedule_message(
+          LeventId::FirstRestaurantInOtherCity, pid, date);
+    }
   }
 
   gs_->process_pending_messages();
+}
+
+void MilestoneTracker::check_restaurant_acquired(const Player& player) {
+  using core::events::LeventId;
+  if (owned_city_count(*gs_, player.id()) < NUMBER_OF_CITIES) {
+    return;
+  }
+  gs_->message_manager().schedule_message(LeventId::OutletsInEveryWesternCity,
+                                          player.id(),
+                                          gs_->time().current_date());
 }
 
 void MilestoneTracker::check_depot_milestones(const Player& player) {

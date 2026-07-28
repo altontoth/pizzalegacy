@@ -21,6 +21,10 @@ public:
   // Checks and schedules restaurant count / city milestone events.
   void check_restaurant_milestones(const Player& player);
 
+  // Call when a restaurant is bought or rented. Schedules the milestone for
+  // holding a restaurant in every city.
+  void check_restaurant_acquired(const Player& player);
+
   // Daily asset/sales/service milestones; weekly profit and delivery
   // milestones when is_end_of_week is set.
   void check_milestone_events(Player& player, bool is_end_of_week);

@@ -148,6 +148,7 @@ Restaurant* RealEstate::create_restaurant(Player& player, Property& property) {
   gs_->restaurants_.push_back(std::move(restaurant));
   auto* created = gs_->restaurants_.back().get();
   property.calculate_demographics(created);
+  gs_->milestones().check_restaurant_acquired(player);
   return created;
 }
 
