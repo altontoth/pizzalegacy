@@ -31,6 +31,8 @@
 
 enum class PlayerStatus { Active, InPrison, Eliminated };
 
+inline constexpr int ai_initial_expansion_cooldown = 3;
+
 class Player {
   friend std::ostream& operator<<(std::ostream& os, const Player& player);
 
@@ -136,6 +138,8 @@ public:
   const Awards& awards() const;
   void award(AwardCategory, AwardLevel);
 
+  void ai_expansion_cooldown(int days) { ai_expansion_cooldown_ = days; }
+
   using MenuSlots = std::array<AiMenuSlot, ai_menu_slots>;
   MenuSlots& ai_menu_slots() { return ai_menu_slots_; }
   const MenuSlots& ai_menu_slots() const { return ai_menu_slots_; }
@@ -218,7 +222,7 @@ private:
   uint8_t start_of_day_hour_{default_start_of_day_hour};
 
   // days until next restaurant expansion check
-  int ai_expansion_cooldown_{3};
+  int ai_expansion_cooldown_{ai_initial_expansion_cooldown};
   // Pizza slots with production history
   MenuSlots ai_menu_slots_{};
   void check_ai_expansion(class GameState& game_state);

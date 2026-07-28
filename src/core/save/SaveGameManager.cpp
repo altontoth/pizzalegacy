@@ -495,6 +495,7 @@ json SaveGameManager::state_to_json(const GameState& state,
   // Save active IDs
   j["active_player"] = state.active_player()->id().value;
   j["active_city"] = state.active_city_id().value;
+  j["city_initialised"] = state.city_initialised_flags();
   j["city_start_of_day_ran"] = state.turn().city_start_of_day_flags();
   j["restaurant_day_ran"] = state.turn().restaurant_day_flags();
 
@@ -720,6 +721,13 @@ void SaveGameManager::json_to_state(const json& j, GameState& state,
       }
     }
     state.players(std::move(players));
+  }
+
+  // Make sure we set the fact that a city has been initialized before creating
+  // a city so it doesn't run init again.
+  if (j.contains("city_initialised")) {
+    state.city_initialised_flags(
+        j["city_initialised"].get<GameState::CityInitFlags>());
   }
 
   // Load cities (must be done BEFORE restaurants to restore property state)

@@ -161,6 +161,13 @@ public:
   void active_city(core::CityId city_id);
   // Create city without changing active_city (debug use):
   void ensure_city_loaded(core::CityId city_id);
+  using CityInitFlags = std::array<bool, NUMBER_OF_CITIES>;
+  [[nodiscard]] const CityInitFlags& city_initialised_flags() const {
+    return city_initialised_;
+  }
+  void city_initialised_flags(const CityInitFlags& flags) {
+    city_initialised_ = flags;
+  }
   void active_district_id(core::DistrictId);
   void clear_active_district();
   void city_position(ViewPoint p);
@@ -351,6 +358,9 @@ private:
   // Per-player city view state, persisted across screen transitions.
   std::array<CityViewMapState, NUMBER_OF_PLAYERS> city_view_view_state_;
   std::array<std::unique_ptr<City>, NUMBER_OF_CITIES> cities_;
+  CityInitFlags city_initialised_{};
+  City& city_or_create(core::CityId city_id);
+  void initialise_city_for_ai(City& city);
   std::array<std::unique_ptr<Player>, NUMBER_OF_PLAYERS> players_;
   std::deque<std::unique_ptr<Restaurant>> restaurants_;
   UIStateStack ui_;

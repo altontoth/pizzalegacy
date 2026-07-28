@@ -211,23 +211,39 @@ std::vector<std::pair<uint8_t, int>> GameState::build_player_chars() const {
   return result;
 }
 
+void GameState::initialise_city_for_ai(City& city) {
+  for (auto& player : players_) {
+    if (!player || player->is_human_controlled()) {
+      continue;
+    }
+    player->ai_expansion_cooldown(ai_initial_expansion_cooldown);
+    real_estate_.create_ai_starting_restaurant(*player, city);
+    ai::init_ai_menu(*player);
+  }
+}
+
+City& GameState::city_or_create(core::CityId city_id) {
+  auto& city = cities_[city_id.value];
+  if (city == nullptr) {
+    city = CityFactory::create_city(city_id, build_player_chars());
+  }
+  return *city;
+}
+
 void GameState::active_city(core::CityId city_id) {
   active_city_ = city_id;
-  if (cities_[city_id.value] == nullptr) {
-    cities_[city_id.value] =
-        CityFactory::create_city(city_id, build_player_chars());
+  City& city = city_or_create(city_id);
+  if (!city_initialised_[city_id.value]) {
+    city_initialised_[city_id.value] = true;
+    initialise_city_for_ai(city);
   }
   city_view_view_state_[active_player_.value].city_id = city_id;
-  turn_.run_city_start_of_day(*cities_[city_id.value]);
+  turn_.run_city_start_of_day(city);
 }
 
 void GameState::ensure_city_loaded(core::CityId city_id) {
   // Create city if it doesn't exist, but don't change active_city_
-  if (cities_[city_id.value] == nullptr) {
-    Logger::info("Creating city {} during ensure_city_loaded", city_id.value);
-    cities_[city_id.value] =
-        CityFactory::create_city(city_id, build_player_chars());
-  }
+  city_or_create(city_id);
 }
 
 void GameState::city_position(ViewPoint p) { city_position_ = p; }
@@ -889,11 +905,6 @@ void GameState::finalize_initialization(GameContext& context) {
 
       load_initial_pizzas(context, core::PlayerId{i});
     }
-    else if (!player_item.is_human) {
-      // AI players always start with a restaurant (Free or QuickStart),
-      // gated by up to 8 courage% attempts matching the original algorithm.
-      real_estate_.create_ai_starting_restaurant(*players_[i], *active_city());
-    }
   }
 
   // All players start in the same city.
@@ -918,12 +929,7 @@ void GameState::finalize_initialization(GameContext& context) {
     }
   }
 
-  // Initialize AI player menu slots for pizza charts
-  for (auto& player : players_) {
-    if (player && !player->is_human_controlled()) {
-      ai::init_ai_menu(*player);
-    }
-  }
+  initialise_city_for_ai(*active_city());
 
   // We start at 9 in the morning on the first day, so 9 times 6 time blocks:
   time_.time_blocks(9 * 6);
