@@ -43,6 +43,7 @@ struct RestaurantTag {};
 struct CityTag {};
 struct BankTag {};
 struct RecipeTag {};
+struct AiPizzaTag {};
 struct FurnitureTag {};
 struct DistrictTag {};
 
@@ -52,6 +53,8 @@ using RestaurantId = StrongId<RestaurantTag>;
 using CityId = StrongId<CityTag>;
 using BankId = StrongId<BankTag>;
 using RecipeId = StrongId<RecipeTag>;
+// A pizza an AI sells, named by PizzaCharts::ai_pizza_names().
+using AiPizzaId = StrongId<AiPizzaTag>;
 using FurnitureId = StrongId<FurnitureTag>;
 using DistrictId = StrongId<DistrictTag>;
 } // namespace core

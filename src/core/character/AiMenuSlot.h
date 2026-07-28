@@ -9,12 +9,18 @@
 #include <algorithm>
 #include <array>
 #include <numeric>
+#include "core/common/Ids.h"
 #include "core/food/Recipe.h"
 
-// Each AI player has 10 of these, representing their pizza menu.
+// Number of menu slots an AI player owns.
+inline constexpr int ai_menu_slots = 10;
+
+// An empty menu slot.
+inline constexpr core::AiPizzaId ai_pizza_none{0};
+
 // Used only for Pizza Charts ranking, not restaurant economics.
 struct AiMenuSlot {
-  int recipe_id{0};
+  core::AiPizzaId pizza_id{ai_pizza_none};
   int production_counter{0};
   int max_production{0};
   std::array<int, core::food::chart_history_days> history{};
@@ -26,7 +32,7 @@ struct AiMenuSlot {
   // Drop the oldest day and store another day's production.
   void update(int restaurant_count) {
     std::ranges::copy(history.begin() + 1, history.end(), history.begin());
-    if (recipe_id != 0) {
+    if (pizza_id != ai_pizza_none) {
       history.back() = restaurant_count * production_counter;
     }
   }

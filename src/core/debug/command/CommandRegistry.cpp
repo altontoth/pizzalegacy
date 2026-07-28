@@ -41,6 +41,26 @@ static std::string label_with_aliases(const CommandDef& cmd) {
   return compat::format("{} ({})", cmd.name, joined);
 }
 
+// Mirror a command's console output to the log as one multi-line message, so
+// the body copies out of a terminal without a timestamp on every line.
+static void log_output(const std::vector<std::string>& tokens,
+                       const CommandResult& result) {
+  std::string text = ">";
+  for (const auto& token : tokens) {
+    text += ' ';
+    text += token;
+  }
+  for (const auto& message : result.messages) {
+    text += '\n';
+    text += message;
+  }
+  if (result.error_message) {
+    text += '\n';
+    text += *result.error_message;
+  }
+  Logger::info("{}", text);
+}
+
 void CommandRegistry::register_command(CommandDef cmd) {
   std::string name = cmd.name;
 
@@ -182,7 +202,9 @@ CommandResult CommandRegistry::execute(const std::vector<std::string>& tokens,
   // Execute the command handler
   try {
     CommandContext ctx{state, context, *this, std::move(parsed.args)};
-    return parsed.command->handler(ctx);
+    CommandResult result = parsed.command->handler(ctx);
+    log_output(tokens, result);
+    return result;
   }
   catch (const std::exception& e) {
     auto result = CommandResult::error(

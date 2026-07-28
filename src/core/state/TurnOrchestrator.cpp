@@ -1178,6 +1178,11 @@ void TurnOrchestrator::skip_city_start_of_day(core::CityId city) {
   city_start_of_day_ran_[city.value] = true;
 }
 
+void TurnOrchestrator::skip_restaurant_day(core::CityId city,
+                                           core::PlayerId player) {
+  restaurant_day_ran_[city.value][player.value] = true;
+}
+
 void TurnOrchestrator::run_city_start_of_day(City& city) {
   int idx = city.id().value;
   if (city_start_of_day_ran_[idx]) {

@@ -744,7 +744,10 @@ void MarketResearch::render_pizza_charts(const RenderContext& ctx) {
                                     row_nr_pos, FontFace::PIZ_NUMB, text_color,
                                     AlignX::RightEdge);
 
-    if (i < static_cast<int>(chart.size())) {
+    const Player* owner = i < static_cast<int>(chart.size())
+                              ? state_.player(chart[i].player_id)
+                              : nullptr;
+    if (owner) {
       const auto& entry = chart[i];
       std::string prev = entry.previous_position == 0
                              ? "-"
@@ -752,10 +755,10 @@ void MarketResearch::render_pizza_charts(const RenderContext& ctx) {
       context_.font->render_line_onto(*ctx.surface, prev, last_week_pos,
                                       FontFace::PIZ_NUMB, last_week_color,
                                       AlignX::RightEdge);
-      context_.font->render_line_onto(*ctx.surface, entry.pizza_name,
-                                      pizza_name_pos, FontFace::PIZ_NUMB,
-                                      style);
-      context_.font->render_line_onto(*ctx.surface, entry.player_name,
+      context_.font->render_line_onto(
+          *ctx.surface, PizzaCharts::pizza_name(*owner, entry.pizza_ref),
+          pizza_name_pos, FontFace::PIZ_NUMB, style);
+      context_.font->render_line_onto(*ctx.surface, owner->name(),
                                       player_name_pos, FontFace::PIZ_NUMB,
                                       style);
     }

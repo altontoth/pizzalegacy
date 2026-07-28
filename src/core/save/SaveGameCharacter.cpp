@@ -12,6 +12,7 @@
 #include "core/character/Awards.h"
 #include "core/character/InsurancePlayerState.h"
 #include "core/character/Player.h"
+#include "core/common/Ids.h"
 #include "core/food/IngredientCategoryType.h"
 #include "core/marketing/NewspaperAdFormat.h"
 #include "core/state/GameState.h"
@@ -188,7 +189,8 @@ json player_to_json(const Player& player) {
   json ai_menu_array = json::array();
   for (const auto& slot : player.ai_menu_slots()) {
     json slot_j;
-    slot_j["recipe_id"] = slot.recipe_id;
+    // Key spelling predates the field name.
+    slot_j["recipe_id"] = slot.pizza_id.value;
     slot_j["production_counter"] = slot.production_counter;
     slot_j["max_production"] = slot.max_production;
     json history_array = json::array();
@@ -371,7 +373,7 @@ json_to_player(const json& j, GameContext& context,
       if (i >= static_cast<int>(slots.size())) {
         break;
       }
-      slots[i].recipe_id = slot_j.value("recipe_id", 0);
+      slots[i].pizza_id = core::AiPizzaId{slot_j.value("recipe_id", 0)};
       slots[i].production_counter = slot_j.value("production_counter", 0);
       slots[i].max_production = slot_j.value("max_production", 0);
       if (slot_j.contains("history")) {

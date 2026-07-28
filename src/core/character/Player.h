@@ -136,10 +136,9 @@ public:
   const Awards& awards() const;
   void award(AwardCategory, AwardLevel);
 
-  std::array<AiMenuSlot, 10>& ai_menu_slots() { return ai_menu_slots_; }
-  const std::array<AiMenuSlot, 10>& ai_menu_slots() const {
-    return ai_menu_slots_;
-  }
+  using MenuSlots = std::array<AiMenuSlot, ai_menu_slots>;
+  MenuSlots& ai_menu_slots() { return ai_menu_slots_; }
+  const MenuSlots& ai_menu_slots() const { return ai_menu_slots_; }
 
   int negotiation_skill() const;
 
@@ -220,8 +219,8 @@ private:
 
   // days until next restaurant expansion check
   int ai_expansion_cooldown_{3};
-  // 10 pizza slots with production history
-  std::array<AiMenuSlot, 10> ai_menu_slots_{};
+  // Pizza slots with production history
+  MenuSlots ai_menu_slots_{};
   void check_ai_expansion(class GameState& game_state);
   void process_contracts(class GameState& game_state);
 

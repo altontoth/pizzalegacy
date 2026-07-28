@@ -55,12 +55,16 @@ Example:
 
         for (int i = 0; i < static_cast<int>(entries.size()); ++i) {
           const auto& e = entries[i];
+          const Player* owner = ctx.state.player(e.player_id);
+          if (!owner) {
+            continue;
+          }
           std::string prev = e.previous_position == 0
                                  ? " -"
                                  : compat::format("{:>2}", e.previous_position);
-          result.add_message(compat::format("{:>2}. {:>4}  {:>5}  {:<19}  {}",
-                                            i + 1, prev, e.score, e.pizza_name,
-                                            e.player_name));
+          result.add_message(compat::format(
+              "{:>2}. {:>4}  {:>5}  {:<19}  {}", i + 1, prev, e.score,
+              PizzaCharts::pizza_name(*owner, e.pizza_ref), owner->name()));
         }
         return result;
       },
@@ -152,20 +156,27 @@ Examples:
             }
           }
           else {
-            // Show AI menu slots
-            const auto& slots = player->ai_menu_slots();
+            auto slots = player->ai_menu_slots();
+            std::ranges::sort(slots, [](const auto& a, const auto& b) {
+              return a.chart_score() > b.chart_score();
+            });
             bool any = false;
-            for (int i = 0; i < 10; ++i) {
-              const auto& slot = slots[i];
-              if (slot.recipe_id == 0) {
+            for (const auto& slot : slots) {
+              if (slot.pizza_id == ai_pizza_none) {
                 continue;
               }
               any = true;
+              std::string days;
+              for (int produced : slot.history) {
+                days += compat::format("{:>5}", produced);
+              }
               result.add_message(
-                  compat::format("  Slot {:>2}: recipe_id={:>3}  prod={:>3}  "
-                                 "max_prod={:>3}  chart_score={:>5}",
-                                 i, slot.recipe_id, slot.production_counter,
-                                 slot.max_production, slot.chart_score()));
+                  compat::format("  Score {:>5} [{} ]  {} (ref {}, prod {}/{})",
+                                 slot.chart_score(), days,
+                                 PizzaCharts::pizza_name(
+                                     *player, PizzaChartRef::of(slot.pizza_id)),
+                                 slot.pizza_id.value, slot.production_counter,
+                                 slot.max_production));
             }
             if (!any) {
               result.add_message("  (no active menu slots)");

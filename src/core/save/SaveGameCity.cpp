@@ -200,9 +200,7 @@ namespace {
 json pizza_chart_entry_to_json(const PizzaChartEntry& entry) {
   return {{"previous_position", entry.previous_position},
           {"player_id", entry.player_id.value},
-          {"pizza_ref", entry.pizza_ref},
-          {"pizza_name", entry.pizza_name},
-          {"player_name", entry.player_name},
+          {"pizza_ref", entry.pizza_ref.value},
           {"score", entry.score}};
 }
 
@@ -210,9 +208,7 @@ PizzaChartEntry json_to_pizza_chart_entry(const json& j) {
   PizzaChartEntry e;
   e.previous_position = j.value("previous_position", uint8_t{0});
   e.player_id = core::PlayerId{j.value("player_id", 0)};
-  e.pizza_ref = j.value("pizza_ref", PizzaChartEntry::unresolved_ref);
-  e.pizza_name = j.value("pizza_name", std::string{});
-  e.player_name = j.value("player_name", std::string{});
+  e.pizza_ref = PizzaChartRef{j.value("pizza_ref", PizzaChartRef::unresolved)};
   e.score = j.value("score", 0);
   return e;
 }

@@ -6,10 +6,13 @@
 
 #include "core/restaurant/AIEconomy.h"
 
+#include <algorithm>
+
 #include "core/character/AiMenuSlot.h"
 #include "core/character/Player.h"
 #include "core/city/District.h"
 #include "core/city/Property.h"
+#include "core/common/Ids.h"
 #include "core/finance/Money.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/state/GameState.h"
@@ -121,31 +124,41 @@ bool check_bankruptcy(Restaurant& restaurant, Player& player,
   return true;
 }
 
+namespace {
+
+// One slot's random draw: a pizza off the canonical list, and a production
+// ceiling the AI's cooking skill widens. Only the first 99 of the 100 pizza
+// names are reachable.
+void generate_menu_slot(AiMenuSlot& slot, uint8_t cooking) {
+  slot.pizza_id = core::AiPizzaId{engine::random::rand_max_n(99) + 1};
+  slot.production_counter = 0;
+  slot.max_production = engine::random::rand_max_n(cooking) + 30;
+}
+
+} // namespace
+
 void init_ai_menu(Player& player) {
   auto& slots = player.ai_menu_slots();
   uint8_t cooking = player.character().cooking();
 
-  for (int i = 0; i < 10; ++i) {
+  for (int i = 0; i < ai_menu_slots; ++i) {
     if (!engine::random::rand_percentage_chance(60)) {
       continue;
     }
 
-    // Pick a random recipe_id 1-100, deduplicate against earlier slots
-    uint8_t rid;
+    // The whole slot is redrawn until its pizza is one no earlier slot holds.
     bool duplicate;
     do {
-      rid = static_cast<uint8_t>(engine::random::rand_max_n(100) + 1);
+      generate_menu_slot(slots[i], cooking);
       duplicate = false;
       for (int j = 0; j < i; ++j) {
-        if (slots[j].recipe_id == rid) {
+        if (slots[j].pizza_id == slots[i].pizza_id) {
           duplicate = true;
           break;
         }
       }
     } while (duplicate);
 
-    slots[i].recipe_id = rid;
-    slots[i].max_production = engine::random::rand_max_n(cooking) + 30;
     slots[i].production_counter =
         engine::random::rand_max_n(slots[i].max_production);
   }
@@ -157,10 +170,10 @@ void init_ai_menu(Player& player) {
     }
   }
 
-  Logger::info(
-      "[AI] Initialized menu for {}: {} active slots", player.name(),
-      std::count_if(slots.begin(), slots.end(),
-                    [](const AiMenuSlot& s) { return s.recipe_id != 0; }));
+  Logger::info("[AI] Initialized menu for {}: {} active slots", player.name(),
+               std::ranges::count_if(slots, [](const AiMenuSlot& s) {
+                 return s.pizza_id != ai_pizza_none;
+               }));
 }
 
 void update_ai_menu(Player& player, int restaurant_count) {

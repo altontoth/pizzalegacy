@@ -6,6 +6,7 @@
 
 // core/food/player_recipes.h
 #pragma once
+#include <algorithm>
 #include <array>
 #include <variant>
 #include <vector>
@@ -76,6 +77,8 @@ struct PlayerRecipes {
     return id;
   }
 
+  // Every created recipe, in creation order (used for tie-breaking pizza chart
+  // entries with the same score).
   std::vector<const Recipe*> all() const {
     std::vector<const Recipe*> out;
     out.reserve(recipe_count());
@@ -87,6 +90,7 @@ struct PlayerRecipes {
     for (const auto& recipe : user) {
       out.push_back(&recipe);
     }
+    std::ranges::sort(out, {}, [](const Recipe* r) { return r->id().value; });
     return out;
   }
 
@@ -101,6 +105,7 @@ struct PlayerRecipes {
     for (auto& recipe : user) {
       out.push_back(&recipe);
     }
+    std::ranges::sort(out, {}, [](const Recipe* r) { return r->id().value; });
     return out;
   }
 
