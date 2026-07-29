@@ -1178,11 +1178,11 @@ Surface StaffView::create_application_card(uint8_t character_id) {
   constexpr int text_left_margin = 20;
   constexpr int text_right_margin = CARD_WIDTH - 20;
 
-  FlowColumns flow{.cutoff_y =
-                       picture_y + picture_height + 10, // 10px below picture
-                   .left_narrow = text_start_x,         // Next to picture
-                   .left_wide = text_left_margin, // Full width below picture
-                   .right = text_right_margin};
+  FlowColumns flow{
+      .cutoff_y = picture_y + picture_height + 10, // 10px below picture
+      .left_margin_above = text_start_x,           // Next to picture
+      .left_margin_below = text_left_margin,       // Full width below picture
+      .right_margin = text_right_margin};
 
   // Render the flowing text with soft hyphen support
   context_.font->render_text_onto(card, full_text,

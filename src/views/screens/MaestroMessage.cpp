@@ -70,9 +70,9 @@ void MaestroMessage::render(const RenderContext& ctx) {
 
   FlowColumns flow{
       .cutoff_y = indent_below_y,
-      .left_narrow = text_left,
-      .left_wide = text_left + indent,
-      .right = text_right,
+      .left_margin_above = text_left,
+      .left_margin_below = text_left + indent,
+      .right_margin = text_right,
   };
 
   context_.font->render_text_onto(*ctx.surface, text_,

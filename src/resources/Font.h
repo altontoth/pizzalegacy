@@ -24,11 +24,10 @@ struct RenderedTextMetrics {
 
 // Configuration for text that flows around an image
 struct FlowColumns {
-  int cutoff_y; // Y threshold (relative to start) where we switch from narrow
-                // to wide
-  int left_narrow; // Left margin while Y < cutoff_y (next to picture)
-  int left_wide;   // Left margin after Y >= cutoff_y (below picture)
-  int right;       // Right margin (constant throughout)
+  int cutoff_y; // Y in the target surface where the left margin switches
+  int left_margin_above;
+  int left_margin_below;
+  int right_margin; // Applies throughout
 };
 
 // Line with its Y position for flowing text

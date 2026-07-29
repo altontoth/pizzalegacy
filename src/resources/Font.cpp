@@ -110,8 +110,8 @@ RenderedTextMetrics Font::render_text_onto(Surface& surface,
     // Render each line at its designated position
     for (const auto& flow_line : flow_lines) {
       // Determine X position based on Y position
-      int x = (flow_line.baseline_y < flow->cutoff_y) ? flow->left_narrow
-                                                      : flow->left_wide;
+      int x = (flow_line.baseline_y < flow->cutoff_y) ? flow->left_margin_above
+                                                      : flow->left_margin_below;
 
       auto line_metrics = render_line_onto(
           surface, flow_line.text, ViewPoint{x, flow_line.baseline_y}, style);
@@ -565,9 +565,9 @@ std::vector<FlowLine> Font::word_wrap_with_flow(std::string_view input_line,
 
   while (i < n) {
     // Determine current max width based on Y position
-    int left_margin =
-        (current_y < flow.cutoff_y) ? flow.left_narrow : flow.left_wide;
-    int max_width = flow.right - left_margin;
+    int left_margin = (current_y < flow.cutoff_y) ? flow.left_margin_above
+                                                  : flow.left_margin_below;
+    int max_width = flow.right_margin - left_margin;
 
     // Find next word [w_begin, w_end)
     const std::size_t w_begin = i;
