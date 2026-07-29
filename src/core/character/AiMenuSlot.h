@@ -13,7 +13,7 @@
 #include "core/food/Recipe.h"
 
 // Number of menu slots an AI player owns.
-inline constexpr int ai_menu_slots = 10;
+inline constexpr int ai_menu_slot_count = 10;
 
 // An empty menu slot.
 inline constexpr core::AiPizzaId ai_pizza_none{0};

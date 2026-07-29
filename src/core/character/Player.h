@@ -140,7 +140,7 @@ public:
 
   void ai_expansion_cooldown(int days) { ai_expansion_cooldown_ = days; }
 
-  using MenuSlots = std::array<AiMenuSlot, ai_menu_slots>;
+  using MenuSlots = std::array<AiMenuSlot, ai_menu_slot_count>;
   MenuSlots& ai_menu_slots() { return ai_menu_slots_; }
   const MenuSlots& ai_menu_slots() const { return ai_menu_slots_; }
 

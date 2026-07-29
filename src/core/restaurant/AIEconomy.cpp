@@ -141,7 +141,7 @@ void init_ai_menu(Player& player) {
   auto& slots = player.ai_menu_slots();
   uint8_t cooking = player.character().cooking();
 
-  for (int i = 0; i < ai_menu_slots; ++i) {
+  for (int i = 0; i < ai_menu_slot_count; ++i) {
     if (!engine::random::rand_percentage_chance(60)) {
       continue;
     }
