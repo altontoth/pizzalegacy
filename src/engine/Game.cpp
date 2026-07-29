@@ -10,6 +10,7 @@
 #include <cassert>
 #include <cstdlib>
 #include <filesystem>
+#include <limits>
 #include <numeric>
 
 #include "core/character/Player.h"
@@ -349,11 +350,11 @@ void Game::run() {
   FpsManager fps(render_fps);
   uint32_t tick_accumulator_ms = 0;
   bool did_initial_raise = false;
+  uint32_t title_fps = std::numeric_limits<uint32_t>::max();
 
   while (!state.should_exit()) {
     uint64_t wall_ms = SDL_GetTicks();
     context.clock.begin_frame(wall_ms);
-    fps.begin_frame(wall_ms);
 
     if (static_cast<int>(state.options().render_fps) != render_fps) {
       render_fps = static_cast<int>(state.options().render_fps);
@@ -497,14 +498,16 @@ void Game::run() {
       SDL_RaiseWindow(sdl_.window.get());
     }
 
-    SDL_SetWindowTitle(
-        sdl_.window.get(),
-        std::string(compat::format("Pizza Legacy {} [{} fps]",
-                                   game_meta::VERSION, fps.current_fps()))
-            .c_str());
+    if (fps.current_fps() != title_fps) {
+      title_fps = fps.current_fps();
+      SDL_SetWindowTitle(
+          sdl_.window.get(),
+          std::string(compat::format("Pizza Legacy {} [{} fps]",
+                                     game_meta::VERSION, title_fps))
+              .c_str());
+    }
 
-    uint64_t end_wall_ms = SDL_GetTicks();
-    fps.end_frame_and_sleep(end_wall_ms);
+    fps.end_frame_and_sleep();
   }
   // Make sure to reset view which might use GameState in their destructor:
   current_view_.reset();
