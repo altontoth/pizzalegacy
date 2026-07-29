@@ -229,6 +229,10 @@ public:
   // is reached.
   void advance_time_blocks(int n);
 
+  // Editing a restaurant's floor pattern tile by tile is a bonus feature,
+  // available from the day after El Maestro announces it a year in.
+  bool floor_editing_unlocked() const;
+
   // Debug fast-forward: how many simulation ticks run per unit of wall time
   int time_scale() const { return time_scale_; }
   void time_scale(int scale) { time_scale_ = scale; }

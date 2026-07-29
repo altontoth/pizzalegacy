@@ -44,6 +44,10 @@ struct FinishTurn {
   bool interactive{false};
 };
 
+struct FloorEditingBonus {
+  static constexpr const char* name = "FloorEditingBonus";
+};
+
 struct TickCities {
   static constexpr const char* name = "TickCities";
 };
@@ -129,11 +133,11 @@ struct SetActivity {
 };
 
 using Step =
-    std::variant<ProcessRestaurant, Delay, FinishTurn, TickCities,
-                 EndOfWeekProcessing, EndOfYearProcessing, EndOfMonthProcessing,
-                 AnnualCompetition, MonthlyCompetition, FadeTransition,
-                 AdvanceDate, SetTimeOfDay, PreparePlayerTurn, ResumeTime,
-                 CityStartOfDay, PlayerTurnCard, WeeklyReports,
+    std::variant<ProcessRestaurant, Delay, FinishTurn, FloorEditingBonus,
+                 TickCities, EndOfWeekProcessing, EndOfYearProcessing,
+                 EndOfMonthProcessing, AnnualCompetition, MonthlyCompetition,
+                 FadeTransition, AdvanceDate, SetTimeOfDay, PreparePlayerTurn,
+                 ResumeTime, CityStartOfDay, PlayerTurnCard, WeeklyReports,
                  MonthlyRestaurantInvoice, MonthlyInvoice, Autosave,
                  SetActivity>;
 

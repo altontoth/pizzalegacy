@@ -129,13 +129,13 @@ set(GAME_PLEGACY_SOURCES
     src/views/layers/TurnLockLayer.cpp
     src/views/screens/Advertising.cpp
     src/views/screens/AnimatedStats.cpp
-    src/views/screens/CookbookReminder.cpp
     src/views/screens/EuroMap.cpp
     src/views/screens/FullscreenStatus.cpp
     src/views/screens/GameOver.cpp
     src/views/screens/GlobalStats.cpp
     src/views/screens/InputPanel.cpp
     src/views/screens/Intro.cpp
+    src/views/screens/MaestroMessage.cpp
     src/views/screens/MafiaMissionView.cpp
     src/views/screens/MarketResearch.cpp
     src/views/screens/Newspaper.cpp
@@ -601,13 +601,13 @@ set(PLEGACY_HEADERS
     src/views/screens/ActorView.inl
     src/views/screens/Advertising.h
     src/views/screens/AnimatedStats.h
-    src/views/screens/CookbookReminder.h
     src/views/screens/EuroMap.h
     src/views/screens/FullscreenStatus.h
     src/views/screens/GameOver.h
     src/views/screens/GlobalStats.h
     src/views/screens/InputPanel.h
     src/views/screens/Intro.h
+    src/views/screens/MaestroMessage.h
     src/views/screens/MafiaMissionView.h
     src/views/screens/MarketResearch.h
     src/views/screens/Newspaper.h

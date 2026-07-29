@@ -21,6 +21,8 @@
 #include "resources/FontManager.h"
 
 #include <algorithm>
+#include <cstddef>
+#include <cstdint>
 #include <ranges>
 
 CategoryOverviewScreen::CategoryOverviewScreen(GameContext& context,
@@ -199,8 +201,40 @@ void CategoryOverviewScreen::draw_flooring_page(const RenderContext& ctx) {
                                   ViewPoint{x_pos - 80, y_pos},
                                   FontFace::PIZ_NUMB, 8, AlignX::Left);
 
-  const auto preview = create_floor_preview(fp, 8, 4);
-  ctx.surface->blit_raw(preview, {74, 178});
+  constexpr int preview_cols = 8;
+  constexpr int preview_rows = 4;
+  const auto preview = create_floor_preview(fp, preview_cols, preview_rows);
+  const ViewPoint preview_pos{74, 178};
+  ctx.surface->blit_raw(preview, preview_pos);
+
+  if (state_.floor_editing_unlocked()) {
+    interactions_.create_frame_item(
+        ViewRect{preview_pos.x, preview_pos.y, preview.width(),
+                 preview.height()},
+        "floor_pattern_edit", [this](views::ui::InteractionEvent ie) {
+          if (ie.type != views::ui::InteractionEvent::Type::ButtonDown ||
+              ie.button != views::ui::MouseButton::Left) {
+            return;
+          }
+          const int col = ie.local.x / LegacyConstants::RESTAURANT_TILE_WIDTH;
+          const int row = ie.local.y / LegacyConstants::RESTAURANT_TILE_HEIGHT;
+          cycle_floor_tile(((row % 2) * 2) + (col % 2));
+        });
+  }
+}
+
+void CategoryOverviewScreen::cycle_floor_tile(int quadrant) {
+  // Every set holds eight tiles, and each quadrant of the pattern steps
+  // through them independently.
+  constexpr int tiles_per_set = 8;
+
+  auto* restaurant = state_.active_restaurant();
+  const auto& layout = restaurant->layout();
+  auto fp = layout->floor_pattern();
+  auto& tile = fp.tile_indices[static_cast<std::size_t>(quadrant)];
+  tile = static_cast<uint8_t>((tile + 1) % tiles_per_set);
+  layout->floor_pattern(fp);
+  mark_dirty();
 }
 
 void CategoryOverviewScreen::draw_furniture_page(const RenderContext& ctx) {

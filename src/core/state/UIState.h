@@ -126,8 +126,9 @@ struct GameOverState {
   core::PlayerId player_id;
   GameOverCause cause;
 };
-struct CookbookReminderState {
-  int cookbook_page;
+struct MaestroMessageState {
+  std::string text;
+  std::function<void()> on_dismiss;
 };
 struct PlayerProfileState {
   core::PlayerId player_id;
@@ -278,6 +279,6 @@ using UIState = std::variant<
     SupplierContractState, PlayerTurnCardState, FullscreenStatusState,
     WinSequenceState, MafiaMissionViewState, MarketResearchState,
     StatsRestaurantsState, PlayerProfileState, GameOverState,
-    CookbookReminderState, OptionsMenuState,
+    MaestroMessageState, OptionsMenuState,
     // nothing on screen:
     std::monostate>;

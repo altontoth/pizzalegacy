@@ -10,6 +10,7 @@
 #include "core/events/LeventId.h"
 #include "core/food/CanonicalPizza.h"
 #include "core/state/GameState.h"
+#include "engine/FormatCompat.h"
 #include "engine/Logger.h"
 #include "engine/ui/ICursorManager.h"
 #include "factories/PizzaFactory.h"
@@ -312,7 +313,14 @@ void PizzaDesign::handle_post_judging() {
           .initial_mode = PizzaDesignMode::Recipes,
           .active_key = active_key_,
       });
-      state_.ui().push<CookbookReminderState>(CookbookReminderState{page});
+      state_.ui().push<MaestroMessageState>(MaestroMessageState{
+          .text = compat::format(
+              "You need a bit more practice baking the standard recipes. This "
+              "recipe can be found on page {} of the great Pizza Tycoon cook "
+              "book.",
+              page),
+          .on_dismiss = {},
+      });
       return;
     }
 

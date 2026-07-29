@@ -30,6 +30,7 @@
 #include "core/state/TurnPresenter.h"
 #include "core/state/UIState.h"
 #include "core/status/StatusHub.h"
+#include "core/time/GameDate.h"
 #include "core/time/TimeOfDay.h"
 #include "engine/Logger.h"
 #include "engine/Random.h"
@@ -197,6 +198,11 @@ void TurnOrchestrator::end_of_turn() {
           turn::Delay{delay_frames_between_restaurants});
     }
   }
+  if (interactive && !floor_editing_bonus_shown_ &&
+      gs_->time().current_date() == game_start_date.add_years(1)) {
+    turn_pipeline_.emplace_back(turn::FloorEditingBonus{});
+  }
+
   turn_pipeline_.emplace_back(
       turn::FinishTurn{std::move(all_ids), interactive});
 
@@ -823,6 +829,20 @@ TurnOrchestrator::execute_pipeline_step(const turn::Step& step) {
           },
 
           [&](const turn::FinishTurn& s) { return finish_end_of_turn(s); },
+
+          [&](const turn::FloorEditingBonus&) {
+            floor_editing_bonus_shown_ = true;
+            gs_->ui().push<MaestroMessageState>(MaestroMessageState{
+                .text =
+                    "You have now managed to survive in Pizza Tycoon for a "
+                    "whole year. You will now receive an (undocumented) extra "
+                    "feature: You can now edit the floor pattern in your "
+                    "restaurants to your taste by clicking on the tiles in "
+                    "your equipment book! Have fun trying it out! - El Maestro",
+                .on_dismiss = [this]() { advance_pipeline(); },
+            });
+            return StepResult::Waiting;
+          },
 
           [&](const turn::TickCities&) {
             end_of_day();

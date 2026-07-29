@@ -32,12 +32,12 @@
 #include "views/screens/ActorView.h"
 #include "views/screens/Advertising.h"
 #include "views/screens/AnimatedStats.h"
-#include "views/screens/CookbookReminder.h"
 #include "views/screens/EuroMap.h"
 #include "views/screens/FullscreenStatus.h"
 #include "views/screens/GameOver.h"
 #include "views/screens/GlobalStats.h"
 #include "views/screens/Intro.h"
+#include "views/screens/MaestroMessage.h"
 #include "views/screens/MafiaMissionView.h"
 #include "views/screens/MarketResearch.h"
 #include "views/screens/Newspaper.h"
@@ -437,8 +437,8 @@ ViewFactory::Result ViewFactory::create(GameContext& context, GameState& gs) {
           [&](const GameOverState& gos) {
             view = std::make_unique<GameOver>(context, gs, gos);
           },
-          [&](const CookbookReminderState& pps) {
-            view = std::make_unique<CookbookReminder>(context, gs, pps);
+          [&](const MaestroMessageState& mms) {
+            view = std::make_unique<MaestroMessage>(context, gs, mms);
           },
           [&](const ViewerState& v) {
             ui_mode = UiMode::Menu;

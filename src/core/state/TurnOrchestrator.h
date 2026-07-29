@@ -232,6 +232,9 @@ private:
   // Track whether the current player turn card is for an AI that should
   // auto-end
   bool pending_ai_auto_end_turn_{false};
+  // El Maestro's floor-editing announcement goes to the first human player to
+  // end a turn on the anniversary, and to nobody else.
+  bool floor_editing_bonus_shown_{false};
 
   std::vector<DeferredStaffEvent> deferred_staff_events_;
   bool showing_deferred_staff_event_{false};

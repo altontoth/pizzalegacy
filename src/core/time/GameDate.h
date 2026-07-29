@@ -69,6 +69,11 @@ public:
                                                 std::chrono::days{days}}};
   }
 
+  GameDate add_years(int years) const {
+    return GameDate{
+        std::chrono::year_month_day{ymd_ + std::chrono::years{years}}};
+  }
+
   auto operator<=>(const GameDate&) const = default;
 
   GameDate month_start() const {
