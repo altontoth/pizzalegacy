@@ -132,7 +132,7 @@ WeeklyCityProfits collect_weekly_city_profits(const GameState& gs,
       profits.total = profits.total + city_profit;
     }
 
-    profits.entries.push_back({c->name(), city_profit, is_active});
+    profits.entries.push_back({city_id, city_profit, is_active});
   }
   return profits;
 }

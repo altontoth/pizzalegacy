@@ -325,6 +325,7 @@ set(PLEGACY_HEADERS
     src/core/city/CarManager.h
     src/core/city/CentralDepot.h
     src/core/city/City.h
+    src/core/city/CityNames.h
     src/core/city/CityTypes.h
     src/core/city/CityViewCommon.h
     src/core/city/CityViewMapState.h

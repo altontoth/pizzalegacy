@@ -12,6 +12,7 @@
 #include <utility>
 
 #include "core/character/Player.h"
+#include "core/city/CityNames.h"
 #include "core/city/Property.h"
 #include "core/finance/TurnInvoices.h"
 #include "core/restaurant/Restaurant.h"
@@ -149,7 +150,8 @@ void show_weekly_city_invoice_popup(GameContext& context, GameState& gs,
   cfg.lines.push_back({"week's profit", std::nullopt});
   cfg.lines.push_back(empty_line);
   for (const auto& entry : profits.entries) {
-    cfg.lines.push_back({entry.city_name, entry.profit});
+    cfg.lines.push_back(
+        {std::string(core::city_name(entry.city_id)), entry.profit});
   }
   cfg.lines.push_back(empty_line);
   cfg.lines.push_back({"", profits.total});

@@ -11,22 +11,24 @@
 
 #include "core/character/Player.h"
 #include "core/city/City.h"
+#include "core/city/CityNames.h"
 #include "core/city/Property.h"
 #include "core/common/Ids.h"
 #include "core/state/GameState.h"
+#include "core/util/Constants.h"
 #include "engine/DisplayConstants.h"
+#include "engine/FormatCompat.h"
 #include "engine/geom/Spaces.h"
 #include "engine/ui/InteractionEvent.h"
 #include "gfx/Blit.h"
 #include "gfx/Draw.h"
-#include "magic_enum/magic_enum.hpp"
 #include "resources/FontManager.h"
 #include "views/base/ViewDefs.h"
 
 constexpr uint8_t dark_text_color = 20;
 constexpr uint8_t box_bg_color = 24;
 
-// Destination enum value. Our render coordinates are 2x these.
+// Indexed by core::CityId. Our render coordinates are 2x these.
 struct CityCoord {
   int x, y;
 };
@@ -45,20 +47,7 @@ constexpr CityCoord city_coords[] = {
 
 EuroMap::EuroMap(GameContext& context, GameState& state, MapMode mode,
                  std::optional<IngredientCategory> category)
-    : View(context, state), map_state_(MapState::NO_ACTION),
-      last_clicked_city_(Destination::NONE), map_mode_(mode),
-      destination_list_({Destination::PARIS, Destination::BERLIN,
-                         Destination::BALTIMORE, Destination::VIENNA,
-                         Destination::CHICAGO, Destination::NEW_YORK,
-                         Destination::MADRID, Destination::ROME,
-                         Destination::STOCKHOLM, Destination::LONDON}),
-      category_(category) {
-
-  for (auto dest : destination_list_) {
-    auto i = static_cast<int>(dest);
-    destination_rects_[dest] =
-        dest_box(ViewPoint{city_coords[i].x * 2, city_coords[i].y * 2});
-  }
+    : View(context, state), map_mode_(mode), category_(category) {
 
   // Where we want the white city popup box and how big it is:
   big_popup_box_.x = 140;
@@ -76,27 +65,27 @@ EuroMap::EuroMap(GameContext& context, GameState& state, MapMode mode,
       ViewRect{0, 0, DisplayConstants::SCREEN_WIDTH,
                DisplayConstants::SCREEN_HEIGHT},
       "euromap_fallback", [this](views::ui::InteractionEvent ev) {
-        auto dest = Destination::NONE;
         if (ev.type == views::ui::InteractionEvent::Type::ButtonDown) {
           map_state_ = MapState::NO_ACTION;
-          last_clicked_city_ = Destination::NONE;
+          last_clicked_city_.reset();
           mark_dirty();
         }
       });
-  for (auto dest : destination_list_) {
-    auto r = destination_rects_[dest];
+  for (int i = 0; i < NUMBER_OF_CITIES; ++i) {
+    core::CityId city{i};
+    auto r = dest_box(ViewPoint{city_coords[i].x * 2, city_coords[i].y * 2});
     interactions_.create_persistent_item(
-        r, compat::format("euromap.{}", magic_enum::enum_name(dest)),
-        [this, dest](views::ui::InteractionEvent ev) {
+        r, compat::format("euromap.{}", core::city_name(city)),
+        [this, city](views::ui::InteractionEvent ev) {
           switch (ev.type) {
           case views::ui::InteractionEvent::Type::ButtonDown:
-            on_city_click(dest, ev.button);
+            on_city_click(city, ev.button);
             break;
           case views::ui::InteractionEvent::Type::Enter:
-            on_city_hover(dest);
+            on_city_hover(city);
             break;
           case views::ui::InteractionEvent::Type::Leave:
-            on_city_leave(dest);
+            on_city_leave(city);
             break;
           default:
             break;
@@ -122,6 +111,7 @@ void EuroMap::render(const RenderContext& ctx) {
 
   if (map_state_ == MapState::CITY_CLICKED) {
     auto popup_surface = create_popup(ctx, big_popup_box_.w, big_popup_box_.h);
+    auto target = *last_clicked_city_;
 
     if (map_mode_ == MapMode::DEPOT) {
       // No depot in target city
@@ -132,21 +122,20 @@ void EuroMap::render(const RenderContext& ctx) {
                                       ViewPoint{0, 50}, FontFace::ASTANDAR,
                                       dark_text_color, AlignX::Center);
       context_.font->render_text_onto(
-          popup_surface, "in " + destination_name(last_clicked_city_),
+          popup_surface, compat::format("in {}", core::city_name(target)),
           ViewPoint{0, 70}, FontFace::ASTANDAR, dark_text_color,
           AlignX::Center);
     }
     else {
-      context_.font->render_text_onto(
-          popup_surface, destination_name(last_clicked_city_), ViewPoint{0, 30},
-          FontFace::ASTANDAR, dark_text_color, AlignX::Center);
+      context_.font->render_text_onto(popup_surface, core::city_name(target),
+                                      ViewPoint{0, 30}, FontFace::ASTANDAR,
+                                      dark_text_color, AlignX::Center);
       context_.font->render_text_onto(popup_surface, "market leader",
                                       ViewPoint{0, 50}, FontFace::ASTANDAR,
                                       dark_text_color, AlignX::Center);
-      auto city_id = core::CityId{static_cast<int>(last_clicked_city_)};
       std::string leader_name = "- nobody -";
-      if (state_.is_city_loaded(city_id)) {
-        auto leader = state_.city(city_id)->control_map().market_leader();
+      if (state_.is_city_loaded(target)) {
+        auto leader = state_.city(target)->control_map().market_leader();
         if (leader) {
           auto* player = state_.player(*leader);
           assert(player);
@@ -164,19 +153,17 @@ void EuroMap::render(const RenderContext& ctx) {
   else if (map_state_ == MapState::CITY_CONFIRMED) {
     auto popup_surface =
         create_popup(ctx, small_popup_box_.w, small_popup_box_.h);
-    auto current_city = static_cast<Destination>(state_.active_city_id().value);
-    int cost = calculate_cost(current_city, last_clicked_city_);
+    auto target = *last_clicked_city_;
+    int cost = calculate_cost(state_.active_city_id(), target);
 
     if (map_mode_ == MapMode::DEPOT) {
-      int city_id = static_cast<int>(last_clicked_city_);
-      core::CityId id{city_id};
-      auto* dest_city = state_.city(id);
-      if (state_.options().fix_legacy_bugs && state_.is_city_loaded(id) &&
+      auto* dest_city = state_.city(target);
+      if (state_.options().fix_legacy_bugs && state_.is_city_loaded(target) &&
           dest_city->trade_embargo_counter(*category_)) {
-        auto city_name = destination_name(last_clicked_city_);
-        context_.font->render_text_onto(popup_surface, city_name + " is",
-                                        ViewPoint{0, 12}, FontFace::ASTANDAR,
-                                        dark_text_color, AlignX::Center);
+        context_.font->render_text_onto(
+            popup_surface, compat::format("{} is", core::city_name(target)),
+            ViewPoint{0, 12}, FontFace::ASTANDAR, dark_text_color,
+            AlignX::Center);
         context_.font->render_text_onto(popup_surface, "under embargo!",
                                         ViewPoint{0, 36}, FontFace::ASTANDAR,
                                         dark_text_color, AlignX::Center);
@@ -190,7 +177,7 @@ void EuroMap::render(const RenderContext& ctx) {
                 return;
               }
               map_state_ = MapState::NO_ACTION;
-              last_clicked_city_ = Destination::NONE;
+              last_clicked_city_.reset();
               mark_dirty();
             });
         return;
@@ -204,13 +191,12 @@ void EuroMap::render(const RenderContext& ctx) {
       interactions_.create_frame_item(
           ViewRect{0, 0, DisplayConstants::SCREEN_WIDTH,
                    DisplayConstants::SCREEN_HEIGHT},
-          "export_cost_box", [this, cost](views::ui::InteractionEvent ie) {
+          "export_cost_box",
+          [this, target, cost](views::ui::InteractionEvent ie) {
             if (ie.type != views::ui::InteractionEvent::Type::Click) {
               return;
             }
-            auto target_id = core::CityId{static_cast<int>(last_clicked_city_)};
-            state_.ui().replace_top<DepotExportState>(*category_, target_id,
-                                                      cost);
+            state_.ui().replace_top<DepotExportState>(*category_, target, cost);
           });
     }
     else {
@@ -243,7 +229,7 @@ void EuroMap::render(const RenderContext& ctx) {
                 return;
               }
               map_state_ = MapState::NO_ACTION;
-              last_clicked_city_ = Destination::NONE;
+              last_clicked_city_.reset();
               mark_dirty();
             });
       }
@@ -252,52 +238,12 @@ void EuroMap::render(const RenderContext& ctx) {
     ctx.surface->blit_raw(popup_surface,
                           ViewPoint{small_popup_box_.x, small_popup_box_.y});
   }
-  else if (hovered_city_ != Destination::NONE) {
+  else if (hovered_city_) {
     constexpr int text_color = 255;
     context_.font->render_text_onto(
-        *ctx.surface, destination_name(hovered_city_), ViewPoint{-40, 190},
+        *ctx.surface, core::city_name(*hovered_city_), ViewPoint{-40, 190},
         FontFace::ASTANDAR, text_color, AlignX::Center);
   }
-}
-
-std::string EuroMap::destination_name(Destination id) {
-  std::string name;
-  switch (id) {
-  case Destination::PARIS:
-    name = "Paris";
-    break;
-  case Destination::BERLIN:
-    name = "Berlin";
-    break;
-  case Destination::BALTIMORE:
-    name = "Baltimore";
-    break;
-  case Destination::VIENNA:
-    name = "Vienna";
-    break;
-  case Destination::CHICAGO:
-    name = "Chicago";
-    break;
-  case Destination::NEW_YORK:
-    name = "New York";
-    break;
-  case Destination::MADRID:
-    name = "Madrid";
-    break;
-  case Destination::ROME:
-    name = "Rome";
-    break;
-  case Destination::STOCKHOLM:
-    name = "Stockholm";
-    break;
-  case Destination::LONDON:
-    name = "London";
-    break;
-  default:
-    name = "Unknown";
-    break;
-  }
-  return name;
 }
 
 Surface EuroMap::create_popup(const RenderContext& ctx, int w, int h) {
@@ -307,30 +253,27 @@ Surface EuroMap::create_popup(const RenderContext& ctx, int w, int h) {
   return box;
 }
 
-int EuroMap::calculate_cost(Destination from, Destination to) {
-  auto fi = static_cast<int>(from);
-  auto ti = static_cast<int>(to);
-  int dx = std::abs(city_coords[fi].x - city_coords[ti].x);
-  int dy = std::abs(city_coords[fi].y - city_coords[ti].y);
+int EuroMap::calculate_cost(core::CityId from, core::CityId to) {
+  int dx = std::abs(city_coords[from.value].x - city_coords[to.value].x);
+  int dy = std::abs(city_coords[from.value].y - city_coords[to.value].y);
   int manhattan = dx + dy;
 
   // Original used difficulty 1-5 with multiplier (difficulty + 1).
   return manhattan * (state_.difficulty_level() + 1);
 }
 
-void EuroMap::on_city_click(Destination dest, views::ui::MouseButton btn) {
+void EuroMap::on_city_click(core::CityId city, views::ui::MouseButton btn) {
   if (btn != views::ui::MouseButton::Left) {
     return;
   }
 
   if (map_mode_ == MapMode::DEPOT) {
-    auto current_city = static_cast<Destination>(state_.active_city_id().value);
-    if (dest == current_city) {
+    if (city == state_.active_city_id()) {
       state_.ui().pop();
       return;
     }
-    last_clicked_city_ = dest;
-    if (player_has_depot_in_city(dest)) {
+    last_clicked_city_ = city;
+    if (player_has_depot_in_city(city)) {
       map_state_ = MapState::CITY_CONFIRMED;
     }
     else {
@@ -345,24 +288,21 @@ void EuroMap::on_city_click(Destination dest, views::ui::MouseButton btn) {
   // they have to click the white box with the price (which is not communicated
   // to them in any way).
   if (context_.config->options().qol_improvements &&
-      map_state_ == MapState::CITY_CONFIRMED && last_clicked_city_ == dest) {
+      map_state_ == MapState::CITY_CONFIRMED && last_clicked_city_ == city) {
     attempt_flight();
     return;
   }
 
-  if (map_state_ == MapState::CITY_CLICKED && last_clicked_city_ == dest) {
-    auto game_last_clicked_city_ =
-        static_cast<Destination>(state_.active_city_id().value);
-
+  if (map_state_ == MapState::CITY_CLICKED && last_clicked_city_ == city) {
     // If they are picking a location for the first time
     if (map_mode_ == MapMode::GAME_INIT) {
-      state_.initializer().city_id = core::CityId{static_cast<int>(dest)};
+      state_.initializer().city_id = city;
       state_.finalize_initialization(context_);
       return;
     }
     // or they clicked the city they were already in:
-    if (game_last_clicked_city_ == dest) {
-      state_.ui().push<CityViewState>(core::CityId{static_cast<int>(dest)});
+    if (city == state_.active_city_id()) {
+      state_.ui().push<CityViewState>(city);
       return;
     }
     map_state_ = MapState::CITY_CONFIRMED;
@@ -373,31 +313,30 @@ void EuroMap::on_city_click(Destination dest, views::ui::MouseButton btn) {
   else {
     map_state_ = MapState::CITY_CLICKED;
   }
-  last_clicked_city_ = dest;
+  last_clicked_city_ = city;
   mark_dirty();
 }
 
-void EuroMap::on_city_hover(Destination dest) {
+void EuroMap::on_city_hover(core::CityId city) {
   if (map_state_ == MapState::NO_ACTION ||
       map_state_ == MapState::CITY_HOVERED) {
     map_state_ = MapState::CITY_HOVERED;
     mark_dirty();
   }
-  hovered_city_ = dest;
+  hovered_city_ = city;
 }
 
-void EuroMap::on_city_leave(Destination dest) {
-  if (map_state_ == MapState::CITY_HOVERED && hovered_city_ == dest) {
-    hovered_city_ = Destination::NONE;
+void EuroMap::on_city_leave(core::CityId city) {
+  if (map_state_ == MapState::CITY_HOVERED && hovered_city_ == city) {
     map_state_ = MapState::NO_ACTION;
   }
-  hovered_city_ = Destination::NONE;
+  hovered_city_.reset();
   mark_dirty();
 }
 
 void EuroMap::attempt_flight() {
-  auto current_city = static_cast<Destination>(state_.active_city_id().value);
-  int cost = calculate_cost(current_city, last_clicked_city_);
+  auto target = *last_clicked_city_;
+  int cost = calculate_cost(state_.active_city_id(), target);
   Money amount{static_cast<int64_t>(cost) * 100};
   if (!state_.spend_cash(Account::Others, amount)) {
     return;
@@ -407,12 +346,10 @@ void EuroMap::attempt_flight() {
     player->on_city_travel();
   }
 
-  state_.ui().push<CityViewState>(
-      core::CityId{static_cast<int>(last_clicked_city_)});
+  state_.ui().push<CityViewState>(target);
 }
 
-bool EuroMap::player_has_depot_in_city(Destination dest) {
-  auto city_id = core::CityId{static_cast<int>(dest)};
+bool EuroMap::player_has_depot_in_city(core::CityId city_id) {
   if (!state_.is_city_loaded(city_id)) {
     return false;
   }

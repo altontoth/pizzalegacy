@@ -66,7 +66,7 @@ void apply_monthly_costs(GameState& gs, Player& player,
 
 struct WeeklyCityProfits {
   struct Entry {
-    std::string city_name;
+    CityId city_id;
     Money profit;
     bool is_active;
   };

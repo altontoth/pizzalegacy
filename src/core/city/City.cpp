@@ -6,6 +6,7 @@
 
 #include "core/city/City.h"
 
+#include "core/city/CityNames.h"
 #include "core/city/District.h"
 #include "core/city/Property.h"
 #include "core/food/Ingredient.h"
@@ -21,7 +22,7 @@
 std::ostream& operator<<(std::ostream& os, const City& city) {
   os << "City:\n";
   os << "  id =" << city.id_ << "\n";
-  os << "  name =" << city.name_ << "\n";
+  os << "  name =" << city.name() << "\n";
   os << "  properties = " << '\n';
   for (const auto& [id, bp] : city.properties_) {
     os << "    " << id << ": " << *bp << "\n";
@@ -36,7 +37,7 @@ City::~City() = default;
 
 core::CityId City::id() const { return id_; }
 
-std::string City::name() const { return name_; }
+std::string_view City::name() const { return core::city_name(id_); }
 
 void City::init_supplier_stock_levels() {
   for (auto& supplier : suppliers_) {
@@ -416,8 +417,6 @@ void City::map_data(const std::vector<unsigned char>& d) {
 void City::named_buildings(const std::map<int, std::string>& nb) {
   named_buildings_ = nb;
 }
-
-void City::city_name(const std::string& cn) { name_ = cn; }
 
 void City::building_names(const std::array<std::array<std::string, 24>, 8>& bn,
                           const std::array<int, 8>& counts) {

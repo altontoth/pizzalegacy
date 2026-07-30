@@ -14,6 +14,7 @@
 #include <optional>
 #include <set>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <vector>
 #include "core/city/CentralDepot.h"
@@ -79,7 +80,7 @@ public:
   ~City();
 
   core::CityId id() const;
-  std::string name() const;
+  std::string_view name() const;
 
   uint8_t type(int index) const;
   int data_length() const;
@@ -111,7 +112,6 @@ public:
   void data_length(int length);
   void map_data(const std::vector<uint8_t>& d);
   void named_buildings(const std::map<int, std::string>& nb);
-  void city_name(const std::string& cn);
   void building_names(const std::array<std::array<std::string, 24>, 8>& bn,
                       const std::array<int, 8>& counts);
   void actors(std::map<uint8_t, std::unique_ptr<Actor>> actors);
@@ -332,7 +332,6 @@ private:
   void replenish_supplier_stock_levels();
 
   core::CityId id_;
-  std::string name_;
 
   int data_length_ = 0;
   std::vector<uint8_t> data_;

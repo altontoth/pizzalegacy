@@ -113,8 +113,9 @@ void DepotIngredientOrderScreen::draw_page_header(const RenderContext& ctx) {
   draw_icon(ctx);
 
   constexpr uint8_t header_color = 12;
-  std::string prefix = is_sell_ ? "central sale  " : "central purch.  ";
-  std::string title = prefix + state_.active_city()->name();
+  std::string_view prefix = is_sell_ ? "central sale  " : "central purch.  ";
+  std::string title =
+      compat::format("{}{}", prefix, state_.active_city()->name());
   context_.font->render_text_onto(*ctx.surface, title, ViewPoint{40, 12},
                                   FontFace::PIZ_NUMB, header_color,
                                   AlignX::Center);

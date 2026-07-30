@@ -7,6 +7,7 @@
 #include "views/screens/GlobalStats.h"
 #include "core/character/Actor.h"
 #include "core/character/Player.h"
+#include "core/city/CityNames.h"
 #include "core/city/District.h"
 #include "core/city/Property.h"
 #include "core/finance/BalanceSheet.h"
@@ -654,10 +655,8 @@ void GlobalStats::render_loans(const RenderContext& ctx) {
           TextStyle{.color = 240, .character_spacing = 1});
     }
     else {
-      const auto* city = state_.city(city_id);
-      std::string label = city ? city->name() : "Unknown city";
-      context_.font->render_text_onto(*ctx.surface, label, {col_city, y},
-                                      FontFace::PIZ_NUMB, 240);
+      context_.font->render_text_onto(*ctx.surface, core::city_name(city_id),
+                                      {col_city, y}, FontFace::PIZ_NUMB, 240);
     }
 
     context_.font->render_text_onto(
@@ -702,10 +701,9 @@ void GlobalStats::render_loans(const RenderContext& ctx) {
                                       FontFace::PIZ_NUMB, 240);
     }
     else {
-      const auto* city = state_.city(inv->city_id());
-      std::string label = city ? city->name() : "Unknown city";
-      context_.font->render_text_onto(*ctx.surface, label, {col_city, y},
-                                      FontFace::PIZ_NUMB, 240);
+      context_.font->render_text_onto(*ctx.surface,
+                                      core::city_name(inv->city_id()),
+                                      {col_city, y}, FontFace::PIZ_NUMB, 240);
     }
 
     context_.font->render_text_onto(

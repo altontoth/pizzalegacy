@@ -139,11 +139,6 @@ void CityFactory::load_city_data(int city_id) {
   uint8_t supplier_count = (uint8_t)is.get();
   supplier_count_ = supplier_count;
 
-  is.seekg(6, std::ios::cur);
-
-  constexpr int city_name_length = 24;
-  city_name_ = text::read_iso8859_1_string(is, city_name_length);
-
   is.seekg(40);
 
   // We need this in the business premise area so it's a member
@@ -471,7 +466,6 @@ void CityFactory::build_city_object(City& city, int id) {
   city.data_length(data_length_);
   city.map_data(map_data_);
   city.named_buildings(named_buildings_);
-  city.city_name(city_name_);
   city.building_names(building_names_, building_name_count_);
   city.type_names(type_names_);
   // ensure each district has a pointer to the city, do this

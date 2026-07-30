@@ -63,7 +63,6 @@ private:
   std::vector<std::unique_ptr<FoodSupplier>> suppliers_;
   int number_of_realtors_{-1};
 
-  std::string city_name_;
   int data_length_ = 0;
   std::array<uint8_t, 300> district_bez_;
   IngredientPrices ingredient_base_prices_;

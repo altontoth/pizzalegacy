@@ -10,6 +10,7 @@
 #include "core/character/Character.h"
 #include "core/character/Player.h"
 #include "core/character/SocialStatus.h"
+#include "core/city/CityNames.h"
 #include "core/city/Property.h"
 #include "core/finance/Money.h"
 #include "core/mission/MissionScoring.h"
@@ -31,11 +32,6 @@
 #include "views/ui/popups/NumberInputPopup.h"
 
 namespace {
-
-constexpr std::array<const char*, NUMBER_OF_CITIES> city_names = {
-    "Paris",    "Berlin", "Baltimore", "Vienna",    "Chicago",
-    "New York", "Madrid", "Rome",      "Stockholm", "London",
-};
 
 constexpr int award_count = 6;
 
@@ -465,8 +461,8 @@ Surface PlayerProfile::create_company(const Player* player) {
   for (int i = 0; i < NUMBER_OF_CITIES; ++i) {
     auto city_id = core::CityId{i};
 
-    font->render_line_onto(page, city_names[i], {78, y}, FontFace::PIZ_NUMB,
-                           text_color);
+    font->render_line_onto(page, core::city_name(city_id), {78, y},
+                           FontFace::PIZ_NUMB, text_color);
 
     if (state_.is_city_loaded(city_id)) {
       Money city_profit{};

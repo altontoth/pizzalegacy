@@ -80,7 +80,7 @@ void DepotExportScreen::draw_page_header(const RenderContext& ctx) {
   Blitmap1Icon icon = core::food::CategoryRegistry::icon(category_);
   blitmap1.render_icon(icon, *ctx.surface, ViewPoint{42, 6});
 
-  std::string title = "export --> " + std::string(target_city_->name());
+  std::string title = compat::format("export --> {}", target_city_->name());
   context_.font->render_text_onto(*ctx.surface, title, ViewPoint{40, 12},
                                   FontFace::PIZ_NUMB, 8, AlignX::Center);
 }
@@ -92,8 +92,8 @@ void DepotExportScreen::draw_ingredient_list(const RenderContext& ctx) {
   const uint8_t text_color = 8;
 
   // Column headers: source city (truncated), AMOUNT, target city (truncated)
-  std::string src_name = std::string(source_city_->name()).substr(0, 5);
-  std::string tgt_name = std::string(target_city_->name()).substr(0, 5);
+  std::string_view src_name = source_city_->name().substr(0, 5);
+  std::string_view tgt_name = target_city_->name().substr(0, 5);
 
   const int src_x = -170;
   const int amount_x = -110;

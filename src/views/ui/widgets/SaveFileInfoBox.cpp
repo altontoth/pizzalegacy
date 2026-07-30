@@ -6,6 +6,8 @@
 
 #include "views/ui/widgets/SaveFileInfoBox.h"
 
+#include "core/city/CityNames.h"
+#include "core/common/Ids.h"
 #include "core/save/SaveGameManager.h"
 #include "core/util/Constants.h"
 #include "engine/FormatCompat.h"
@@ -95,21 +97,14 @@ void SaveFileInfoBox::draw(Surface& screen, ViewPoint p, bool is_selected) {
   }
 
   if (info_.active_player >= 0) {
-    constexpr std::array<const char*, NUMBER_OF_CITIES> CITY_NAMES = {
-        "Paris",    "Berlin", "Baltimore", "Vienna",    "Chicago",
-        "New York", "Madrid", "Rome",      "Stockholm", "London",
-    };
-
     std::string player_name = (info_.active_player < NUMBER_OF_PLAYERS)
                                   ? info_.player_names[info_.active_player]
                                   : "?";
-    std::string city_name =
-        (info_.active_city >= 0 && info_.active_city < NUMBER_OF_CITIES)
-            ? CITY_NAMES[info_.active_city]
-            : "?";
 
     context_.font->render_line_onto(
-        block, compat::format("Active: {} ({})", player_name, city_name),
+        block,
+        compat::format("Active: {} ({})", player_name,
+                       core::city_name(core::CityId{info_.active_city})),
         text_pos, FontFace::SUPERSMA, TEXT_COLOR);
   }
 

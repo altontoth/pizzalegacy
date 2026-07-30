@@ -57,7 +57,7 @@ void DepotIngredientCategoryView::draw_page_header(const RenderContext& ctx) {
                                    context_.vga->get("gfx/back9"));
   draw_icon(ctx);
   const std::string title =
-      "central depot " + std::string(state_.active_city()->name());
+      compat::format("central depot {}", state_.active_city()->name());
   context_.font->render_text_onto(*ctx.surface, title, ViewPoint{134, 12},
                                   FontFace::PIZ_NUMB, 8, AlignX::Left);
 }
