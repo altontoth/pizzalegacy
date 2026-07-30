@@ -62,9 +62,6 @@ public:
   // invocations.
   bool begin_restaurant_day(core::CityId city, core::PlayerId player);
 
-  // Count a player's restaurant start of day in a city as already done
-  void skip_restaurant_day(core::CityId city, core::PlayerId player);
-
   using CityDayFlags = std::array<bool, NUMBER_OF_CITIES>;
   using RestaurantDayFlags =
       std::array<std::array<bool, NUMBER_OF_PLAYERS>, NUMBER_OF_CITIES>;
