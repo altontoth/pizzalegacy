@@ -24,6 +24,8 @@ struct ICursorManager {
   virtual void custom_cursor(const gfx::Surface& surface,
                              bool centered = true) = 0;
   virtual void clear_custom_cursor() = 0;
+  // Temporarily hide the cursor
+  virtual void suppress_custom_cursor(bool suppress) = 0;
 
   virtual void hide_cursor() = 0;
   virtual void show_cursor() = 0;

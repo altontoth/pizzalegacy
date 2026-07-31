@@ -53,7 +53,7 @@ void CursorManager::base_cursor_mode(UiMode mode) {
       (mode == UiMode::Menu) ? gfx::PaletteHandle{38} : gfx::PaletteHandle{0};
   cursor_surface_.palette(palette);
 
-  if (!custom_cursor_active_) {
+  if (!custom_cursor_showing()) {
     sync_hardware_cursor();
   }
 }
@@ -64,6 +64,7 @@ void CursorManager::custom_cursor(const Surface& surface, bool centered) {
   custom_cursor_surface_.emplace(surface.clone());
   custom_cursor_active_ = true;
   custom_cursor_centered_ = centered;
+  custom_cursor_suppressed_ = false;
   // Installing a custom cursor makes it visible.
   cursor_hidden_ = false;
   sync_hardware_cursor();
@@ -75,10 +76,23 @@ void CursorManager::clear_custom_cursor() {
   }
 
   custom_cursor_active_ = false;
+  custom_cursor_suppressed_ = false;
   custom_cursor_surface_.reset();
   scaled_custom_surface_.reset();
 
   sync_hardware_cursor();
+}
+
+void CursorManager::suppress_custom_cursor(bool suppress) {
+  if (custom_cursor_suppressed_ == suppress) {
+    return;
+  }
+  custom_cursor_suppressed_ = suppress;
+  sync_hardware_cursor();
+}
+
+bool CursorManager::custom_cursor_showing() const {
+  return custom_cursor_active_ && !custom_cursor_suppressed_;
 }
 
 void CursorManager::hide_cursor() {
@@ -154,7 +168,7 @@ void CursorManager::sync_hardware_cursor() {
     SDL_HideCursor();
     return;
   }
-  if (custom_cursor_active_) {
+  if (custom_cursor_showing()) {
     hw_apply_cursor(*custom_cursor_surface_, custom_cursor_centered_);
   }
   else {
@@ -170,7 +184,7 @@ void CursorManager::hw_rebuild_base_cursor() {
 
 void CursorManager::update_palette(gfx::PaletteHandle palette) {
   cursor_surface_.palette(palette);
-  if (!custom_cursor_active_) {
+  if (!custom_cursor_showing()) {
     sync_hardware_cursor();
   }
 }
@@ -237,14 +251,14 @@ const gfx::Surface* CursorManager::software_cursor_sprite() const {
   if (relative_mouse_mode_) {
     return nullptr;
   }
-  if (custom_cursor_active_) {
+  if (custom_cursor_showing()) {
     return &*custom_cursor_surface_;
   }
   return &cursor_surface_;
 }
 
 bool CursorManager::software_cursor_centered() const {
-  return custom_cursor_active_ ? custom_cursor_centered_ : false;
+  return custom_cursor_showing() ? custom_cursor_centered_ : false;
 }
 
 void CursorManager::set_relative_mouse_mode(bool enable) {

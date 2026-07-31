@@ -21,6 +21,7 @@ public:
   UiMode base_cursor_mode() const override;
   void custom_cursor(const Surface& surface, bool centered = true) override;
   void clear_custom_cursor() override;
+  void suppress_custom_cursor(bool suppress) override;
   void hide_cursor() override;
   void show_cursor() override;
   bool is_custom_cursor_active() const override;
@@ -52,6 +53,7 @@ private:
   void hw_free_cursor();
   void hw_rebuild_base_cursor();
   void hw_apply_cursor(const Surface& source_surface, bool centered);
+  bool custom_cursor_showing() const;
 
   gfx::Surface cursor_surface_;
   std::optional<gfx::Surface> custom_cursor_surface_;
@@ -60,6 +62,7 @@ private:
   UiMode base_mode_{UiMode::Game};
   bool cursor_hidden_{false};
   bool custom_cursor_active_{false};
+  bool custom_cursor_suppressed_{false};
   float last_scale_x_{1.0f};
   float last_scale_y_{1.0f};
   bool custom_cursor_centered_{false};

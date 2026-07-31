@@ -6,6 +6,7 @@
 
 #include "views/ui/PopupManager.h"
 #include "engine/DisplayConstants.h"
+#include "engine/ui/ICursorManager.h"
 #include "engine/ui/InteractionLayers.h"
 
 PopupManager::PopupManager(GameContext& gc)
@@ -32,12 +33,14 @@ void PopupManager::tick() {
   if (!active_popup_) {
     if (is_active()) {
       hide();
+      context_.cursor->suppress_custom_cursor(false);
       did_change = true;
     }
   }
   else {
     if (!is_active()) {
       show();
+      context_.cursor->suppress_custom_cursor(true);
       did_change = true;
     }
   }
