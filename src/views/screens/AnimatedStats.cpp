@@ -253,12 +253,10 @@ void AnimatedStats::draw_decorated_background(const RenderContext& ctx,
   ctx.surface->fill(bg_color);
   const auto& stanbobs = context_.bob->get("bob/stanbobs.bob");
   constexpr int margin = 3;
-  views::ui::render_decorated_corners(
-      *ctx.surface, stanbobs,
-      ViewRect{{margin, margin},
-               {views::base::MAIN_PANEL_WIDTH - margin * 2,
-                views::base::MAIN_PANEL_HEIGHT - margin * 2}},
-      6, {11});
+  const ViewRect box = ViewRect{0, 0, views::base::MAIN_PANEL_WIDTH,
+                                views::base::MAIN_PANEL_HEIGHT}
+                           .inset(margin, margin);
+  views::ui::render_decorated_corners(*ctx.surface, stanbobs, box, 6, {11});
 }
 
 // Shared thermometer rendering, ported from the original.

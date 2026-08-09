@@ -21,15 +21,14 @@ void render_paper_background(Surface& surface,
 
   if (with_grid) {
     constexpr uint8_t GRID_COLOR = 27;
-    gfx::draw::grid(surface, {0, 0, surface.width(), surface.height()},
-                    GRID_COLOR);
+    gfx::draw::grid(surface, surface.rect(), GRID_COLOR);
   }
 }
 
 void render_corner_decorations(Surface& surface,
                                const Blitmap<Blitmap2Icon>& blitmap,
                                std::optional<ViewRect> box) {
-  ViewRect b = box.value_or(ViewRect{0, 0, surface.width(), surface.height()});
+  ViewRect b = box.value_or(surface.rect());
   using B = Blitmap2Icon;
 
   // Corner pieces

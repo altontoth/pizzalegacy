@@ -161,9 +161,7 @@ void GlobalStats::render_background(const RenderContext& ctx, bool show_grid) {
   ctx.surface->fill(29);
   if (show_grid) {
     constexpr uint8_t GRID_COLOR = 27;
-    gfx::draw::grid(*ctx.surface,
-                    {0, 0, ctx.surface->width(), ctx.surface->height()},
-                    GRID_COLOR);
+    gfx::draw::grid(*ctx.surface, ctx.surface->rect(), GRID_COLOR);
   }
 
   blitmap2_.render_icon_aligned(Blitmap2Icon::PAGE_NW, *ctx.surface,
