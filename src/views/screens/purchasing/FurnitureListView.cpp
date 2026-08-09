@@ -249,8 +249,9 @@ void FurnitureListView::draw_furniture_list(const RenderContext& ctx) {
     if (count > 0) {
       ctx.surface->blit_masked(green_purchase_mark_, {300, bg_box.y + 11});
       context_.font->render_text_onto(
-          *ctx.surface, std::to_string(count), ViewPoint{-40, bg_box.y + 30},
-          FontFace::PIZ_NUMB, COLOR_BLACK, AlignX::Right);
+          *ctx.surface, std::to_string(count),
+          ViewPoint{ctx.surface->width() - 40, bg_box.y + 30},
+          FontFace::PIZ_NUMB, COLOR_BLACK, TextAnchor::End);
     }
     // Finally, move y_pos down for the next item.  Must match how
     // we computed total_item_height in the constructor:
@@ -262,9 +263,9 @@ void FurnitureListView::draw_furniture_list(const RenderContext& ctx) {
     y_pos += total_item_height;
   }
   std::string page_nr = compat::format("- {} -", current_page_ + 1);
-  context_.font->render_text_onto(*ctx.surface, page_nr, ViewPoint{0, 316},
-                                  FontFace::PIZ_NUMB, COLOR_BLACK,
-                                  AlignX::Center);
+  context_.font->render_text_onto(
+      *ctx.surface, page_nr, ViewPoint{ctx.surface->width() / 2, 316},
+      FontFace::PIZ_NUMB, COLOR_BLACK, TextAnchor::Middle);
 }
 
 void FurnitureListView::draw_furniture_preview(const RenderContext& ctx,

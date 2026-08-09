@@ -18,15 +18,15 @@ DiskMenu::DiskMenu(GameContext& context, GameState& state)
   add_menu_item(std::make_unique<TextMenuItem>(
       context, "Save",
       [&state] { state.ui().push<ScreenTag>(ScreenTag::Kind::MenuSave); }, face,
-      style, sel_style));
+      style, sel_style, item_align));
   add_menu_item(std::make_unique<TextMenuItem>(
       context, "Old Game",
       [&state] { state.ui().push<ScreenTag>(ScreenTag::Kind::MenuGameLoad); },
-      face, style, sel_style));
+      face, style, sel_style, item_align));
   add_menu_item(std::make_unique<TextMenuItem>(
       context, "Options",
       [&state] { state.ui().push<ScreenTag>(ScreenTag::Kind::MenuOptions); },
-      face, style, sel_style));
+      face, style, sel_style, item_align));
   add_menu_item(std::make_unique<TextMenuItem>(
       context, "Exit",
       [&state, &context] {
@@ -38,9 +38,10 @@ DiskMenu::DiskMenu(GameContext& context, GameState& state)
                                               }
                                             });
       },
-      face, style, sel_style));
+      face, style, sel_style, item_align));
   add_menu_item(std::make_unique<TextMenuItem>(
-      context, "OK", [&state] { state.ui().pop(); }, face, style, sel_style));
+      context, "OK", [&state] { state.ui().pop(); }, face, style, sel_style,
+      item_align));
 
   // Make sure nothing is selected/higlighted by default
   update_selection(nullptr);

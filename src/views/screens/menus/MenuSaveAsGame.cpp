@@ -70,7 +70,7 @@ MenuSaveAsGame::MenuSaveAsGame(GameContext& context, GameState& state)
         state_.ui().pop();
         state_.ui().pop();
       },
-      FontFace::RUBY, style, sel_style));
+      FontFace::RUBY, style, sel_style, item_align));
 }
 
 void MenuSaveAsGame::load_save_files() {

@@ -68,7 +68,7 @@ void StatsRestaurants::render(const RenderContext& ctx) {
       4, {11});
 
   TextStyle ts{.color = 240,
-               .align = AlignX::Left,
+               .align = TextAnchor::Start,
                .shadow = ShadowStyle{
                    .offset = {-2, 2},
                    .color = 13,
@@ -187,10 +187,10 @@ void StatsRestaurants::draw_restaurant_overview(const RenderContext& ctx,
   // Column headers
   context_.font->render_text_onto(
       *ctx.surface, "day", pos + PxOffset{day_col_x, header_y},
-      FontFace::PIZ_NUMB, table_col_header_color, AlignX::RightEdge);
+      FontFace::PIZ_NUMB, table_col_header_color, TextAnchor::End);
   context_.font->render_text_onto(
       *ctx.surface, "week", pos + PxOffset{week_col_x, header_y},
-      FontFace::PIZ_NUMB, table_col_header_color, AlignX::RightEdge);
+      FontFace::PIZ_NUMB, table_col_header_color, TextAnchor::End);
 
   // Table lines
   gfx::draw::line(*ctx.surface, pos + vert_bar_1_orig, pos + vert_bar_1_end,
@@ -209,11 +209,11 @@ void StatsRestaurants::draw_restaurant_overview(const RenderContext& ctx,
   context_.font->render_text_onto(*ctx.surface, compat::format("{}", day_sales),
                                   pos + PxOffset{day_col_x, sales_y},
                                   FontFace::PIZ_NUMB, table_value_color,
-                                  AlignX::RightEdge);
+                                  TextAnchor::End);
   context_.font->render_text_onto(
       *ctx.surface, compat::format("{}", week_sales),
       pos + PxOffset{week_col_x, sales_y}, FontFace::PIZ_NUMB,
-      table_value_color, AlignX::RightEdge);
+      table_value_color, TextAnchor::End);
 
   // Profit row
   context_.font->render_text_onto(*ctx.surface, "profit",
@@ -222,11 +222,11 @@ void StatsRestaurants::draw_restaurant_overview(const RenderContext& ctx,
   context_.font->render_text_onto(
       *ctx.surface, compat::format("{}", day_profit),
       pos + PxOffset{day_col_x, profit_y}, FontFace::PIZ_NUMB,
-      table_value_color, AlignX::RightEdge);
+      table_value_color, TextAnchor::End);
   context_.font->render_text_onto(
       *ctx.surface, compat::format("{}", week_profit),
       pos + PxOffset{week_col_x, profit_y}, FontFace::PIZ_NUMB,
-      table_value_color, AlignX::RightEdge);
+      table_value_color, TextAnchor::End);
 
   // Restaurant separator line
   gfx::draw::line(*ctx.surface, ViewPoint{pos.x, pos.y + 124},

@@ -11,6 +11,7 @@
 #include "views/screens/purchasing/PurchasingMain.h"
 #include "views/ui/status/StatusController.h"
 
+#include <optional>
 #include <string>
 #include <vector>
 #include "engine/geom/Spaces.h"
@@ -36,16 +37,22 @@ protected:
   SupplierType supplier_type_;
 
 private:
-  struct InfoField {
+  // Right-aligned, its right edge this far in from the panel's right edge.
+  struct InfoValue {
     std::string text;
-    // offset relative to the base x-position:
-    int x_offset = 0;
+    int right_inset = 0;
+  };
+
+  // Left edge at this x within the panel.
+  struct InfoPostFix {
+    std::string text;
+    int x = 0;
   };
 
   struct InfoLine {
-    std::optional<InfoField> label;
-    InfoField value;
-    std::optional<InfoField> post_fix;
+    std::optional<std::string> label;
+    InfoValue value;
+    std::optional<InfoPostFix> post_fix;
   };
 
   virtual void draw_flooring_page(const RenderContext& ctx);

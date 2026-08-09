@@ -27,30 +27,30 @@ MenuMain::MenuMain(GameContext& context, GameState& state)
   add_menu_item(std::make_unique<TextMenuItem>(
       context, "Old Game",
       [&state] { state.ui().push<ScreenTag>(ScreenTag::Kind::MenuGameLoad); },
-      face, style, sel_style));
+      face, style, sel_style, item_align));
   add_menu_item(std::make_unique<SpacerMenuItem>(context, space_between_lines));
 
   add_menu_item(std::make_unique<TextMenuItem>(
       context, "New Game",
       [&state] { state.ui().push<ScreenTag>(ScreenTag::Kind::MenuNewGame); },
-      face, style, sel_style));
+      face, style, sel_style, item_align));
   add_menu_item(std::make_unique<SpacerMenuItem>(context, space_between_lines));
 
   add_menu_item(std::make_unique<TextMenuItem>(
       context, "High Scores",
       [&state] { state.ui().push<ScreenTag>(ScreenTag::Kind::MenuHighScores); },
-      face, style, sel_style));
+      face, style, sel_style, item_align));
 
   add_menu_item(std::make_unique<SpacerMenuItem>(context, space_between_lines));
 
   add_menu_item(std::make_unique<TextMenuItem>(
       context, "Options",
       [&state] { state.ui().push<ScreenTag>(ScreenTag::Kind::MenuOptions); },
-      face, style, sel_style));
+      face, style, sel_style, item_align));
   add_menu_item(std::make_unique<PositionMarkerMenuItem>(context, 276, 164));
   add_menu_item(std::make_unique<TextMenuItem>(
       context, "Exit", [&state] { state.request_exit(); }, FontFace::RUBY,
-      style, sel_style));
+      style, sel_style, item_align));
 
   // Debug info in small text in the corner:
   ViewPoint debug_info{10, 170};

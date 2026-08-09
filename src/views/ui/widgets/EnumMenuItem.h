@@ -26,14 +26,14 @@ public:
     int color = is_selected ? 29 : 240;
 
     RenderedTextMetrics metrics = context_.font->render_text_onto(
-        screen, text_, p, font_face_, color, AlignX::Left);
+        screen, text_, p, font_face_, color, TextAnchor::Start);
 
     width_ = metrics.width;
     height_ = metrics.height;
 
     std::string label{to_string(value_)};
     context_.font->render_text_onto(screen, label, ViewPoint{value_x_pos, p.y},
-                                    font_face_, color, AlignX::Left);
+                                    font_face_, color, TextAnchor::Start);
     width_ += (value_x_pos - width_);
   }
 

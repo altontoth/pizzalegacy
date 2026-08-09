@@ -333,9 +333,9 @@ void ActorView<LineEnum>::render_contract_terms(const RenderContext& ctx) {
                         const std::string& value) {
     int y = text_y + row * line_h;
     context_.font->render_text_onto(s, label, ViewPoint{text_x, y},
-                                    FontFace::PIZ_NUMB, 15, AlignX::Left);
+                                    FontFace::PIZ_NUMB, 15, TextAnchor::Start);
     context_.font->render_text_onto(s, value, ViewPoint{val_x, y},
-                                    FontFace::PIZ_NUMB, 15, AlignX::RightEdge);
+                                    FontFace::PIZ_NUMB, 15, TextAnchor::End);
   };
 
   render_row(0, "sum:", compat::format("{:w}", terms->sum));

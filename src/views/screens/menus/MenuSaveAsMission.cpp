@@ -68,7 +68,7 @@ MenuSaveAsMission::MenuSaveAsMission(GameContext& context, GameState& state)
         state_.ui().pop();
         state_.ui().pop();
       },
-      FontFace::RUBY, style, sel_style));
+      FontFace::RUBY, style, sel_style, item_align));
 }
 
 void MenuSaveAsMission::save_to_file(const std::string& filename) {

@@ -194,11 +194,12 @@ void RestaurantStats::render_daily_balance(const RenderContext& ctx) {
 
   // Header
   std::string title = restaurant_->name();
-  context_.font->render_line_onto(*ctx.surface, title, ViewPoint{0, 24},
-                                  FontFace::PIZ_NUMB, 11, AlignX::Center);
+  const int center_x = ctx.surface->width() / 2;
+  context_.font->render_line_onto(*ctx.surface, title, ViewPoint{center_x, 24},
+                                  FontFace::PIZ_NUMB, 11, TextAnchor::Middle);
   context_.font->render_line_onto(*ctx.surface, "daily settlement",
-                                  ViewPoint{0, 50}, FontFace::RUBY, 11,
-                                  AlignX::Center);
+                                  ViewPoint{center_x, 50}, FontFace::RUBY, 11,
+                                  TextAnchor::Middle);
 
   // Column headers - automatic mode (end of day) shows "today"/"yesterday",
   // manual mode (via button) shows "yesterday"/"day before"
@@ -206,10 +207,10 @@ void RestaurantStats::render_daily_balance(const RenderContext& ctx) {
   const char* second_col_label = automatic_mode_ ? "yesterday" : "day before";
   context_.font->render_line_onto(*ctx.surface, first_col_label,
                                   ViewPoint{172, 84}, FontFace::PIZ_NUMB, 240,
-                                  AlignX::Left);
+                                  TextAnchor::Start);
   context_.font->render_line_onto(*ctx.surface, second_col_label,
                                   ViewPoint{268, 84}, FontFace::PIZ_NUMB, 14,
-                                  AlignX::Left);
+                                  TextAnchor::Start);
 
   // Get stats data
   const auto& yesterday = restaurant_->stats().yesterday;
@@ -231,115 +232,115 @@ void RestaurantStats::render_daily_balance(const RenderContext& ctx) {
   // Orders
   context_.font->render_line_onto(*ctx.surface, "orders", ViewPoint{label_x, y},
                                   FontFace::PIZ_NUMB, label_color,
-                                  AlignX::Left);
+                                  TextAnchor::Start);
   context_.font->render_line_onto(
       *ctx.surface, compat::format("{}", yesterday.orders_generated),
       ViewPoint{int_yesterday_x, y}, FontFace::PIZ_NUMB, yesterday_color,
-      AlignX::RightEdge);
+      TextAnchor::End);
   context_.font->render_line_onto(
       *ctx.surface, compat::format("{}", day_before.orders_generated),
       ViewPoint{int_day_before_x, y}, FontFace::PIZ_NUMB, day_before_color,
-      AlignX::RightEdge);
+      TextAnchor::End);
   y += line_height;
 
   // Pizzas sold
   context_.font->render_line_onto(*ctx.surface, "pizzas sold",
                                   ViewPoint{label_x, y}, FontFace::PIZ_NUMB,
-                                  label_color, AlignX::Left);
+                                  label_color, TextAnchor::Start);
   context_.font->render_line_onto(
       *ctx.surface, compat::format("{}", yesterday.orders_fulfilled),
       ViewPoint{int_yesterday_x, y}, FontFace::PIZ_NUMB, yesterday_color,
-      AlignX::RightEdge);
+      TextAnchor::End);
   context_.font->render_line_onto(
       *ctx.surface, compat::format("{}", day_before.orders_fulfilled),
       ViewPoint{int_day_before_x, y}, FontFace::PIZ_NUMB, day_before_color,
-      AlignX::RightEdge);
+      TextAnchor::End);
   y += line_height;
 
   // Delivery capacity
   context_.font->render_line_onto(*ctx.surface, "delivery capacity",
                                   ViewPoint{label_x, y}, FontFace::PIZ_NUMB,
-                                  label_color, AlignX::Left);
+                                  label_color, TextAnchor::Start);
   context_.font->render_line_onto(
       *ctx.surface,
       compat::format("{} %", yesterday.delivery_capacity_percent()),
       ViewPoint{pct_yesterday_x, y}, FontFace::PIZ_NUMB, yesterday_color,
-      AlignX::RightEdge);
+      TextAnchor::End);
   context_.font->render_line_onto(
       *ctx.surface,
       compat::format("{} %", day_before.delivery_capacity_percent()),
       ViewPoint{pct_day_before_x, y}, FontFace::PIZ_NUMB, day_before_color,
-      AlignX::RightEdge);
+      TextAnchor::End);
   y += line_height;
 
   // Demand value
   context_.font->render_line_onto(*ctx.surface, "demand value",
                                   ViewPoint{label_x, y}, FontFace::PIZ_NUMB,
-                                  label_color, AlignX::Left);
+                                  label_color, TextAnchor::Start);
   context_.font->render_line_onto(
       *ctx.surface, compat::format("{}", yesterday.total_order_value),
       ViewPoint{money_yesterday_x, y}, FontFace::PIZ_NUMB, yesterday_color,
-      AlignX::RightEdge);
+      TextAnchor::End);
   context_.font->render_line_onto(
       *ctx.surface, compat::format("{}", day_before.total_order_value),
       ViewPoint{money_day_before_x, y}, FontFace::PIZ_NUMB, day_before_color,
-      AlignX::RightEdge);
+      TextAnchor::End);
   y += line_height;
 
   // Sales
   context_.font->render_line_onto(*ctx.surface, "sales", ViewPoint{label_x, y},
                                   FontFace::PIZ_NUMB, label_color,
-                                  AlignX::Left);
+                                  TextAnchor::Start);
   context_.font->render_line_onto(
       *ctx.surface, compat::format("{}", yesterday.revenue),
       ViewPoint{money_yesterday_x, y}, FontFace::PIZ_NUMB, yesterday_color,
-      AlignX::RightEdge);
+      TextAnchor::End);
   context_.font->render_line_onto(
       *ctx.surface, compat::format("{}", day_before.revenue),
       ViewPoint{money_day_before_x, y}, FontFace::PIZ_NUMB, day_before_color,
-      AlignX::RightEdge);
+      TextAnchor::End);
   y += line_height;
 
   // Ingredients used
   context_.font->render_line_onto(*ctx.surface, "ingredients used",
                                   ViewPoint{label_x, y}, FontFace::PIZ_NUMB,
-                                  label_color, AlignX::Left);
+                                  label_color, TextAnchor::Start);
   context_.font->render_line_onto(
       *ctx.surface, compat::format("{}", yesterday.ingredient_costs),
       ViewPoint{money_yesterday_x, y}, FontFace::PIZ_NUMB, yesterday_color,
-      AlignX::RightEdge);
+      TextAnchor::End);
   context_.font->render_line_onto(
       *ctx.surface, compat::format("{}", day_before.ingredient_costs),
       ViewPoint{money_day_before_x, y}, FontFace::PIZ_NUMB, day_before_color,
-      AlignX::RightEdge);
+      TextAnchor::End);
   y += line_height;
 
   // Profit
   context_.font->render_line_onto(*ctx.surface, "profit", ViewPoint{label_x, y},
                                   FontFace::PIZ_NUMB, label_color,
-                                  AlignX::Left);
+                                  TextAnchor::Start);
   context_.font->render_line_onto(
       *ctx.surface, compat::format("{}", yesterday.gross_profit),
       ViewPoint{money_yesterday_x, y}, FontFace::PIZ_NUMB, yesterday_color,
-      AlignX::RightEdge);
+      TextAnchor::End);
   context_.font->render_line_onto(
       *ctx.surface, compat::format("{}", day_before.gross_profit),
       ViewPoint{money_day_before_x, y}, FontFace::PIZ_NUMB, day_before_color,
-      AlignX::RightEdge);
+      TextAnchor::End);
   y += line_height;
 
   // Expenditure (fixed costs + ingredient purchases + furniture purchases)
   context_.font->render_line_onto(*ctx.surface, "expenditure",
                                   ViewPoint{label_x, y}, FontFace::PIZ_NUMB,
-                                  label_color, AlignX::Left);
+                                  label_color, TextAnchor::Start);
   context_.font->render_line_onto(
       *ctx.surface, compat::format("{}", yesterday.total_expenditure()),
       ViewPoint{money_yesterday_x, y}, FontFace::PIZ_NUMB, yesterday_color,
-      AlignX::RightEdge);
+      TextAnchor::End);
   context_.font->render_line_onto(
       *ctx.surface, compat::format("{}", day_before.total_expenditure()),
       ViewPoint{money_day_before_x, y}, FontFace::PIZ_NUMB, day_before_color,
-      AlignX::RightEdge);
+      TextAnchor::End);
 }
 
 void RestaurantStats::render_paper(const RenderContext& ctx, ViewRect box) {
@@ -369,12 +370,12 @@ void RestaurantStats::render_week_review(const RenderContext& ctx) {
   // Header
   context_.font->render_line_onto(*ctx.surface, "weekly overview",
                                   ViewPoint{192, 14}, FontFace::RUBY, dark_text,
-                                  AlignX::CenterPoint);
+                                  TextAnchor::Middle);
 
   // Column headers
   context_.font->render_line_onto(
       *ctx.surface, "guests pizzas sales    profit    %", ViewPoint{50, 102},
-      FontFace::PIZ_NUMB, 11, AlignX::Left);
+      FontFace::PIZ_NUMB, 11, TextAnchor::Start);
 
   auto week_data = restaurant_->stats().last_week();
   auto current_date = state_.time().current_date();
@@ -445,34 +446,34 @@ void RestaurantStats::render_week_review(const RenderContext& ctx) {
     std::string date_str = compat::format("{}-{}", date.day(), date.month());
     context_.font->render_line_onto(
         *ctx.surface, date_str, ViewPoint{date_x, row_y}, FontFace::PIZ_NUMB,
-        dark_text, AlignX::CenterPoint);
+        dark_text, TextAnchor::Middle);
 
     // Guests
     context_.font->render_line_onto(
         *ctx.surface, compat::format("{}", stats.guests),
         ViewPoint{guests_x, row_y}, FontFace::PIZ_NUMB, dark_text,
-        AlignX::RightEdge);
+        TextAnchor::End);
     total_guests += stats.guests;
 
     // Pizzas
     context_.font->render_line_onto(
         *ctx.surface, compat::format("{}", stats.orders_fulfilled),
         ViewPoint{pizzas_x, row_y}, FontFace::PIZ_NUMB, dark_text,
-        AlignX::RightEdge);
+        TextAnchor::End);
     total_pizzas += stats.orders_fulfilled;
 
     // Sales
     context_.font->render_line_onto(
         *ctx.surface, compat::format("{}", stats.revenue),
         ViewPoint{sales_x, row_y}, FontFace::PIZ_NUMB, dark_text,
-        AlignX::RightEdge);
+        TextAnchor::End);
     total_sales = total_sales + stats.revenue;
 
     // Profit
     context_.font->render_line_onto(
         *ctx.surface, compat::format("{}", stats.gross_profit),
         ViewPoint{profit_x, row_y}, FontFace::PIZ_NUMB, dark_text,
-        AlignX::RightEdge);
+        TextAnchor::End);
     total_costs = total_costs + stats.ingredient_costs;
 
     // Percent
@@ -480,7 +481,7 @@ void RestaurantStats::render_week_review(const RenderContext& ctx) {
     context_.font->render_line_onto(*ctx.surface, compat::format("{}", percent),
                                     ViewPoint{percentage_x, row_y},
                                     FontFace::PIZ_NUMB, dark_text,
-                                    AlignX::RightEdge);
+                                    TextAnchor::End);
     total_percent += percent;
 
     row_y += 20;
@@ -492,30 +493,30 @@ void RestaurantStats::render_week_review(const RenderContext& ctx) {
   context_.font->render_line_onto(
       *ctx.surface, compat::format("{}", total_guests),
       ViewPoint{guests_x, totals_y}, FontFace::PIZ_NUMB, dark_text,
-      AlignX::RightEdge);
+      TextAnchor::End);
 
   context_.font->render_line_onto(
       *ctx.surface, compat::format("{}", total_pizzas),
       ViewPoint{pizzas_x, totals_y}, FontFace::PIZ_NUMB, dark_text,
-      AlignX::RightEdge);
+      TextAnchor::End);
 
   context_.font->render_line_onto(
       *ctx.surface, compat::format("{}", total_sales),
       ViewPoint{sales_x, totals_y}, FontFace::PIZ_NUMB, dark_text,
-      AlignX::RightEdge);
+      TextAnchor::End);
 
   Money total_profit = total_sales - total_costs;
   context_.font->render_line_onto(
       *ctx.surface, compat::format("{}", total_profit),
       ViewPoint{profit_x, totals_y}, FontFace::PIZ_NUMB, dark_text,
-      AlignX::RightEdge);
+      TextAnchor::End);
 
   // Average percent
   int avg_percent = total_percent / 7;
   context_.font->render_line_onto(
       *ctx.surface, compat::format("{}", avg_percent),
       ViewPoint{percentage_x, totals_y}, FontFace::PIZ_NUMB, dark_text,
-      AlignX::RightEdge);
+      TextAnchor::End);
 }
 
 void RestaurantStats::render_month_review(const RenderContext& ctx) {
@@ -525,17 +526,17 @@ void RestaurantStats::render_month_review(const RenderContext& ctx) {
   // Header
   context_.font->render_line_onto(*ctx.surface, "monthly overview",
                                   ViewPoint{14, 40}, FontFace::PIZ_NUMB, 11,
-                                  AlignX::Left);
+                                  TextAnchor::Start);
 
   auto date = state_.time().current_date();
   std::string current_month{date.month_name()};
   std::string prev_month{date.previous_month_name()};
 
   context_.font->render_line_onto(*ctx.surface, prev_month, ViewPoint{184, 48},
-                                  FontFace::PIZ_NUMB, 11, AlignX::Left);
+                                  FontFace::PIZ_NUMB, 11, TextAnchor::Start);
   context_.font->render_line_onto(*ctx.surface, current_month,
                                   ViewPoint{292, 48}, FontFace::PIZ_NUMB, 11,
-                                  AlignX::Left);
+                                  TextAnchor::Start);
   gfx::draw::line(*ctx.surface, {14, 82}, {380, 82}, 13, 2);
   gfx::draw::line(*ctx.surface, {14, 176}, {380, 176}, 13, 2);
   gfx::draw::line(*ctx.surface, {14, 344}, {380, 344}, 13, 2);
@@ -549,14 +550,14 @@ void RestaurantStats::render_month_review(const RenderContext& ctx) {
   const int sales_y = 84;
   const int coin_machines_y = 102;
   // Receipts section
-  context_.font->render_line_onto(*ctx.surface,
-                                  "receipts:", ViewPoint{20, receipts_y},
-                                  FontFace::PIZ_NUMB, text_color, AlignX::Left);
+  context_.font->render_line_onto(
+      *ctx.surface, "receipts:", ViewPoint{20, receipts_y}, FontFace::PIZ_NUMB,
+      text_color, TextAnchor::Start);
 
   // Sales (negate for display - revenue accounts are credits in accounting)
-  context_.font->render_line_onto(*ctx.surface,
-                                  "sales:", ViewPoint{30, sales_y},
-                                  FontFace::PIZ_NUMB, text_color, AlignX::Left);
+  context_.font->render_line_onto(
+      *ctx.surface, "sales:", ViewPoint{30, sales_y}, FontFace::PIZ_NUMB,
+      text_color, TextAnchor::Start);
   auto prev_sales = -financials.previous_month_operational(Account::Sales, date,
                                                            restaurant_id_);
   auto curr_sales = -financials.current_month_operational(Account::Sales, date,
@@ -564,16 +565,16 @@ void RestaurantStats::render_month_review(const RenderContext& ctx) {
   context_.font->render_line_onto(
       *ctx.surface, compat::format("{}", prev_sales),
       ViewPoint{prev_month_col, sales_y}, FontFace::PIZ_NUMB, text_color,
-      AlignX::RightEdge);
+      TextAnchor::End);
   context_.font->render_line_onto(
       *ctx.surface, compat::format("{}", curr_sales),
       ViewPoint{curr_month_col, sales_y}, FontFace::PIZ_NUMB, text_color,
-      AlignX::RightEdge);
+      TextAnchor::End);
 
   // Coin machines (negated)
   context_.font->render_line_onto(
       *ctx.surface, "coin machines:", ViewPoint{30, coin_machines_y},
-      FontFace::PIZ_NUMB, text_color, AlignX::Left);
+      FontFace::PIZ_NUMB, text_color, TextAnchor::Start);
   auto prev_coins = -financials.previous_month_operational(
       Account::CoinMachines, date, restaurant_id_);
   auto curr_coins = -financials.current_month_operational(Account::CoinMachines,
@@ -581,11 +582,11 @@ void RestaurantStats::render_month_review(const RenderContext& ctx) {
   context_.font->render_line_onto(
       *ctx.surface, compat::format("{}", prev_coins),
       ViewPoint{prev_month_col, coin_machines_y}, FontFace::PIZ_NUMB,
-      text_color, AlignX::RightEdge);
+      text_color, TextAnchor::End);
   context_.font->render_line_onto(
       *ctx.surface, compat::format("{}", curr_coins),
       ViewPoint{curr_month_col, coin_machines_y}, FontFace::PIZ_NUMB,
-      text_color, AlignX::RightEdge);
+      text_color, TextAnchor::End);
 
   // Total receipts (both already negated)
   auto prev_receipts = prev_sales + prev_coins;
@@ -593,17 +594,17 @@ void RestaurantStats::render_month_review(const RenderContext& ctx) {
   context_.font->render_line_onto(
       *ctx.surface, compat::format("{}", prev_receipts),
       ViewPoint{prev_month_col, receipts_y}, FontFace::PIZ_NUMB, text_color,
-      AlignX::RightEdge);
+      TextAnchor::End);
   context_.font->render_line_onto(
       *ctx.surface, compat::format("{}", curr_receipts),
       ViewPoint{curr_month_col, receipts_y}, FontFace::PIZ_NUMB, text_color,
-      AlignX::RightEdge);
+      TextAnchor::End);
 
   // Expenditure
   const int expenditure_y = 160;
-  context_.font->render_line_onto(*ctx.surface,
-                                  "expenditure:", ViewPoint{20, expenditure_y},
-                                  FontFace::PIZ_NUMB, text_color, AlignX::Left);
+  context_.font->render_line_onto(
+      *ctx.surface, "expenditure:", ViewPoint{20, expenditure_y},
+      FontFace::PIZ_NUMB, text_color, TextAnchor::Start);
 
   const std::vector<Account> exp_accounts = {
       Account::Staff,    Account::Rents,     Account::Stock,
@@ -619,7 +620,7 @@ void RestaurantStats::render_month_review(const RenderContext& ctx) {
   for (size_t i = 0; i < exp_accounts.size(); ++i) {
     context_.font->render_line_onto(*ctx.surface, exp_labels[i],
                                     ViewPoint{30, y}, FontFace::PIZ_NUMB,
-                                    text_color, AlignX::Left);
+                                    text_color, TextAnchor::Start);
 
     auto prev_exp = financials.previous_month_operational(exp_accounts[i], date,
                                                           restaurant_id_);
@@ -631,11 +632,11 @@ void RestaurantStats::render_month_review(const RenderContext& ctx) {
     context_.font->render_line_onto(
         *ctx.surface, compat::format("{}", prev_exp),
         ViewPoint{prev_month_col, y}, FontFace::PIZ_NUMB, text_color,
-        AlignX::RightEdge);
+        TextAnchor::End);
     context_.font->render_line_onto(
         *ctx.surface, compat::format("{}", curr_exp),
         ViewPoint{curr_month_col, y}, FontFace::PIZ_NUMB, text_color,
-        AlignX::RightEdge);
+        TextAnchor::End);
     y += line_height;
   }
 
@@ -643,28 +644,28 @@ void RestaurantStats::render_month_review(const RenderContext& ctx) {
   context_.font->render_line_onto(
       *ctx.surface, compat::format("{}", prev_total_exp),
       ViewPoint{prev_month_col, expenditure_y}, FontFace::PIZ_NUMB, text_color,
-      AlignX::RightEdge);
+      TextAnchor::End);
   context_.font->render_line_onto(
       *ctx.surface, compat::format("{}", curr_total_exp),
       ViewPoint{curr_month_col, expenditure_y}, FontFace::PIZ_NUMB, text_color,
-      AlignX::RightEdge);
+      TextAnchor::End);
 
   const int result_y = 326;
 
   // Result
-  context_.font->render_line_onto(*ctx.surface,
-                                  "result:", ViewPoint{20, result_y},
-                                  FontFace::PIZ_NUMB, text_color, AlignX::Left);
+  context_.font->render_line_onto(
+      *ctx.surface, "result:", ViewPoint{20, result_y}, FontFace::PIZ_NUMB,
+      text_color, TextAnchor::Start);
   auto prev_result = prev_receipts - prev_total_exp;
   auto curr_result = curr_receipts - curr_total_exp;
   context_.font->render_line_onto(
       *ctx.surface, compat::format("{}", prev_result),
       ViewPoint{prev_month_col, result_y}, FontFace::PIZ_NUMB, text_color,
-      AlignX::RightEdge);
+      TextAnchor::End);
   context_.font->render_line_onto(
       *ctx.surface, compat::format("{}", curr_result),
       ViewPoint{curr_month_col, result_y}, FontFace::PIZ_NUMB, text_color,
-      AlignX::RightEdge);
+      TextAnchor::End);
 }
 
 void RestaurantStats::render_customer_stats(const RenderContext& ctx) {
@@ -684,7 +685,7 @@ void RestaurantStats::render_customer_stats(const RenderContext& ctx) {
   ctx.surface->palette(PaletteHandle{7});
 
   context_.font->render_line_onto(*ctx.surface, "Customers", ViewPoint{192, 24},
-                                  FontFace::RUBY, 12, AlignX::CenterPoint);
+                                  FontFace::RUBY, 12, TextAnchor::Middle);
 
   // Get customer data
   // potential = raw customers from location (yellow bar)
@@ -757,7 +758,7 @@ void RestaurantStats::render_customer_stats(const RenderContext& ctx) {
     context_.font->render_line_onto(*ctx.surface,
                                     compat::format("{}", potential_value),
                                     ViewPoint{top_number_x, top_number_y},
-                                    FontFace::SUPERSMA, 240, AlignX::RightEdge);
+                                    FontFace::SUPERSMA, 240, TextAnchor::End);
 
     {
       // Draw green bar (actual customers) - stacked sprites going upward
@@ -777,7 +778,7 @@ void RestaurantStats::render_customer_stats(const RenderContext& ctx) {
     context_.font->render_line_onto(*ctx.surface,
                                     compat::format("{}", current_value),
                                     ViewPoint{bottom_number_x, bottom_number_y},
-                                    FontFace::SUPERSMA, 240, AlignX::RightEdge);
+                                    FontFace::SUPERSMA, 240, TextAnchor::End);
   }
 }
 
@@ -876,11 +877,11 @@ void RestaurantStats::render_sales_curve(const RenderContext& ctx) {
   // Render title and scale
   context_.font->render_line_onto(*ctx.surface, "Sales curve",
                                   ViewPoint{title_x, title_y}, FontFace::RUBY,
-                                  header_color, AlignX::Left);
+                                  header_color, TextAnchor::Start);
   context_.font->render_line_onto(
       *ctx.surface, compat::format("in ${} units", scale * 10),
       ViewPoint{scale_text_x, scale_text_y}, FontFace::PIZ_NUMB, header_color,
-      AlignX::Left);
+      TextAnchor::Start);
 
   // Bar sprites: frame 10 = green (sales), frame 12 = red (expenditure)
   const auto& sales_bar = stabo.frame(10);
@@ -932,7 +933,7 @@ void RestaurantStats::render_sales_curve(const RenderContext& ctx) {
     context_.font->render_line_onto(
         *ctx.surface, compat::format("{}-{}", date.day(), date.month()),
         ViewPoint{x, day_label_y}, FontFace::SUPERSMA, label_color,
-        AlignX::Left);
+        TextAnchor::Start);
   }
 }
 

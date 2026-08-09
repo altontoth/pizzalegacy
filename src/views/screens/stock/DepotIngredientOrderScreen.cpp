@@ -116,9 +116,9 @@ void DepotIngredientOrderScreen::draw_page_header(const RenderContext& ctx) {
   std::string_view prefix = is_sell_ ? "central sale  " : "central purch.  ";
   std::string title =
       compat::format("{}{}", prefix, state_.active_city()->name());
-  context_.font->render_text_onto(*ctx.surface, title, ViewPoint{40, 12},
-                                  FontFace::PIZ_NUMB, header_color,
-                                  AlignX::Center);
+  context_.font->render_text_onto(
+      *ctx.surface, title, ViewPoint{(ctx.surface->width() / 2) + 40, 12},
+      FontFace::PIZ_NUMB, header_color, TextAnchor::Middle);
 }
 
 void DepotIngredientOrderScreen::register_ingredient_row(ViewRect row_rect,
@@ -190,16 +190,16 @@ void DepotIngredientOrderScreen::draw_ingredient_list(
 
   context_.font->render_text_onto(
       *ctx.surface, "price", ViewPoint{header_price_x, header_y},
-      FontFace::SUPERSMA, header_color, AlignX::RightEdge);
+      FontFace::SUPERSMA, header_color, TextAnchor::End);
   context_.font->render_text_onto(
       *ctx.surface, "suppl", ViewPoint{header_suppl_x, header_y},
-      FontFace::SUPERSMA, header_color, AlignX::RightEdge);
+      FontFace::SUPERSMA, header_color, TextAnchor::End);
   context_.font->render_text_onto(
       *ctx.surface, "amount", ViewPoint{header_amount_x, header_y},
-      FontFace::SUPERSMA, header_color, AlignX::RightEdge);
+      FontFace::SUPERSMA, header_color, TextAnchor::End);
   context_.font->render_text_onto(
       *ctx.surface, "store", ViewPoint{header_store_x, header_y},
-      FontFace::SUPERSMA, header_color, AlignX::RightEdge);
+      FontFace::SUPERSMA, header_color, TextAnchor::End);
 
   int y = header_y + 20;
   for (size_t i = 0; i < ingredients_.size(); i++) {
@@ -225,27 +225,27 @@ void DepotIngredientOrderScreen::draw_ingredient_list(
       context_.font->render_text_onto(
           *ctx.surface, compat::format("{:n}", batch.price_per_unit),
           ViewPoint{price_x, y}, FontFace::CSTANDAR, text_color,
-          AlignX::RightEdge);
+          TextAnchor::End);
       int city_supply = supplier_ ? supplier_->stock(batch.ingredient_type) : 0;
       int projected_supply =
           is_sell_ ? city_supply + batch.count : city_supply - batch.count;
       context_.font->render_text_onto(
           *ctx.surface, std::to_string(projected_supply),
           ViewPoint{header_suppl_x, y}, FontFace::CSTANDAR, text_color,
-          AlignX::RightEdge);
+          TextAnchor::End);
       context_.font->render_text_onto(
           *ctx.surface, std::to_string(batch.count), ViewPoint{amount_x, y},
-          FontFace::CSTANDAR, text_color, AlignX::RightEdge);
+          FontFace::CSTANDAR, text_color, TextAnchor::End);
       int projected_store = is_sell_ ? batch.current_stock - batch.count
                                      : batch.current_stock + batch.count;
       context_.font->render_text_onto(
           *ctx.surface, std::to_string(projected_store), ViewPoint{store_x, y},
-          FontFace::CSTANDAR, text_color, AlignX::RightEdge);
+          FontFace::CSTANDAR, text_color, TextAnchor::End);
     }
     else {
       context_.font->render_text_onto(*ctx.surface, "------",
                                       ViewPoint{price_x, y}, FontFace::CSTANDAR,
-                                      text_color, AlignX::RightEdge);
+                                      text_color, TextAnchor::End);
     }
 
     y += line_height;
@@ -256,11 +256,11 @@ void DepotIngredientOrderScreen::draw_ingredient_list(
   context_.font->render_text_onto(
       *ctx.surface,
       is_sell_ ? "income:" : "sum:", ViewPoint{header_price_x, footer_y},
-      FontFace::CSTANDAR, text_color, AlignX::RightEdge);
+      FontFace::CSTANDAR, text_color, TextAnchor::End);
   context_.font->render_text_onto(
       *ctx.surface, compat::format("{:n}", total_cost),
       ViewPoint{sum_x, footer_y}, FontFace::CSTANDAR,
-      is_sell_ ? uint8_t{40} : uint8_t{20}, AlignX::RightEdge);
+      is_sell_ ? uint8_t{40} : uint8_t{20}, TextAnchor::End);
 }
 
 void DepotIngredientOrderScreen::render(const RenderContext& ctx) {

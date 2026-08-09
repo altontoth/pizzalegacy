@@ -27,7 +27,7 @@ MenuSave::MenuSave(GameContext& context, GameState& state)
   add_menu_item(std::make_unique<TextMenuItem>(
       context, "as game",
       [&state] { state.ui().push<ScreenTag>(ScreenTag::Kind::MenuSaveAsGame); },
-      face, style, sel_style));
+      face, style, sel_style, item_align));
 
   add_menu_item(std::make_unique<SpacerMenuItem>(context, space_between_lines));
 
@@ -36,7 +36,7 @@ MenuSave::MenuSave(GameContext& context, GameState& state)
       [&state] {
         state.ui().push<ScreenTag>(ScreenTag::Kind::MenuSaveAsMission);
       },
-      face, style, sel_style));
+      face, style, sel_style, item_align));
 }
 
 Surface MenuSave::background() const { return default_background("Save"); }

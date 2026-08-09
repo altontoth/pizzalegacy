@@ -67,7 +67,7 @@ void SaveFileListBox::draw(Surface& screen, ViewPoint p, bool is_selected) {
                                     FontFace::PIZ_NUMB, 1);
     context_.font->render_text_onto(block, display_date,
                                     ViewPoint{DATE_COLUMN_X, y + 4},
-                                    FontFace::MINI, 1, AlignX::RightEdge);
+                                    FontFace::MINI, 1, TextAnchor::End);
     y += LINE_HEIGHT;
   }
 

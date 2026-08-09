@@ -17,8 +17,8 @@
 #include "core/restaurant/PizzaSalesAggregator.h"
 #include "core/state/GameState.h"
 #include "engine/input/InputManager.h"
-#include "engine/ui/Alignment.h"
 #include "engine/ui/InteractionEvent.h"
+#include "engine/ui/TextAnchor.h"
 #include "gfx/Blit.h"
 #include "resources/BlitmapManager.h"
 #include "resources/FontManager.h"
@@ -161,7 +161,7 @@ void RestaurantMenu::render_menu_view(const RenderContext& ctx) {
 
   const TextStyle line_style{.color = text_color};
   const TextStyle price_whole_style{.color = text_color,
-                                    .align = AlignX::Right};
+                                    .align = TextAnchor::End};
 
   const int line_h = 14;
 
@@ -250,9 +250,10 @@ void RestaurantMenu::render_menu_view(const RenderContext& ctx) {
                                       FontFace::CSTANDAR, line_style);
     }
     else {
-      context_.font->render_line_onto(
-          *ctx.surface, std::to_string(price.whole()) + ".", ViewPoint{-78, y},
-          FontFace::CSTANDAR, price_whole_style);
+      context_.font->render_line_onto(*ctx.surface,
+                                      std::to_string(price.whole()) + ".",
+                                      ViewPoint{ctx.surface->width() - 78, y},
+                                      FontFace::CSTANDAR, price_whole_style);
       context_.font->render_line_onto(*ctx.surface, cents,
                                       ViewPoint{price_cents_pos.x, y},
                                       FontFace::CSTANDAR, line_style);
@@ -260,10 +261,10 @@ void RestaurantMenu::render_menu_view(const RenderContext& ctx) {
   }
 
   const std::string page_text = "- " + std::to_string(current_page_ + 1) + " -";
-  const TextStyle page_style{.color = 11, .align = AlignX::Center};
+  const TextStyle page_style{.color = 11, .align = TextAnchor::Middle};
 
   const int page_y = list_box.y + list_box.h + 4;
-  const int page_center_x = 0;
+  const int page_center_x = ctx.surface->width() / 2;
   context_.font->render_line_onto(*ctx.surface, page_text,
                                   ViewPoint{page_center_x, page_y},
                                   FontFace::PIZ_NUMB, page_style);
@@ -321,7 +322,7 @@ void RestaurantMenu::render_sales_view(const RenderContext& ctx) {
     context_.font->render_line_onto(
         *ctx.surface, std::to_string(i + 1), ViewPoint{position_x, y},
         FontFace::CSTANDAR,
-        {.color = row_text_color, .align = AlignX::RightEdge});
+        {.color = row_text_color, .align = TextAnchor::End});
 
     if (recipe) {
       context_.font->render_line_onto(*ctx.surface, recipe->display_name(),
@@ -332,16 +333,16 @@ void RestaurantMenu::render_sales_view(const RenderContext& ctx) {
     context_.font->render_line_onto(
         *ctx.surface, compat::format("{:n}", menu_entry.price),
         ViewPoint{price_x, y}, row_font,
-        {.color = row_text_color, .align = AlignX::RightEdge});
+        {.color = row_text_color, .align = TextAnchor::End});
 
     context_.font->render_line_onto(
         *ctx.surface, std::to_string(sales.count_sold), ViewPoint{sales_x, y},
-        row_font, {.color = row_text_color, .align = AlignX::RightEdge});
+        row_font, {.color = row_text_color, .align = TextAnchor::End});
 
     context_.font->render_line_onto(
         *ctx.surface, compat::format("{:n}", sales.revenue),
         ViewPoint{turnover_x, y}, row_font,
-        {.color = row_text_color, .align = AlignX::RightEdge});
+        {.color = row_text_color, .align = TextAnchor::End});
 
     total_sales += sales.count_sold;
     total_turnover = total_turnover + sales.revenue;
@@ -351,17 +352,17 @@ void RestaurantMenu::render_sales_view(const RenderContext& ctx) {
 
   context_.font->render_line_onto(
       *ctx.surface, std::to_string(total_sales), ViewPoint{sales_x, total_y},
-      row_font, {.color = row_text_color, .align = AlignX::RightEdge});
+      row_font, {.color = row_text_color, .align = TextAnchor::End});
 
   context_.font->render_line_onto(
       *ctx.surface, compat::format("{:n}", total_turnover),
       ViewPoint{turnover_x, total_y}, row_font,
-      {.color = row_text_color, .align = AlignX::RightEdge});
+      {.color = row_text_color, .align = TextAnchor::End});
 
   const std::string page_text = "- " + std::to_string(current_page_ + 1) + " -";
-  context_.font->render_line_onto(*ctx.surface, page_text, ViewPoint{0, 316},
-                                  FontFace::PIZ_NUMB,
-                                  {.color = 8, .align = AlignX::Center});
+  context_.font->render_line_onto(
+      *ctx.surface, page_text, ViewPoint{ctx.surface->width() / 2, 316},
+      FontFace::PIZ_NUMB, {.color = 8, .align = TextAnchor::Middle});
 }
 
 void RestaurantMenu::begin_price_edit(int row) {

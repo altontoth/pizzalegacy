@@ -41,14 +41,14 @@ DifficultySelection::DifficultySelection(GameContext& context, GameState& state)
           state.initializer().difficulty = option.second;
           state.ui().push<ScreenTag>(ScreenTag::Kind::CharacterSelection);
         },
-        face, style, sel_style));
+        face, style, sel_style, item_align));
     add_menu_item(
         std::make_unique<SpacerMenuItem>(context, space_between_lines));
   }
   add_menu_item(std::make_unique<PositionMarkerMenuItem>(context, 270, 244));
   add_menu_item(std::make_unique<TextMenuItem>(
       context, "Back", [this] { state_.ui().pop(); }, FontFace::RUBY, style,
-      sel_style));
+      sel_style, item_align));
 }
 
 Surface DifficultySelection::background() const {

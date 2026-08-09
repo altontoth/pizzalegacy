@@ -58,8 +58,9 @@ void NumberInputPopup::render(Surface& surface, ViewPoint origin) {
   auto pop = popup_surface(popup_width_, popup_height_);
 
   // Title
-  font_->render_text_onto(pop, text_, {0, 18}, FontFace::ASTANDAR, 6,
-                          AlignX::Center);
+  const int center_x = pop.width() / 2;
+  font_->render_text_onto(pop, text_, {center_x, 18}, FontFace::ASTANDAR, 6,
+                          TextAnchor::Middle);
 
   const uint8_t text_box_bg = 13;
   pop.fill_rect({67, 60, 102, 24}, text_box_bg);
@@ -75,8 +76,8 @@ void NumberInputPopup::render(Surface& surface, ViewPoint origin) {
     display_text = std::to_string(value_) + append_text_;
   }
 
-  font_->render_text_onto(pop, display_text, {-70, 65}, FontFace::ASTANDAR, 5,
-                          AlignX::Center);
+  font_->render_text_onto(pop, display_text, {center_x - 70, 65},
+                          FontFace::ASTANDAR, 5, TextAnchor::Middle);
 
   // Buttons (PopupButton draws the base; we overlay arrows for up/down)
   btn_up_.render_with(*this, pop);

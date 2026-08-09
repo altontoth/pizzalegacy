@@ -8,8 +8,8 @@
 
 #include "core/state/GameState.h"
 #include "engine/DisplayConstants.h"
+#include "engine/Geometry.h"
 #include "engine/geom/Spaces.h"
-#include "engine/ui/Alignment.h"
 #include "engine/ui/TooltipRequest.h"
 #include "gfx/Blit.h"
 #include "gfx/Draw.h"
@@ -72,9 +72,9 @@ void Menu::update_interactions() {
       bool is_selected = false;
 
       Size size = menu_item->measure();
-      ViewPoint origin = views::ui::align_in_rect(
-          ViewRect{{x, y}, {SCREEN_WIDTH, SCREEN_HEIGHT}}, size,
-          menu_item->alignment());
+      ViewPoint origin =
+          align_in_rect(ViewRect{{x, y}, {SCREEN_WIDTH, SCREEN_HEIGHT}}, size,
+                        menu_item->alignment(), VAlign::Top);
       ViewPoint new_pos{origin.x, y};
       ViewRect r{new_pos, size}; // override_x, y, size.w, size.h};
       layout_.push_back(MenuEntry{

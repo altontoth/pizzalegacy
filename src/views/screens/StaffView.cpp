@@ -733,7 +733,7 @@ Surface StaffView::create_staff_overview(Restaurant* r) {
                                     FontFace::PIZ_NUMB, text_color);
     context_.font->render_text_onto(surface, std::to_string(line.value),
                                     ViewPoint{value_x, y}, FontFace::PIZ_NUMB,
-                                    text_color, AlignX::RightEdge);
+                                    text_color, TextAnchor::End);
     gfx::draw::line(surface, ViewPoint{label_x, y + line_spacing - 4},
                     ViewPoint{value_x, y + line_spacing - 4}, line_color, 2);
     y += line_spacing;
@@ -823,7 +823,7 @@ Surface StaffView::create_staff_slots(Restaurant* r) {
       context_.font->render_text_onto(
           this_staff_slots, capacity,
           ViewPoint{cap_x, slot_start_y + text_y_offset}, FontFace::PIZ_NUMB,
-          TEXT_COLOR_BLACK, AlignX::RightEdge);
+          TEXT_COLOR_BLACK, TextAnchor::End);
     }
   }
   else {
@@ -850,7 +850,7 @@ Surface StaffView::create_staff_slots(Restaurant* r) {
         context_.font->render_text_onto(
             this_staff_slots, capacity,
             ViewPoint{cap_x, slot_y + text_y_offset}, FontFace::PIZ_NUMB,
-            TEXT_COLOR_BLACK, AlignX::RightEdge);
+            TEXT_COLOR_BLACK, TextAnchor::End);
 
         context_.font->render_text_onto(
             this_staff_slots, compat::format("{}", staff->payment()),
@@ -908,17 +908,18 @@ Surface StaffView::create_data_card_impl(
                                   ViewPoint{label_x_offset, 120},
                                   FontFace::CSTANDAR, TEXT_COLOR_BLACK);
 
-  context_.font->render_text_onto(card, std::to_string(payment_dollars),
-                                  ViewPoint{-32, 120}, FontFace::CSTANDAR,
-                                  TEXT_COLOR_BLACK, AlignX::Right);
+  context_.font->render_text_onto(
+      card, std::to_string(payment_dollars), ViewPoint{card.width() - 32, 120},
+      FontFace::CSTANDAR, TEXT_COLOR_BLACK, TextAnchor::End);
 
   context_.font->render_text_onto(card, "PIZZAS/DAY",
                                   ViewPoint{label_x_offset, 138},
                                   FontFace::CSTANDAR, TEXT_COLOR_BLACK);
 
   context_.font->render_text_onto(card, std::to_string(data.pizzas_per_day),
-                                  ViewPoint{-32, 138}, FontFace::CSTANDAR,
-                                  TEXT_COLOR_BLACK, AlignX::Right);
+                                  ViewPoint{card.width() - 32, 138},
+                                  FontFace::CSTANDAR, TEXT_COLOR_BLACK,
+                                  TextAnchor::End);
 
   // Character stat bars
   struct StatEntry {
@@ -1020,14 +1021,14 @@ Surface StaffView::create_training_card(const Staff& staff) {
     context_.font->render_text_onto(card, std::to_string(course.min_level()),
                                     ViewPoint{TRAINING_SCORE_X, y},
                                     FontFace::PIZ_NUMB, TEXT_COLOR_BLACK,
-                                    AlignX::RightEdge);
+                                    TextAnchor::End);
     context_.font->render_text_onto(card, compat::format("{}", course.cost()),
                                     ViewPoint{TRAINING_COST_X, y},
                                     FontFace::PIZ_NUMB, TEXT_COLOR_BLACK,
-                                    AlignX::RightEdge);
+                                    TextAnchor::End);
     context_.font->render_text_onto(
         card, std::to_string(course.duration()), ViewPoint{TRAINING_DAYS_X, y},
-        FontFace::PIZ_NUMB, TEXT_COLOR_BLACK, AlignX::RightEdge);
+        FontFace::PIZ_NUMB, TEXT_COLOR_BLACK, TextAnchor::End);
     y += TRAINING_ROW_H;
   }
 
@@ -1185,9 +1186,9 @@ Surface StaffView::create_application_card(uint8_t character_id) {
       .right_margin = text_right_margin};
 
   // Render the flowing text with soft hyphen support
-  context_.font->render_text_onto(card, full_text,
-                                  ViewPoint{text_start_x, text_start_y},
-                                  FontFace::CSTANDAR, 5, AlignX::Left, flow);
+  context_.font->render_text_onto(
+      card, full_text, ViewPoint{text_start_x, text_start_y},
+      FontFace::CSTANDAR, 5, TextAnchor::Start, flow);
 
   return card;
 }

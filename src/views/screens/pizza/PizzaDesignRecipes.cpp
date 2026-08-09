@@ -9,7 +9,7 @@
 #include "core/state/GameState.h"
 #include "engine/Logger.h"
 #include "engine/PlatformPaths.h"
-#include "engine/ui/Alignment.h"
+#include "engine/ui/TextAnchor.h"
 #include "factories/PizzaFactory.h"
 #include "gfx/Blit.h"
 #include "resources/BobSizeFn.h"
@@ -35,16 +35,16 @@ void PizzaDesign::draw_recipes(const RenderContext& ctx) {
                                    context_.vga->get("gfx/back4"));
 
   const TextStyle ts{.color = 6,
-                     .align = AlignX::Center,
+                     .align = TextAnchor::Middle,
                      .shadow =
                          ShadowStyle{.offset = PxOffset{0, 1}, .color = 20}};
 
-  const ViewPoint title_pos{-20, 42};
+  const ViewPoint title_pos{(ctx.surface->width() / 2) - 20, 42};
 
   context_.font->render_text_onto(*ctx.surface, "recipe list", title_pos,
                                   FontFace::ASTANDAR, ts);
 
-  const TextStyle pg_ts{.color = 6, .align = AlignX::Left};
+  const TextStyle pg_ts{.color = 6, .align = TextAnchor::Start};
   const ViewPoint page_pos{276, 42};
 
   context_.font->render_text_onto(*ctx.surface,

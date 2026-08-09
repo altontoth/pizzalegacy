@@ -20,16 +20,16 @@ Font& FontManager::get(FontFace face) {
 RenderedTextMetrics FontManager::render_line_onto(Surface& surface,
                                                   std::string_view text,
                                                   ViewPoint p, FontFace face,
-                                                  uint8_t color, AlignX align) {
+                                                  uint8_t color,
+                                                  TextAnchor align) {
   return get(face).render_line_onto(
       surface, text, p,
       TextStyle{.color = color, .align = align, .shadow = {}});
 }
 
-RenderedTextMetrics
-FontManager::render_text_onto(Surface& surface, std::string_view text,
-                              ViewPoint p, FontFace face, uint8_t color,
-                              AlignX align, std::optional<FlowColumns> flow) {
+RenderedTextMetrics FontManager::render_text_onto(
+    Surface& surface, std::string_view text, ViewPoint p, FontFace face,
+    uint8_t color, TextAnchor align, std::optional<FlowColumns> flow) {
   return get(face).render_text_onto(
       surface, text, p, TextStyle{.color = color, .align = align, .shadow = {}},
       flow);

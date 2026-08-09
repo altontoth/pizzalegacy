@@ -47,7 +47,7 @@ void MaestroMessage::render(const RenderContext& ctx) {
 
   TextStyle style{
       .color = 240,
-      .align = AlignX::Left,
+      .align = TextAnchor::Start,
       .shadow = std::nullopt,
       .character_spacing = std::nullopt,
       .line_spacing = 10,
@@ -55,7 +55,7 @@ void MaestroMessage::render(const RenderContext& ctx) {
 
   TextStyle center_style{
       .color = 240,
-      .align = AlignX::CenterPoint,
+      .align = TextAnchor::Middle,
       .shadow = std::nullopt,
       .character_spacing = std::nullopt,
       .line_spacing = 10,

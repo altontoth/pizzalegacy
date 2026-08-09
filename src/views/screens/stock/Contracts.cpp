@@ -123,7 +123,7 @@ void Contracts::render_front(const RenderContext& ctx) {
   constexpr int y_remaining = 268 - LC::WOOD_BORDER_HEIGHT_TOP;
 
   auto text = [&](int x, int row_y, const std::string& s,
-                  AlignX align = AlignX::Left) {
+                  TextAnchor align = TextAnchor::Start) {
     TextStyle ts{
         .color = 8,
         .align = align,
@@ -135,20 +135,19 @@ void Contracts::render_front(const RenderContext& ctx) {
   };
 
   text(heading_x, y_contract_with, "contract with");
-  text(supplier_center_x, y_supplier + 20, supplier_name, AlignX::CenterPoint);
+  text(supplier_center_x, y_supplier + 20, supplier_name, TextAnchor::Middle);
 
   // Total
   text(label_x, y_total, "total:");
-  text(value_x, y_total, compat::format("{:w}", c.daily_sum),
-       AlignX::RightEdge);
+  text(value_x, y_total, compat::format("{:w}", c.daily_sum), TextAnchor::End);
 
   // Discount: label, percent, and negated amount on same row
   Money discount_amount = (c.daily_sum * c.discount_pct) / 100;
   text(label_x, y_discount, "discount:");
   text(pct_x, y_discount, compat::format("{}%", c.discount_pct),
-       AlignX::RightEdge);
+       TextAnchor::End);
   text(value_x, y_discount, compat::format("{:w}", -discount_amount),
-       AlignX::RightEdge);
+       TextAnchor::End);
 
   // Separator line between discount and after-discount total
   gfx::draw::line(*ctx.surface, ViewPoint{sep_x1, y_separator},
@@ -157,16 +156,16 @@ void Contracts::render_front(const RenderContext& ctx) {
   // After-discount total (unlabeled)
   Money after_discount = c.daily_sum - discount_amount;
   text(value_x, y_after_discount, compat::format("{:w}", after_discount),
-       AlignX::RightEdge);
+       TextAnchor::End);
 
   // Charge
   text(label_x, y_charge, "charge:");
-  text(charge_x, y_charge, compat::format("{:w}", c.charge), AlignX::RightEdge);
+  text(charge_x, y_charge, compat::format("{:w}", c.charge), TextAnchor::End);
 
   // Penalty
   text(label_x, y_penalty, "penalty clause:");
   text(penalty_x, y_penalty, compat::format("{:w}", c.cancellation_penalty),
-       AlignX::RightEdge);
+       TextAnchor::End);
 
   // Amount toggle - clickable
   text(label_x, y_amount, "amount:");
@@ -191,13 +190,13 @@ void Contracts::render_front(const RenderContext& ctx) {
   if (supplier) {
     text(label_x, y_quality, "quality:");
     text(quality_x, y_quality, compat::format("{}", supplier->quality()),
-         AlignX::RightEdge);
+         TextAnchor::End);
   }
 
   // Remaining term: number then "day" or "days"
   text(label_x, y_remaining, "remaining term:");
   text(quality_x, y_remaining, compat::format("{}", c.remaining_term),
-       AlignX::RightEdge);
+       TextAnchor::End);
   text(days_x, y_remaining, c.remaining_term == 1 ? "day" : "days");
 }
 
@@ -235,7 +234,7 @@ void Contracts::render_back(const RenderContext& ctx) {
                          page_color);
 
   auto text = [&](int x, int row_y, const std::string& s,
-                  AlignX align = AlignX::Left) {
+                  TextAnchor align = TextAnchor::Start) {
     context_.font->render_text_onto(*ctx.surface, s, ViewPoint{x, row_y},
                                     FontFace::CSTANDAR, 8, align);
   };
@@ -253,7 +252,7 @@ void Contracts::render_back(const RenderContext& ctx) {
         IngredientFactory::create_ingredient(static_cast<int>(item.type));
     std::string name = ingredient ? ingredient->name() : "?";
     text(ingredient_x, y, name);
-    text(kg_num_x, y, compat::format("{}", item.kg_per_day), AlignX::RightEdge);
+    text(kg_num_x, y, compat::format("{}", item.kg_per_day), TextAnchor::End);
     text(kg_label_x, y, "kg");
     y += ingredient_line_h;
   }

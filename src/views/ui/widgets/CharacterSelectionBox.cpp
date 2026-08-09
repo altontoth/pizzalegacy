@@ -73,10 +73,8 @@ void CharacterSelectionBox::draw(Surface& screen, ViewPoint p,
         block, item.label, ViewPoint{col1_x, this_y}, FontFace::PIZ_NUMB, 1);
 
     context_.font->render_text_onto(block, item.get_value(),
-                                    // Because we're right aligned we move it a
-                                    // bit away from the right border this way:
-                                    ViewPoint{-8, this_y}, FontFace::PIZ_NUMB,
-                                    1, AlignX::Right);
+                                    ViewPoint{block.width() - 8, this_y},
+                                    FontFace::PIZ_NUMB, 1, TextAnchor::End);
 
     this_y += y_offset;
   }

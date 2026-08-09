@@ -154,8 +154,9 @@ void Intro::render(const RenderContext& ctx) {
   case Logo::PRESENTS:
     ctx.surface->palette(PaletteHandle{39});
     ctx.surface->fill(gfx::ColorIndex{2});
-    context_.font->render_text_onto(*ctx.surface, "presents", ViewPoint{0, 128},
-                                    FontFace::MENU, text_color, AlignX::Center);
+    context_.font->render_text_onto(
+        *ctx.surface, "presents", ViewPoint{ctx.surface->width() / 2, 128},
+        FontFace::MENU, text_color, TextAnchor::Middle);
     break;
   case Logo::TITEL1:
     ctx.surface->fill(gfx::ColorIndex{31});
@@ -171,22 +172,22 @@ void Intro::render(const RenderContext& ctx) {
     context_.font->render_text_onto(
         *ctx.surface, "V3.0",
         ViewPoint{6, DisplayConstants::SCREEN_HEIGHT - 14}, FontFace::CSTANDAR,
-        text_color, AlignX::Left);
+        text_color, TextAnchor::Start);
     break;
   case Logo::CREDITS: {
     ctx.surface->palette(PaletteHandle{39});
     ctx.surface->fill(gfx::ColorIndex{2});
     auto& entry = credit_mapping_[current_credit_line_];
-    int x = 0;
+    int x = ctx.surface->width() / 2;
     int y = 128;
     context_.font->render_text_onto(*ctx.surface, credit_lines_[entry.first],
                                     ViewPoint{x, y}, FontFace::MENU, text_color,
-                                    AlignX::Center);
+                                    TextAnchor::Middle);
     y += 40;
     for (auto line_nr : entry.second) {
       context_.font->render_text_onto(*ctx.surface, credit_lines_[line_nr],
                                       ViewPoint{x, y}, FontFace::MENU,
-                                      text_color, AlignX::Center);
+                                      text_color, TextAnchor::Middle);
       y += 30;
     }
   } break;

@@ -354,7 +354,7 @@ void AnimatedStats::render_reputation(const RenderContext& ctx) {
 
   context_.font->render_text_onto(*ctx.surface, "restaurant popularity",
                                   ViewPoint{192, 18}, FontFace::ASTANDAR, 240,
-                                  AlignX::CenterPoint);
+                                  TextAnchor::Middle);
 
   static constexpr std::array<Blitmap4Icon, 8> COMP_ICONS = {
       Blitmap4Icon::ALARM_CLOCK,     // 0: WaitingTime
@@ -433,7 +433,7 @@ void AnimatedStats::render_pizza_quality(const RenderContext& ctx) {
 
   context_.font->render_text_onto(*ctx.surface, "quality of pizzas",
                                   ViewPoint{192, 18}, FontFace::ASTANDAR, 240,
-                                  AlignX::CenterPoint);
+                                  TextAnchor::Middle);
 
   static constexpr std::array<Blitmap4Icon, 4> QUALITY_ICONS = {
       Blitmap4Icon::INGREDIENTS, // 0: ingredient quality
@@ -668,7 +668,7 @@ void AnimatedStats::render_capacity(const RenderContext& ctx) {
     context_.font->render_text_onto(
         *ctx.surface, "demand",
         ViewPoint{demand_label_x, demand_bar_start.y + LABEL_Y_OFFSET},
-        FontFace::PIZ_NUMB, 240, AlignX::Left);
+        FontFace::PIZ_NUMB, 240, TextAnchor::Start);
 
     int capacity_label_x = (capacity_pixels_to_show >= LABEL_INSIDE_THRESHOLD)
                                ? capacity_bar_start.x + LABEL_INSIDE_X_OFFSET
@@ -678,7 +678,7 @@ void AnimatedStats::render_capacity(const RenderContext& ctx) {
     context_.font->render_text_onto(
         *ctx.surface, "capacity",
         ViewPoint{capacity_label_x, capacity_bar_start.y + LABEL_Y_OFFSET},
-        FontFace::PIZ_NUMB, 240, AlignX::Left);
+        FontFace::PIZ_NUMB, 240, TextAnchor::Start);
   }
 }
 
@@ -688,10 +688,10 @@ void AnimatedStats::render_popularity(const RenderContext& ctx) {
   ctx.surface->palette({7});
 
   context_.font->render_text_onto(*ctx.surface, "Popularity", ViewPoint{92, 20},
-                                  FontFace::RUBY, 12, AlignX::Left);
+                                  FontFace::RUBY, 12, TextAnchor::Start);
   context_.font->render_text_onto(*ctx.surface, "with customers",
                                   ViewPoint{50, 42}, FontFace::RUBY, 12,
-                                  AlignX::Left);
+                                  TextAnchor::Start);
 
   const auto& stanbobs = context_.bob->get("bob/stanbobs.bob");
   const int edge_offset = 12;
@@ -779,10 +779,10 @@ void AnimatedStats::render_turnover(const RenderContext& ctx) {
   // Render text headers
   context_.font->render_text_onto(*ctx.surface, "takings",
                                   ViewPoint{takings_text_x, takings_text_y},
-                                  FontFace::ASTANDAR, 13, AlignX::Left);
+                                  FontFace::ASTANDAR, 13, TextAnchor::Start);
   context_.font->render_text_onto(*ctx.surface, "expenses",
                                   ViewPoint{expenses_text_x, expenses_text_y},
-                                  FontFace::ASTANDAR, 13, AlignX::Left);
+                                  FontFace::ASTANDAR, 13, TextAnchor::Start);
 
   // Draw horizontal dividing line
   const int line_x = 188;
@@ -835,19 +835,19 @@ void AnimatedStats::render_turnover(const RenderContext& ctx) {
   context_.font->render_text_onto(
       *ctx.surface, compat::format("{}", stats.day_before_yesterday.revenue),
       ViewPoint{takings_value_x, value_y}, FontFace::ASTANDAR, 12,
-      AlignX::Left);
+      TextAnchor::Start);
 
   context_.font->render_text_onto(
       *ctx.surface, compat::format("{}", stats.yesterday.total_expenditure()),
       ViewPoint{expenses_value_x, value_y}, FontFace::ASTANDAR, 12,
-      AlignX::Left);
+      TextAnchor::Start);
 }
 
 void AnimatedStats::render_production(const RenderContext& ctx) {
   gfx::blit::blit_raw_with_palette(*ctx.surface,
                                    context_.vga->get("gfx/back6"));
   context_.font->render_text_onto(*ctx.surface, "output", ViewPoint{150, 18},
-                                  FontFace::ASTANDAR, 244, AlignX::Left);
+                                  FontFace::ASTANDAR, 244, TextAnchor::Start);
 
   const int order_count = production_data_.order_count;
   const int oven_count =
@@ -858,7 +858,7 @@ void AnimatedStats::render_production(const RenderContext& ctx) {
   if (order_count == 0) {
     context_.font->render_text_onto(*ctx.surface, "NO|ORDERS",
                                     ViewPoint{136, 64}, FontFace::CSTANDAR, 244,
-                                    AlignX::Left);
+                                    TextAnchor::Start);
   }
   else {
     // Render paper notes (sprite 13) in grid

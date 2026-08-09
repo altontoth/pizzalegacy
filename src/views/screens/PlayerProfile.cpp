@@ -205,10 +205,10 @@ Surface PlayerProfile::create_overview(const Player* player) {
 
   if (!first_name.empty()) {
     font->render_text_onto(s, first_name, first_name_pos, FontFace::ASTANDAR,
-                           16, AlignX::CenterPoint);
+                           16, TextAnchor::Middle);
   }
   font->render_text_onto(s, last_name, last_name_pos, FontFace::ASTANDAR, 16,
-                         AlignX::CenterPoint);
+                         TextAnchor::Middle);
 
   const ViewPoint game_mode_pos{116, 244};
   const int line_height = 22;
@@ -229,7 +229,7 @@ Surface PlayerProfile::create_overview(const Player* player) {
                                    game_mode_pos.y};
   font->render_text_onto(s, std::to_string(state_.human_player_count()),
                          player_count_pos, FontFace::PIZ_NUMB, text_color,
-                         AlignX::RightEdge);
+                         TextAnchor::End);
 
   const ViewPoint score_label_pos{game_mode_pos.x,
                                   game_mode_pos.y + line_height};
@@ -238,7 +238,7 @@ Surface PlayerProfile::create_overview(const Player* player) {
   const ViewPoint score_value_pos{game_mode_pos.x + label_x_offset,
                                   game_mode_pos.y + line_height};
   font->render_text_onto(s, std::to_string(player->score()), score_value_pos,
-                         FontFace::PIZ_NUMB, text_color, AlignX::RightEdge);
+                         FontFace::PIZ_NUMB, text_color, TextAnchor::End);
 
   const ViewPoint start_of_day_pos{game_mode_pos.x + 8,
                                    score_value_pos.y + line_height};
@@ -421,7 +421,7 @@ Surface PlayerProfile::create_character_values(const Player* player) {
                            FontFace::PIZ_NUMB, text_color);
 
     font->render_line_onto(char_val, std::to_string(value), {values_x, y},
-                           FontFace::PIZ_NUMB, text_color, AlignX::RightEdge);
+                           FontFace::PIZ_NUMB, text_color, TextAnchor::End);
 
     y += line_height;
   }
@@ -435,11 +435,11 @@ Surface PlayerProfile::create_company(const Player* player) {
 
   // Restaurant chain
   font->render_text_onto(page, "Restaurant chain", {192, 24},
-                         FontFace::PIZ_NUMB, text_color, AlignX::CenterPoint);
+                         FontFace::PIZ_NUMB, text_color, TextAnchor::Middle);
 
   // Company name
   font->render_text_onto(page, player->name(), {192, 48}, FontFace::PIZ_NUMB,
-                         text_color, AlignX::CenterPoint);
+                         text_color, TextAnchor::Middle);
 
   // Owner: name
   const auto& character = player->character();
@@ -473,7 +473,7 @@ Surface PlayerProfile::create_company(const Player* player) {
       }
       font->render_line_onto(page, compat::format("{:i}", city_profit),
                              {336, y}, FontFace::PIZ_NUMB, text_color,
-                             AlignX::RightEdge);
+                             TextAnchor::End);
     }
     else {
       font->render_line_onto(page, "---------------", {188, y},
@@ -491,13 +491,13 @@ Surface PlayerProfile::create_curriculum_vitae(const Player* player, int page) {
   auto* font = context_.font;
 
   font->render_text_onto(cv, "Curriculum Vitae", {192, 24}, FontFace::PIZ_NUMB,
-                         text_color, AlignX::CenterPoint);
+                         text_color, TextAnchor::Middle);
 
   const auto& character = player->character();
   std::string name =
       compat::format("{} {}", character.first_name(), character.last_name());
   font->render_text_onto(cv, name, {192, 48}, FontFace::PIZ_NUMB, text_color,
-                         AlignX::CenterPoint);
+                         TextAnchor::Middle);
 
   constexpr int date_x = 72;
   constexpr int text_x = 160;
@@ -522,7 +522,7 @@ Surface PlayerProfile::create_curriculum_vitae(const Player* player, int page) {
   int total_pages = cv_total_pages(entries.size());
   font->render_line_onto(
       cv, compat::format(" - {}/{} -", page + 1, total_pages), {192, 330},
-      FontFace::PIZ_NUMB, text_color, AlignX::CenterPoint);
+      FontFace::PIZ_NUMB, text_color, TextAnchor::Middle);
 
   return cv;
 }
@@ -588,7 +588,7 @@ Surface PlayerProfile::create_awards(const Player* player) {
 
   // Title: "awards" centered
   font->render_text_onto(page, "awards", {192, 34}, FontFace::RUBY, 16,
-                         AlignX::CenterPoint);
+                         TextAnchor::Middle);
 
   const auto& awards = player->awards();
   for (size_t i = 0; i < awards.size(); ++i) {
@@ -627,12 +627,12 @@ Surface PlayerProfile::create_target_cv(const Player* player, int page) {
   if (!state_.is_mission_active()) {
     font->render_text_onto(cv, "Target curriculum vitae|in mission mode only",
                            {192, 60}, FontFace::ASTANDAR, text_color,
-                           AlignX::CenterPoint);
+                           TextAnchor::Middle);
     return cv;
   }
 
   font->render_text_onto(cv, "Target Curriculum Vitae", {192, 24},
-                         FontFace::PIZ_NUMB, text_color, AlignX::CenterPoint);
+                         FontFace::PIZ_NUMB, text_color, TextAnchor::Middle);
 
   const auto& target = *state_.mission_target();
 
@@ -661,14 +661,14 @@ Surface PlayerProfile::create_target_cv(const Player* player, int page) {
         {text_x, y}, FontFace::PIZ_NUMB, text_color);
     font->render_line_onto(cv, compat::format("{}%", scores[i]),
                            {percent_x, y + (row_height / 2)},
-                           FontFace::PIZ_NUMB, text_color, AlignX::RightEdge);
+                           FontFace::PIZ_NUMB, text_color, TextAnchor::End);
     y += row_height;
   }
 
   int total_pages = cv_total_pages(milestones.size());
   font->render_line_onto(
       cv, compat::format(" - {}/{} -", page + 1, total_pages), {192, 330},
-      FontFace::PIZ_NUMB, text_color, AlignX::CenterPoint);
+      FontFace::PIZ_NUMB, text_color, TextAnchor::Middle);
 
   return cv;
 }

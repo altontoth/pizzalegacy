@@ -7,6 +7,7 @@
 #pragma once
 
 #include <string>
+#include "engine/Geometry.h"
 #include "engine/geom/Spaces.h"
 #include "resources/FontManager.h"
 #include "views/ui/widgets/MenuItem.h"
@@ -14,13 +15,13 @@
 class LabelMenuItem : public MenuItem {
 public:
   LabelMenuItem(GameContext& gc, std::string text, FontFace font_face,
-                const TextStyle& ts = {})
-      : MenuItem(gc, font_face, std::move(text), ts.align), style_(ts) {}
+                const TextStyle& ts = {}, HAlign align = HAlign::Left)
+      : MenuItem(gc, font_face, std::move(text), align), style_(ts) {}
 
   void draw(Surface& screen, ViewPoint p, bool /*is_selected*/) override {
     TextStyle style = style_;
-    // Menu already aligns the layout, so we have to use Left here regardless:
-    style.align = AlignX::Left;
+    // The menu has already placed the item, so the text draws from p.
+    style.align = TextAnchor::Start;
     RenderedTextMetrics metrics =
         context_.font->render_text_onto(screen, text_, p, font_face_, style);
     width_ = metrics.width;

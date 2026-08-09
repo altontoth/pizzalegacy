@@ -78,12 +78,12 @@ MenuGameLoad::MenuGameLoad(GameContext& context, GameState& state)
 
   constexpr TextStyle style{
       .color = 1,
-      .align = AlignX::Left,
+      .align = TextAnchor::Start,
       .shadow = std::nullopt,
   };
   constexpr TextStyle sel_style{
       .color = 29,
-      .align = AlignX::Left,
+      .align = TextAnchor::Start,
       .shadow = std::nullopt,
   };
 

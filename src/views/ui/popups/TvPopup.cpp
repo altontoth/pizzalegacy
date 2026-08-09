@@ -70,7 +70,7 @@ void TvPopup::render(Surface& surface, ViewPoint origin) {
 
   const PxOffset title_offset{box_size.w / 2, 18};
   font_->render_line_onto(surface, "TV-Programs", origin + title_offset,
-                          FontFace::ASTANDAR, 240, AlignX::CenterPoint);
+                          FontFace::ASTANDAR, 240, TextAnchor::Middle);
 
   for (int i = 0; i < static_cast<int>(tv_channels.size()); ++i) {
     const ViewRect local = row_rect(i);

@@ -19,12 +19,12 @@ TextInputPopup::TextInputPopup(const GameContext& context, std::string text,
 void TextInputPopup::render(Surface& surface, ViewPoint origin) {
   auto pop_surface = popup_surface(popup_width_, popup_height_);
 
-  const ViewPoint text_origin{0, 20};
+  const ViewPoint text_origin{pop_surface.width() / 2, 20};
   const uint8_t text_box_bg = 13;
   const uint8_t text_color = 240;
 
   font_->render_text_onto(pop_surface, prompt_text_, text_origin,
-                          FontFace::ASTANDAR, text_color, AlignX::Center);
+                          FontFace::ASTANDAR, text_color, TextAnchor::Middle);
 
   const ViewRect bg_box = {30, 60, 302, 24};
   pop_surface.fill_rect(bg_box, text_box_bg);
@@ -34,7 +34,7 @@ void TextInputPopup::render(Surface& surface, ViewPoint origin) {
 
   const ViewPoint input_origin = text_origin + PxOffset{34, 44};
   font_->render_text_onto(pop_surface, display_text, input_origin,
-                          FontFace::ASTANDAR, text_color, AlignX::Left);
+                          FontFace::ASTANDAR, text_color, TextAnchor::Start);
 
   surface.blit_raw(pop_surface, origin);
 }

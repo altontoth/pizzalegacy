@@ -26,8 +26,8 @@ public:
       : MenuItem(gc, face), position_(position), entry_(std::move(e)) {}
 
   void draw(Surface& screen, ViewPoint p, bool /*is_selected*/) override {
-    constexpr TextStyle left{.align = AlignX::Left};
-    constexpr TextStyle right{.align = AlignX::RightEdge};
+    constexpr TextStyle left{.align = TextAnchor::Start};
+    constexpr TextStyle right{.align = TextAnchor::End};
 
     auto pos_str = compat::format("{}.", position_);
     auto score_str = compat::format("{}", entry_.score);
@@ -81,7 +81,7 @@ MenuHighScores::MenuHighScores(GameContext& context, GameState& state)
   add_menu_item(std::make_unique<PositionMarkerMenuItem>(context, 156, 234));
   add_menu_item(std::make_unique<TextMenuItem>(
       context, "Back", [this] { state_.ui().pop(); }, FontFace::RUBY, style,
-      sel_style));
+      sel_style, item_align));
 
   update_selection(nullptr);
 }

@@ -7,12 +7,11 @@
 #include "Font.h"
 
 #include <algorithm>
-#include <cstdlib>
 #include <set>
 #include <string>
 #include <utfcpp/utf8.h>
 #include "engine/Fatal.h"
-#include "engine/ui/Alignment.h"
+#include "engine/ui/TextAnchor.h"
 #include "resources/FontTypes.h"
 
 constexpr int SPACE_BETWEEN_CHARACTERS = 2;
@@ -138,19 +137,18 @@ RenderedTextMetrics Font::render_text_onto(Surface& surface,
     return metrics;
   }
 
-  // Standard path: fixed width wrapping
-  // The available wrap width depends on alignment: for Left, text starts at
-  // pos.x and extends right. For CenterPoint, text extends both ways from
-  // pos.x. For RightEdge, text extends left from pos.x.
-  int available_width;
-  if (style.align == AlignX::CenterPoint) {
+  // No flow, so we just wrap at the edge of the surface (after taking the
+  // anchor into account).
+  int available_width = surface.width() - pos.x;
+  switch (style.align) {
+  case TextAnchor::Start:
+    break;
+  case TextAnchor::Middle:
     available_width = 2 * std::min(pos.x, surface.width() - pos.x);
-  }
-  else if (style.align == AlignX::RightEdge) {
+    break;
+  case TextAnchor::End:
     available_width = pos.x;
-  }
-  else {
-    available_width = surface.width() - pos.x;
+    break;
   }
   if (style.shadow && style.shadow->offset.dx > 0) {
     available_width -= style.shadow->offset.dx;
@@ -227,22 +225,16 @@ RenderedTextMetrics Font::render_line_onto(Surface& target,
   RenderedTextMetrics out{};
   auto size = size_text(text, style);
 
-  ViewPoint origin;
-  if (style.align == AlignX::RightEdge) {
-    // For RightEdge: pos.x is the right edge of the text
-    origin.x = pos.x - size.width;
-    origin.y = pos.y;
-  }
-  else if (style.align == AlignX::CenterPoint) {
-    // For CenterPoint: pos.x is the center of the text
+  ViewPoint origin{pos.x, pos.y};
+  switch (style.align) {
+  case TextAnchor::Start:
+    break;
+  case TextAnchor::Middle:
     origin.x = pos.x - (size.width / 2);
-    origin.y = pos.y;
-  }
-  else {
-    // Legacy alignment: create container rect and align within it
-    ViewRect r{pos, target.size()};
-    origin =
-        views::ui::align_in_rect(r, {size.width, size.height}, style.align);
+    break;
+  case TextAnchor::End:
+    origin.x = pos.x - size.width;
+    break;
   }
   out.render_x = origin.x;
 

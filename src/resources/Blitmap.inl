@@ -116,7 +116,7 @@ void Blitmap<IconEnum>::render_icon_aligned(IconEnum icon, Surface& dest,
   ViewRect container =
       bounds.value_or(ViewRect{0, 0, dest.width(), dest.height()});
 
-  ViewPoint pos = align_in_rect(container, src, h_align, v_align);
+  ViewPoint pos = align_in_rect(container, src.size(), h_align, v_align);
 
   // then apply any extra offset
   pos.x += offset.x;

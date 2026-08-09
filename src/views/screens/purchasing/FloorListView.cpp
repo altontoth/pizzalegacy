@@ -95,9 +95,9 @@ void FloorListView::draw_flooring_list(const RenderContext& ctx) {
   interactions_.begin_frame();
 
   if (patterns_.empty()) {
-    context_.font->render_text_onto(*ctx.surface, "no patterns",
-                                    ViewPoint{0, 180}, FontFace::PIZ_NUMB,
-                                    COLOR_BLACK, AlignX::Center);
+    context_.font->render_text_onto(
+        *ctx.surface, "no patterns", ViewPoint{ctx.surface->width() / 2, 180},
+        FontFace::PIZ_NUMB, COLOR_BLACK, TextAnchor::Middle);
     Logger::warn("No patterns available");
     return;
   }
@@ -165,9 +165,9 @@ void FloorListView::draw_flooring_list(const RenderContext& ctx) {
 
   // Page number
   const std::string page_nr = compat::format("{}", current_page_ + 1);
-  context_.font->render_text_onto(*ctx.surface, page_nr, ViewPoint{150, 316},
-                                  FontFace::PIZ_NUMB, COLOR_BLACK,
-                                  AlignX::Center);
+  context_.font->render_text_onto(
+      *ctx.surface, page_nr, ViewPoint{(ctx.surface->width() / 2) + 150, 316},
+      FontFace::PIZ_NUMB, COLOR_BLACK, TextAnchor::Middle);
 }
 
 void FloorListView::set_up_input_panel() {

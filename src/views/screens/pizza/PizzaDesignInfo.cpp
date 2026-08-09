@@ -12,7 +12,7 @@
 #include "core/state/GameState.h"
 #include "engine/FormatCompat.h"
 #include "engine/Logger.h"
-#include "engine/ui/Alignment.h"
+#include "engine/ui/TextAnchor.h"
 #include "gfx/Blit.h"
 #include "gfx/Draw.h"
 #include "views/screens/pizza/PizzaDesign.h"
@@ -46,7 +46,7 @@ void PizzaDesign::draw_ingredients(const RenderContext& ctx) const {
     summary_map[ingredient_name] += weight;
     total_weight += weight;
   }
-  int weight_x = -250;
+  const int weight_x = ctx.surface->width() - 250;
   int name_x = 140;
   int y = 70;
 
@@ -55,16 +55,17 @@ void PizzaDesign::draw_ingredients(const RenderContext& ctx) const {
                                   text_color);
   context_.font->render_text_onto(
       *ctx.surface, std::to_string(total_weight) + " G", ViewPoint{weight_x, y},
-      FontFace::CSTANDAR, text_color, AlignX::Right);
+      FontFace::CSTANDAR, text_color, TextAnchor::End);
 
   for (const auto& item : summary_map) {
     y += 14;
     context_.font->render_text_onto(*ctx.surface, item.first,
                                     ViewPoint{name_x, y}, FontFace::CSTANDAR,
                                     text_color);
-    context_.font->render_text_onto(
-        *ctx.surface, std::to_string(item.second) + " G",
-        ViewPoint{weight_x, y}, FontFace::CSTANDAR, text_color, AlignX::Right);
+    context_.font->render_text_onto(*ctx.surface,
+                                    std::to_string(item.second) + " G",
+                                    ViewPoint{weight_x, y}, FontFace::CSTANDAR,
+                                    text_color, TextAnchor::End);
   }
 
   context_.font->render_text_onto(
@@ -198,8 +199,9 @@ void PizzaDesign::draw_pizza_info(const RenderContext& ctx) const {
 
   int label_x = 75;
   int label_y = 85;
-  int here_x_offset = -220; // "here" column
-  int all_x_offset = -140;  // "all" column (further left)
+  const int right_edge = ctx.surface->width();
+  const int here_x = right_edge - 145; // "here" column
+  const int all_x = right_edge - 65;   // "all" column (further left)
   text_color = 6;
 
   // costs
@@ -210,14 +212,14 @@ void PizzaDesign::draw_pizza_info(const RenderContext& ctx) const {
   // Show calculated cost in "here" column
   context_.font->render_text_onto(
       *ctx.surface, compat::format("{:n}", pizza_cost),
-      ViewPoint{label_x + here_x_offset, label_y}, FontFace::PIZ_NUMB,
-      text_color, AlignX::Right);
+      ViewPoint{here_x, label_y}, FontFace::PIZ_NUMB, text_color,
+      TextAnchor::End);
 
   if (restaurants_with_pizza > 0) {
     context_.font->render_text_onto(
         *ctx.surface, compat::format("{:n}", all_costs),
-        ViewPoint{label_x + all_x_offset, label_y}, FontFace::PIZ_NUMB,
-        text_color, AlignX::Right);
+        ViewPoint{all_x, label_y}, FontFace::PIZ_NUMB, text_color,
+        TextAnchor::End);
   }
   label_y += 21;
 
@@ -229,15 +231,15 @@ void PizzaDesign::draw_pizza_info(const RenderContext& ctx) const {
   if (on_current_menu) {
     context_.font->render_text_onto(
         *ctx.surface, compat::format("{:n}", here_price),
-        ViewPoint{label_x + here_x_offset, label_y}, FontFace::PIZ_NUMB,
-        text_color, AlignX::Right);
+        ViewPoint{here_x, label_y}, FontFace::PIZ_NUMB, text_color,
+        TextAnchor::End);
   }
 
   if (restaurants_with_pizza > 0) {
     context_.font->render_text_onto(
         *ctx.surface, compat::format("{:n}", all_price),
-        ViewPoint{label_x + all_x_offset, label_y}, FontFace::PIZ_NUMB,
-        text_color, AlignX::Right);
+        ViewPoint{all_x, label_y}, FontFace::PIZ_NUMB, text_color,
+        TextAnchor::End);
   }
   label_y += 21;
 
@@ -247,17 +249,15 @@ void PizzaDesign::draw_pizza_info(const RenderContext& ctx) const {
                                   FontFace::PIZ_NUMB, text_color);
 
   if (on_current_menu) {
-    context_.font->render_text_onto(*ctx.surface, std::to_string(here_sales),
-                                    ViewPoint{label_x + here_x_offset, label_y},
-                                    FontFace::PIZ_NUMB, text_color,
-                                    AlignX::Right);
+    context_.font->render_text_onto(
+        *ctx.surface, std::to_string(here_sales), ViewPoint{here_x, label_y},
+        FontFace::PIZ_NUMB, text_color, TextAnchor::End);
   }
 
   if (restaurants_with_pizza > 0) {
-    context_.font->render_text_onto(*ctx.surface, std::to_string(all_sales),
-                                    ViewPoint{label_x + all_x_offset, label_y},
-                                    FontFace::PIZ_NUMB, text_color,
-                                    AlignX::Right);
+    context_.font->render_text_onto(
+        *ctx.surface, std::to_string(all_sales), ViewPoint{all_x, label_y},
+        FontFace::PIZ_NUMB, text_color, TextAnchor::End);
   }
   label_y += 21;
 
@@ -269,15 +269,15 @@ void PizzaDesign::draw_pizza_info(const RenderContext& ctx) const {
   if (on_current_menu) {
     context_.font->render_text_onto(
         *ctx.surface, compat::format("{:n}", here_profit),
-        ViewPoint{label_x + here_x_offset, label_y}, FontFace::PIZ_NUMB,
-        text_color, AlignX::Right);
+        ViewPoint{here_x, label_y}, FontFace::PIZ_NUMB, text_color,
+        TextAnchor::End);
   }
 
   if (restaurants_with_pizza > 0) {
     context_.font->render_text_onto(
         *ctx.surface, compat::format("{:n}", all_profit),
-        ViewPoint{label_x + all_x_offset, label_y}, FontFace::PIZ_NUMB,
-        text_color, AlignX::Right);
+        ViewPoint{all_x, label_y}, FontFace::PIZ_NUMB, text_color,
+        TextAnchor::End);
   }
 
   context_.font->render_text_onto(*ctx.surface, "popularity",

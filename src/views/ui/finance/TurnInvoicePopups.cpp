@@ -19,7 +19,7 @@
 #include "core/state/GameState.h"
 #include "core/state/UIState.h"
 #include "core/util/GameContext.h"
-#include "engine/ui/Alignment.h"
+#include "engine/ui/TextAnchor.h"
 #include "views/ui/PopupManager.h"
 #include "views/ui/finance/FinanceComponents.h"
 #include "views/ui/popups/InvoicePopup.h"
@@ -84,7 +84,7 @@ void show_electricity_slot_invoice_popup(GameContext& context, GameState& gs,
   cfg.lines.push_back(empty_line);
   cfg.lines.push_back({"ELECTRICITY:", invoice.electricity});
   cfg.lines.push_back(empty_line);
-  cfg.lines.push_back({"SLOT MACHINES", {}, AlignX::Left});
+  cfg.lines.push_back({"SLOT MACHINES", {}, TextAnchor::Start});
   cfg.lines.push_back({"INCOME:", invoice.slot_income});
   cfg.lines.push_back(empty_line);
   cfg.lines.push_back({"TOTAL:", invoice.total});

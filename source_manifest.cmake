@@ -516,12 +516,12 @@ set(PLEGACY_HEADERS
     src/engine/input/TextSession.h
     src/engine/input/backend/SDLGamepad.h
     src/engine/input/backend/SDLKeymap.h
-    src/engine/ui/Alignment.h
     src/engine/ui/CursorManager.h
     src/engine/ui/ICursorManager.h
     src/engine/ui/InteractionEvent.h
     src/engine/ui/InteractionLayers.h
     src/engine/ui/InteractionManager.h
+    src/engine/ui/TextAnchor.h
     src/engine/ui/TooltipManager.h
     src/engine/ui/TooltipRequest.h
     src/engine/ui/UiMode.h

@@ -37,7 +37,7 @@ struct InvoiceLine {
   std::string label;
   std::optional<Money> value;
   // only used when value is nullopt
-  AlignX align = AlignX::Center;
+  TextAnchor align = TextAnchor::Middle;
 };
 
 struct InvoiceConfig {

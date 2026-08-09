@@ -60,13 +60,15 @@ void StockMain::render(const RenderContext& ctx) {
   context_.font->render_text_onto(*ctx.surface, "value", ViewPoint{130, 240},
                                   FontFace::PIZ_NUMB, style);
 
+  const int right_edge = ctx.surface->width();
   style.color = 8;
-  style.align = AlignX::Right;
-  context_.font->render_text_onto(*ctx.surface, kg_text, ViewPoint{-106, 210},
+  style.align = TextAnchor::End;
+  context_.font->render_text_onto(*ctx.surface, kg_text,
+                                  ViewPoint{right_edge - 106, 210},
                                   FontFace::PIZ_NUMB, style);
   context_.font->render_text_onto(*ctx.surface, value_text,
-                                  ViewPoint{-110, 240}, FontFace::PIZ_NUMB,
-                                  style);
+                                  ViewPoint{right_edge - 110, 240},
+                                  FontFace::PIZ_NUMB, style);
 }
 
 void StockMain::navigate_to_restaurant(core::RestaurantId new_id) {

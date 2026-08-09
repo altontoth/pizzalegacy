@@ -14,8 +14,8 @@
 #include "core/state/UIState.h"
 #include "engine/FormatCompat.h"
 #include "engine/geom/Spaces.h"
-#include "engine/ui/Alignment.h"
 #include "engine/ui/InteractionEvent.h"
+#include "engine/ui/TextAnchor.h"
 #include "factories/IngredientFactory.h"
 #include "gfx/Blit.h"
 #include "resources/BlitmapManager.h"
@@ -59,7 +59,7 @@ void DepotIngredientCategoryView::draw_page_header(const RenderContext& ctx) {
   const std::string title =
       compat::format("central depot {}", state_.active_city()->name());
   context_.font->render_text_onto(*ctx.surface, title, ViewPoint{134, 12},
-                                  FontFace::PIZ_NUMB, 8, AlignX::Left);
+                                  FontFace::PIZ_NUMB, 8, TextAnchor::Start);
 }
 
 void DepotIngredientCategoryView::draw_ingredient_list(
@@ -77,19 +77,19 @@ void DepotIngredientCategoryView::draw_ingredient_list(
 
   context_.font->render_text_onto(*ctx.surface, "qual", ViewPoint{176, col_y},
                                   FontFace::CSTANDAR, text_color,
-                                  AlignX::RightEdge);
+                                  TextAnchor::End);
   context_.font->render_text_onto(*ctx.surface, "stoc", ViewPoint{226, col_y},
                                   FontFace::CSTANDAR, text_color,
-                                  AlignX::RightEdge);
+                                  TextAnchor::End);
   context_.font->render_text_onto(*ctx.surface, "nee", ViewPoint{266, col_y},
                                   FontFace::CSTANDAR, text_color,
-                                  AlignX::RightEdge);
+                                  TextAnchor::End);
   context_.font->render_text_onto(*ctx.surface, "value", ViewPoint{326, col_y},
                                   FontFace::CSTANDAR, text_color,
-                                  AlignX::RightEdge);
+                                  TextAnchor::End);
   context_.font->render_text_onto(*ctx.surface, "lv", ViewPoint{356, col_y},
                                   FontFace::CSTANDAR, text_color,
-                                  AlignX::RightEdge);
+                                  TextAnchor::End);
 
   auto [start_id, end_id] = core::food::CategoryRegistry::id_range(category_);
 
@@ -124,30 +124,31 @@ void DepotIngredientCategoryView::draw_ingredient_list(
 
     context_.font->render_text_onto(*ctx.surface, std::to_string(quality),
                                     ViewPoint{176, y}, FontFace::CSTANDAR,
-                                    row_color, AlignX::RightEdge);
+                                    row_color, TextAnchor::End);
     context_.font->render_text_onto(*ctx.surface, std::to_string(supplies),
                                     ViewPoint{224, y}, FontFace::CSTANDAR,
-                                    row_color, AlignX::RightEdge);
+                                    row_color, TextAnchor::End);
     context_.font->render_text_onto(*ctx.surface, std::to_string(need),
                                     ViewPoint{260, y}, FontFace::CSTANDAR,
-                                    row_color, AlignX::RightEdge);
+                                    row_color, TextAnchor::End);
     if (stock) {
       context_.font->render_text_onto(
           *ctx.surface, compat::format("{:n}", stock->weighted_avg_cost),
-          ViewPoint{326, y}, FontFace::CSTANDAR, text_color, AlignX::RightEdge);
+          ViewPoint{326, y}, FontFace::CSTANDAR, text_color, TextAnchor::End);
       context_.font->render_text_onto(
           *ctx.surface, compat::format("{:n}", stock->last_price),
-          ViewPoint{360, y}, FontFace::CSTANDAR, text_color, AlignX::RightEdge);
+          ViewPoint{360, y}, FontFace::CSTANDAR, text_color, TextAnchor::End);
     }
 
     y += line_height;
   }
 
   context_.font->render_text_onto(*ctx.surface, "sum value", ViewPoint{96, 320},
-                                  FontFace::CSTANDAR, text_color, AlignX::Left);
+                                  FontFace::CSTANDAR, text_color,
+                                  TextAnchor::Start);
   context_.font->render_text_onto(
       *ctx.surface, compat::format("{}", depot_total_value),
-      ViewPoint{312, 320}, FontFace::CSTANDAR, text_color, AlignX::RightEdge);
+      ViewPoint{312, 320}, FontFace::CSTANDAR, text_color, TextAnchor::End);
 }
 
 void DepotIngredientCategoryView::set_up_input_panel() {

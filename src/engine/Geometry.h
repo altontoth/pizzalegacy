@@ -7,30 +7,27 @@
 
 #pragma once
 
-#include <cassert>
+#include "engine/Size.h"
 #include "engine/geom/Spaces.h"
 
+// Placement of a box inside a container (for text use TextAnchor).
 enum class HAlign { Left, Center, Right };
 enum class VAlign { Top, Center, Bottom };
 
-constexpr ViewPoint align_in_rect(const ViewRect& container,
-                                  const ViewRect& src, HAlign h_align,
-                                  VAlign v_align) {
-  // src.w, src.h are the width/height of the thing we're aligning
-  // container.x, container.y, container.w, container.h define the box
-  assert(src.w <= container.w);
-  assert(src.h <= container.h);
-
+// If the box is larger than its container it'll extend beyond the right or
+// bottom edge.
+constexpr ViewPoint align_in_rect(const ViewRect& container, const Size& sz,
+                                  HAlign h_align, VAlign v_align) {
   ViewPoint p{};
   switch (h_align) {
   case HAlign::Left:
     p.x = container.x;
     break;
   case HAlign::Center:
-    p.x = container.x + (container.w - src.w) / 2;
+    p.x = container.x + (container.w - sz.w) / 2;
     break;
   case HAlign::Right:
-    p.x = container.x + (container.w - src.w);
+    p.x = container.x + (container.w - sz.w);
     break;
   }
 
@@ -39,10 +36,10 @@ constexpr ViewPoint align_in_rect(const ViewRect& container,
     p.y = container.y;
     break;
   case VAlign::Center:
-    p.y = container.y + (container.h - src.h) / 2;
+    p.y = container.y + (container.h - sz.h) / 2;
     break;
   case VAlign::Bottom:
-    p.y = container.y + (container.h - src.h);
+    p.y = container.y + (container.h - sz.h);
     break;
   }
 

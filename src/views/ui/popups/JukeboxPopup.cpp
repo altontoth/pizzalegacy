@@ -86,7 +86,7 @@ void JukeboxPopup::render(Surface& surface, ViewPoint origin) {
 
   const PxOffset title_offset{box_size.w / 2, 18};
   font_->render_line_onto(surface, "Music Selection", origin + title_offset,
-                          FontFace::ASTANDAR, 240, AlignX::CenterPoint);
+                          FontFace::ASTANDAR, 240, TextAnchor::Middle);
 
   for (int i = 0; i < static_cast<int>(music_titles.size()); ++i) {
     const ViewRect local = row_rect(i);

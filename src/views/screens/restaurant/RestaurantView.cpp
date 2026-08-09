@@ -1427,7 +1427,7 @@ void RestaurantView::render_item_picker(
                                     FontFace::PIZ_NUMB, text_color);
     context_.font->render_text_onto(*ctx.surface, std::to_string(bag_count),
                                     {292, text_y}, FontFace::PIZ_NUMB,
-                                    text_color, AlignX::RightEdge);
+                                    text_color, TextAnchor::End);
 
     interactions_.create_frame_item(
         hover_box, name,

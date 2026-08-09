@@ -15,8 +15,8 @@
 #include "core/state/GameState.h"
 #include "core/util/Constants.h"
 #include "engine/geom/Spaces.h"
-#include "engine/ui/Alignment.h"
 #include "engine/ui/InteractionEvent.h"
+#include "engine/ui/TextAnchor.h"
 #include "gfx/Blit.h"
 #include "gfx/Draw.h"
 #include "resources/BlitmapIcons.h"
@@ -47,7 +47,7 @@ void MarketResearch::render_bar_chart(
   context_.font->render_line_onto(
       *ctx.surface, "chain of restaurants",
       ViewPoint{views::base::MAIN_PANEL_WIDTH / 2, 14}, FontFace::ASTANDAR,
-      text_color, AlignX::CenterPoint);
+      text_color, TextAnchor::Middle);
 
   // Compute scale and subtitle based on mode
   int scale_unit = 1;
@@ -78,7 +78,7 @@ void MarketResearch::render_bar_chart(
 
   context_.font->render_line_onto(
       *ctx.surface, subtitle, ViewPoint{views::base::MAIN_PANEL_WIDTH / 2, 32},
-      FontFace::ASTANDAR, text_color, AlignX::CenterPoint);
+      FontFace::ASTANDAR, text_color, TextAnchor::Middle);
 
   // Graph area
   constexpr int grid_color = 14;
@@ -91,7 +91,7 @@ void MarketResearch::render_bar_chart(
     context_.font->render_line_onto(*ctx.surface, std::to_string(i),
                                     label_y_start -
                                         PxOffset{0, i * y_label_offset},
-                                    FontFace::CSTANDAR, 240, AlignX::RightEdge);
+                                    FontFace::CSTANDAR, 240, TextAnchor::End);
   }
 
   constexpr int graph_bottom = 52 + 244;
@@ -280,16 +280,18 @@ void MarketResearch::render_area_info(const RenderContext& ctx) {
                        "extremely high",
                        "out of range"};
 
-  ViewPoint position{0, 28};
+  ViewPoint position{ctx.surface->width() / 2, 28};
   context_.font->render_text_onto(*ctx.surface, "zone info", position,
-                                  FontFace::RUBY, text_color, AlignX::Center);
+                                  FontFace::RUBY, text_color,
+                                  TextAnchor::Middle);
   position.y += 32;
   context_.font->render_text_onto(*ctx.surface, district_.name(), position,
-                                  FontFace::RUBY, text_color, AlignX::Center);
+                                  FontFace::RUBY, text_color,
+                                  TextAnchor::Middle);
   position.y += 26;
   context_.font->render_text_onto(*ctx.surface, "population", position,
                                   FontFace::PIZ_NUMB, text_color,
-                                  AlignX::Center);
+                                  TextAnchor::Middle);
 
   auto& percentages = district_.population_percentages();
   std::array<std::string, static_cast<int>(PopulationType::count)>
@@ -301,11 +303,11 @@ void MarketResearch::render_area_info(const RenderContext& ctx) {
   for (int i = 0; i < static_cast<int>(PopulationType::count); ++i) {
     context_.font->render_text_onto(*ctx.surface, population_strings[i],
                                     position, FontFace::PIZ_NUMB, text_color,
-                                    AlignX::Left);
+                                    TextAnchor::Start);
     context_.font->render_text_onto(
         *ctx.surface, std::to_string(percentages[i]) + " %",
-        ViewPoint{-100, position.y}, FontFace::PIZ_NUMB, text_color,
-        AlignX::Right);
+        ViewPoint{ctx.surface->width() - 100, position.y}, FontFace::PIZ_NUMB,
+        text_color, TextAnchor::End);
     position.y += 20;
   }
 
@@ -313,37 +315,45 @@ void MarketResearch::render_area_info(const RenderContext& ctx) {
   position.y += 20;
 
   context_.font->render_text_onto(*ctx.surface, "income", position,
-                                  FontFace::PIZ_NUMB, text_color, AlignX::Left);
+                                  FontFace::PIZ_NUMB, text_color,
+                                  TextAnchor::Start);
   context_.font->render_text_onto(
       *ctx.surface, "$" + std::to_string(district_.average_income()),
-      ViewPoint{200, position.y}, FontFace::PIZ_NUMB, text_color, AlignX::Left);
+      ViewPoint{200, position.y}, FontFace::PIZ_NUMB, text_color,
+      TextAnchor::Start);
 
   position.y += 22;
 
   context_.font->render_text_onto(*ctx.surface, "type of zone", position,
-                                  FontFace::PIZ_NUMB, text_color, AlignX::Left);
+                                  FontFace::PIZ_NUMB, text_color,
+                                  TextAnchor::Start);
   context_.font->render_text_onto(
       *ctx.surface, type_strings[static_cast<int>(district_.district_type())],
-      ViewPoint{192, position.y}, FontFace::PIZ_NUMB, text_color, AlignX::Left);
+      ViewPoint{192, position.y}, FontFace::PIZ_NUMB, text_color,
+      TextAnchor::Start);
 
   position.y += 22;
   context_.font->render_text_onto(*ctx.surface, "traffic density", position,
-                                  FontFace::PIZ_NUMB, text_color, AlignX::Left);
+                                  FontFace::PIZ_NUMB, text_color,
+                                  TextAnchor::Start);
   context_.font->render_text_onto(
       *ctx.surface,
       range_strings[static_cast<int>(
           district_.range_discriptor(district_.traffic_density(), 0, 100))],
-      ViewPoint{192, position.y}, FontFace::PIZ_NUMB, text_color, AlignX::Left);
+      ViewPoint{192, position.y}, FontFace::PIZ_NUMB, text_color,
+      TextAnchor::Start);
 
   position.y += 22;
 
   context_.font->render_text_onto(*ctx.surface, "crime statistics", position,
-                                  FontFace::PIZ_NUMB, text_color, AlignX::Left);
+                                  FontFace::PIZ_NUMB, text_color,
+                                  TextAnchor::Start);
   context_.font->render_text_onto(
       *ctx.surface,
       range_strings[static_cast<int>(
           district_.range_discriptor(district_.crime_statistics(), 0, 100))],
-      ViewPoint{192, position.y}, FontFace::PIZ_NUMB, text_color, AlignX::Left);
+      ViewPoint{192, position.y}, FontFace::PIZ_NUMB, text_color,
+      TextAnchor::Start);
 }
 
 void MarketResearch::render_property_info(const RenderContext& ctx) {
@@ -351,64 +361,75 @@ void MarketResearch::render_property_info(const RenderContext& ctx) {
                                     context_.vga->get("gfx/permap"));
   render_paper(ctx, ViewRect{10, 14, 360, 328});
 
-  ViewPoint position(0, 28);
+  ViewPoint position(ctx.surface->width() / 2, 28);
   context_.font->render_text_onto(*ctx.surface, "Property Info", position,
-                                  FontFace::RUBY, text_color, AlignX::Center);
+                                  FontFace::RUBY, text_color,
+                                  TextAnchor::Middle);
 
   position.y += 32;
   context_.font->render_text_onto(*ctx.surface, district_.name(), position,
-                                  FontFace::RUBY, text_color, AlignX::Center);
+                                  FontFace::RUBY, text_color,
+                                  TextAnchor::Middle);
 
   position.x = 50;
   position.y += 30;
-  context_.font->render_text_onto(*ctx.surface,
-                                  "premises availability:", position,
-                                  FontFace::PIZ_NUMB, text_color, AlignX::Left);
+  context_.font->render_text_onto(
+      *ctx.surface, "premises availability:", position, FontFace::PIZ_NUMB,
+      text_color, TextAnchor::Start);
 
   context_.font->render_text_onto(
       *ctx.surface, std::to_string(district_.premises_availability()) + " %",
-      ViewPoint{270, position.y}, FontFace::PIZ_NUMB, text_color, AlignX::Left);
+      ViewPoint{270, position.y}, FontFace::PIZ_NUMB, text_color,
+      TextAnchor::Start);
 
   position.y += 24;
   context_.font->render_text_onto(*ctx.surface, "rent level:", position,
-                                  FontFace::PIZ_NUMB, text_color, AlignX::Left);
+                                  FontFace::PIZ_NUMB, text_color,
+                                  TextAnchor::Start);
 
   // Both price and rent level are left shifted twice in the original.
   context_.font->render_text_onto(
       *ctx.surface, "$" + std::to_string(district_.rent_level() * 4) + "/sqm",
-      ViewPoint{270, position.y}, FontFace::PIZ_NUMB, text_color, AlignX::Left);
+      ViewPoint{270, position.y}, FontFace::PIZ_NUMB, text_color,
+      TextAnchor::Start);
 
   position.y += 24;
   context_.font->render_text_onto(*ctx.surface, "price level:", position,
-                                  FontFace::PIZ_NUMB, text_color, AlignX::Left);
+                                  FontFace::PIZ_NUMB, text_color,
+                                  TextAnchor::Start);
 
   context_.font->render_text_onto(
       *ctx.surface, "$" + std::to_string(district_.price_level() * 4) + "/sqm",
-      ViewPoint{270, position.y}, FontFace::PIZ_NUMB, text_color, AlignX::Left);
+      ViewPoint{270, position.y}, FontFace::PIZ_NUMB, text_color,
+      TextAnchor::Start);
 
   position.y += 24;
   context_.font->render_text_onto(*ctx.surface, "tendency:", position,
-                                  FontFace::PIZ_NUMB, text_color, AlignX::Left);
+                                  FontFace::PIZ_NUMB, text_color,
+                                  TextAnchor::Start);
 
   int cur_tendency = district_.tendency_current();
   int target_tendency = district_.tendency_target();
   std::string tendency_str =
       cur_tendency < target_tendency ? "rising" : "falling";
-  context_.font->render_text_onto(*ctx.surface, tendency_str,
-                                  ViewPoint{270, position.y},
-                                  FontFace::PIZ_NUMB, text_color, AlignX::Left);
+  context_.font->render_text_onto(
+      *ctx.surface, tendency_str, ViewPoint{270, position.y},
+      FontFace::PIZ_NUMB, text_color, TextAnchor::Start);
 
   position.y += 24;
   context_.font->render_text_onto(*ctx.surface, "average size:", position,
-                                  FontFace::PIZ_NUMB, text_color, AlignX::Left);
+                                  FontFace::PIZ_NUMB, text_color,
+                                  TextAnchor::Start);
 
   context_.font->render_text_onto(
       *ctx.surface, std::to_string(district_.average_square_meters()) + " sqm",
-      ViewPoint{270, position.y}, FontFace::PIZ_NUMB, text_color, AlignX::Left);
+      ViewPoint{270, position.y}, FontFace::PIZ_NUMB, text_color,
+      TextAnchor::Start);
 
   position.y += 44;
   context_.font->render_text_onto(*ctx.surface, "rooms:", position,
-                                  FontFace::PIZ_NUMB, text_color, AlignX::Left);
+                                  FontFace::PIZ_NUMB, text_color,
+                                  TextAnchor::Start);
 
   struct BuildingCounts {
     int not_available = 0;
@@ -448,30 +469,33 @@ void MarketResearch::render_property_info(const RenderContext& ctx) {
   constexpr int col_2_x = 270;
 
   context_.font->render_text_onto(*ctx.surface, "to rent:", position,
-                                  FontFace::PIZ_NUMB, text_color, AlignX::Left);
+                                  FontFace::PIZ_NUMB, text_color,
+                                  TextAnchor::Start);
 
-  context_.font->render_text_onto(*ctx.surface,
-                                  std::to_string(building_counts.for_sale),
-                                  ViewPoint{col_2_x, position.y},
-                                  FontFace::PIZ_NUMB, text_color, AlignX::Left);
+  context_.font->render_text_onto(
+      *ctx.surface, std::to_string(building_counts.for_sale),
+      ViewPoint{col_2_x, position.y}, FontFace::PIZ_NUMB, text_color,
+      TextAnchor::Start);
 
   position.y += 24;
   context_.font->render_text_onto(*ctx.surface, "for sale:", position,
-                                  FontFace::PIZ_NUMB, text_color, AlignX::Left);
+                                  FontFace::PIZ_NUMB, text_color,
+                                  TextAnchor::Start);
 
-  context_.font->render_text_onto(*ctx.surface,
-                                  std::to_string(building_counts.for_rent),
-                                  ViewPoint{col_2_x, position.y},
-                                  FontFace::PIZ_NUMB, text_color, AlignX::Left);
+  context_.font->render_text_onto(
+      *ctx.surface, std::to_string(building_counts.for_rent),
+      ViewPoint{col_2_x, position.y}, FontFace::PIZ_NUMB, text_color,
+      TextAnchor::Start);
 
   position.y += 24;
   context_.font->render_text_onto(*ctx.surface, "not available:", position,
-                                  FontFace::PIZ_NUMB, text_color, AlignX::Left);
+                                  FontFace::PIZ_NUMB, text_color,
+                                  TextAnchor::Start);
 
-  context_.font->render_text_onto(*ctx.surface,
-                                  std::to_string(building_counts.not_available),
-                                  ViewPoint{col_2_x, position.y},
-                                  FontFace::PIZ_NUMB, text_color, AlignX::Left);
+  context_.font->render_text_onto(
+      *ctx.surface, std::to_string(building_counts.not_available),
+      ViewPoint{col_2_x, position.y}, FontFace::PIZ_NUMB, text_color,
+      TextAnchor::Start);
 }
 
 void MarketResearch::render_economy(const RenderContext& ctx) {
@@ -529,11 +553,11 @@ void MarketResearch::render_economy(const RenderContext& ctx) {
   context_.font->render_line_onto(
       *ctx.surface, "economy",
       graph_box.point() + PxOffset{(graph_box.w / 2) - 56, 14},
-      FontFace::ASTANDAR, text_color, AlignX::CenterPoint);
+      FontFace::ASTANDAR, text_color, TextAnchor::Middle);
   context_.font->render_line_onto(
       *ctx.surface, std::to_string(state_.time().current_date().year()),
       graph_box.point() + PxOffset{(graph_box.w / 2) + 92, 14},
-      FontFace::ASTANDAR, text_color, AlignX::CenterPoint);
+      FontFace::ASTANDAR, text_color, TextAnchor::Middle);
 
   // Inflation rate box, original never seems to change from 3, so just render
   // it as static text
@@ -543,10 +567,10 @@ void MarketResearch::render_economy(const RenderContext& ctx) {
   ViewPoint infl_center =
       inflation_box.point() + PxOffset{inflation_box.w / 2, 20};
   context_.font->render_line_onto(*ctx.surface, "inflation", infl_center,
-                                  FontFace::RUBY, 13, AlignX::CenterPoint);
+                                  FontFace::RUBY, 13, TextAnchor::Middle);
   context_.font->render_line_onto(*ctx.surface, "3%",
                                   infl_center + PxOffset{0, 32}, FontFace::RUBY,
-                                  13, AlignX::CenterPoint);
+                                  13, TextAnchor::Middle);
 }
 
 void MarketResearch::render_customer_taste(const RenderContext& ctx) {
@@ -558,7 +582,7 @@ void MarketResearch::render_customer_taste(const RenderContext& ctx) {
   const int text_color = 10;
   context_.font->render_line_onto(
       *ctx.surface, "taste", ViewPoint{views::base::MAIN_PANEL_WIDTH / 2, 4},
-      FontFace::RUBY, text_color, AlignX::CenterPoint);
+      FontFace::RUBY, text_color, TextAnchor::Middle);
 
   const std::array<std::string_view, 5> tastes = {"fatty", "sweet", "salty",
                                                   "hot", "spicy"};
@@ -577,7 +601,7 @@ void MarketResearch::render_customer_taste(const RenderContext& ctx) {
     int col_offset = 92 + (static_cast<int>(i) * col_width);
     context_.font->render_line_onto(
         *ctx.surface, tastes[i], ViewPoint{x + col_offset, taste_label_y},
-        FontFace::PIZ_NUMB, text_color, AlignX::CenterPoint);
+        FontFace::PIZ_NUMB, text_color, TextAnchor::Middle);
   }
 
   for (auto demo : ALL_CONSUMER_TYPES) {
@@ -593,7 +617,7 @@ void MarketResearch::render_customer_taste(const RenderContext& ctx) {
         context_.font->render_line_onto(
             *ctx.surface, compat::format("{} %", percentage),
             ViewPoint{x + col_offset + 20, y + 18}, FontFace::PIZ_NUMB,
-            text_color, AlignX::CenterPoint);
+            text_color, TextAnchor::Middle);
       }
       else {
         blitmap.render_icon(percentage > 50 ? thumbs_up : thumbs_down,
@@ -621,12 +645,12 @@ void MarketResearch::render_trends(const RenderContext& ctx) {
   const ViewPoint trend_infos_pos{views::base::MAIN_PANEL_WIDTH / 2, 22};
   context_.font->render_line_onto(*ctx.surface, "--- Trend Infos ---",
                                   trend_infos_pos, FontFace::PIZ_NUMB,
-                                  text_color, AlignX::CenterPoint);
+                                  text_color, TextAnchor::Middle);
 
   const ViewPoint latest_thing_pos{views::base::MAIN_PANEL_WIDTH / 2, 54};
   TextStyle ts{
       .color = text_color,
-      .align = AlignX::CenterPoint,
+      .align = TextAnchor::Middle,
       .shadow = std::nullopt,
       .character_spacing = 4,
   };
@@ -694,10 +718,10 @@ void MarketResearch::render_trends(const RenderContext& ctx) {
         core::food::to_string(static_cast<core::food::IngredientType>(slot)));
     context_.font->render_line_onto(
         *ctx.surface, name, ViewPoint{up_row1_label.x, y}, FontFace::PIZ_NUMB,
-        text_color, AlignX::Left);
+        text_color, TextAnchor::Start);
     context_.font->render_line_onto(
         *ctx.surface, std::to_string(val), ViewPoint{up_row1_value.x, y},
-        FontFace::PIZ_NUMB, text_color, AlignX::RightEdge);
+        FontFace::PIZ_NUMB, text_color, TextAnchor::End);
   }
 
   for (int row = 0; row < negative_rows; ++row) {
@@ -707,10 +731,10 @@ void MarketResearch::render_trends(const RenderContext& ctx) {
         core::food::to_string(static_cast<core::food::IngredientType>(slot)));
     context_.font->render_line_onto(
         *ctx.surface, name, ViewPoint{down_row1_label.x, y}, FontFace::PIZ_NUMB,
-        text_color, AlignX::Left);
+        text_color, TextAnchor::Start);
     context_.font->render_line_onto(
         *ctx.surface, std::to_string(val), ViewPoint{down_row1_value.x, y},
-        FontFace::PIZ_NUMB, text_color, AlignX::RightEdge);
+        FontFace::PIZ_NUMB, text_color, TextAnchor::End);
   }
 }
 
@@ -727,7 +751,7 @@ void MarketResearch::render_pizza_charts(const RenderContext& ctx) {
 
   TextStyle style{
       .color = 240,
-      .align = AlignX::Left,
+      .align = TextAnchor::Start,
       .shadow = std::nullopt,
       .character_spacing = 1,
   };
@@ -742,7 +766,7 @@ void MarketResearch::render_pizza_charts(const RenderContext& ctx) {
 
     context_.font->render_line_onto(*ctx.surface, std::to_string(i + 1),
                                     row_nr_pos, FontFace::PIZ_NUMB, text_color,
-                                    AlignX::RightEdge);
+                                    TextAnchor::End);
 
     const Player* owner = i < static_cast<int>(chart.size())
                               ? state_.player(chart[i].player_id)
@@ -754,7 +778,7 @@ void MarketResearch::render_pizza_charts(const RenderContext& ctx) {
                              : std::to_string(entry.previous_position);
       context_.font->render_line_onto(*ctx.surface, prev, last_week_pos,
                                       FontFace::PIZ_NUMB, last_week_color,
-                                      AlignX::RightEdge);
+                                      TextAnchor::End);
       context_.font->render_line_onto(
           *ctx.surface, PizzaCharts::pizza_name(*owner, entry.pizza_ref),
           pizza_name_pos, FontFace::PIZ_NUMB, style);

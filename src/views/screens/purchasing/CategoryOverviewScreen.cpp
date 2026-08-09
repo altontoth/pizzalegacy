@@ -131,16 +131,16 @@ void CategoryOverviewScreen::draw_info_section(
   for (const auto& line : lines) {
     ViewPoint pos = base;
     if (line.label) {
-      context_.font->render_text_onto(*ctx.surface, line.label->text, pos,
+      context_.font->render_text_onto(*ctx.surface, *line.label, pos,
                                       FontFace::PIZ_NUMB, text_black);
     }
-    pos.x = line.value.x_offset;
+    pos.x = ctx.surface->width() - line.value.right_inset;
     context_.font->render_text_onto(*ctx.surface, line.value.text, pos,
                                     FontFace::PIZ_NUMB, text_black,
-                                    AlignX::Right);
+                                    TextAnchor::End);
 
     if (line.post_fix) {
-      pos.x = line.post_fix->x_offset;
+      pos.x = line.post_fix->x;
       context_.font->render_text_onto(*ctx.surface, line.post_fix->text, pos,
                                       FontFace::PIZ_NUMB, text_black);
     }
@@ -180,26 +180,26 @@ void CategoryOverviewScreen::draw_flooring_page(const RenderContext& ctx) {
   const auto total_value = fp.price_per_tile * tile_count;
   context_.font->render_text_onto(
       *ctx.surface, compat::format("{:w}", total_value),
-      ViewPoint{x_pos, y_pos}, FontFace::PIZ_NUMB, 8, AlignX::Left);
+      ViewPoint{x_pos, y_pos}, FontFace::PIZ_NUMB, 8, TextAnchor::Start);
   y_pos += 20;
   // Quality from supplier
   context_.font->render_text_onto(*ctx.surface, std::to_string(fp.quality),
                                   ViewPoint{x_pos, y_pos}, FontFace::PIZ_NUMB,
-                                  8, AlignX::Left);
+                                  8, TextAnchor::Start);
   y_pos += 20;
   // Number of tiles
   std::string tile_count_str =
       compat::format("{} * {} = {}", rest_width, rest_height, tile_count);
   context_.font->render_text_onto(*ctx.surface, tile_count_str,
                                   ViewPoint{x_pos, y_pos}, FontFace::PIZ_NUMB,
-                                  8, AlignX::Left);
+                                  8, TextAnchor::Start);
   y_pos += 20;
   // Area
   std::string area = compat::format(
       "{} sqm", static_cast<int>((rest_width / 2) * (rest_height / 2)));
   context_.font->render_text_onto(*ctx.surface, area,
                                   ViewPoint{x_pos - 80, y_pos},
-                                  FontFace::PIZ_NUMB, 8, AlignX::Left);
+                                  FontFace::PIZ_NUMB, 8, TextAnchor::Start);
 
   constexpr int preview_cols = 8;
   constexpr int preview_rows = 4;
@@ -244,25 +244,25 @@ void CategoryOverviewScreen::draw_furniture_page(const RenderContext& ctx) {
 
   // Build all lines as data
   std::vector<InfoLine> lines = {
-      {.label = InfoField{.text = "in use:"},
-       .value = InfoField{.text = std::to_string(stats.seating_utilization),
-                          .x_offset = -180},
-       .post_fix = InfoField{.text = "%", .x_offset = 226}},
-      {.label = InfoField{.text = "value:"},
+      {.label = "in use:",
+       .value = InfoValue{.text = std::to_string(stats.seating_utilization),
+                          .right_inset = 180},
+       .post_fix = InfoPostFix{.text = "%", .x = 226}},
+      {.label = "value:",
        .value =
-           InfoField{.text = std::to_string(value_dollars), .x_offset = -180},
+           InfoValue{.text = std::to_string(value_dollars), .right_inset = 180},
        .post_fix = std::nullopt},
-      {.label = InfoField{.text = "quality:"},
-       .value = InfoField{.text = std::to_string(stats.avg_quality),
-                          .x_offset = -180}},
-      {.label = InfoField{.text = "capacity:"},
-       .value = InfoField{.text = std::to_string(stats.seat_count),
-                          .x_offset = -180},
-       .post_fix = InfoField{.text = "seats", .x_offset = 274}},
+      {.label = "quality:",
+       .value = InfoValue{.text = std::to_string(stats.avg_quality),
+                          .right_inset = 180}},
+      {.label = "capacity:",
+       .value = InfoValue{.text = std::to_string(stats.seat_count),
+                          .right_inset = 180},
+       .post_fix = InfoPostFix{.text = "seats", .x = 274}},
       {.label = std::nullopt,
-       .value = InfoField{.text = std::to_string(stats.customers_per_day),
-                          .x_offset = -180},
-       .post_fix = InfoField{.text = "per day", .x_offset = 274}},
+       .value = InfoValue{.text = std::to_string(stats.customers_per_day),
+                          .right_inset = 180},
+       .post_fix = InfoPostFix{.text = "per day", .x = 274}},
   };
   draw_info_section(ctx, lines);
 }
@@ -297,48 +297,48 @@ void CategoryOverviewScreen::draw_oven_page(const RenderContext& ctx) {
 
   /* Then the values */
   pos.y = 0;
-  pos.x = -100;
+  pos.x = text_box.width() - 100;
 
   // ovens count
   context_.font->render_text_onto(text_box, std::to_string(stats.oven_count),
                                   pos, FontFace::PIZ_NUMB, text_black,
-                                  AlignX::Right);
+                                  TextAnchor::End);
   pos.y += 20;
 
   // bake time/pizza
   context_.font->render_text_onto(
       text_box, compat::format("{:.2f}", stats.avg_bake_time), pos,
-      FontFace::PIZ_NUMB, text_black, AlignX::Right);
+      FontFace::PIZ_NUMB, text_black, TextAnchor::End);
   pos.y += 20;
 
   // in use %
   context_.font->render_text_onto(
       text_box, std::to_string(stats.utilization_percent), pos,
-      FontFace::PIZ_NUMB, text_black, AlignX::Right);
+      FontFace::PIZ_NUMB, text_black, TextAnchor::End);
   pos.y += 20;
 
   // value
   context_.font->render_text_onto(text_box, std::to_string(value_dollars), pos,
                                   FontFace::PIZ_NUMB, text_black,
-                                  AlignX::Right);
+                                  TextAnchor::End);
   pos.y += 20;
 
   // quality
   context_.font->render_text_onto(text_box, std::to_string(stats.avg_quality),
                                   pos, FontFace::PIZ_NUMB, text_black,
-                                  AlignX::Right);
+                                  TextAnchor::End);
   pos.y += 20;
 
   // baking capacity - number
   context_.font->render_text_onto(
       text_box, std::to_string(stats.total_capacity), pos, FontFace::PIZ_NUMB,
-      text_black, AlignX::Right);
+      text_black, TextAnchor::End);
   pos.y += 20;
 
   // baking capacity - per day
   context_.font->render_text_onto(
       text_box, std::to_string(stats.capacity_per_day), pos, FontFace::PIZ_NUMB,
-      text_black, AlignX::Right);
+      text_black, TextAnchor::End);
 
   /* Then the labels after the values */
   pos.y = 20;
@@ -453,18 +453,18 @@ void CategoryOverviewScreen::draw_extras_page(const RenderContext& ctx) {
 
   // Build all lines as data
   std::vector<InfoLine> lines = {
-      {.label = InfoField{.text = "decor:"},
+      {.label = "decor:",
        .value =
-           InfoField{.text = std::to_string(decor_count), .x_offset = -120}},
-      {.label = InfoField{.text = "entertainment media:"},
+           InfoValue{.text = std::to_string(decor_count), .right_inset = 120}},
+      {.label = "entertainment media:",
        .value =
-           InfoField{.text = std::to_string(media_count), .x_offset = -120}},
-      {.label = InfoField{.text = "arcade games:"},
+           InfoValue{.text = std::to_string(media_count), .right_inset = 120}},
+      {.label = "arcade games:",
        .value =
-           InfoField{.text = std::to_string(games_count), .x_offset = -120}},
-      {.label = InfoField{.text = "others:"},
+           InfoValue{.text = std::to_string(games_count), .right_inset = 120}},
+      {.label = "others:",
        .value =
-           InfoField{.text = std::to_string(others_count), .x_offset = -120}},
+           InfoValue{.text = std::to_string(others_count), .right_inset = 120}},
   };
   draw_info_section(ctx, lines);
 }

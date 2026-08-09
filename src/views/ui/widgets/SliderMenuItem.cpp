@@ -48,7 +48,7 @@ SliderMenuItemBase::SliderMenuItemBase(GameContext& context,
 
 void SliderMenuItemBase::draw(Surface& screen, ViewPoint p, bool is_selected) {
   context_.font->render_text_onto(screen, text_, p, font_face_, COLOR_LABEL,
-                                  AlignX::Left);
+                                  TextAnchor::Start);
 
   const int track_x = p.x + TRACK_LOCAL_X;
   const int cy = p.y + (ROW_HEIGHT / 2);
@@ -80,7 +80,7 @@ void SliderMenuItemBase::draw(Surface& screen, ViewPoint p, bool is_selected) {
 
   context_.font->render_text_onto(screen, value_text(),
                                   ViewPoint{p.x + VALUE_LOCAL_X, p.y},
-                                  font_face_, COLOR_LABEL, AlignX::Left);
+                                  font_face_, COLOR_LABEL, TextAnchor::Start);
 }
 
 Size SliderMenuItemBase::measure() const {

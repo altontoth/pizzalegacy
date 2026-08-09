@@ -83,9 +83,10 @@ public:
           });
 
       // Render supplier name
-      game_ctx.font->render_text_onto(*ctx.surface, supplier->name(),
-                                      ViewPoint{16, pos.y + 20},
-                                      FontFace::PIZ_NUMB, 12, AlignX::Center);
+      game_ctx.font->render_text_onto(
+          *ctx.surface, supplier->name(),
+          ViewPoint{(ctx.surface->width() / 2) + 16, pos.y + 20},
+          FontFace::PIZ_NUMB, 12, TextAnchor::Middle);
 
       // Render optional extra info (e.g., spending)
       if (extra_info_) {
@@ -100,9 +101,9 @@ public:
                           std::size_t current_page) {
     constexpr int text_color = 1;
     std::string page_nr = compat::format("- {} -", current_page + 1);
-    game_ctx.font->render_text_onto(*ctx.surface, page_nr, ViewPoint{20, 316},
-                                    FontFace::PIZ_NUMB, text_color,
-                                    AlignX::Center);
+    game_ctx.font->render_text_onto(
+        *ctx.surface, page_nr, ViewPoint{(ctx.surface->width() / 2) + 20, 316},
+        FontFace::PIZ_NUMB, text_color, TextAnchor::Middle);
   }
 
   void setup_pagination_buttons(InputPanel* panel, std::size_t& current_page,

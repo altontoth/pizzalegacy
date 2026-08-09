@@ -75,7 +75,7 @@ FullscreenStatus::FullscreenStatus(GameContext& context, GameState& state,
 
   constexpr int wrap_width = DisplayConstants::SCREEN_WIDTH - (2 * 30);
   TextStyle ts{.color = fg_color_,
-               .align = AlignX::Left,
+               .align = TextAnchor::Start,
                .shadow = ShadowStyle{
                    .offset = {-2, 2},
                    .color = shadow_color_,

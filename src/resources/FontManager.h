@@ -47,7 +47,7 @@ public:
   RenderedTextMetrics render_line_onto(Surface& target_surface,
                                        std::string_view text, ViewPoint p,
                                        FontFace face, uint8_t color,
-                                       AlignX align = AlignX::Left);
+                                       TextAnchor align = TextAnchor::Start);
 
   RenderedTextMetrics render_line_onto(Surface& surface, std::string_view text,
                                        ViewPoint p, FontFace face,
@@ -60,7 +60,8 @@ public:
 
   RenderedTextMetrics
   render_text_onto(Surface& surface, std::string_view text, ViewPoint p,
-                   FontFace face, uint8_t color, AlignX align = AlignX::Left,
+                   FontFace face, uint8_t color,
+                   TextAnchor align = TextAnchor::Start,
                    std::optional<FlowColumns> flow = std::nullopt);
 
   RenderedTextMetrics render_into_rect(Surface& surface, std::string_view text,

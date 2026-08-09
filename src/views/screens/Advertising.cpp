@@ -8,8 +8,8 @@
 #include "core/character/Player.h"
 #include "core/state/GameState.h"
 #include "engine/FormatCompat.h"
-#include "engine/ui/Alignment.h"
 #include "engine/ui/InteractionEvent.h"
+#include "engine/ui/TextAnchor.h"
 #include "gfx/Blit.h"
 #include "magic_enum/magic_enum.hpp"
 #include "resources/FontTypes.h"
@@ -203,11 +203,11 @@ void Advertising::render_overview(const RenderContext& ctx) {
       context_.font->render_line_onto(
           *ctx.surface, compat::format("{}", cost),
           ViewPoint{ADVERTISING_INFO_COST_RIGHT_X, text_y}, FontFace::PIZ_NUMB,
-          ADVERTISING_INFO_TEXT_COLOR, AlignX::RightEdge);
+          ADVERTISING_INFO_TEXT_COLOR, TextAnchor::End);
       context_.font->render_line_onto(
           *ctx.surface, compat::format("{} %", effectiveness),
           ViewPoint{ADVERTISING_INFO_PCT_RIGHT_X, text_y}, FontFace::PIZ_NUMB,
-          ADVERTISING_INFO_TEXT_COLOR, AlignX::RightEdge);
+          ADVERTISING_INFO_TEXT_COLOR, TextAnchor::End);
     }
   }
 }
@@ -372,7 +372,7 @@ void Advertising::render_newspaper_preview(
   context_.font->render_line_onto(
       *ctx.surface, company_name,
       ViewPoint{NEWSPAPER_PREVIEW_CENTER_X, style.name_y}, style.name_font,
-      NEWSPAPER_PREVIEW_DEFAULT_COLOR, AlignX::CenterPoint);
+      NEWSPAPER_PREVIEW_DEFAULT_COLOR, TextAnchor::Middle);
 
   int line_y = style.lines_y;
   for (int i = 0; i < static_cast<int>(fragments.size()); ++i) {
@@ -381,7 +381,7 @@ void Advertising::render_newspaper_preview(
     context_.font->render_line_onto(
         *ctx.surface, fragments[i],
         ViewPoint{NEWSPAPER_PREVIEW_CENTER_X, line_y}, style.line_font, color,
-        AlignX::CenterPoint);
+        TextAnchor::Middle);
     line_y += style.line_height;
   }
 }

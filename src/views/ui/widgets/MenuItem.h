@@ -10,10 +10,10 @@
 #include <utility>
 
 #include "core/util/GameContext.h"
+#include "engine/Geometry.h"
 #include "engine/Size.h"
 #include "engine/geom/Spaces.h"
 #include "engine/input/InputManager.h"
-#include "engine/ui/Alignment.h"
 #include "engine/ui/InteractionEvent.h"
 #include "resources/FontTypes.h"
 
@@ -26,7 +26,7 @@ public:
   MenuItem(GameContext& gc, FontFace font_face)
       : context_(gc), font_face_(font_face) {};
   MenuItem(GameContext& gc, FontFace font_face, std::string text,
-           AlignX align = AlignX::Left)
+           HAlign align = HAlign::Left)
       : context_(gc), font_face_(font_face), text_(std::move(text)),
         alignment_(align) {};
   virtual ~MenuItem() = default;
@@ -36,7 +36,7 @@ public:
   virtual Size measure() const = 0;
   int x() const { return x_pos_; }
   FontFace font_face() const { return font_face_; }
-  AlignX alignment() const { return alignment_; }
+  HAlign alignment() const { return alignment_; }
 
   // Whether keyboard navigation can land on this item. Decorative and
   // layout-only items return false and are skipped when stepping focus.
@@ -70,5 +70,5 @@ protected:
   int x_pos_ = -1;
   FontFace font_face_;
   std::string text_;
-  AlignX alignment_{AlignX::Left};
+  HAlign alignment_{HAlign::Left};
 };

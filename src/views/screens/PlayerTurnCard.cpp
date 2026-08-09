@@ -25,10 +25,11 @@ void PlayerTurnCard::render(const RenderContext& ctx) {
   auto name = player->name();
   const TextStyle style{
       .color = 24,
-      .align = AlignX::Center,
+      .align = TextAnchor::Middle,
       .shadow = ShadowStyle{.offset = PxOffset{-2, 2}, .color = 20}};
 
-  context_.font->render_text_onto(*ctx.surface, name, {0, 60},
+  context_.font->render_text_onto(*ctx.surface, name,
+                                  {ctx.surface->width() / 2, 60},
                                   FontFace::ASTANDAR, style);
 
   views::helpers::draw_framed_portrait(*ctx.surface, player->character(),

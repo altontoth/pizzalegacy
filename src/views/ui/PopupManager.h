@@ -13,10 +13,10 @@
 #include "core/util/GameContext.h"
 #include "engine/DebugLabel.h"
 #include "engine/DisplayConstants.h"
+#include "engine/Geometry.h"
 #include "engine/RenderContext.h"
 #include "engine/Renderable.h"
 #include "engine/geom/Spaces.h"
-#include "engine/ui/Alignment.h"
 #include "engine/ui/InteractionLayers.h"
 #include "views/base/OverlayBehavior.h"
 #include "views/ui/popups/BasePopup.h"
@@ -74,7 +74,7 @@ private:
     }
     constexpr ViewRect screen{0, 0, DisplayConstants::SCREEN_WIDTH,
                               DisplayConstants::SCREEN_HEIGHT};
-    return views::ui::align_in_rect(screen, sz, AlignX::Center, AlignY::Middle);
+    return align_in_rect(screen, sz, HAlign::Center, VAlign::Center);
   }
 
   const GameContext& context_;

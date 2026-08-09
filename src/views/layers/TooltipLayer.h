@@ -76,7 +76,7 @@ public:
     // draw line (no wrapping)
     context_.font->render_line_onto(*ctx.surface, txt, text_center,
                                     FontFace::CSTANDAR, req.text_color,
-                                    AlignX::CenterPoint);
+                                    TextAnchor::Middle);
   }
   void tick() override {
     auto rev = mgr_.revision();

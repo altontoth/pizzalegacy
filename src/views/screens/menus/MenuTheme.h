@@ -6,15 +6,15 @@
 
 #pragma once
 
+#include "engine/Geometry.h"
 #include "resources/FontTypes.h"
 
 namespace views::ui::menu {
 
 inline constexpr ShadowStyle shadow{.offset = {5, -5}, .color = 26};
-inline constexpr TextStyle style{
-    .color = 1, .align = AlignX::Center, .shadow = shadow};
-inline constexpr TextStyle sel_style{
-    .color = 29, .align = AlignX::Center, .shadow = shadow};
+inline constexpr TextStyle style{.color = 1, .shadow = shadow};
+inline constexpr TextStyle sel_style{.color = 29, .shadow = shadow};
 inline constexpr FontFace face = FontFace::MENU;
+inline constexpr HAlign item_align = HAlign::Center;
 
 } // namespace views::ui::menu

@@ -40,16 +40,17 @@ void DepotWeaponInterface::render(const RenderContext& ctx) {
   views::ui::dropdowndecoration::draw_dropdown_decoration(text_box, 0);
 
   const int text_color = 240;
+  const int right_edge = text_box.width();
 
   int y_position = 28;
   context_.font->render_text_onto(text_box, "category", {10, y_position},
                                   FontFace::PIZ_NUMB, text_color);
-  context_.font->render_text_onto(text_box, "bag", {-70, y_position},
-                                  FontFace::PIZ_NUMB, text_color,
-                                  AlignX::Right);
-  context_.font->render_text_onto(text_box, "depot", {-4, y_position},
-                                  FontFace::PIZ_NUMB, text_color,
-                                  AlignX::Right);
+  context_.font->render_text_onto(
+      text_box, "bag", {right_edge - 70, y_position}, FontFace::PIZ_NUMB,
+      text_color, TextAnchor::End);
+  context_.font->render_text_onto(
+      text_box, "depot", {right_edge - 4, y_position}, FontFace::PIZ_NUMB,
+      text_color, TextAnchor::End);
 
   auto* player = state_.active_player();
   auto* depot_weapons = property_->weapons();
@@ -72,12 +73,12 @@ void DepotWeaponInterface::render(const RenderContext& ctx) {
     int text_y = y_position + 1;
     context_.font->render_text_onto(text_box, name, {10, text_y},
                                     FontFace::PIZ_NUMB, text_color);
-    context_.font->render_text_onto(text_box, std::to_string(bag_count),
-                                    {-74, text_y}, FontFace::PIZ_NUMB,
-                                    text_color, AlignX::Right);
-    context_.font->render_text_onto(text_box, std::to_string(depot_count),
-                                    {-20, text_y}, FontFace::PIZ_NUMB,
-                                    text_color, AlignX::Right);
+    context_.font->render_text_onto(
+        text_box, std::to_string(bag_count), {right_edge - 74, text_y},
+        FontFace::PIZ_NUMB, text_color, TextAnchor::End);
+    context_.font->render_text_onto(
+        text_box, std::to_string(depot_count), {right_edge - 20, text_y},
+        FontFace::PIZ_NUMB, text_color, TextAnchor::End);
 
     // Interaction box needs absolute coordinates
     ViewRect hover_box_absolute{hover_box.x + text_box_offset.x,

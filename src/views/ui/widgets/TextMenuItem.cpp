@@ -6,13 +6,12 @@
 
 #include "views/ui/widgets/TextMenuItem.h"
 #include "engine/geom/Spaces.h"
-#include "engine/ui/Alignment.h"
+#include "engine/ui/TextAnchor.h"
 #include "resources/FontManager.h"
 
 void TextMenuItem::draw(Surface& screen, ViewPoint p, bool is_selected) {
   TextStyle style = is_selected ? selected_style_ : style_;
-  // Menu already aligns the layout, so we have to use Left here regardless:
-  style.align = AlignX::Left;
+  style.align = TextAnchor::Start;
   RenderedTextMetrics metrics =
       context_.font->render_text_onto(screen, text_, p, font_face_, style);
 

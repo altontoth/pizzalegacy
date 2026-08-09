@@ -81,8 +81,9 @@ void DepotExportScreen::draw_page_header(const RenderContext& ctx) {
   blitmap1.render_icon(icon, *ctx.surface, ViewPoint{42, 6});
 
   std::string title = compat::format("export --> {}", target_city_->name());
-  context_.font->render_text_onto(*ctx.surface, title, ViewPoint{40, 12},
-                                  FontFace::PIZ_NUMB, 8, AlignX::Center);
+  context_.font->render_text_onto(
+      *ctx.surface, title, ViewPoint{(ctx.surface->width() / 2) + 40, 12},
+      FontFace::PIZ_NUMB, 8, TextAnchor::Middle);
 }
 
 void DepotExportScreen::draw_ingredient_list(const RenderContext& ctx) {
@@ -95,19 +96,20 @@ void DepotExportScreen::draw_ingredient_list(const RenderContext& ctx) {
   std::string_view src_name = source_city_->name().substr(0, 5);
   std::string_view tgt_name = target_city_->name().substr(0, 5);
 
-  const int src_x = -170;
-  const int amount_x = -110;
-  const int tgt_x = -50;
+  const int right_edge = ctx.surface->width();
+  const int src_x = right_edge - 170;
+  const int amount_x = right_edge - 110;
+  const int tgt_x = right_edge - 50;
 
   context_.font->render_text_onto(
       *ctx.surface, src_name, ViewPoint{src_x, header_y}, FontFace::SUPERSMA,
-      text_color, AlignX::Right);
+      text_color, TextAnchor::End);
   context_.font->render_text_onto(
       *ctx.surface, "AMOUNT", ViewPoint{amount_x, header_y}, FontFace::SUPERSMA,
-      text_color, AlignX::Right);
+      text_color, TextAnchor::End);
   context_.font->render_text_onto(
       *ctx.surface, tgt_name, ViewPoint{tgt_x, header_y}, FontFace::SUPERSMA,
-      text_color, AlignX::Right);
+      text_color, TextAnchor::End);
 
   const int name_x = 22;
   int y = header_y + 20;
@@ -171,18 +173,19 @@ void DepotExportScreen::draw_ingredient_list(const RenderContext& ctx) {
     int effective_source = item.source_stock_kg - item.transfer_amount;
     context_.font->render_text_onto(
         *ctx.surface, std::to_string(effective_source), ViewPoint{src_x, y},
-        FontFace::CSTANDAR, text_color, AlignX::Right);
+        FontFace::CSTANDAR, text_color, TextAnchor::End);
 
     // Transfer amount
-    context_.font->render_text_onto(
-        *ctx.surface, std::to_string(item.transfer_amount),
-        ViewPoint{amount_x, y}, FontFace::CSTANDAR, text_color, AlignX::Right);
+    context_.font->render_text_onto(*ctx.surface,
+                                    std::to_string(item.transfer_amount),
+                                    ViewPoint{amount_x, y}, FontFace::CSTANDAR,
+                                    text_color, TextAnchor::End);
 
     // Target stock
     int effective_target = item.target_stock_kg + item.transfer_amount;
     context_.font->render_text_onto(
         *ctx.surface, std::to_string(effective_target), ViewPoint{tgt_x, y},
-        FontFace::CSTANDAR, text_color, AlignX::Right);
+        FontFace::CSTANDAR, text_color, TextAnchor::End);
 
     y += line_height;
   }
@@ -208,7 +211,7 @@ void DepotExportScreen::draw_ingredient_list(const RenderContext& ctx) {
                                   FontFace::SUPERSMA, text_color);
   context_.font->render_text_onto(
       *ctx.surface, compat::format("{:n}", total_value),
-      ViewPoint{tgt_x, footer_y}, FontFace::SUPERSMA, 20, AlignX::Right);
+      ViewPoint{tgt_x, footer_y}, FontFace::SUPERSMA, 20, TextAnchor::End);
 }
 
 void DepotExportScreen::set_up_input_panel() {

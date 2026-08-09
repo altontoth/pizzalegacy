@@ -109,9 +109,9 @@ void IngredientOrderScreen::draw_page_header(const RenderContext& ctx) {
 
   constexpr uint8_t header_color = 8;
   std::string title = supplier_ ? supplier_->name() : "SUPPLIER";
-  context_.font->render_text_onto(*ctx.surface, title, ViewPoint{40, 16},
-                                  FontFace::PIZ_NUMB, header_color,
-                                  AlignX::Center);
+  context_.font->render_text_onto(
+      *ctx.surface, title, ViewPoint{(ctx.surface->width() / 2) + 40, 16},
+      FontFace::PIZ_NUMB, header_color, TextAnchor::Middle);
 }
 
 void IngredientOrderScreen::register_ingredient_row(ViewRect row_rect,
@@ -163,27 +163,28 @@ void IngredientOrderScreen::draw_ingredient_list(const RenderContext& ctx) {
   const uint8_t text_color_days = 12;
 
   const int name_x = 22;
-  const int header_price_x = -178;
-  const int price_x = -172;
-  const int header_amount_x = -110;
-  const int amount_x = -128;
-  const int header_stock_x = -66;
-  const int stock_x = -72;
-  const int header_days_x = -26;
-  const int days_x = -32;
+  const int right_edge = ctx.surface->width();
+  const int header_price_x = right_edge - 178;
+  const int price_x = right_edge - 172;
+  const int header_amount_x = right_edge - 110;
+  const int amount_x = right_edge - 128;
+  const int header_stock_x = right_edge - 66;
+  const int stock_x = right_edge - 72;
+  const int header_days_x = right_edge - 26;
+  const int days_x = right_edge - 32;
 
   context_.font->render_text_onto(
       *ctx.surface, "PRICE", ViewPoint{header_price_x, header_y},
-      FontFace::SUPERSMA, text_color, AlignX::Right);
+      FontFace::SUPERSMA, text_color, TextAnchor::End);
   context_.font->render_text_onto(
       *ctx.surface, "AMOUNT", ViewPoint{header_amount_x, header_y},
-      FontFace::SUPERSMA, text_color, AlignX::Right);
+      FontFace::SUPERSMA, text_color, TextAnchor::End);
   context_.font->render_text_onto(
       *ctx.surface, "STOCK", ViewPoint{header_stock_x, header_y},
-      FontFace::SUPERSMA, text_color, AlignX::Right);
+      FontFace::SUPERSMA, text_color, TextAnchor::End);
   context_.font->render_text_onto(
       *ctx.surface, "DAYS", ViewPoint{header_days_x, header_y},
-      FontFace::SUPERSMA, text_color, AlignX::Right);
+      FontFace::SUPERSMA, text_color, TextAnchor::End);
 
   constexpr int line_color = 15;
   constexpr int line_width = 2;
@@ -230,24 +231,24 @@ void IngredientOrderScreen::draw_ingredient_list(const RenderContext& ctx) {
       std::string price_text = compat::format("{:n}", batch.price_per_unit);
       context_.font->render_text_onto(*ctx.surface, price_text,
                                       ViewPoint{price_x, y}, FontFace::CSTANDAR,
-                                      text_color, AlignX::Right);
+                                      text_color, TextAnchor::End);
     }
     else {
       context_.font->render_text_onto(*ctx.surface, "------",
                                       ViewPoint{price_x, y}, FontFace::CSTANDAR,
-                                      text_color, AlignX::Right);
+                                      text_color, TextAnchor::End);
     }
 
     // Only show amount, stock, and days for ingredients the supplier sells
     if (supplier_sells) {
       context_.font->render_text_onto(
           *ctx.surface, std::to_string(batch.count), ViewPoint{amount_x, y},
-          FontFace::CSTANDAR, text_color, AlignX::Right);
+          FontFace::CSTANDAR, text_color, TextAnchor::End);
 
       int projected_stock = batch.current_stock + batch.count;
       context_.font->render_text_onto(
           *ctx.surface, std::to_string(projected_stock), ViewPoint{stock_x, y},
-          FontFace::CSTANDAR, text_color, AlignX::Right);
+          FontFace::CSTANDAR, text_color, TextAnchor::End);
 
       // Render days remaining (show if ingredient has usage on menu)
       // Calculate days based on projected stock (current + order amount)
@@ -259,7 +260,7 @@ void IngredientOrderScreen::draw_ingredient_list(const RenderContext& ctx) {
         std::string days_text = std::to_string(days_remaining);
         context_.font->render_text_onto(
             *ctx.surface, days_text, ViewPoint{days_x, y}, FontFace::CSTANDAR,
-            text_color_days, AlignX::Right);
+            text_color_days, TextAnchor::End);
       }
     }
 
@@ -284,10 +285,10 @@ void IngredientOrderScreen::draw_ingredient_list(const RenderContext& ctx) {
   std::string total_text = compat::format("{:n}", total_cost);
   context_.font->render_text_onto(
       *ctx.surface, "TOTAL:", ViewPoint{header_price_x, footer_y},
-      FontFace::SUPERSMA, text_color, AlignX::Right);
-  context_.font->render_text_onto(*ctx.surface, total_text,
-                                  ViewPoint{stock_x, footer_y},
-                                  FontFace::SUPERSMA, red_color, AlignX::Right);
+      FontFace::SUPERSMA, text_color, TextAnchor::End);
+  context_.font->render_text_onto(
+      *ctx.surface, total_text, ViewPoint{stock_x, footer_y},
+      FontFace::SUPERSMA, red_color, TextAnchor::End);
 }
 
 void IngredientOrderScreen::draw_page_screen(const RenderContext& ctx) {

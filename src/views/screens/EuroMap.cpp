@@ -116,23 +116,27 @@ void EuroMap::render(const RenderContext& ctx) {
     if (map_mode_ == MapMode::DEPOT) {
       // No depot in target city
       context_.font->render_text_onto(popup_surface, "You do not have",
-                                      ViewPoint{0, 30}, FontFace::ASTANDAR,
-                                      dark_text_color, AlignX::Center);
+                                      ViewPoint{popup_surface.width() / 2, 30},
+                                      FontFace::ASTANDAR, dark_text_color,
+                                      TextAnchor::Middle);
       context_.font->render_text_onto(popup_surface, "a central depot",
-                                      ViewPoint{0, 50}, FontFace::ASTANDAR,
-                                      dark_text_color, AlignX::Center);
+                                      ViewPoint{popup_surface.width() / 2, 50},
+                                      FontFace::ASTANDAR, dark_text_color,
+                                      TextAnchor::Middle);
       context_.font->render_text_onto(
           popup_surface, compat::format("in {}", core::city_name(target)),
-          ViewPoint{0, 70}, FontFace::ASTANDAR, dark_text_color,
-          AlignX::Center);
+          ViewPoint{popup_surface.width() / 2, 70}, FontFace::ASTANDAR,
+          dark_text_color, TextAnchor::Middle);
     }
     else {
       context_.font->render_text_onto(popup_surface, core::city_name(target),
-                                      ViewPoint{0, 30}, FontFace::ASTANDAR,
-                                      dark_text_color, AlignX::Center);
+                                      ViewPoint{popup_surface.width() / 2, 30},
+                                      FontFace::ASTANDAR, dark_text_color,
+                                      TextAnchor::Middle);
       context_.font->render_text_onto(popup_surface, "market leader",
-                                      ViewPoint{0, 50}, FontFace::ASTANDAR,
-                                      dark_text_color, AlignX::Center);
+                                      ViewPoint{popup_surface.width() / 2, 50},
+                                      FontFace::ASTANDAR, dark_text_color,
+                                      TextAnchor::Middle);
       std::string leader_name = "- nobody -";
       if (state_.is_city_loaded(target)) {
         auto leader = state_.city(target)->control_map().market_leader();
@@ -142,9 +146,9 @@ void EuroMap::render(const RenderContext& ctx) {
           leader_name = player->name();
         }
       }
-      context_.font->render_text_onto(popup_surface, leader_name,
-                                      ViewPoint{0, 70}, FontFace::ASTANDAR,
-                                      dark_text_color, AlignX::Center);
+      context_.font->render_text_onto(
+          popup_surface, leader_name, ViewPoint{popup_surface.width() / 2, 70},
+          FontFace::ASTANDAR, dark_text_color, TextAnchor::Middle);
     }
 
     ctx.surface->blit_raw(popup_surface,
@@ -162,11 +166,12 @@ void EuroMap::render(const RenderContext& ctx) {
           dest_city->trade_embargo_counter(*category_)) {
         context_.font->render_text_onto(
             popup_surface, compat::format("{} is", core::city_name(target)),
-            ViewPoint{0, 12}, FontFace::ASTANDAR, dark_text_color,
-            AlignX::Center);
-        context_.font->render_text_onto(popup_surface, "under embargo!",
-                                        ViewPoint{0, 36}, FontFace::ASTANDAR,
-                                        dark_text_color, AlignX::Center);
+            ViewPoint{popup_surface.width() / 2, 12}, FontFace::ASTANDAR,
+            dark_text_color, TextAnchor::Middle);
+        context_.font->render_text_onto(
+            popup_surface, "under embargo!",
+            ViewPoint{popup_surface.width() / 2, 36}, FontFace::ASTANDAR,
+            dark_text_color, TextAnchor::Middle);
         ctx.surface->blit_raw(
             popup_surface, ViewPoint{small_popup_box_.x, small_popup_box_.y});
         interactions_.create_frame_item(
@@ -183,11 +188,13 @@ void EuroMap::render(const RenderContext& ctx) {
         return;
       }
       context_.font->render_text_onto(popup_surface, "Export will cost",
-                                      ViewPoint{0, 12}, FontFace::ASTANDAR,
-                                      dark_text_color, AlignX::Center);
+                                      ViewPoint{popup_surface.width() / 2, 12},
+                                      FontFace::ASTANDAR, dark_text_color,
+                                      TextAnchor::Middle);
       context_.font->render_text_onto(
-          popup_surface, "$" + std::to_string(cost) + ".", ViewPoint{0, 36},
-          FontFace::ASTANDAR, dark_text_color, AlignX::Center);
+          popup_surface, "$" + std::to_string(cost) + ".",
+          ViewPoint{popup_surface.width() / 2, 36}, FontFace::ASTANDAR,
+          dark_text_color, TextAnchor::Middle);
       interactions_.create_frame_item(
           ViewRect{0, 0, DisplayConstants::SCREEN_WIDTH,
                    DisplayConstants::SCREEN_HEIGHT},
@@ -203,12 +210,14 @@ void EuroMap::render(const RenderContext& ctx) {
       Money amount{static_cast<int64_t>(cost) * 100};
       bool can_afford = state_.active_player()->cash_balance() >= amount;
       if (can_afford) {
-        context_.font->render_text_onto(popup_surface, "The flight costs",
-                                        ViewPoint{0, 12}, FontFace::ASTANDAR,
-                                        dark_text_color, AlignX::Center);
         context_.font->render_text_onto(
-            popup_surface, "$" + std::to_string(cost) + ".", ViewPoint{0, 36},
-            FontFace::ASTANDAR, dark_text_color, AlignX::Center);
+            popup_surface, "The flight costs",
+            ViewPoint{popup_surface.width() / 2, 12}, FontFace::ASTANDAR,
+            dark_text_color, TextAnchor::Middle);
+        context_.font->render_text_onto(
+            popup_surface, "$" + std::to_string(cost) + ".",
+            ViewPoint{popup_surface.width() / 2, 36}, FontFace::ASTANDAR,
+            dark_text_color, TextAnchor::Middle);
         interactions_.create_frame_item(
             small_popup_box_, "flight_cost_box",
             [this](views::ui::InteractionEvent ie) {
@@ -219,9 +228,10 @@ void EuroMap::render(const RenderContext& ctx) {
             });
       }
       else {
-        context_.font->render_text_onto(popup_surface, "Not enough money!",
-                                        ViewPoint{0, 24}, FontFace::ASTANDAR,
-                                        dark_text_color, AlignX::Center);
+        context_.font->render_text_onto(
+            popup_surface, "Not enough money!",
+            ViewPoint{popup_surface.width() / 2, 24}, FontFace::ASTANDAR,
+            dark_text_color, TextAnchor::Middle);
         interactions_.create_frame_item(
             small_popup_box_, "flight_cost_box",
             [this](views::ui::InteractionEvent ie) {
@@ -241,8 +251,9 @@ void EuroMap::render(const RenderContext& ctx) {
   else if (hovered_city_) {
     constexpr int text_color = 255;
     context_.font->render_text_onto(
-        *ctx.surface, core::city_name(*hovered_city_), ViewPoint{-40, 190},
-        FontFace::ASTANDAR, text_color, AlignX::Center);
+        *ctx.surface, core::city_name(*hovered_city_),
+        ViewPoint{ctx.surface->width() / 2 - 40, 190}, FontFace::ASTANDAR,
+        text_color, TextAnchor::Middle);
   }
 }
 

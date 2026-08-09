@@ -82,15 +82,17 @@ MenuMissionSelect::MenuMissionSelect(GameContext& context, GameState& state)
   add_menu_item(
       std::make_unique<PositionMarkerMenuItem>(context, BUTTONS_X, BUTTONS_Y));
   add_menu_item(std::make_unique<TextMenuItem>(
-      context, "Disk", [this] { toggle_disk(); }, face, style, sel_style));
+      context, "Disk", [this] { toggle_disk(); }, face, style, sel_style,
+      item_align));
   add_menu_item(std::make_unique<SpacerMenuItem>(context, 14));
   add_menu_item(std::make_unique<TextMenuItem>(
-      context, "OK", [this] { confirm(); }, face, style, sel_style));
+      context, "OK", [this] { confirm(); }, face, style, sel_style,
+      item_align));
   add_menu_item(
       std::make_unique<SpacerMenuItem>(context, BACK_BUTTON_Y_OFFSET));
   add_menu_item(std::make_unique<TextMenuItem>(
       context, "Back", [this] { state_.ui().pop(); }, FontFace::RUBY, style,
-      sel_style));
+      sel_style, item_align));
 
   // Right column: the eight named built-in missions. The arrows are there
   // because the original has them but they don't do anything.

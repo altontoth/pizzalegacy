@@ -11,7 +11,7 @@
 #include "core/state/GameState.h"
 #include "engine/FormatCompat.h"
 #include "engine/audio/AudioManager.h"
-#include "engine/ui/Alignment.h"
+#include "engine/ui/TextAnchor.h"
 #include "gfx/Blit.h"
 #include "views/screens/pizza/PizzaDesign.h"
 #include "views/screens/pizza/PizzaDesignHelpers.h"
@@ -255,8 +255,9 @@ void PizzaDesign::draw_competition_results(const RenderContext& ctx) {
 
   constexpr int text_color = 6;
   context_.font->render_text_onto(
-      *ctx.surface, "PIZZA COMPETITION", ViewPoint{-20, 42}, FontFace::ASTANDAR,
-      TextStyle{.color = text_color, .align = AlignX::Center});
+      *ctx.surface, "PIZZA COMPETITION",
+      ViewPoint{(ctx.surface->width() / 2) - 20, 42}, FontFace::ASTANDAR,
+      TextStyle{.color = text_color, .align = TextAnchor::Middle});
 
   constexpr int col_name = 46;
   constexpr int col_time = 234;
@@ -283,13 +284,13 @@ void PizzaDesign::draw_competition_results(const RenderContext& ctx) {
         TextStyle{.color = text_color, .character_spacing = 1});
     context_.font->render_text_onto(*ctx.surface, time_str,
                                     ViewPoint{col_time, y}, FontFace::PIZ_NUMB,
-                                    text_color, AlignX::RightEdge);
+                                    text_color, TextAnchor::End);
     context_.font->render_text_onto(*ctx.surface, match_str,
                                     ViewPoint{col_match, y}, FontFace::PIZ_NUMB,
-                                    text_color, AlignX::RightEdge);
+                                    text_color, TextAnchor::End);
     context_.font->render_text_onto(*ctx.surface, final_str,
                                     ViewPoint{col_final, y}, FontFace::PIZ_NUMB,
-                                    text_color, AlignX::RightEdge);
+                                    text_color, TextAnchor::End);
     y += row_height;
   }
 

@@ -42,17 +42,23 @@ Surface render_invoice(FontManager& font, const InvoiceConfig& config) {
   ViewRect very_inner_box = inner_box.inset(8, 8);
   invoice.fill_rect(very_inner_box, config.background_color);
 
-  font.render_text_onto(invoice, config.title, config.title_pos,
-                        config.title_font, COLOR_BLACK, AlignX::Center);
+  const int center_x = invoice.width() / 2;
+
+  font.render_text_onto(invoice, config.title,
+                        {center_x + config.title_pos.x, config.title_pos.y},
+                        config.title_font, COLOR_BLACK, TextAnchor::Middle);
 
   if (!config.subtitle.empty()) {
-    font.render_text_onto(invoice, config.subtitle, config.subtitle_pos,
-                          config.subtitle_font, COLOR_BLACK, AlignX::Center);
+    font.render_text_onto(
+        invoice, config.subtitle,
+        {center_x + config.subtitle_pos.x, config.subtitle_pos.y},
+        config.subtitle_font, COLOR_BLACK, TextAnchor::Middle);
   }
 
-  font.render_text_onto(invoice, "@@@@@@@@@@@@@@@@@@@@@@@",
-                        config.separator_pos, FontFace::CSTANDAR, COLOR_BLACK,
-                        AlignX::Center);
+  font.render_text_onto(
+      invoice, "@@@@@@@@@@@@@@@@@@@@@@@",
+      {center_x + config.separator_pos.x, config.separator_pos.y},
+      FontFace::CSTANDAR, COLOR_BLACK, TextAnchor::Middle);
 
   // Render line items
   int y = config.line_start_y;
@@ -65,9 +71,10 @@ Surface render_invoice(FontManager& font, const InvoiceConfig& config) {
       continue;
     }
 
-    const auto align = has_value ? AlignX::Left : line.align;
-    const auto x_pos =
-        (has_value || line.align == AlignX::Left) ? config.label_x : 0;
+    const auto align = has_value ? TextAnchor::Start : line.align;
+    const auto x_pos = (has_value || line.align == TextAnchor::Start)
+                           ? config.label_x
+                           : center_x;
     if (has_label) {
       font.render_text_onto(invoice, line.label, ViewPoint{x_pos, y},
                             config.line_font, COLOR_BLACK, align);
@@ -76,15 +83,15 @@ Surface render_invoice(FontManager& font, const InvoiceConfig& config) {
     if (has_value) {
       font.render_text_onto(invoice, compat::format("{}", *line.value),
                             ViewPoint{config.value_x, y}, config.line_font,
-                            COLOR_BLACK, AlignX::RightEdge);
+                            COLOR_BLACK, TextAnchor::End);
     }
 
     y += config.line_spacing;
   }
 
   if (!config.footer.empty()) {
-    font.render_text_onto(invoice, config.footer, ViewPoint{0, 292},
-                          FontFace::CSTANDAR, COLOR_BLACK, AlignX::Center);
+    font.render_text_onto(invoice, config.footer, ViewPoint{center_x, 292},
+                          FontFace::CSTANDAR, COLOR_BLACK, TextAnchor::Middle);
   }
 
   return invoice;

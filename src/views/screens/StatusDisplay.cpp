@@ -88,13 +88,26 @@ void StatusDisplay::render_recipe(const StatusDisplayRecipe& recipe,
   auto to_alignment = [](StatusAlignment a) {
     switch (a) {
     case StatusAlignment::Left:
-      return AlignX::Left;
+      return TextAnchor::Start;
     case StatusAlignment::Center:
-      return AlignX::Center;
+      return TextAnchor::Middle;
     case StatusAlignment::Right:
-      return AlignX::Right;
-      break;
+      return TextAnchor::End;
     }
+    return TextAnchor::Start;
+  };
+  // A centered or right-aligned column gives its x relative to the panel's
+  // center or right edge.
+  auto to_x = [&ctx](const StatusColumn& col) {
+    switch (col.align) {
+    case StatusAlignment::Left:
+      return col.x;
+    case StatusAlignment::Center:
+      return (ctx.surface->width() / 2) + col.x;
+    case StatusAlignment::Right:
+      return ctx.surface->width() + col.x;
+    }
+    return col.x;
   };
   int y = 16;
   const int color_yellow = 16;
@@ -111,18 +124,18 @@ void StatusDisplay::render_recipe(const StatusDisplayRecipe& recipe,
     case StatusItemKind::TwoColumn: {
       const auto& col1 = item.col1;
       const auto& col2 = item.col2;
-      context_.font->render_text_onto(*ctx.surface, col1.text,
-                                      ViewPoint{col1.x, y}, FontFace::SUPERSMA,
-                                      c, to_alignment(col1.align));
-      context_.font->render_text_onto(*ctx.surface, col2.text,
-                                      ViewPoint{col2.x, y}, FontFace::SUPERSMA,
-                                      c, to_alignment(col2.align));
+      context_.font->render_text_onto(
+          *ctx.surface, col1.text, ViewPoint{to_x(col1), y}, FontFace::SUPERSMA,
+          c, to_alignment(col1.align));
+      context_.font->render_text_onto(
+          *ctx.surface, col2.text, ViewPoint{to_x(col2), y}, FontFace::SUPERSMA,
+          c, to_alignment(col2.align));
       y += 12;
       break;
     }
     case StatusItemKind::Single:
       context_.font->render_line_onto(
-          *ctx.surface, item.col1.text, ViewPoint{item.col1.x, y},
+          *ctx.surface, item.col1.text, ViewPoint{to_x(item.col1), y},
           FontFace::SUPERSMA, c, to_alignment(item.col1.align));
       y += 12;
       break;
@@ -176,7 +189,7 @@ void StatusDisplay::render_header_info(const RenderContext& ctx) {
     constexpr int money_y_offset = 164;
     TextStyle ts{
         .color = text_color,
-        .align = AlignX::Left,
+        .align = TextAnchor::Start,
         .shadow = std::nullopt,
         .character_spacing = 2,
     };
@@ -218,7 +231,7 @@ void StatusDisplay::render_attack_bars(const RenderContext& ctx) {
     constexpr int contamination_color = 14; // white
     const TextStyle ts{
         .color = contamination_color,
-        .align = AlignX::CenterPoint,
+        .align = TextAnchor::Middle,
     };
     context_.font->render_line_onto(
         *ctx.surface,
@@ -232,7 +245,7 @@ void StatusDisplay::render_attack_bars(const RenderContext& ctx) {
     constexpr int police_text_y = 4;
     const TextStyle ts{
         .color = police_text_color,
-        .align = AlignX::CenterPoint,
+        .align = TextAnchor::Middle,
     };
     context_.font->render_line_onto(
         *ctx.surface, "POLICE COMING!",

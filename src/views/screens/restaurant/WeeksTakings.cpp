@@ -162,9 +162,9 @@ void WeeksTakings::render_pizza_sales_page(const RenderContext& ctx,
   const int text_color = 240;
   context_.font->render_text_onto(*ctx.surface, "week's",
                                   ViewPoint{72, header_y}, FontFace::ASTANDAR,
-                                  header_text_color, AlignX::Left);
+                                  header_text_color, TextAnchor::Start);
   TextStyle ts{.color = header_text_color,
-               .align = AlignX::Left,
+               .align = TextAnchor::Start,
                .shadow = ShadowStyle{
                    .offset = {-2, 2},
                    .color = header_secondary_color,
@@ -174,12 +174,12 @@ void WeeksTakings::render_pizza_sales_page(const RenderContext& ctx,
 
   // Subtitle
   context_.font->render_text_onto(*ctx.surface, "sales", ViewPoint{160, 44},
-                                  FontFace::ASTANDAR, 11, AlignX::Left);
+                                  FontFace::ASTANDAR, 11, TextAnchor::Start);
 
   // Column headers
   context_.font->render_text_onto(*ctx.surface, "ITEMS SALES COSTS PROFIT",
                                   ViewPoint{168, 64}, FontFace::SUPERSMA,
-                                  text_color, AlignX::Left);
+                                  text_color, TextAnchor::Start);
 
   // Column x positions
   const int name_x = 42 - LegacyConstants::WOOD_BORDER_WIDTH_LEFT;
@@ -215,31 +215,28 @@ void WeeksTakings::render_pizza_sales_page(const RenderContext& ctx,
     // Render pizza name
     context_.font->render_text_onto(*ctx.surface, pizza_name,
                                     ViewPoint{name_x, y}, FontFace::SUPERSMA,
-                                    text_color, AlignX::Left);
+                                    text_color, TextAnchor::Start);
 
     // Items sold
-    context_.font->render_text_onto(*ctx.surface,
-                                    compat::format("{}", sales.count_sold),
-                                    ViewPoint{items_x, y}, FontFace::SUPERSMA,
-                                    text_color, AlignX::RightEdge);
+    context_.font->render_text_onto(
+        *ctx.surface, compat::format("{}", sales.count_sold),
+        ViewPoint{items_x, y}, FontFace::SUPERSMA, text_color, TextAnchor::End);
 
     // Sales (revenue)
-    context_.font->render_text_onto(*ctx.surface,
-                                    compat::format("{}", sales.revenue),
-                                    ViewPoint{sales_x, y}, FontFace::SUPERSMA,
-                                    text_color, AlignX::RightEdge);
+    context_.font->render_text_onto(
+        *ctx.surface, compat::format("{}", sales.revenue),
+        ViewPoint{sales_x, y}, FontFace::SUPERSMA, text_color, TextAnchor::End);
 
     // Costs
-    context_.font->render_text_onto(*ctx.surface,
-                                    compat::format("{}", sales.ingredient_cost),
-                                    ViewPoint{costs_x, y}, FontFace::SUPERSMA,
-                                    text_color, AlignX::RightEdge);
+    context_.font->render_text_onto(
+        *ctx.surface, compat::format("{}", sales.ingredient_cost),
+        ViewPoint{costs_x, y}, FontFace::SUPERSMA, text_color, TextAnchor::End);
 
     // Profit
     context_.font->render_text_onto(*ctx.surface,
                                     compat::format("{}", sales.profit),
                                     ViewPoint{profit_x, y}, FontFace::SUPERSMA,
-                                    text_color, AlignX::RightEdge);
+                                    text_color, TextAnchor::End);
 
     page_revenue = page_revenue + sales.revenue;
     page_costs = page_costs + sales.ingredient_cost;
@@ -253,23 +250,23 @@ void WeeksTakings::render_pizza_sales_page(const RenderContext& ctx,
   const int total_y = 308;
   context_.font->render_text_onto(*ctx.surface,
                                   "TOTAL:", ViewPoint{20, total_y},
-                                  FontFace::SUPERSMA, 11, AlignX::Left);
+                                  FontFace::SUPERSMA, 11, TextAnchor::Start);
 
   context_.font->render_text_onto(
       *ctx.surface, compat::format("{}", page_items),
-      ViewPoint{items_x, total_y}, FontFace::SUPERSMA, 11, AlignX::RightEdge);
+      ViewPoint{items_x, total_y}, FontFace::SUPERSMA, 11, TextAnchor::End);
 
   context_.font->render_text_onto(
       *ctx.surface, compat::format("{}", page_revenue),
-      ViewPoint{sales_x, total_y}, FontFace::SUPERSMA, 11, AlignX::RightEdge);
+      ViewPoint{sales_x, total_y}, FontFace::SUPERSMA, 11, TextAnchor::End);
 
   context_.font->render_text_onto(
       *ctx.surface, compat::format("{}", page_costs),
-      ViewPoint{costs_x, total_y}, FontFace::SUPERSMA, 11, AlignX::RightEdge);
+      ViewPoint{costs_x, total_y}, FontFace::SUPERSMA, 11, TextAnchor::End);
 
   context_.font->render_text_onto(
       *ctx.surface, compat::format("{}", page_profit),
-      ViewPoint{profit_x, total_y}, FontFace::SUPERSMA, 11, AlignX::RightEdge);
+      ViewPoint{profit_x, total_y}, FontFace::SUPERSMA, 11, TextAnchor::End);
 }
 
 void WeeksTakings::render_expenses_page(const RenderContext& ctx,
@@ -277,9 +274,9 @@ void WeeksTakings::render_expenses_page(const RenderContext& ctx,
 
   context_.font->render_text_onto(*ctx.surface, "week's",
                                   ViewPoint{72, header_y}, FontFace::ASTANDAR,
-                                  header_text_color, AlignX::Left);
+                                  header_text_color, TextAnchor::Start);
   TextStyle ts{.color = header_text_color,
-               .align = AlignX::Left,
+               .align = TextAnchor::Start,
                .shadow = ShadowStyle{
                    .offset = {-2, 2},
                    .color = header_secondary_color,
@@ -304,10 +301,10 @@ void WeeksTakings::render_expenses_page(const RenderContext& ctx,
   // Ingredients section header
   context_.font->render_text_onto(*ctx.surface, "ingre-",
                                   ViewPoint{category_x, y}, FontFace::SUPERSMA,
-                                  text_color, AlignX::Left);
-  context_.font->render_text_onto(*ctx.surface,
-                                  "dients:", ViewPoint{category_x, y + 12},
-                                  FontFace::SUPERSMA, text_color, AlignX::Left);
+                                  text_color, TextAnchor::Start);
+  context_.font->render_text_onto(
+      *ctx.surface, "dients:", ViewPoint{category_x, y + 12},
+      FontFace::SUPERSMA, text_color, TextAnchor::Start);
 
   const std::array<std::string, 4> category_names = {
       "Vegetables", "Meat + Fish", "Fruit", "Cheese + Spices"};
@@ -318,13 +315,12 @@ void WeeksTakings::render_expenses_page(const RenderContext& ctx,
   for (size_t i = 0; i < category_names.size(); ++i) {
     context_.font->render_text_onto(*ctx.surface, category_names[i],
                                     ViewPoint{label_x, y}, FontFace::SUPERSMA,
-                                    text_color, AlignX::Left);
+                                    text_color, TextAnchor::Start);
 
     context_.font->render_text_onto(
         *ctx.surface,
         compat::format("{}", weekly.ingredient_purchases_by_category[i]),
-        ViewPoint{value_x, y}, FontFace::SUPERSMA, text_color,
-        AlignX::RightEdge);
+        ViewPoint{value_x, y}, FontFace::SUPERSMA, text_color, TextAnchor::End);
 
     total_ingredients =
         total_ingredients + weekly.ingredient_purchases_by_category[i];
@@ -337,14 +333,14 @@ void WeeksTakings::render_expenses_page(const RenderContext& ctx,
   // Ingredient subtotal
   context_.font->render_text_onto(
       *ctx.surface, compat::format("{}", total_ingredients),
-      ViewPoint{total_x, y}, FontFace::SUPERSMA, text_color, AlignX::RightEdge);
+      ViewPoint{total_x, y}, FontFace::SUPERSMA, text_color, TextAnchor::End);
 
   y += 22;
 
   // Cooks section
-  context_.font->render_text_onto(*ctx.surface,
-                                  "cooks:", ViewPoint{category_x, y},
-                                  FontFace::SUPERSMA, text_color, AlignX::Left);
+  context_.font->render_text_onto(
+      *ctx.surface, "cooks:", ViewPoint{category_x, y}, FontFace::SUPERSMA,
+      text_color, TextAnchor::Start);
 
   Money total_staff{0};
 
@@ -359,17 +355,17 @@ void WeeksTakings::render_expenses_page(const RenderContext& ctx,
 
         context_.font->render_text_onto(
             *ctx.surface, name, ViewPoint{label_x, y}, FontFace::SUPERSMA,
-            text_color, AlignX::Left);
+            text_color, TextAnchor::Start);
         context_.font->render_text_onto(
             *ctx.surface, compat::format("{}", weekly_wage),
             ViewPoint{value_x, y}, FontFace::SUPERSMA, text_color,
-            AlignX::RightEdge);
+            TextAnchor::End);
         total_staff = total_staff + weekly_wage;
       }
       else {
         context_.font->render_text_onto(
             *ctx.surface, no_name, ViewPoint{label_x, y}, FontFace::SUPERSMA,
-            text_color, AlignX::Left);
+            text_color, TextAnchor::Start);
       }
       y += line_spacing;
     }
@@ -380,7 +376,7 @@ void WeeksTakings::render_expenses_page(const RenderContext& ctx,
   // Waiters section
   context_.font->render_text_onto(*ctx.surface, "waiters",
                                   ViewPoint{category_x, y}, FontFace::SUPERSMA,
-                                  text_color, AlignX::Left);
+                                  text_color, TextAnchor::Start);
 
   // Render 6 waiter slots
   if (restaurant_) {
@@ -393,17 +389,17 @@ void WeeksTakings::render_expenses_page(const RenderContext& ctx,
 
         context_.font->render_text_onto(
             *ctx.surface, name, ViewPoint{label_x, y}, FontFace::SUPERSMA,
-            text_color, AlignX::Left);
+            text_color, TextAnchor::Start);
         context_.font->render_text_onto(
             *ctx.surface, compat::format("{}", weekly_wage),
             ViewPoint{value_x, y}, FontFace::SUPERSMA, text_color,
-            AlignX::RightEdge);
+            TextAnchor::End);
         total_staff = total_staff + weekly_wage;
       }
       else {
         context_.font->render_text_onto(
             *ctx.surface, no_name, ViewPoint{label_x, y}, FontFace::SUPERSMA,
-            text_color, AlignX::Left);
+            text_color, TextAnchor::Start);
       }
       y += line_spacing;
     }
@@ -412,9 +408,9 @@ void WeeksTakings::render_expenses_page(const RenderContext& ctx,
   y += 3;
 
   // Manager section
-  context_.font->render_text_onto(*ctx.surface,
-                                  "managers:", ViewPoint{category_x, y},
-                                  FontFace::SUPERSMA, text_color, AlignX::Left);
+  context_.font->render_text_onto(
+      *ctx.surface, "managers:", ViewPoint{category_x, y}, FontFace::SUPERSMA,
+      text_color, TextAnchor::Start);
 
   if (restaurant_ && restaurant_->manager()) {
     std::string name = restaurant_->manager()->character().first_name() + " " +
@@ -423,33 +419,33 @@ void WeeksTakings::render_expenses_page(const RenderContext& ctx,
 
     context_.font->render_text_onto(*ctx.surface, name, ViewPoint{label_x, y},
                                     FontFace::SUPERSMA, text_color,
-                                    AlignX::Left);
+                                    TextAnchor::Start);
     context_.font->render_text_onto(
         *ctx.surface, compat::format("{}", weekly_wage), ViewPoint{value_x, y},
-        FontFace::SUPERSMA, text_color, AlignX::RightEdge);
+        FontFace::SUPERSMA, text_color, TextAnchor::End);
     total_staff = total_staff + weekly_wage;
   }
   else {
     context_.font->render_text_onto(*ctx.surface, no_name,
                                     ViewPoint{label_x, y}, FontFace::SUPERSMA,
-                                    text_color, AlignX::Left);
+                                    text_color, TextAnchor::Start);
   }
 
   // Staff subtotal
   context_.font->render_text_onto(
       *ctx.surface, compat::format("{}", total_staff), ViewPoint{total_x, y},
-      FontFace::SUPERSMA, text_color, AlignX::RightEdge);
+      FontFace::SUPERSMA, text_color, TextAnchor::End);
 
   // Grand total at bottom
   const int total_y = 312;
-  context_.font->render_text_onto(*ctx.surface,
-                                  "TOTAL:", ViewPoint{category_x + 8, total_y},
-                                  FontFace::SUPERSMA, text_color, AlignX::Left);
+  context_.font->render_text_onto(
+      *ctx.surface, "TOTAL:", ViewPoint{category_x + 8, total_y},
+      FontFace::SUPERSMA, text_color, TextAnchor::Start);
 
   Money grand_total = total_ingredients + total_staff;
   context_.font->render_text_onto(
       *ctx.surface, compat::format("{}", grand_total), ViewPoint{366, total_y},
-      FontFace::SUPERSMA, text_color, AlignX::RightEdge);
+      FontFace::SUPERSMA, text_color, TextAnchor::End);
 }
 
 void WeeksTakings::navigate_to_restaurant(core::RestaurantId new_id) {

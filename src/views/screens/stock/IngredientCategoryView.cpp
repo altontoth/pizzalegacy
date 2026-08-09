@@ -12,7 +12,7 @@
 #include "core/restaurant/Restaurant.h"
 #include "core/state/GameState.h"
 #include "engine/geom/Spaces.h"
-#include "engine/ui/Alignment.h"
+#include "engine/ui/TextAnchor.h"
 #include "factories/IngredientFactory.h"
 #include "gfx/Blit.h"
 #include "gfx/Draw.h"
@@ -54,7 +54,7 @@ void IngredientCategoryView::draw_page_header(const RenderContext& ctx) {
   const std::string title =
       "supplies " + std::string(core::food::CategoryRegistry::name(category_));
   context_.font->render_text_onto(*ctx.surface, title, ViewPoint{138, 22},
-                                  FontFace::PIZ_NUMB, 8, AlignX::Left);
+                                  FontFace::PIZ_NUMB, 8, TextAnchor::Start);
 }
 
 void IngredientCategoryView::draw_ingredient_list(const RenderContext& ctx) {
@@ -71,19 +71,19 @@ void IngredientCategoryView::draw_ingredient_list(const RenderContext& ctx) {
 
   context_.font->render_text_onto(*ctx.surface, "qual", ViewPoint{210, col_y},
                                   FontFace::SUPERSMA, text_color,
-                                  AlignX::RightEdge);
+                                  TextAnchor::End);
   context_.font->render_text_onto(*ctx.surface, "sup", ViewPoint{248, col_y},
                                   FontFace::SUPERSMA, text_color,
-                                  AlignX::RightEdge);
+                                  TextAnchor::End);
   context_.font->render_text_onto(*ctx.surface, "nee", ViewPoint{284, col_y},
                                   FontFace::SUPERSMA, text_color,
-                                  AlignX::RightEdge);
+                                  TextAnchor::End);
   context_.font->render_text_onto(*ctx.surface, "use", ViewPoint{322, col_y},
                                   FontFace::SUPERSMA, text_color,
-                                  AlignX::RightEdge);
+                                  TextAnchor::End);
   context_.font->render_text_onto(*ctx.surface, "days", ViewPoint{364, col_y},
                                   FontFace::SUPERSMA, text_color,
-                                  AlignX::RightEdge);
+                                  TextAnchor::End);
 
   // Vertical separators between columns
   constexpr int line_color = 15;
@@ -129,22 +129,22 @@ void IngredientCategoryView::draw_ingredient_list(const RenderContext& ctx) {
     if (supplies || need || usage > 0) {
       context_.font->render_text_onto(*ctx.surface, std::to_string(quality),
                                       ViewPoint{210, y}, FontFace::CSTANDAR,
-                                      row_color, AlignX::RightEdge);
+                                      row_color, TextAnchor::End);
       context_.font->render_text_onto(*ctx.surface, std::to_string(supplies),
                                       ViewPoint{250, y}, FontFace::CSTANDAR,
-                                      row_color, AlignX::RightEdge);
+                                      row_color, TextAnchor::End);
       context_.font->render_text_onto(*ctx.surface, std::to_string(need),
                                       ViewPoint{288, y}, FontFace::CSTANDAR,
-                                      row_color, AlignX::RightEdge);
+                                      row_color, TextAnchor::End);
       context_.font->render_text_onto(*ctx.surface, std::to_string(usage),
                                       ViewPoint{326, y}, FontFace::CSTANDAR,
-                                      row_color, AlignX::RightEdge);
+                                      row_color, TextAnchor::End);
     }
 
     if (supplies > 0 && days_left > 0) {
       context_.font->render_text_onto(*ctx.surface, std::to_string(days_left),
                                       ViewPoint{358, y}, FontFace::CSTANDAR,
-                                      text_color, AlignX::RightEdge);
+                                      text_color, TextAnchor::End);
     }
 
     y += line_height;

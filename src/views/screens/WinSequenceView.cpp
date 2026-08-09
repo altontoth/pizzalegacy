@@ -37,7 +37,7 @@ WinSequenceView::WinSequenceView(GameContext& context, GameState& state,
   total_lines_ = static_cast<int>(lines.size());
 
   TextStyle ts{.color = FG_COLOR,
-               .align = AlignX::Left,
+               .align = TextAnchor::Start,
                .shadow = ShadowStyle{.offset = {-1, 1}, .color = SHADOW_COLOR}};
   typewriter_.set_text(lines[line_index_], ViewPoint{30, 320},
                        FontFace::ASTANDAR, ts, WRAP_WIDTH);

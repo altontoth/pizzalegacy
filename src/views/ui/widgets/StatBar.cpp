@@ -66,8 +66,8 @@ gfx::Surface StatBar::create_stat_bar(const std::string_view& label,
   font_->render_text_onto(final_surf, label, {BUFFER_PIXELS * 3, 4},
                           FontFace::SUPERSMA, text_idx);
   font_->render_text_onto(final_surf, std::to_string(value),
-                          {-BUFFER_PIXELS * 2, 4}, FontFace::SUPERSMA, text_idx,
-                          AlignX::Right);
+                          {final_surf.width() - (BUFFER_PIXELS * 2), 4},
+                          FontFace::SUPERSMA, text_idx, TextAnchor::End);
 
   // remove some artifact pixels by turning them transparent
   uint8_t c1 = final_surf.get({0, 0});

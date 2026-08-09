@@ -14,7 +14,7 @@
 #include "core/finance/Scale.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/state/GameState.h"
-#include "engine/ui/Alignment.h"
+#include "engine/ui/TextAnchor.h"
 #include "gfx/Draw.h"
 #include "resources/BlitmapManager.h"
 #include "views/base/ViewDefs.h"
@@ -195,8 +195,9 @@ void GlobalStats::render_month_overview(const RenderContext& ctx) {
   auto& financials = state_.active_player()->financials();
   auto restaurants = state_.restaurants_for(state_.active_player()->id());
 
-  PxOffset last_month_offset{-164, 0};
-  PxOffset this_month_offset{-48, 0};
+  // Value columns, right-aligned against the panel edge.
+  const int last_month_x = ctx.surface->width() - 146;
+  const int this_month_x = ctx.surface->width() - 30;
   constexpr int line_spacing = 18;
   constexpr uint8_t item_color = 240;
 
@@ -206,11 +207,13 @@ void GlobalStats::render_month_overview(const RenderContext& ctx) {
     context_.font->render_text_onto(*ctx.surface, compat::format("{}:", label),
                                     pos, FontFace::PIZ_NUMB, item_color);
     context_.font->render_text_onto(*ctx.surface, compat::format("{}", last_m),
-                                    pos + last_month_offset, FontFace::PIZ_NUMB,
-                                    item_color, AlignX::Right);
+                                    ViewPoint{last_month_x, pos.y},
+                                    FontFace::PIZ_NUMB, item_color,
+                                    TextAnchor::End);
     context_.font->render_text_onto(*ctx.surface, compat::format("{}", this_m),
-                                    pos + this_month_offset, FontFace::PIZ_NUMB,
-                                    item_color, AlignX::Right);
+                                    ViewPoint{this_month_x, pos.y},
+                                    FontFace::PIZ_NUMB, item_color,
+                                    TextAnchor::End);
   };
 
   // Clickable row dimensions (original coords * 2)
@@ -396,7 +399,7 @@ void GlobalStats::render_month_overview_popup(
     context_.font->render_text_onto(*ctx.surface, compat::format("{}", value),
                                     popup_rect.point() + rest_value_offset,
                                     FontFace::PIZ_NUMB, text_color,
-                                    AlignX::RightEdge);
+                                    TextAnchor::End);
 
     y += row_height;
   }
@@ -410,7 +413,7 @@ void GlobalStats::render_month_overview_popup(
     const PxOffset info_offset{popup_rect.w / 2, popup_rect.h - 10};
     context_.font->render_text_onto(
         *ctx.surface, scroll_info, popup_rect.point() + info_offset,
-        FontFace::MINI, text_color, AlignX::CenterPoint);
+        FontFace::MINI, text_color, TextAnchor::Middle);
   }
 
   // Create backdrop to dismiss popup when clicking outside
@@ -484,7 +487,7 @@ void GlobalStats::render_bar_chart(
 
   TextStyle ts{
       .color = 12,
-      .align = AlignX::CenterPoint,
+      .align = TextAnchor::Middle,
   };
   context_.font->render_text_onto(
       *ctx.surface, std::string(title),
@@ -507,7 +510,7 @@ void GlobalStats::render_bar_chart(
   // X-axis label
   context_.font->render_text_onto(*ctx.surface, x_axis_label,
                                   ViewPoint{376, 266}, FontFace::CSTANDAR, 13,
-                                  AlignX::RightEdge);
+                                  TextAnchor::End);
 
   constexpr int bottom_y = 258;
   constexpr int x_start = 48;
@@ -661,18 +664,18 @@ void GlobalStats::render_loans(const RenderContext& ctx) {
 
     context_.font->render_text_onto(
         *ctx.surface, compat::format("{}", loan->start_amount()),
-        {col_amount, y}, FontFace::PIZ_NUMB, 240, AlignX::RightEdge);
+        {col_amount, y}, FontFace::PIZ_NUMB, 240, TextAnchor::End);
     context_.font->render_text_onto(
         *ctx.surface, compat::format("{}", loan->months_left()), {col_time, y},
-        FontFace::PIZ_NUMB, 240, AlignX::RightEdge);
+        FontFace::PIZ_NUMB, 240, TextAnchor::End);
     context_.font->render_text_onto(
         *ctx.surface, std::to_string(loan->interest_percentage()), {col_pct, y},
-        FontFace::PIZ_NUMB, 240, AlignX::RightEdge);
+        FontFace::PIZ_NUMB, 240, TextAnchor::End);
     context_.font->render_text_onto(*ctx.surface, " %", {col_pct + 10, y},
                                     FontFace::PIZ_NUMB, 240);
     context_.font->render_text_onto(
         *ctx.surface, compat::format("{}", loan->monthly_repayment()),
-        {col_month, y}, FontFace::PIZ_NUMB, 240, AlignX::RightEdge);
+        {col_month, y}, FontFace::PIZ_NUMB, 240, TextAnchor::End);
   }
 
   constexpr int sep_y = 168;
@@ -708,16 +711,16 @@ void GlobalStats::render_loans(const RenderContext& ctx) {
 
     context_.font->render_text_onto(
         *ctx.surface, compat::format("{:i}", inv->amount()), {col_amount, y},
-        FontFace::PIZ_NUMB, 240, AlignX::RightEdge);
+        FontFace::PIZ_NUMB, 240, TextAnchor::End);
     context_.font->render_text_onto(
         *ctx.surface, compat::format("{}", inv->months_left()), {col_time, y},
-        FontFace::PIZ_NUMB, 240, AlignX::Right);
+        FontFace::PIZ_NUMB, 240, TextAnchor::End);
     context_.font->render_text_onto(*ctx.surface,
                                     compat::format("{}%", inv->return_rate()),
                                     {col_pct, y}, FontFace::PIZ_NUMB, 240);
     context_.font->render_text_onto(
         *ctx.surface, compat::format("{}", inv->monthly_return()),
-        {col_month, y}, FontFace::PIZ_NUMB, 240, AlignX::Right);
+        {col_month, y}, FontFace::PIZ_NUMB, 240, TextAnchor::End);
   }
 }
 
@@ -874,7 +877,7 @@ void GlobalStats::render_balance(const RenderContext& ctx) {
 
   TextStyle ts{
       .color = 240,
-      .align = AlignX::Left,
+      .align = TextAnchor::Start,
       .shadow =
           ShadowStyle{
               .offset = {-2, 2},
@@ -894,7 +897,12 @@ void GlobalStats::render_balance(const RenderContext& ctx) {
 
   constexpr int line_spacing = 22;
   constexpr uint8_t item_color = 240;
-  PxOffset amount_pos_offset = {-210, 0};
+  // The sheet has an assets and a liabilities side; each one's amounts end
+  // this far left of the panel edge, measured from that side's label x.
+  constexpr int amount_inset = 210;
+  auto amount_x = [&ctx](ViewPoint label_pos) {
+    return ctx.surface->width() + label_pos.x - amount_inset;
+  };
 
   auto draw_label_and_amount = [&](std::string_view label, Money amount,
                                    ViewPoint pos) {
@@ -903,8 +911,9 @@ void GlobalStats::render_balance(const RenderContext& ctx) {
                                     pos, FontFace::PIZ_NUMB, item_color);
 
     context_.font->render_text_onto(
-        *ctx.surface, compat::format("{:i}", amount), pos + amount_pos_offset,
-        FontFace::PIZ_NUMB, item_color, AlignX::Right);
+        *ctx.surface, compat::format("{:i}", amount),
+        ViewPoint{amount_x(pos), pos.y}, FontFace::PIZ_NUMB, item_color,
+        TextAnchor::End);
   };
   auto balance =
       BalanceSheet(*state_.active_player(), state_.options().fix_legacy_bugs);
@@ -932,8 +941,8 @@ void GlobalStats::render_balance(const RenderContext& ctx) {
                                     FontFace::PIZ_NUMB, text_color);
     context_.font->render_text_onto(
         *ctx.surface, compat::format("{:i}", loss_amount),
-        label_pos + amount_pos_offset, FontFace::PIZ_NUMB, text_color,
-        AlignX::Right);
+        ViewPoint{amount_x(label_pos), label_pos.y}, FontFace::PIZ_NUMB,
+        text_color, TextAnchor::End);
   }
   constexpr int total_y = 276 + 36;
   draw_label_and_amount("", balance.total_assets(), ViewPoint{6, total_y});

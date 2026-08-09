@@ -6,8 +6,8 @@
 
 #pragma once
 
+#include "engine/Geometry.h"
 #include "engine/geom/Spaces.h"
-#include "engine/ui/Alignment.h"
 #include "views/ui/widgets/MenuItem.h"
 
 class TextMenuItem : public MenuItem {
@@ -15,8 +15,8 @@ public:
   TextMenuItem(GameContext& gc, const std::string& text,
                std::function<void()> action,
                FontFace font_face = FontFace::MENU, const TextStyle& ts = {},
-               const TextStyle& sel_ts = {})
-      : MenuItem(gc, font_face, text, ts.align), action_(std::move(action)),
+               const TextStyle& sel_ts = {}, HAlign align = HAlign::Left)
+      : MenuItem(gc, font_face, text, align), action_(std::move(action)),
         style_(ts), selected_style_(sel_ts) {}
 
   void draw(Surface& screen, ViewPoint p, bool is_selected) override;

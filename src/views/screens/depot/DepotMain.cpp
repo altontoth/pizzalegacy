@@ -57,7 +57,7 @@ void DepotMain::render(const RenderContext& ctx) {
 
   TextStyle ts{
       .color = 240,
-      .align = AlignX::Left,
+      .align = TextAnchor::Start,
       .shadow = std::nullopt,
       .character_spacing = 1,
   };
@@ -67,12 +67,15 @@ void DepotMain::render(const RenderContext& ctx) {
   context_.font->render_text_onto(*ctx.surface, "in use", ViewPoint{130, 240},
                                   FontFace::PIZ_NUMB, ts);
 
-  ts.align = AlignX::Right;
+  const int right_edge = ctx.surface->width();
+  ts.align = TextAnchor::End;
   ts.color = 8;
   context_.font->render_text_onto(*ctx.surface, capacity_text,
-                                  ViewPoint{-106, 210}, FontFace::PIZ_NUMB, ts);
+                                  ViewPoint{right_edge - 106, 210},
+                                  FontFace::PIZ_NUMB, ts);
   context_.font->render_text_onto(*ctx.surface, in_use_text,
-                                  ViewPoint{-110, 240}, FontFace::PIZ_NUMB, ts);
+                                  ViewPoint{right_edge - 110, 240},
+                                  FontFace::PIZ_NUMB, ts);
 }
 
 void DepotMain::set_up_input_panel() {

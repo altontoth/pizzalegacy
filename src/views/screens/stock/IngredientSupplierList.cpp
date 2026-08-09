@@ -69,8 +69,9 @@ IngredientSupplierList::IngredientSupplierList(GameContext& context,
         if (spent > 0_usd) {
           std::string spending_text = compat::format("SO FAR: {:w}", spent);
           context_.font->render_text_onto(
-              surface, spending_text, ViewPoint{16, pos.y + 38},
-              FontFace::CSTANDAR, 12, AlignX::Center);
+              surface, spending_text,
+              ViewPoint{(surface.width() / 2) + 16, pos.y + 38},
+              FontFace::CSTANDAR, 12, TextAnchor::Middle);
         }
       });
 
@@ -92,8 +93,9 @@ void IngredientSupplierList::draw_page_header(const RenderContext& ctx) {
                                    context_.vga->get("gfx/back9"));
 
   std::string title = category_titles_[category_] + " suppliers";
-  context_.font->render_text_onto(*ctx.surface, title, ViewPoint{40, 16},
-                                  FontFace::PIZ_NUMB, 8, AlignX::Center);
+  context_.font->render_text_onto(
+      *ctx.surface, title, ViewPoint{(ctx.surface->width() / 2) + 40, 16},
+      FontFace::PIZ_NUMB, 8, TextAnchor::Middle);
 }
 
 void IngredientSupplierList::draw_page_screen(const RenderContext& ctx) {

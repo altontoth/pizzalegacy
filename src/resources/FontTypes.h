@@ -10,7 +10,7 @@
 #include <optional>
 #include <unordered_map>
 #include "engine/geom/PxOffset.h"
-#include "engine/ui/Alignment.h"
+#include "engine/ui/TextAnchor.h"
 #include "gfx/ColorIndex.h"
 #include "gfx/Surface.h"
 
@@ -54,7 +54,7 @@ struct ShadowStyle {
 
 struct TextStyle {
   gfx::ColorIndex color{240};
-  AlignX align{AlignX::Left};
+  TextAnchor align{TextAnchor::Start};
   std::optional<ShadowStyle> shadow = std::nullopt;
   std::optional<int> character_spacing = std::nullopt; // pixels between chars
   int line_spacing{0}; // extra pixels added between lines (multi-line only)
