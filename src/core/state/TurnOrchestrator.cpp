@@ -1187,6 +1187,9 @@ void TurnOrchestrator::end_of_day() {
 
   tick_active_cities();
 
+  // Every city drifts, including ones no player has entered.
+  gs_->weapon_market().daily_update();
+
   gs_->milestones().check_world_domination();
 
   process_depot_theft();

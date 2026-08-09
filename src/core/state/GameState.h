@@ -9,6 +9,7 @@
 #include "core/character/Player.h"
 #include "core/city/City.h"
 #include "core/city/CityViewMapState.h"
+#include "core/economy/WeaponMarket.h"
 #include "core/events/CareerLog.h"
 #include "core/finance/BankAccountRegistry.h"
 #include "core/food/CustomerTasteProfiles.h"
@@ -108,6 +109,9 @@ public:
   // Bank account registry (player accounts, mayor bribes, mafia laundering)
   BankAccountRegistry& bank_accounts() { return bank_accounts_; }
   const BankAccountRegistry& bank_accounts() const { return bank_accounts_; }
+
+  WeaponMarket& weapon_market() { return weapon_market_; }
+  const WeaponMarket& weapon_market() const { return weapon_market_; }
 
   core::food::CustomerTasteProfiles& customer_taste_profiles() {
     return customer_taste_profiles_;
@@ -412,6 +416,7 @@ private:
   BankAccountRegistry bank_accounts_;
   core::food::CustomerTasteProfiles customer_taste_profiles_{
       core::food::default_customer_taste_profiles()};
+  WeaponMarket weapon_market_;
   std::unordered_set<int> actors_refusing_calls_;
   // Context pointer for creating popups from GameState
   GameContext* context_{nullptr};

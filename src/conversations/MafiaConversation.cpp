@@ -15,6 +15,7 @@
 #include "core/character/Actor.h"
 #include "core/character/Player.h"
 #include "core/city/City.h"
+#include "core/city/CityNames.h"
 #include "core/city/District.h"
 #include "core/city/Property.h"
 #include "core/common/Ids.h"
@@ -329,18 +330,17 @@ bool MafiaConversation::advance_line_choice(MafiaLine choice) {
       constexpr Item weapons[] = {Item::FlameThrower, Item::Chemicals,
                                   Item::Bazooka, Item::Bomb};
       auto tip_city_id = core::CityId{rand_max_n(NUMBER_OF_CITIES)};
-      state_.ensure_city_loaded(tip_city_id);
-      auto* tip_city = state_.city(tip_city_id);
+      auto tip_city_name = core::city_name(tip_city_id);
       int w1 = rand_max_n(4);
-      int w2 = (w1 + 1 + rand_max_n(3)) % 4;
-      auto& market = tip_city->weapon_market();
-      auto price1 = market.purchase_price(weapons[w1]);
-      auto price2 = market.purchase_price(weapons[w2]);
-      tip_opener_text_ = compat::format(" {}.", tip_city->name());
-      tip_result_text_ = compat::format(
-          " {}: {} cost ${} and {} ${} at the moment.", tip_city->name(),
-          core::item::to_string(weapons[w1]), price1.whole(),
-          core::item::to_string(weapons[w2]), price2.whole());
+      int w2 = (w1 + 1) % 4;
+      auto& market = state_.weapon_market();
+      auto price1 = market.purchase_price(tip_city_id, weapons[w1]);
+      auto price2 = market.purchase_price(tip_city_id, weapons[w2]);
+      tip_opener_text_ = compat::format(" {}.", tip_city_name);
+      tip_result_text_ =
+          compat::format(" {}: {} cost {:w} and {} {:w} at the moment.",
+                         tip_city_name, core::item::to_string(weapons[w1]),
+                         price1, core::item::to_string(weapons[w2]), price2);
       tip_reveal_ = MafiaLine::WEAPONS_PRICES_ARE;
       current_line(MafiaLine::I_HAVE_LATEST_WEAPON_PRICES);
       break;
@@ -952,10 +952,16 @@ std::optional<MafiaMission> MafiaConversation::generate_mission(int rank) {
     mission.risk_pct = (difficulty * 3) + clan_danger_ +
                        rand_max_n(std::max(difficulty * 3, 1));
 
-    int weapon_price = rand_between(200, 500);
-    int reward_raw = weapon_price * mission.quantity *
-                     ((mission.risk_pct * 2) + (rand_max_n(80) + 80)) / 100;
-    mission.reward = Money{static_cast<int64_t>(reward_raw) * 100};
+    // Paid at the going rate for the weapon asked for, in the city the job was
+    // offered in. The per-unit price is truncated before the quantity applies.
+    auto weapon = static_cast<core::item::Item>(
+        static_cast<int>(core::item::Item::FlameThrower) +
+        (mission.item_index - static_cast<int>(MafiaLine::FLAME_THROWERS)));
+    const Money unit_price =
+        (state_.weapon_market().purchase_price(city->id(), weapon) *
+         ((mission.risk_pct * 2) + (rand_max_n(80) + 80)) / 100)
+            .truncated_to_dollars();
+    mission.reward = unit_price * mission.quantity;
 
     mission.deadline = delivery_date;
     break;

@@ -25,6 +25,7 @@
 #include "core/city/City.h"
 #include "core/city/MayorOffice.h"
 #include "core/city/Property.h"
+#include "core/economy/WeaponMarket.h"
 #include "core/events/CareerLog.h"
 #include "core/mission/MissionTarget.h"
 #include "core/restaurant/Restaurant.h"
@@ -539,6 +540,20 @@ json SaveGameManager::state_to_json(const GameState& state,
     j["customer_taste_profiles"] = taste_array;
   }
 
+  // Save the underworld price walk for every city
+  {
+    json market_array = json::array();
+    const auto& market = state.weapon_market();
+    for (int i = 0; i < NUMBER_OF_CITIES; ++i) {
+      core::CityId city_id{i};
+      for (int column = 0; column < WeaponMarket::columns_per_city; ++column) {
+        market_array.push_back({{"modifier", market.modifier(city_id, column)},
+                                {"rising", market.rising(city_id, column)}});
+      }
+    }
+    j["weapon_market"] = market_array;
+  }
+
   // Save players
   json players_array = json::array();
   auto players = state.players();
@@ -709,6 +724,20 @@ void SaveGameManager::json_to_state(const json& j, GameState& state,
       tp.salty = taste_array[i]["salty"].get<int>();
       tp.hot = taste_array[i]["hot"].get<int>();
       tp.spicy = taste_array[i]["spicy"].get<int>();
+    }
+  }
+
+  if (j.contains("weapon_market")) {
+    const auto& market_array = j["weapon_market"];
+    auto& market = state.weapon_market();
+    constexpr size_t slot_count =
+        static_cast<size_t>(NUMBER_OF_CITIES) * WeaponMarket::columns_per_city;
+    for (size_t i = 0; i < market_array.size() && i < slot_count; ++i) {
+      core::CityId city_id{static_cast<int>(i) /
+                           WeaponMarket::columns_per_city};
+      int column = static_cast<int>(i) % WeaponMarket::columns_per_city;
+      market.set_slot(city_id, column, market_array[i]["modifier"].get<int>(),
+                      market_array[i]["rising"].get<bool>());
     }
   }
 

@@ -49,6 +49,12 @@ struct Money {
 
   [[nodiscard]] constexpr int64_t whole() const noexcept { return cents / 100; }
 
+  // Drops any cents, truncating toward zero. The original quantizes to whole
+  // dollars at specific points; this marks them.
+  [[nodiscard]] constexpr Money truncated_to_dollars() const noexcept {
+    return Money{(cents / 100) * 100};
+  }
+
   [[nodiscard]] constexpr int64_t fractional() const noexcept {
     auto r = cents % 100;
     return r < 0 ? -r : r;

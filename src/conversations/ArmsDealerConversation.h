@@ -39,7 +39,6 @@ private:
   constexpr int piece_count(ArmsDealerLine l);
   PurchaseResult make_purchase(int count, core::item::Item, Money price_per);
   SaleResult make_sale(int requested, core::item::Item id, Money price_per);
-  WeaponMarket& market_;
   core::item::Item selected_item_;
   Money price_{0};
 };

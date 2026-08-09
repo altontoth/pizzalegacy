@@ -12,6 +12,7 @@
 #include "core/character/Player.h"
 #include "core/character/SocialStatus.h"
 #include "core/city/City.h"
+#include "core/city/CityNames.h"
 #include "core/item/Item.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/state/GameState.h"
@@ -613,23 +614,17 @@ CommandDef make_armsdealer_commands() {
           .help_text = R"(Usage: armsdealer market
 
 Prints the purchase and sell price of every weapon for all 10 cities.
-Cities that have not yet been visited are initialized on the fly.
 
 Example:
   armsdealer market
 )",
           .handler = [](const CommandContext& ctx) -> CommandResult {
             auto result = CommandResult::success();
+            auto& market = ctx.state.weapon_market();
             for (int i = 0; i < NUMBER_OF_CITIES; ++i) {
               core::CityId city_id{i};
-              ctx.state.ensure_city_loaded(city_id);
-              City* city = ctx.state.city(city_id);
-              if (!city) {
-                continue;
-              }
-              result.add_message(
-                  compat::format("--- {} (city {}) ---", city->name(), i));
-              auto& market = city->weapon_market();
+              result.add_message(compat::format("--- {} (city {}) ---",
+                                                core::city_name(city_id), i));
               for (core::item::Item item : core::item::weapon_list) {
                 // Only print weapons
                 if (static_cast<int>(item) <
@@ -638,7 +633,8 @@ Example:
                 }
                 result.add_message(compat::format(
                     "  {:16} buy={:w}  sell={:w}", core::item::to_string(item),
-                    market.purchase_price(item), market.sell_price(item)));
+                    market.purchase_price(city_id, item),
+                    market.sell_price(city_id, item)));
               }
             }
             return result;

@@ -884,6 +884,7 @@ void GameState::finalize_initialization(GameContext& context) {
   active_city(cfg.city_id); // Set the active city before pushing UI state
   ui().push<CityViewState>(cfg.city_id);
   difficulty_level_ = static_cast<int>(cfg.difficulty);
+  weapon_market_.init();
 
   for (int i = 0; i < NUMBER_OF_PLAYERS; ++i) {
     auto player_item = initializer_->players.at(i);

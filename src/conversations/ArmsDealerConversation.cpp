@@ -15,8 +15,7 @@
 ArmsDealerConversation::ArmsDealerConversation(GameState& state,
                                                const Actor* actor)
     : BaseConversation(compute_start_line(state, actor), state, "t/waffen.e",
-                       actor),
-      market_(state.active_city()->weapon_market()) {}
+                       actor) {}
 
 /* This advances only the lines that don't require user choices */
 bool ArmsDealerConversation::advance() {
@@ -97,7 +96,8 @@ bool ArmsDealerConversation::advance_line_choice(ArmsDealerLine choice) {
   case ArmsDealerLine::RATS:
   case ArmsDealerLine::STINK_BOMB:
     selected_item_ = to_arms_dealer_item(choice);
-    price_ = market_.purchase_price(selected_item_);
+    price_ = state_.weapon_market().purchase_price(state_.active_city_id(),
+                                                   selected_item_);
     current_line(ArmsDealerLine::JOKE_PRICE);
     break;
   case ArmsDealerLine::ICE_VANILLA:
@@ -105,11 +105,14 @@ bool ArmsDealerConversation::advance_line_choice(ArmsDealerLine choice) {
   case ArmsDealerLine::ICE_STRAWBERRY:
   case ArmsDealerLine::ICE_LEMON:
     selected_item_ = to_arms_dealer_item(choice);
-    price_ = market_.purchase_price(selected_item_);
     if (previous_line_ == ArmsDealerLine::CHOOSE_FLAVOR) {
+      price_ = state_.weapon_market().purchase_price(state_.active_city_id(),
+                                                     selected_item_);
       current_line(ArmsDealerLine::ONE_SCOOP_COSTS);
     }
     else if (previous_line_ == ArmsDealerLine::WHAT_KIND_OF_GOODS) {
+      price_ = state_.weapon_market().sell_price(state_.active_city_id(),
+                                                 selected_item_);
       current_line(ArmsDealerLine::ILL_PAY);
     }
     break;

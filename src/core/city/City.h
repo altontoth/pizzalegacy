@@ -26,7 +26,7 @@
 #include "core/city/MayorOffice.h"
 #include "core/city/PizzaCharts.h"
 #include "core/common/Ids.h"
-#include "core/economy/WeaponMarket.h"
+#include "core/finance/Money.h"
 #include "core/food/Ingredient.h"
 #include "core/food/IngredientCategoryType.h"
 #include "core/marketing/AdvertisingCampaign.h"
@@ -255,8 +255,6 @@ public:
     assert(it != mafia_settings_.end() && "Invalid mafia actor_id");
     return it->second;
   }
-  WeaponMarket& weapon_market();
-
   void ingredient_base_prices(const IngredientPrices& prices) {
     ingredient_base_prices_ = prices;
   }
@@ -357,7 +355,6 @@ private:
   std::unordered_map<int, InsuranceSettings> insurance_settings_;
   std::unordered_map<int, MafiaSettings> mafia_settings_;
   std::unordered_map<int, RealtorSettings> realtor_settings_;
-  WeaponMarket weapon_market_;
   int mayor_id_ = -1;
   int police_id_ = -1;
   int first_bank_id_ = -1;

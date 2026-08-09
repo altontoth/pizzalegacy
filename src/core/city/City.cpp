@@ -507,8 +507,6 @@ Property* City::property_by_index(int index) const {
   return nullptr;
 }
 
-WeaponMarket& City::weapon_market() { return weapon_market_; }
-
 void City::blacklist_staff(uint8_t character_id, core::PlayerId player) {
   staff_blacklist_[character_id].insert(player);
 }
