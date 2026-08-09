@@ -40,6 +40,7 @@
 #include "views/factories/ViewFactory.h"
 #include "views/layers/ConsoleLayer.h"
 #include "views/layers/DebugLayer.h"
+#include "views/layers/GameInfoLayer.h"
 #include "views/layers/PauseLayer.h"
 #include "views/layers/TooltipLayer.h"
 #include "views/layers/TurnLockLayer.h"
@@ -253,6 +254,7 @@ void Game::run() {
   Logger::info("Logger initialized");
 
   OverlayManager overlays;
+  overlays.push<GameInfoLayer>(context, state);
   overlays.push<TooltipLayer>(context, state, *tooltip_manager_);
 
   // Before PopupManager: its per-frame popup items must outrank the lock.

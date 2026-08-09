@@ -27,7 +27,6 @@ TurnLockLayer::TurnLockLayer(GameContext& context, GameState& state)
 // them. Rendering after the view and before PopupManager keeps the lock
 // above the view's items and popups above the lock.
 void TurnLockLayer::render(const RenderContext& ctx) {
-  ctx.surface->fill(gfx::TRANSPARENT);
   interactions_.begin_frame();
   if (!locked_) {
     return;
@@ -37,9 +36,6 @@ void TurnLockLayer::render(const RenderContext& ctx) {
                DisplayConstants::SCREEN_HEIGHT},
       "turn_lock", [](const views::ui::InteractionEvent&) {}, {},
       views::ui::InteractionLayer::Exclusive);
-  if (!activity_.empty()) {
-    views::ui::draw_activity_caption(*context_.font, *ctx.surface, activity_);
-  }
 }
 
 void TurnLockLayer::tick() {
@@ -53,13 +49,6 @@ void TurnLockLayer::tick() {
     else {
       context_.cursor->clear_custom_cursor();
     }
-  }
-  std::string_view activity =
-      locked_ ? state_.turn().pipeline_activity() : std::string_view{};
-  if (activity != activity_) {
-    activity_ = activity;
-    mark_dirty();
-    request_recompose();
   }
   if (locked_) {
     mark_dirty();

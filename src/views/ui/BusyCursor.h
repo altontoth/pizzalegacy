@@ -13,8 +13,6 @@
 #include "core/util/GameContext.h"
 #include "views/ui/Icon.h"
 
-class FontManager;
-
 namespace views::ui {
 
 // Runs work that stalls the game loop (loading a save, initializing audio)
@@ -42,10 +40,5 @@ private:
 
 // Use an icon from as a standalone surface, with the gray background removed.
 gfx::Surface icon_surface(VgaManager& vga, Icon icon);
-
-// Draw a short activity caption ("Loading...", "Ending turn...") in the
-// bottom left corner.
-void draw_activity_caption(FontManager& font, gfx::Surface& surface,
-                           std::string_view text);
 
 } // namespace views::ui

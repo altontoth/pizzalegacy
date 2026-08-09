@@ -125,6 +125,7 @@ set(GAME_PLEGACY_SOURCES
     src/views/helpers/camera/RmbDragScroller.cpp
     src/views/layers/ConsoleLayer.cpp
     src/views/layers/DebugLayer.cpp
+    src/views/layers/GameInfoLayer.cpp
     src/views/layers/PauseLayer.cpp
     src/views/layers/TurnLockLayer.cpp
     src/views/screens/Advertising.cpp
@@ -203,6 +204,7 @@ set(GAME_PLEGACY_SOURCES
     src/views/ui/DropdownList.cpp
     src/views/ui/PageDecoration.cpp
     src/views/ui/PopupManager.cpp
+    src/views/ui/ScreenText.cpp
     src/views/ui/SlideAnimator.cpp
     src/views/ui/TurnPresenterView.cpp
     src/views/ui/competition/CompetitionPopups.cpp
@@ -595,6 +597,7 @@ set(PLEGACY_HEADERS
     src/views/helpers/camera/ScrollEdges.h
     src/views/layers/ConsoleLayer.h
     src/views/layers/DebugLayer.h
+    src/views/layers/GameInfoLayer.h
     src/views/layers/PauseLayer.h
     src/views/layers/TooltipLayer.h
     src/views/layers/TurnLockLayer.h
@@ -681,6 +684,7 @@ set(PLEGACY_HEADERS
     src/views/ui/Icon.h
     src/views/ui/PageDecoration.h
     src/views/ui/PopupManager.h
+    src/views/ui/ScreenText.h
     src/views/ui/SlideAnimator.h
     src/views/ui/TurnPresenterView.h
     src/views/ui/competition/CompetitionPopups.h
