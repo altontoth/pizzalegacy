@@ -21,7 +21,7 @@
 #include "core/city/CityTypes.h"
 #include "core/city/District.h"
 #include "core/city/Property.h"
-#include "core/events/LeventId.h"
+#include "core/events/MilestoneId.h"
 #include "core/finance/TurnInvoices.h"
 #include "core/init/NewGameConfig.h"
 #include "core/restaurant/AIEconomy.h"
@@ -156,10 +156,10 @@ void GameState::deduct_staff_wages_for_restaurant(
   if (p->cash_balance().cents < 0) {
     Logger::warn("[Finance] {} - BANKRUPT after staff payment! Balance: {}",
                  p->name(), p->cash_balance());
-    deliver_message(core::events::LeventId::NotAbleToPayDebts,
-                    [this, pid = *owner_id_opt]() {
-                      eliminate_player(pid, GameOverCause::BankruptDebts);
-                    });
+    deliver_milestone(core::events::MilestoneId::NotAbleToPayDebts,
+                      [this, pid = *owner_id_opt]() {
+                        eliminate_player(pid, GameOverCause::BankruptDebts);
+                      });
   }
 }
 
@@ -305,29 +305,39 @@ void GameState::advance_game_time() {
     check_mafia_events();
   }
   check_police_events();
-  process_pending_messages();
+  process_pending_milestones();
 
   turn_.fire_due_events();
 }
 
-void GameState::deliver_message(core::events::LeventId msg_id,
-                                std::function<void()> on_dismiss) {
+void GameState::record_milestone(core::events::MilestoneId msg_id,
+                                 core::PlayerId player_id) {
+  if (!career_log_.schedule_message(msg_id, player_id, time_.current_date())) {
+    return;
+  }
+
+  const int score = career_log_.get_data(msg_id).score;
+  auto* p = player(player_id);
+  if (p && score > 0) {
+    p->add_score(score);
+  }
+}
+
+void GameState::deliver_milestone(core::events::MilestoneId msg_id,
+                                  std::function<void()> on_dismiss) {
   auto* player = active_player();
   if (!player) {
     return;
   }
 
-  if (!message_manager_.claim_for_delivery(msg_id, player->id(),
-                                           time().current_date())) {
+  record_milestone(msg_id, player->id());
+
+  if (!career_log_.claim_for_delivery(msg_id, player->id(),
+                                      time().current_date())) {
     if (on_dismiss) {
       on_dismiss();
     }
     return;
-  }
-
-  const auto& data = message_manager_.get_data(msg_id);
-  if (data.score > 0) {
-    player->add_score(data.score);
   }
 
   // Mission mode: achieving the mission's last target milestone ends the
@@ -345,7 +355,7 @@ void GameState::deliver_message(core::events::LeventId msg_id,
     };
   }
 
-  if (data.background != core::events::ZwBackground::NONE) {
+  if (career_log_.has_fullscreen(msg_id)) {
     FullscreenStatusState fss{.message_id = msg_id,
                               .on_dismiss = std::move(on_dismiss)};
     ui_.push<FullscreenStatusState>(std::move(fss));
@@ -365,15 +375,15 @@ void GameState::eliminate_player(core::PlayerId id, GameOverCause cause) {
   ui_.push<GameOverState>(id, cause);
 }
 
-void GameState::process_pending_messages() {
+void GameState::process_pending_milestones() {
   auto* player = active_player();
   if (!player || !player->is_human_controlled()) {
     return;
   }
 
-  auto pending = message_manager_.get_pending_for_player(player->id());
+  auto pending = career_log_.get_pending_for_player(player->id());
   for (auto msg_id : pending) {
-    deliver_message(msg_id);
+    deliver_milestone(msg_id);
   }
 }
 
@@ -548,39 +558,31 @@ void GameState::process_mayor_award_event(const MayorAwardEvent& award_event) {
       }
     }
 
-    // Schedule LeventId milestones for the winner if they are the active
+    // Schedule MilestoneId milestones for the winner if they are the active
     // player.
     if (award_winner.has_value()) {
       auto* p = active_player();
       if (p && p->id().value == *award_winner) {
-        using core::events::LeventId;
-        const auto& date = time_.current_date();
+        using core::events::MilestoneId;
         switch (award_event.type) {
         case MayorAwardType::MostBeautifulRestaurant:
-          message_manager_.schedule_message(LeventId::AwardInteriorOfTheYear,
-                                            p->id(), date);
-          message_manager_.schedule_message(
-              LeventId::AwardMostBeautifulRestaurant, p->id(), date);
+          record_milestone(MilestoneId::AwardInteriorOfTheYear, p->id());
+          record_milestone(MilestoneId::AwardMostBeautifulRestaurant, p->id());
           break;
         case MayorAwardType::PizzaOfTheYear:
-          message_manager_.schedule_message(LeventId::AwardPizzaOfTheYearMayor,
-                                            p->id(), date);
+          record_milestone(MilestoneId::AwardPizzaOfTheYearMayor, p->id());
           break;
         case MayorAwardType::BestInvestorInTown:
-          message_manager_.schedule_message(LeventId::AwardBestInvestor,
-                                            p->id(), date);
+          record_milestone(MilestoneId::AwardBestInvestor, p->id());
           break;
         case MayorAwardType::BestImitator:
-          message_manager_.schedule_message(LeventId::AwardBestImitator,
-                                            p->id(), date);
+          record_milestone(MilestoneId::AwardBestImitator, p->id());
           break;
         case MayorAwardType::GoldenBowTie:
-          message_manager_.schedule_message(LeventId::AwardGoldenBowTie,
-                                            p->id(), date);
+          record_milestone(MilestoneId::AwardGoldenBowTie, p->id());
           break;
         case MayorAwardType::TransAtlanticTrade:
-          message_manager_.schedule_message(
-              LeventId::AwardTransAtlanticTradePlaque, p->id(), date);
+          record_milestone(MilestoneId::AwardTransAtlanticTradePlaque, p->id());
           break;
         default:
           break;
@@ -677,11 +679,11 @@ void GameState::on_city_entered(core::CityId city_id, const Player& player) {
     }
   }
 
-  using core::events::LeventId;
-  auto arrival = static_cast<LeventId>(
-      static_cast<int>(LeventId::ArrivalInParis) + city_id.value);
-  message_manager_.schedule_message(arrival, player.id(), time_.current_date());
-  process_pending_messages();
+  using core::events::MilestoneId;
+  auto arrival = static_cast<MilestoneId>(
+      static_cast<int>(MilestoneId::ArrivalInParis) + city_id.value);
+  record_milestone(arrival, player.id());
+  process_pending_milestones();
 }
 
 void GameState::check_mafia_events() {
@@ -1027,9 +1029,9 @@ void GameState::city_view_view_state(CityViewMapState cmvs) {
 RankChange GameState::adjust_underworld_score(Player& player, int delta) {
   auto rc = player.social_status().adjust_underworld(delta, difficulty_level_);
   if (rc.promoted()) {
-    // Underworld rank LeventIds run from AsGoodAsDead(15) to Godfather(27)
-    auto id = static_cast<core::events::LeventId>(15 + rc.new_rank);
-    message_manager_.schedule_message(id, player.id(), time_.current_date());
+    // Underworld rank MilestoneIds run from AsGoodAsDead(15) to Godfather(27)
+    auto id = static_cast<core::events::MilestoneId>(15 + rc.new_rank);
+    record_milestone(id, player.id());
     player.character().adjust_courage(5);
     player.character().adjust_personality(4);
   }
@@ -1043,9 +1045,9 @@ RankChange GameState::adjust_underworld_score(Player& player, int delta) {
 RankChange GameState::adjust_social_score(Player& player, int delta) {
   auto rc = player.social_status().adjust_social(delta, difficulty_level_);
   if (rc.promoted()) {
-    // Business rank LeventIds run from LaughingStock(1) to StatusTycoon(14)
-    auto id = static_cast<core::events::LeventId>(1 + rc.new_rank);
-    message_manager_.schedule_message(id, player.id(), time_.current_date());
+    // Business rank MilestoneIds run from LaughingStock(1) to StatusTycoon(14)
+    auto id = static_cast<core::events::MilestoneId>(1 + rc.new_rank);
+    record_milestone(id, player.id());
     player.character().adjust_popularity(5);
     player.character().adjust_personality(4);
   }

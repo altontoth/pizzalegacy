@@ -7,7 +7,7 @@
 #include "conversations/ArmsDealerConversation.h"
 #include "conversations/ArmsDealerLine.h"
 #include "core/character/Player.h"
-#include "core/events/LeventId.h"
+#include "core/events/MilestoneId.h"
 #include "core/inventory/Inventory.h"
 #include "core/item/Item.h"
 #include "engine/FormatCompat.h"
@@ -515,9 +515,9 @@ ArmsDealerConversation::make_sale(int requested, core::item::Item id,
     player.add_weapon_dealing_profit(profit);
 
     if (player.weapon_dealing_profit() >= 3000_usd) {
-      state_.message_manager().schedule_message(
-          core::events::LeventId::YouHaveMadeOver3KProfitThroughWeaponDeals,
-          player.id(), date);
+      state_.record_milestone(
+          core::events::MilestoneId::YouHaveMadeOver3KProfitThroughWeaponDeals,
+          player.id());
     }
   }
 

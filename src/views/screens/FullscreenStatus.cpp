@@ -5,7 +5,7 @@
  */
 
 #include "views/screens/FullscreenStatus.h"
-#include "core/events/LeventId.h"
+#include "core/events/MilestoneId.h"
 #include "core/state/GameState.h"
 #include "engine/DisplayConstants.h"
 #include "engine/FormatCompat.h"
@@ -51,20 +51,20 @@ constexpr std::array<BgColorEntry, 12> BG_COLOR_TABLE = {{
 } // namespace
 
 FullscreenStatus::FullscreenStatus(GameContext& context, GameState& state,
-                                   core::events::LeventId msg_id,
+                                   core::events::MilestoneId msg_id,
                                    std::function<void()> on_dismiss)
     : View(context, state), typewriter_(context_.font), message_id_(msg_id),
       listener_(context_.input->register_listener(*this)),
       on_dismiss_(std::move(on_dismiss)), background_([&]() -> const Surface& {
-        const auto& msg_data = state_.message_manager().get_data(msg_id);
-        assert(msg_data.background != core::events::ZwBackground::NONE);
+        const auto& msg_data = state_.career_log().get_data(msg_id);
+        assert(state_.career_log().has_fullscreen(msg_id));
         return context_.vga->get(
             compat::format("gfx/zw{}", static_cast<int>(msg_data.background)));
       }()) {
 
-  text_ = state_.message_manager().get_levent_text(msg_id);
+  text_ = state_.career_log().fullscreen_text(msg_id).value_or("");
 
-  const auto& msg_data = state_.message_manager().get_data(msg_id);
+  const auto& msg_data = state_.career_log().get_data(msg_id);
   const auto bg_index = static_cast<int>(msg_data.background);
   if (bg_index > 0 && bg_index < static_cast<int>(BG_COLOR_TABLE.size())) {
     const auto& entry = BG_COLOR_TABLE[bg_index];

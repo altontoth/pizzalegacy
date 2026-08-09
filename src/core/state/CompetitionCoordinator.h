@@ -12,7 +12,7 @@
 #include <vector>
 
 #include "core/common/Ids.h"
-#include "core/events/LeventId.h"
+#include "core/events/MilestoneId.h"
 #include "core/state/AnnualCompetitionFlow.h"
 #include "core/state/CompetitionSession.h"
 
@@ -44,7 +44,7 @@ public:
   // Simulates the AI participants, determines the winner and settles the bets
   // of a monthly/challenge competition session. Returns the event to deliver
   // to a human winner once the results screen is dismissed, if any.
-  std::optional<core::events::LeventId>
+  std::optional<core::events::MilestoneId>
   finalize_competition_results(CompetitionSession& session);
 
   // GameState::update() hook: advances the annual flow once its mayor

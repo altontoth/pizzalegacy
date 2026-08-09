@@ -8,7 +8,7 @@
 
 #include <array>
 #include <utility>
-#include "core/events/FullscreenMessageManager.h"
+#include "core/events/CareerLog.h"
 #include "core/mission/MissionFile.h"
 #include "core/state/GameState.h"
 #include "core/state/UIState.h"
@@ -163,8 +163,7 @@ void MenuMissionSelect::show_goals() {
     for (const auto& milestone : selected_->milestones) {
       lines.push_back(milestone.date.cv_date_string());
       // LEBEN.E CV texts use '|' as a line break
-      std::string text =
-          state_.message_manager().get_cv_text(milestone.message_id);
+      std::string text = state_.career_log().cv_label(milestone.message_id);
       size_t start = 0;
       while (true) {
         size_t pipe = text.find('|', start);

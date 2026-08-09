@@ -21,7 +21,7 @@
 #include "core/city/City.h"
 #include "core/city/District.h"
 #include "core/city/Property.h"
-#include "core/events/LeventId.h"
+#include "core/events/MilestoneId.h"
 #include "core/finance/Money.h"
 #include "core/food/IngredientCategory.h"
 #include "core/food/IngredientType.h"
@@ -1079,21 +1079,21 @@ void Restaurant::end_of_day(GameState& game_state) {
   // decrements happen for all restaurants (open or closed). Event generation
   // and manager routine are skipped for closed restaurants.
   {
-    // Fullscreen levent shown when a staff member masters the top course.
-    auto master_levent = [](SkillType skill) {
+    // Fullscreen shown when a staff member masters the top course.
+    auto master_milestone = [](SkillType skill) {
       switch (skill) {
       case SkillType::SERVING:
-        return core::events::LeventId::FullyQualifiedWaiter;
+        return core::events::MilestoneId::FullyQualifiedWaiter;
       case SkillType::MANAGEMENT:
-        return core::events::LeventId::ManagerIsExpertInBusinessStudies;
+        return core::events::MilestoneId::ManagerIsExpertInBusinessStudies;
       case SkillType::COOKING:
       case SkillType::NONE:
         break;
       }
-      return core::events::LeventId::FullyTrainedMasterchef;
+      return core::events::MilestoneId::FullyTrainedMasterchef;
     };
 
-    auto reset_daily_staff = [&game_state, &master_levent](Staff& s) {
+    auto reset_daily_staff = [&game_state, &master_milestone](Staff& s) {
       s.late(false);
       s.stole_money(false);
       s.wants_to_quit(false);
@@ -1113,7 +1113,7 @@ void Restaurant::end_of_day(GameState& game_state) {
             .scope = StatusScope::Restaurant,
         });
         if (res.mastered) {
-          game_state.deliver_message(master_levent(res.skill));
+          game_state.deliver_milestone(master_milestone(res.skill));
         }
       }
     };

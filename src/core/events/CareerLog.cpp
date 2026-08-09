@@ -4,16 +4,21 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "core/events/FullscreenMessageManager.h"
+#include "core/events/CareerLog.h"
 
+#include "engine/Logger.h"
 #include "resources/util/FileUtils.h"
 
 #include <algorithm>
+#include <array>
+#include <cstddef>
+#include <string_view>
+#include <utility>
 
 namespace core::events {
 
 using ZW = ZwBackground;
-constexpr std::array<EventData, 140> levent_data = {{
+constexpr std::array<EventData, 140> milestone_data = {{
     // unused
     {ZwBackground::NONE, 0},
 
@@ -164,12 +169,25 @@ constexpr std::array<EventData, 140> levent_data = {{
     {ZW::NONE, 1000000}, // [139] $500k week's profits in one city
 }};
 
-FullscreenMessageManager::FullscreenMessageManager()
-    : levent_loaded_(false), leben_loaded_(false) {}
+// The original renders these four CV labels from strings in the executable
+// instead of leben.e; there are lines for them but those talk about per week
+// milestones instead of per day, so presumably some last minute change of mind
+// in the original.
+constexpr std::array<std::pair<MilestoneId, std::string_view>, 4>
+    cv_label_overrides = {{
+        {MilestoneId::Sold1KPizzasPerDay, "1000 pizzas sold|in a single day"},
+        {MilestoneId::Sold10KPizzasPerDay, "10000 pizzas sold|in one week"},
+        {MilestoneId::Has25KWeeksProfitInOneRestaurant,
+         "$25000 week's profit|in one restaurant"},
+        {MilestoneId::Has50KWeeksProfitInOneRestaurant,
+         "$50000 week's profit|in one restaurant"},
+    }};
 
-bool FullscreenMessageManager::schedule_message(LeventId msg_id,
-                                                core::PlayerId player_id,
-                                                const GameDate& date) {
+CareerLog::CareerLog()
+    : fullscreen_texts_loaded_(false), cv_labels_loaded_(false) {}
+
+bool CareerLog::schedule_message(MilestoneId msg_id, core::PlayerId player_id,
+                                 const GameDate& date) {
   if (was_scheduled(msg_id, player_id)) {
     return false;
   }
@@ -179,8 +197,8 @@ bool FullscreenMessageManager::schedule_message(LeventId msg_id,
   return true;
 }
 
-bool FullscreenMessageManager::was_scheduled(LeventId msg_id,
-                                             core::PlayerId player_id) const {
+bool CareerLog::was_scheduled(MilestoneId msg_id,
+                              core::PlayerId player_id) const {
   auto it = player_messages_.find(player_id);
   if (it == player_messages_.end()) {
     return false;
@@ -192,8 +210,7 @@ bool FullscreenMessageManager::was_scheduled(LeventId msg_id,
   });
 }
 
-bool FullscreenMessageManager::was_shown(LeventId msg_id,
-                                         core::PlayerId player_id) const {
+bool CareerLog::was_shown(MilestoneId msg_id, core::PlayerId player_id) const {
   auto it = player_messages_.find(player_id);
   if (it == player_messages_.end()) {
     return false;
@@ -205,9 +222,8 @@ bool FullscreenMessageManager::was_shown(LeventId msg_id,
   });
 }
 
-bool FullscreenMessageManager::claim_for_delivery(LeventId msg_id,
-                                                  core::PlayerId player_id,
-                                                  const GameDate& date) {
+bool CareerLog::claim_for_delivery(MilestoneId msg_id, core::PlayerId player_id,
+                                   const GameDate& date) {
   if (was_shown(msg_id, player_id)) {
     return false;
   }
@@ -217,13 +233,17 @@ bool FullscreenMessageManager::claim_for_delivery(LeventId msg_id,
   return true;
 }
 
-const EventData& FullscreenMessageManager::get_data(LeventId msg_id) const {
-  return levent_data[static_cast<int>(msg_id)];
+const EventData& CareerLog::get_data(MilestoneId msg_id) const {
+  return milestone_data[static_cast<int>(msg_id)];
 }
 
-std::vector<LeventId> FullscreenMessageManager::get_pending_for_player(
-    core::PlayerId player_id) const {
-  std::vector<LeventId> pending;
+bool CareerLog::has_fullscreen(MilestoneId msg_id) const {
+  return get_data(msg_id).background != ZwBackground::NONE;
+}
+
+std::vector<MilestoneId>
+CareerLog::get_pending_for_player(core::PlayerId player_id) const {
+  std::vector<MilestoneId> pending;
 
   auto it = player_messages_.find(player_id);
   if (it == player_messages_.end()) {
@@ -240,8 +260,7 @@ std::vector<LeventId> FullscreenMessageManager::get_pending_for_player(
   return pending;
 }
 
-void FullscreenMessageManager::mark_as_shown(LeventId msg_id,
-                                             core::PlayerId player_id) {
+void CareerLog::mark_as_shown(MilestoneId msg_id, core::PlayerId player_id) {
   auto it = player_messages_.find(player_id);
   if (it == player_messages_.end()) {
     return;
@@ -256,20 +275,25 @@ void FullscreenMessageManager::mark_as_shown(LeventId msg_id,
   }
 }
 
-std::string FullscreenMessageManager::get_levent_text(LeventId msg_id) const {
-  if (!levent_loaded_) {
-    load_levent_texts();
+std::optional<std::string>
+CareerLog::fullscreen_text(MilestoneId msg_id) const {
+  if (!fullscreen_texts_loaded_) {
+    load_fullscreen_texts();
   }
 
-  return levent_texts_[static_cast<int>(msg_id) - 1];
+  const auto line = static_cast<size_t>(msg_id) - 1;
+  if (line >= fullscreen_texts_.size() || fullscreen_texts_[line].empty()) {
+    return std::nullopt;
+  }
+  return fullscreen_texts_[line];
 }
 
-void FullscreenMessageManager::clear_player_messages(core::PlayerId player_id) {
+void CareerLog::clear_player_messages(core::PlayerId player_id) {
   player_messages_.erase(player_id);
 }
 
-void FullscreenMessageManager::restore_scheduled(
-    core::PlayerId pid, const std::vector<CvEntry>& entries) {
+void CareerLog::restore_scheduled(core::PlayerId pid,
+                                  const std::vector<CvEntry>& entries) {
   auto& messages = player_messages_[pid];
   for (const auto& entry : entries) {
     messages.emplace_back(entry.date, entry.message_id);
@@ -277,8 +301,8 @@ void FullscreenMessageManager::restore_scheduled(
   }
 }
 
-std::vector<FullscreenMessageManager::CvEntry>
-FullscreenMessageManager::get_cv_entries_for(core::PlayerId player_id) const {
+std::vector<CareerLog::CvEntry>
+CareerLog::get_cv_entries_for(core::PlayerId player_id) const {
   std::vector<CvEntry> entries;
 
   auto it = player_messages_.find(player_id);
@@ -293,22 +317,43 @@ FullscreenMessageManager::get_cv_entries_for(core::PlayerId player_id) const {
   return entries;
 }
 
-void FullscreenMessageManager::load_levent_texts() const {
-  levent_texts_ = fileutils::load_text_lines("t/levent.e");
-  levent_loaded_ = true;
+void CareerLog::load_fullscreen_texts() const {
+  fullscreen_texts_ = fileutils::load_text_lines("t/levent.e");
+  fullscreen_texts_loaded_ = true;
+
+  for (size_t id = 1; id < milestone_data.size(); ++id) {
+    if (milestone_data[id].background == ZwBackground::NONE) {
+      continue;
+    }
+    if (id > fullscreen_texts_.size() || fullscreen_texts_[id - 1].empty()) {
+      Logger::warn("[CareerLog] milestone {} shows a background but levent.e "
+                   "has no text for it",
+                   id);
+    }
+  }
 }
 
-std::string FullscreenMessageManager::get_cv_text(LeventId msg_id) const {
-  if (!leben_loaded_) {
-    load_leben_texts();
+std::string CareerLog::cv_label(MilestoneId msg_id) const {
+  for (const auto& [id, label] : cv_label_overrides) {
+    if (id == msg_id) {
+      return std::string{label};
+    }
   }
 
-  return leben_texts_[static_cast<int>(msg_id) - 1];
+  if (!cv_labels_loaded_) {
+    load_cv_labels();
+  }
+
+  const auto line = static_cast<size_t>(msg_id) - 1;
+  if (line >= cv_labels_.size()) {
+    return {};
+  }
+  return cv_labels_[line];
 }
 
-void FullscreenMessageManager::load_leben_texts() const {
-  leben_texts_ = fileutils::load_text_lines("t/leben.e");
-  leben_loaded_ = true;
+void CareerLog::load_cv_labels() const {
+  cv_labels_ = fileutils::load_text_lines("t/leben.e");
+  cv_labels_loaded_ = true;
 }
 
 } // namespace core::events

@@ -15,7 +15,7 @@
 #include "core/city/District.h"
 #include "core/city/Property.h"
 #include "core/common/Ids.h"
-#include "core/events/LeventId.h"
+#include "core/events/MilestoneId.h"
 #include "core/finance/Money.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/state/GameState.h"
@@ -39,33 +39,29 @@ int owned_city_count(GameState& gs, core::PlayerId pid) {
 
 void MilestoneTracker::check_milestone_events(Player& player,
                                               bool is_end_of_week) {
-  using core::events::LeventId;
+  using core::events::MilestoneId;
   const auto& date = gs_->time().current_date();
   const auto pid = player.id();
-  auto& message_manager = gs_->message_manager();
 
   // Asset milestones (cash on hand)
   const Money cash = player.cash_balance();
   if (cash >= 100'000_usd) {
-    message_manager.schedule_message(LeventId::HasAssetsOf100K, pid, date);
+    gs_->record_milestone(MilestoneId::HasAssetsOf100K, pid);
   }
   if (cash >= 500'000_usd) {
-    message_manager.schedule_message(LeventId::YouHaveAssetsOf500K, pid, date);
+    gs_->record_milestone(MilestoneId::YouHaveAssetsOf500K, pid);
   }
   if (cash >= 1'000'000_usd) {
-    message_manager.schedule_message(LeventId::YouHaveBecomeMillionaire, pid,
-                                     date);
+    gs_->record_milestone(MilestoneId::YouHaveBecomeMillionaire, pid);
   }
   if (cash >= 2'000'000_usd) {
-    message_manager.schedule_message(LeventId::MakesASecondMillion, pid, date);
+    gs_->record_milestone(MilestoneId::MakesASecondMillion, pid);
   }
   if (cash >= 10'000'000_usd) {
-    message_manager.schedule_message(LeventId::MillionaireTenTimesOver, pid,
-                                     date);
+    gs_->record_milestone(MilestoneId::MillionaireTenTimesOver, pid);
   }
   if (cash >= 20'000'000_usd) {
-    message_manager.schedule_message(LeventId::MillionaireTwentyTimesOver, pid,
-                                     date);
+    gs_->record_milestone(MilestoneId::MillionaireTwentyTimesOver, pid);
   }
 
   // Per-restaurant daily stats for active city restaurants.
@@ -87,34 +83,31 @@ void MilestoneTracker::check_milestone_events(Player& player,
     total_ingredients_today += yesterday.ingredients_used_grams;
 
     if (yesterday.orders_fulfilled >= 1'000) {
-      message_manager.schedule_message(
-          LeventId::Has1000CustomersPerDayInOneRestaurant, pid, date);
+      gs_->record_milestone(MilestoneId::Has1000CustomersPerDayInOneRestaurant,
+                            pid);
     }
 
     int st = rest->service_time_minutes();
     if (st > 0 && st <= 4) {
-      message_manager.schedule_message(
-          LeventId::AverageServiceTimeLessThan4Minutes, pid, date);
+      gs_->record_milestone(MilestoneId::AverageServiceTimeLessThan4Minutes,
+                            pid);
     }
   }
 
   if (total_ingredients_today >= 1000LL * 1000) {
-    message_manager.schedule_message(LeventId::YouHaveUsed1000KiloOfIngredients,
-                                     pid, date);
+    gs_->record_milestone(MilestoneId::YouHaveUsed1000KiloOfIngredients, pid);
   }
   if (total_daily_pizzas >= 1'000) {
-    message_manager.schedule_message(LeventId::Sold1KPizzasPerDay, pid, date);
+    gs_->record_milestone(MilestoneId::Sold1KPizzasPerDay, pid);
   }
   if (total_daily_pizzas >= 10'000) {
-    message_manager.schedule_message(LeventId::Sold10KPizzasPerDay, pid, date);
+    gs_->record_milestone(MilestoneId::Sold10KPizzasPerDay, pid);
   }
   if (total_daily_revenue >= 10'000_usd) {
-    message_manager.schedule_message(LeventId::AchievedTurnover10KPerDay, pid,
-                                     date);
+    gs_->record_milestone(MilestoneId::AchievedTurnover10KPerDay, pid);
   }
   if (total_ingredients_today >= 5'000LL * 1000) {
-    message_manager.schedule_message(LeventId::Used5000KgIngredientsInOneDay,
-                                     pid, date);
+    gs_->record_milestone(MilestoneId::Used5000KgIngredientsInOneDay, pid);
   }
 
   // District coverage: fire if player has a restaurant in every district
@@ -128,8 +121,7 @@ void MilestoneTracker::check_milestone_events(Player& player,
       }
     }
     if (covered.size() >= all_districts.size()) {
-      message_manager.schedule_message(LeventId::RepresentedInAllAreas, pid,
-                                       date);
+      gs_->record_milestone(MilestoneId::RepresentedInAllAreas, pid);
     }
   }
 
@@ -145,8 +137,7 @@ void MilestoneTracker::check_milestone_events(Player& player,
       player.financials().total_expenditures(week_start, date);
   const Money week_net = week_receipts - week_expenditures;
   if (week_net < -1'000'000_usd) {
-    message_manager.schedule_message(LeventId::LosesOneMillionInOneWeek, pid,
-                                     date);
+    gs_->record_milestone(MilestoneId::LosesOneMillionInOneWeek, pid);
   }
 
   // Weekly profit per restaurant and per city
@@ -160,12 +151,10 @@ void MilestoneTracker::check_milestone_events(Player& player,
     city_weekly_profit = city_weekly_profit + wp;
 
     if (wp >= 25'000_usd) {
-      message_manager.schedule_message(
-          LeventId::Has25KWeeksProfitInOneRestaurant, pid, date);
+      gs_->record_milestone(MilestoneId::Has25KWeeksProfitInOneRestaurant, pid);
     }
     if (wp >= 50'000_usd) {
-      message_manager.schedule_message(
-          LeventId::Has50KWeeksProfitInOneRestaurant, pid, date);
+      gs_->record_milestone(MilestoneId::Has50KWeeksProfitInOneRestaurant, pid);
     }
 
     // Perfect deliveries: no orders lost in past week. The original gives
@@ -182,29 +171,26 @@ void MilestoneTracker::check_milestone_events(Player& player,
     }
     if (perfect_week) {
       perfect_delivery_count++;
-      message_manager.schedule_message(LeventId::AbleToMeet100PctDeliveries,
-                                       pid, date);
+      gs_->record_milestone(MilestoneId::AbleToMeet100PctDeliveries, pid);
     }
   }
 
   if (perfect_delivery_count >= 5) {
-    message_manager.schedule_message(
-        LeventId::PerfectDeliveriesFor1WeekAcross5Restaurants, pid, date);
+    gs_->record_milestone(
+        MilestoneId::PerfectDeliveriesFor1WeekAcross5Restaurants, pid);
   }
 
   if (city_weekly_profit >= 500'000_usd) {
-    message_manager.schedule_message(LeventId::Has500KWeeksProfitsInOneCity,
-                                     pid, date);
+    gs_->record_milestone(MilestoneId::Has500KWeeksProfitsInOneCity, pid);
   }
 }
 
 void MilestoneTracker::check_market_share_milestones(const City& city) {
-  using core::events::LeventId;
+  using core::events::MilestoneId;
   const auto& pcts = city.control_map().player_percentages();
-  const auto& date = gs_->time().current_date();
 
-  auto domination_event = static_cast<LeventId>(
-      static_cast<int>(LeventId::DominatesMarketInParis) + city.id().value);
+  auto domination_event = static_cast<MilestoneId>(
+      static_cast<int>(MilestoneId::DominatesMarketInParis) + city.id().value);
 
   for (int p = 0; p < NUMBER_OF_PLAYERS; ++p) {
     auto pid = core::PlayerId{p};
@@ -215,17 +201,14 @@ void MilestoneTracker::check_market_share_milestones(const City& city) {
     // Original game bug: checks 5% but displays "10% market share" message
     float first_threshold = gs_->options().fix_legacy_bugs ? 10.0f : 5.0f;
     if (pct >= 50) {
-      gs_->message_manager().schedule_message(
-          LeventId::Achieved50PctMarketShareInCity, pid, date);
-      gs_->message_manager().schedule_message(domination_event, pid, date);
+      gs_->record_milestone(MilestoneId::Achieved50PctMarketShareInCity, pid);
+      gs_->record_milestone(domination_event, pid);
     }
     if (pct >= 20) {
-      gs_->message_manager().schedule_message(
-          LeventId::Achieved20PctMarketShareInCity, pid, date);
+      gs_->record_milestone(MilestoneId::Achieved20PctMarketShareInCity, pid);
     }
     if (pct >= first_threshold) {
-      gs_->message_manager().schedule_message(
-          LeventId::Achieved10PctMarketShareInCity, pid, date);
+      gs_->record_milestone(MilestoneId::Achieved10PctMarketShareInCity, pid);
     }
   }
 }
@@ -266,9 +249,8 @@ void MilestoneTracker::check_world_domination() {
 }
 
 void MilestoneTracker::check_restaurant_milestones(const Player& player) {
-  using core::events::LeventId;
+  using core::events::MilestoneId;
   auto pid = player.id();
-  auto date = gs_->time().current_date();
 
   const bool fix_bugs = gs_->options().fix_legacy_bugs;
 
@@ -291,8 +273,7 @@ void MilestoneTracker::check_restaurant_milestones(const Player& player) {
   }
 
   if (opened_count >= 5) {
-    gs_->message_manager().schedule_message(LeventId::HasFiveRestaurants, pid,
-                                            date);
+    gs_->record_milestone(MilestoneId::HasFiveRestaurants, pid);
   }
 
   // The original counts restaurants currently open rather than ever opened,
@@ -302,12 +283,10 @@ void MilestoneTracker::check_restaurant_milestones(const Player& player) {
   const int count = fix_bugs ? opened_count : open_count;
   if (fix_bugs || open_count < 3) {
     if (count == 1) {
-      gs_->message_manager().schedule_message(LeventId::OpenedFirstRestaurant,
-                                              pid, date);
+      gs_->record_milestone(MilestoneId::OpenedFirstRestaurant, pid);
     }
     else if (count == 2) {
-      gs_->message_manager().schedule_message(LeventId::OpensSecondRestaurant,
-                                              pid, date);
+      gs_->record_milestone(MilestoneId::OpensSecondRestaurant, pid);
     }
 
     const bool other_city =
@@ -315,39 +294,33 @@ void MilestoneTracker::check_restaurant_milestones(const Player& player) {
             ? std::count(opened_cities.begin(), opened_cities.end(), true) >= 2
             : owned_city_count(*gs_, pid) == 2;
     if (other_city) {
-      gs_->message_manager().schedule_message(
-          LeventId::FirstRestaurantInOtherCity, pid, date);
+      gs_->record_milestone(MilestoneId::FirstRestaurantInOtherCity, pid);
     }
   }
 
-  gs_->process_pending_messages();
+  gs_->process_pending_milestones();
 }
 
 void MilestoneTracker::check_restaurant_acquired(const Player& player) {
-  using core::events::LeventId;
+  using core::events::MilestoneId;
   if (owned_city_count(*gs_, player.id()) < NUMBER_OF_CITIES) {
     return;
   }
-  gs_->message_manager().schedule_message(LeventId::OutletsInEveryWesternCity,
-                                          player.id(),
-                                          gs_->time().current_date());
+  gs_->record_milestone(MilestoneId::OutletsInEveryWesternCity, player.id());
 }
 
 void MilestoneTracker::check_depot_milestones(const Player& player) {
-  using core::events::LeventId;
+  using core::events::MilestoneId;
   int depot_count = 0;
   for (auto* city : gs_->initialized_cities()) {
     if (city->central_depot(player.id()).capacity() > 0) {
       depot_count++;
     }
   }
-  const auto& date = gs_->time().current_date();
   if (depot_count >= 10) {
-    gs_->message_manager().schedule_message(
-        LeventId::CentralWarehouseIn10Cities, player.id(), date);
+    gs_->record_milestone(MilestoneId::CentralWarehouseIn10Cities, player.id());
   }
   if (depot_count >= 5) {
-    gs_->message_manager().schedule_message(LeventId::CentralWarehouseIn5Cities,
-                                            player.id(), date);
+    gs_->record_milestone(MilestoneId::CentralWarehouseIn5Cities, player.id());
   }
 }

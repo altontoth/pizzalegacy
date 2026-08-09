@@ -40,7 +40,7 @@ set(GAME_PLEGACY_SOURCES
     src/core/debug/commands/RestaurantCommands.cpp
     src/core/debug/commands/StaffCommands.cpp
     src/core/economy/WeaponMarket.cpp
-    src/core/events/FullscreenMessageManager.cpp
+    src/core/events/CareerLog.cpp
     src/core/finance/BalanceSheet.cpp
     src/core/finance/BankAccountRegistry.cpp
     src/core/finance/Ledger.cpp
@@ -365,8 +365,8 @@ set(PLEGACY_HEADERS
     src/core/debug/commands/RestaurantCommands.h
     src/core/debug/commands/StaffCommands.h
     src/core/economy/WeaponMarket.h
-    src/core/events/FullscreenMessageManager.h
-    src/core/events/LeventId.h
+    src/core/events/CareerLog.h
+    src/core/events/MilestoneId.h
     src/core/finance/BalanceSheet.h
     src/core/finance/BankAccountRegistry.h
     src/core/finance/Investment.h

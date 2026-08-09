@@ -17,7 +17,7 @@
 #include "core/character/Character.h"
 #include "core/character/Player.h"
 #include "core/city/Property.h"
-#include "core/events/LeventId.h"
+#include "core/events/MilestoneId.h"
 #include "core/restaurant/Furniture.h"
 #include "core/restaurant/PlacedFurniture.h"
 #include "core/restaurant/RestaurantTypes.h"
@@ -599,11 +599,11 @@ void AttackScene::run_police_arrest() {
   // is gone.
   state_.initiate_arrest(reason, [st_ptr = &state_, attacker_id]() {
     constexpr auto milestone =
-        core::events::LeventId::CarriedOutFirstAttackOnCompetitorsRestaurant;
+        core::events::MilestoneId::CarriedOutFirstAttackOnCompetitorsRestaurant;
     const core::PlayerId prev =
         st_ptr->active_player() ? st_ptr->active_player()->id() : attacker_id;
     st_ptr->active_player(attacker_id);
-    st_ptr->deliver_message(milestone);
+    st_ptr->deliver_milestone(milestone);
     st_ptr->active_player(prev);
   });
 }
@@ -627,9 +627,9 @@ void AttackScene::process_attack_aftermath(AttackEndReason reason) {
   // On arrest we need to show this fullscreen update after the arrest
   if (reason != AttackEndReason::Arrested) {
     if (auto* attacker_player = state_.active_player()) {
-      state_.message_manager().schedule_message(
-          core::events::LeventId::CarriedOutFirstAttackOnCompetitorsRestaurant,
-          attacker_player->id(), state_.time().current_date());
+      state_.record_milestone(core::events::MilestoneId::
+                                  CarriedOutFirstAttackOnCompetitorsRestaurant,
+                              attacker_player->id());
     }
   }
 

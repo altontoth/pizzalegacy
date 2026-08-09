@@ -16,7 +16,7 @@
 #include "conversations/MayorLine.h"
 #include "core/GameTypes.h"
 #include "core/common/Ids.h"
-#include "core/events/LeventId.h"
+#include "core/events/MilestoneId.h"
 #include "core/food/BakeSession.h"
 #include "core/food/IngredientCategoryType.h"
 #include "core/food/Pizza.h"
@@ -241,7 +241,7 @@ struct PlayerTurnCardState {
   GameDate date;
 };
 struct FullscreenStatusState {
-  core::events::LeventId message_id;
+  core::events::MilestoneId message_id;
   std::function<void()> on_dismiss;
 };
 struct WinSequenceState {

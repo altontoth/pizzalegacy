@@ -7,7 +7,7 @@
 // The bake workflow: starting a bake session, finishing a design, and the
 // post-judging bookkeeping.
 
-#include "core/events/LeventId.h"
+#include "core/events/MilestoneId.h"
 #include "core/food/CanonicalPizza.h"
 #include "core/state/GameState.h"
 #include "engine/FormatCompat.h"
@@ -128,9 +128,8 @@ void PizzaDesign::finish_new_user(std::string name) {
       cp->recipes().create_user(std::move(name), std::move(bake_->working));
   change_active_key(id);
 
-  state_.message_manager().schedule_message(
-      core::events::LeventId::CreatedFirstPizza, cp->id(),
-      state_.time().current_date());
+  state_.record_milestone(core::events::MilestoneId::CreatedFirstPizza,
+                          cp->id());
 
   if (competition_) {
     // Annual competition: hand results to GameState and exit.

@@ -18,7 +18,7 @@
 #include "core/character/Player.h"
 #include "core/city/City.h"
 #include "core/city/Property.h"
-#include "core/events/LeventId.h"
+#include "core/events/MilestoneId.h"
 #include "core/food/IngredientCategory.h"
 #include "core/food/IngredientType.h"
 #include "core/restaurant/AIEconomy.h"
@@ -488,25 +488,25 @@ void TurnOrchestrator::show_next_deferred_inspection() {
 
   std::function<void()> on_complete;
   if (outcome.star_gained) {
-    using core::events::LeventId;
-    LeventId msg_id = LeventId::AwardedFirstStar;
+    using core::events::MilestoneId;
+    MilestoneId msg_id = MilestoneId::AwardedFirstStar;
     switch (restaurant->star_rating()) {
     case 2:
-      msg_id = LeventId::FirstTwoStarRestaurant;
+      msg_id = MilestoneId::FirstTwoStarRestaurant;
       break;
     case 3:
-      msg_id = LeventId::FirstThreeStarRestaurant;
+      msg_id = MilestoneId::FirstThreeStarRestaurant;
       break;
     case 4:
-      msg_id = LeventId::FirstFourStarRestaurant;
+      msg_id = MilestoneId::FirstFourStarRestaurant;
       break;
     case 5:
-      msg_id = LeventId::FirstFiveStarRestaurant;
+      msg_id = MilestoneId::FirstFiveStarRestaurant;
       break;
     default:
       break;
     }
-    on_complete = [this, msg_id]() { gs_->deliver_message(msg_id); };
+    on_complete = [this, msg_id]() { gs_->deliver_milestone(msg_id); };
   }
 
   MayorConversationType conv_type =
@@ -1089,9 +1089,8 @@ void TurnOrchestrator::deliver_depot_stock(core::PlayerId player_id) {
   auto& central_depot = city.central_depot(player_id);
   if (central_depot.capacity() > 0 &&
       central_depot.used() >= central_depot.capacity()) {
-    gs_->message_manager_.schedule_message(
-        core::events::LeventId::CentralDepotFull, player_id,
-        gs_->time_.current_date());
+    gs_->record_milestone(core::events::MilestoneId::CentralDepotFull,
+                          player_id);
   }
 }
 
@@ -1234,9 +1233,8 @@ void TurnOrchestrator::run_city_start_of_day(City& city) {
   city.pizza_charts().build(*gs_);
   const auto& chart_entries = city.pizza_charts().entries();
   if (!chart_entries.empty()) {
-    gs_->message_manager_.schedule_message(
-        core::events::LeventId::PizzaReachedNo1InCharts,
-        chart_entries[0].player_id, gs_->time_.current_date());
+    gs_->record_milestone(core::events::MilestoneId::PizzaReachedNo1InCharts,
+                          chart_entries[0].player_id);
   }
   city.control_map().build(*gs_, city);
   gs_->milestones().check_market_share_milestones(city);

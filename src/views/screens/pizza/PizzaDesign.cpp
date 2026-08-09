@@ -582,7 +582,7 @@ void PizzaDesign::create_input_panel() {
           bake_.reset();
           state_.ui().pop();
           if (pending_competition_message_) {
-            state_.deliver_message(*pending_competition_message_);
+            state_.deliver_milestone(*pending_competition_message_);
           }
           if (on_done_) {
             on_done_();

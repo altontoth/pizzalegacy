@@ -123,9 +123,8 @@ MafiaConversation::MafiaConversation(
   else {
     // Mafia contacting you does not count, only when you call them do you get
     // this:
-    state.message_manager().schedule_message(
-        core::events::LeventId::MakesFirstContactWithMafia, player->id(),
-        state.time().current_date());
+    state.record_milestone(
+        core::events::MilestoneId::MakesFirstContactWithMafia, player->id());
   }
 
   apply_npc_effects(state, mm);
@@ -150,20 +149,20 @@ void MafiaConversation::apply_npc_effects(GameState& state, MafiaMode mm) {
       on_end_ = [this, mission_type]() {
         switch (mission_type) {
         case MafiaMissionType::Weapon:
-          state_.deliver_message(
-              core::events::LeventId::CompletedFirstArmsDeal);
+          state_.deliver_milestone(
+              core::events::MilestoneId::CompletedFirstArmsDeal);
           break;
         case MafiaMissionType::Laundering:
-          state_.deliver_message(
-              core::events::LeventId::SuccessfullyLaunderedMoney);
+          state_.deliver_milestone(
+              core::events::MilestoneId::SuccessfullyLaunderedMoney);
           break;
         case MafiaMissionType::Investment:
-          state_.deliver_message(
-              core::events::LeventId::FirstExperienceShadyShareDealing);
+          state_.deliver_milestone(
+              core::events::MilestoneId::FirstExperienceShadyShareDealing);
           break;
         case MafiaMissionType::Package:
-          state_.deliver_message(
-              core::events::LeventId::CompletedFirstCourierService);
+          state_.deliver_milestone(
+              core::events::MilestoneId::CompletedFirstCourierService);
           break;
         default:
           break;
@@ -805,18 +804,18 @@ bool MafiaConversation::has_ended() const {
     if (game_over_pending_) {
       game_over_pending_ = false;
       auto* player = state_.active_player();
-      state_.message_manager().schedule_message(
-          core::events::LeventId::CoolVinnieAndBigLuigiTakeYouForABath,
-          player->id(), state_.time().current_date());
+      state_.record_milestone(
+          core::events::MilestoneId::CoolVinnieAndBigLuigiTakeYouForABath,
+          player->id());
       state_.ui().push<GameOverState>(player->id(),
                                       GameOverCause::KilledByMafia);
     }
     if (star_message_pending_) {
       star_message_pending_ = false;
       auto* player = state_.active_player();
-      state_.message_manager().schedule_message(
-          core::events::LeventId::YouSeeStarsAndHearPlentyOfBirdSong,
-          player->id(), state_.time().current_date());
+      state_.record_milestone(
+          core::events::MilestoneId::YouSeeStarsAndHearPlentyOfBirdSong,
+          player->id());
     }
     return true;
   default:

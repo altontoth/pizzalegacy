@@ -12,7 +12,7 @@
 #include "conversations/BankLine.h"
 #include "core/character/Actor.h"
 #include "core/character/Player.h"
-#include "core/events/LeventId.h"
+#include "core/events/MilestoneId.h"
 #include "core/finance/Ledger.h"
 #include "engine/Math.h"
 
@@ -119,9 +119,8 @@ bool BankConversation::advance_proposal(bool agree) {
     if (agree) {
       state_.active_player()->add_loan(state_.active_city_id(), proposed_loan_,
                                        state_.time().current_date());
-      state_.message_manager().schedule_message(
-          core::events::LeventId::TakesOutFirstLoan,
-          state_.active_player()->id(), state_.time().current_date());
+      state_.record_milestone(core::events::MilestoneId::TakesOutFirstLoan,
+                              state_.active_player()->id());
       current_line(BankLine::GOOD_LUCK_WITH_INVESTMENTS);
     }
     else {

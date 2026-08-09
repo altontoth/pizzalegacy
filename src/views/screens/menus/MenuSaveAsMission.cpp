@@ -8,7 +8,7 @@
 
 #include <algorithm>
 #include "core/character/Player.h"
-#include "core/events/FullscreenMessageManager.h"
+#include "core/events/CareerLog.h"
 #include "core/mission/MissionFile.h"
 #include "core/state/GameState.h"
 #include "engine/Logger.h"
@@ -75,8 +75,7 @@ void MenuSaveAsMission::save_to_file(const std::string& filename) {
   Logger::info("Mission save requested for: {}", filename);
 
   const auto* player = state_.active_player();
-  if (!player ||
-      state_.message_manager().get_cv_entries_for(player->id()).empty()) {
+  if (!player || state_.career_log().get_cv_entries_for(player->id()).empty()) {
     context_.popup->origin(ViewPoint{26, 40});
     context_.popup->create<AlertPopup>(
         "Your career is still empty - achieve something first!");
@@ -114,8 +113,7 @@ void MenuSaveAsMission::write_mission(const std::string& filename) {
   }
 
   const auto* player = state_.active_player();
-  const auto entries =
-      state_.message_manager().get_cv_entries_for(player->id());
+  const auto entries = state_.career_log().get_cv_entries_for(player->id());
   if (core::mission::save_career_mission(name, entries)) {
     Logger::info("Saved career as mission: {}", name);
     // Pop twice to get back to DiskMenu (not just to the save menu)

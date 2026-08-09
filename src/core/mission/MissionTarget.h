@@ -6,8 +6,8 @@
 
 #pragma once
 
-#include "core/events/FullscreenMessageManager.h"
-#include "core/events/LeventId.h"
+#include "core/events/CareerLog.h"
+#include "core/events/MilestoneId.h"
 
 #include <string>
 #include <vector>
@@ -15,7 +15,7 @@
 namespace core::mission {
 
 // A target milestone has the same shape as a live CV entry.
-using TargetMilestone = core::events::FullscreenMessageManager::CvEntry;
+using TargetMilestone = core::events::CareerLog::CvEntry;
 
 /**
  * The target CV of a mission: someone else's career the player tries to
@@ -34,7 +34,7 @@ struct MissionTarget {
 
   // The mission ends when the player achieves this event (the last
   // defined target milestone).
-  core::events::LeventId final_event() const {
+  core::events::MilestoneId final_event() const {
     return milestones.back().message_id;
   }
 };

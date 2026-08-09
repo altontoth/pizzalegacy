@@ -7,7 +7,7 @@
 #pragma once
 
 #include "core/GameTypes.h"
-#include "core/events/LeventId.h"
+#include "core/events/MilestoneId.h"
 #include "core/food/BakeSession.h"
 #include "core/food/Pizza.h"
 #include "core/food/Recipe.h"
@@ -117,7 +117,7 @@ private:
   std::optional<CompetitionSession> competition_;
   std::optional<core::PlayerId> competing_player_id_;
   std::function<void()> on_done_;
-  std::optional<core::events::LeventId> pending_competition_message_;
+  std::optional<core::events::MilestoneId> pending_competition_message_;
   uint64_t competition_design_ticks_{0};
   int reveal_delay_remaining_ticks_{0};
   bool reveal_speed_boost_{false};

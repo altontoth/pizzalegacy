@@ -10,7 +10,7 @@
 #include "core/city/City.h"
 #include "core/city/District.h"
 #include "core/city/Property.h"
-#include "core/events/LeventId.h"
+#include "core/events/MilestoneId.h"
 #include "core/food/IngredientCategory.h"
 #include "core/restaurant/AIEconomy.h"
 #include "core/restaurant/Restaurant.h"
@@ -210,9 +210,8 @@ void Player::end_of_day(GameState& game_state) {
   Money balance = cash_balance();
 
   if (balance.cents < 0) {
-    game_state.message_manager().schedule_message(
-        core::events::LeventId::FinancialDifficultiesFirstTime, id_,
-        game_state.time().current_date());
+    game_state.record_milestone(
+        core::events::MilestoneId::FinancialDifficultiesFirstTime, id_);
     Logger::warn("[Finance] {} - Account overdrawn: {}", name_, balance);
   }
 }
@@ -227,8 +226,8 @@ void Player::end_of_week(GameState& game_state) {
     for (const auto& s_ptr : city->suppliers()) {
       if (s_ptr->relationship(id_).outstanding_debt.cents > 0) {
         Logger::warn("[Finance] {} - BANKRUPT! Unpaid supplier debt", name_);
-        game_state.deliver_message(
-            core::events::LeventId::NotAbleToPaySuppliers,
+        game_state.deliver_milestone(
+            core::events::MilestoneId::NotAbleToPaySuppliers,
             [this, &game_state]() {
               game_state.eliminate_player(id_,
                                           GameOverCause::BankruptSuppliers);

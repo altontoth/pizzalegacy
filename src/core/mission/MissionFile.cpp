@@ -14,7 +14,7 @@
 #include <fstream>
 #include <system_error>
 #include <utility>
-#include "core/events/LeventId.h"
+#include "core/events/MilestoneId.h"
 #include "core/time/GameDate.h"
 #include "engine/Logger.h"
 #include "resources/util/FileUtils.h"
@@ -110,7 +110,7 @@ std::optional<MissionTarget> read_mission_file(const fs::path& path) {
 
     target.milestones.push_back(
         {GameDate{year, month, day},
-         static_cast<core::events::LeventId>(event_id)});
+         static_cast<core::events::MilestoneId>(event_id)});
   }
 
   // A mission with no milestones is pointless, so we treat it like a failed

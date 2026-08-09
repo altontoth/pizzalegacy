@@ -7,7 +7,7 @@
 #include "views/screens/GameOver.h"
 
 #include "core/character/Player.h"
-#include "core/events/FullscreenMessageManager.h"
+#include "core/events/CareerLog.h"
 #include "core/mission/MissionFile.h"
 #include "core/mission/MissionScoring.h"
 #include "core/save/SaveGameManager.h"
@@ -45,7 +45,7 @@ GameOver::GameOver(GameContext& context, GameState& state, GameOverState gos)
     // gives the same result as at the moment the final milestone fired.
     mission_score_ = core::mission::overall_score(
         *state.mission_target(),
-        state.message_manager().get_cv_entries_for(player_->id()));
+        state.career_log().get_cv_entries_for(player_->id()));
   }
 
   interactions_.create_persistent_item(
@@ -83,7 +83,7 @@ void GameOver::after_high_score() { offer_save_career(); }
 
 void GameOver::offer_save_career() {
   if (!player_ ||
-      state_.message_manager().get_cv_entries_for(player_->id()).empty()) {
+      state_.career_log().get_cv_entries_for(player_->id()).empty()) {
     finish_flow();
     return;
   }
@@ -113,8 +113,7 @@ void GameOver::save_career_as_mission(const std::string& raw_name) {
     name = "career";
   }
 
-  const auto entries =
-      state_.message_manager().get_cv_entries_for(player_->id());
+  const auto entries = state_.career_log().get_cv_entries_for(player_->id());
   if (!core::mission::save_career_mission(name, entries)) {
     context_.popup->create<AlertPopup>("Failed to save the mission file.");
   }

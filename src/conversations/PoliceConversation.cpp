@@ -10,7 +10,7 @@
 
 #include "core/character/Player.h"
 #include "core/character/SocialStatus.h"
-#include "core/events/LeventId.h"
+#include "core/events/MilestoneId.h"
 #include "core/finance/Ledger.h"
 #include "core/item/Item.h"
 #include "engine/Fatal.h"
@@ -213,9 +213,8 @@ bool PoliceConversation::advance_line_choice(PoliceLine choice) {
       player->financials().transfer(state_.time().current_date(), Account::Cash,
                                     Account::FinesAndBribes, donation,
                                     AccountingScope::Operational);
-      state_.message_manager().schedule_message(
-          core::events::LeventId::FirstBribery, player->id(),
-          state_.time().current_date());
+      state_.record_milestone(core::events::MilestoneId::FirstBribery,
+                              player->id());
       current_line(PoliceLine::YES_THANKS_WHAT_WOULD_I_HAVE_DONE_WITHOUT);
     }
     else {
@@ -248,9 +247,8 @@ bool PoliceConversation::advance_proposal(bool agree) {
       }
       int crime_code = static_cast<int>(*arrest_reason_);
       state_.adjust_social_score(*player, -10 * crime_code);
-      state_.message_manager().schedule_message(
-          core::events::LeventId::YouReceivedFineFirstTime, player->id(),
-          state_.time().current_date());
+      state_.record_milestone(
+          core::events::MilestoneId::YouReceivedFineFirstTime, player->id());
       current_line(PoliceLine::PLAYER_PAID_FINE);
     }
     else {
@@ -474,7 +472,7 @@ void PoliceConversation::go_to_jail(int days) {
   // Show prison fullscreen after the conversation view pops.
   // The on_dismiss callback starts the jail day loop.
   on_end_ = [&state = state_] {
-    state.deliver_message(core::events::LeventId::YouAreOnTheWayToPrison,
-                          [&state] { state.turn().request_end_of_turn(); });
+    state.deliver_milestone(core::events::MilestoneId::YouAreOnTheWayToPrison,
+                            [&state] { state.turn().request_end_of_turn(); });
   };
 }

@@ -25,7 +25,7 @@
 #include "core/city/City.h"
 #include "core/city/MayorOffice.h"
 #include "core/city/Property.h"
-#include "core/events/FullscreenMessageManager.h"
+#include "core/events/CareerLog.h"
 #include "core/mission/MissionTarget.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/save/SaveGameCharacter.h"
@@ -631,7 +631,7 @@ json SaveGameManager::state_to_json(const GameState& state,
   for (size_t pid = 0; pid < players.size(); ++pid) {
     if (players[pid] != nullptr) {
       auto player_id = core::PlayerId{static_cast<int>(pid)};
-      auto entries = state.message_manager().get_cv_entries_for(player_id);
+      auto entries = state.career_log().get_cv_entries_for(player_id);
       if (!entries.empty()) {
         json entry_array = json::array();
         for (const auto& entry : entries) {
@@ -683,7 +683,7 @@ void SaveGameManager::json_to_state(const json& j, GameState& state,
       target.milestones.push_back(
           {GameDate{milestone["y"].get<int>(), milestone["m"].get<int>(),
                     milestone["d"].get<int>()},
-           static_cast<core::events::LeventId>(milestone["id"].get<int>())});
+           static_cast<core::events::MilestoneId>(milestone["id"].get<int>())});
     }
     state.mission_target(std::move(target));
   }
@@ -860,15 +860,16 @@ void SaveGameManager::json_to_state(const json& j, GameState& state,
   if (j.contains("shown_messages")) {
     for (const auto& [pid_str, entries_json] : j["shown_messages"].items()) {
       auto pid = core::PlayerId{std::stoi(pid_str)};
-      state.message_manager().clear_player_messages(pid);
-      std::vector<core::events::FullscreenMessageManager::CvEntry> entries;
+      state.career_log().clear_player_messages(pid);
+      std::vector<core::events::CareerLog::CvEntry> entries;
       for (const auto& val : entries_json) {
-        auto id = static_cast<core::events::LeventId>(val.at("id").get<int>());
+        auto id =
+            static_cast<core::events::MilestoneId>(val.at("id").get<int>());
         GameDate date{val.at("y").get<int>(), val.at("m").get<int>(),
                       val.at("d").get<int>()};
         entries.push_back({date, id});
       }
-      state.message_manager().restore_scheduled(pid, entries);
+      state.career_log().restore_scheduled(pid, entries);
     }
   }
 }

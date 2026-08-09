@@ -11,7 +11,7 @@ class GameState;
 class Player;
 
 // Scans player and city state for achievement milestones and schedules the
-// matching Levent messages. Stateless; split out of GameState for cohesion
+// matching milestones. Stateless; split out of GameState for cohesion
 // and written against its public API.
 class MilestoneTracker {
 public:

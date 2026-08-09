@@ -5,8 +5,8 @@
  */
 
 #include "GameCommands.h"
-#include "core/events/FullscreenMessageManager.h"
-#include "core/events/LeventId.h"
+#include "core/events/CareerLog.h"
+#include "core/events/MilestoneId.h"
 #include "core/mission/MissionFile.h"
 #include "core/mission/MissionScoring.h"
 #include "core/mission/MissionTarget.h"
@@ -339,11 +339,11 @@ Valid causes: debts, suppliers, killed, tycoon
         std::string cause_str = ctx.string_arg(0);
 
         GameOverCause cause;
-        core::events::LeventId message;
+        core::events::MilestoneId message;
         if (cause_str == "killed") {
           cause = GameOverCause::KilledByMafia;
           message =
-              core::events::LeventId::CoolVinnieAndBigLuigiTakeYouForABath;
+              core::events::MilestoneId::CoolVinnieAndBigLuigiTakeYouForABath;
         }
         else if (cause_str == "tycoon") {
           ctx.state.trigger_win_sequence(player->id());
@@ -352,17 +352,17 @@ Valid causes: debts, suppliers, killed, tycoon
         }
         else if (cause_str == "suppliers") {
           cause = GameOverCause::BankruptSuppliers;
-          message = core::events::LeventId::NotAbleToPaySuppliers;
+          message = core::events::MilestoneId::NotAbleToPaySuppliers;
         }
         else {
           cause = GameOverCause::BankruptDebts;
-          message = core::events::LeventId::NotAbleToPayDebts;
+          message = core::events::MilestoneId::NotAbleToPayDebts;
         }
 
-        ctx.state.deliver_message(message,
-                                  [player, cause, &state = ctx.state]() {
-                                    state.eliminate_player(player->id(), cause);
-                                  });
+        ctx.state.deliver_milestone(
+            message, [player, cause, &state = ctx.state]() {
+              state.eliminate_player(player->id(), cause);
+            });
         return CommandResult::success().add_message(
             compat::format("Game over triggered: {}", cause_str));
       },
@@ -375,12 +375,12 @@ static CommandDef make_game_levent() {
       .description = "Fire a life event (CV milestone) for the active player",
       .help_text = R"(Usage: game levent <id>
 
-Delivers the given LeventId to the active player as if the milestone had
+Delivers the given MilestoneId to the active player as if the milestone had
 just been achieved: records the CV entry, awards score, and shows the
 fullscreen message if the event has one. In mission mode this can trigger
 the end-of-mission check.
 
-Valid ids: 1-139 (see LeventId.h). 100+ are CV-only (no fullscreen).
+Valid ids: 1-139 (see MilestoneId.h). 100+ are CV-only (no fullscreen).
 
 Example:
   game levent 30    # "Opens 1st restaurant"
@@ -392,7 +392,7 @@ Example:
                   .type = ArgType::Int,
                   .optional = false,
                   .default_provider = DefaultProvider::None,
-                  .description = "LeventId to fire (1-139)",
+                  .description = "MilestoneId to fire (1-139)",
               },
           },
       .handler = [](const CommandContext& ctx) -> CommandResult {
@@ -402,15 +402,15 @@ Example:
         }
         const int id = static_cast<int>(ctx.int_arg(0));
         if (id < 1 || id > 139) {
-          return CommandResult::error("LeventId must be in 1-139");
+          return CommandResult::error("MilestoneId must be in 1-139");
         }
-        const auto msg_id = static_cast<core::events::LeventId>(id);
+        const auto msg_id = static_cast<core::events::MilestoneId>(id);
         const bool already_shown =
-            ctx.state.message_manager().was_shown(msg_id, player->id());
-        ctx.state.deliver_message(msg_id);
+            ctx.state.career_log().was_shown(msg_id, player->id());
+        ctx.state.deliver_milestone(msg_id);
         return CommandResult::success().add_message(
             compat::format("Fired levent {}: {}{}", id,
-                           ctx.state.message_manager().get_cv_text(msg_id),
+                           ctx.state.career_log().cv_label(msg_id),
                            already_shown ? " (already shown)" : ""));
       },
   };
@@ -443,8 +443,7 @@ Example:
         if (!player) {
           return CommandResult::error("No active player");
         }
-        auto entries =
-            ctx.state.message_manager().get_cv_entries_for(player->id());
+        auto entries = ctx.state.career_log().get_cv_entries_for(player->id());
         if (entries.empty()) {
           return CommandResult::error("The active player's CV is empty");
         }
@@ -486,7 +485,7 @@ percentage against the active player's CV, plus the overall score.
         }
         const auto& target = *ctx.state.mission_target();
         const auto live_cv =
-            ctx.state.message_manager().get_cv_entries_for(player->id());
+            ctx.state.career_log().get_cv_entries_for(player->id());
         const auto scores =
             core::mission::per_milestone_scores(target, live_cv);
 
@@ -499,7 +498,7 @@ percentage against the active player's CV, plus the overall score.
           result.add_message(compat::format(
               "  {:3}%  {:c}  [{}] {}", scores[i], milestone.date,
               static_cast<int>(milestone.message_id),
-              ctx.state.message_manager().get_cv_text(milestone.message_id)));
+              ctx.state.career_log().cv_label(milestone.message_id)));
         }
         result.add_message(compat::format(
             "Overall: {}%", core::mission::overall_score(target, live_cv)));

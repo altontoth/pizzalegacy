@@ -13,7 +13,7 @@
 #include "core/character/Actor.h"
 #include "core/character/Player.h"
 #include "core/city/City.h"
-#include "core/events/LeventId.h"
+#include "core/events/MilestoneId.h"
 #include "core/finance/Ledger.h"
 #include "core/finance/Money.h"
 #include "core/food/Pizza.h"
@@ -166,7 +166,7 @@ void CompetitionCoordinator::collect_competition_bets(
   }
 }
 
-std::optional<core::events::LeventId>
+std::optional<core::events::MilestoneId>
 CompetitionCoordinator::finalize_competition_results(
     CompetitionSession& session) {
   auto& c = session;
@@ -218,7 +218,7 @@ CompetitionCoordinator::finalize_competition_results(
 
   // The event for a winning human, delivered by the caller once the results
   // screen is dismissed, don't want to spoil the results :)
-  std::optional<core::events::LeventId> winner_message;
+  std::optional<core::events::MilestoneId> winner_message;
 
   // Distribute prize money and update counters
   // All bets were already deducted upfront in collect_competition_bets().
@@ -247,10 +247,11 @@ CompetitionCoordinator::finalize_competition_results(
 
       if (winner.is_human) {
         if (wins == 1) {
-          winner_message = core::events::LeventId::FirstPriceInPizzaCompetition;
+          winner_message =
+              core::events::MilestoneId::FirstPriceInPizzaCompetition;
         }
         else if (wins == 10) {
-          winner_message = core::events::LeventId::Won10PizzaCompetitions;
+          winner_message = core::events::MilestoneId::Won10PizzaCompetitions;
         }
       }
     }
@@ -457,13 +458,11 @@ void CompetitionCoordinator::advance_annual_competition() {
       winner_player_id = winner_p.player_id.value;
       if (auto* winner = gs_->player(winner_p.player_id)) {
         gs_->adjust_social_score(*winner, 40);
-        using core::events::LeventId;
-        gs_->message_manager().schedule_message(
-            LeventId::AwardBestPizzaOfTheYear, winner->id(),
-            gs_->time().current_date());
-        gs_->message_manager().schedule_message(
-            LeventId::AwardRestaurantOfTheYear, winner->id(),
-            gs_->time().current_date());
+        using core::events::MilestoneId;
+        gs_->record_milestone(MilestoneId::AwardBestPizzaOfTheYear,
+                              winner->id());
+        gs_->record_milestone(MilestoneId::AwardRestaurantOfTheYear,
+                              winner->id());
       }
     }
 

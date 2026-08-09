@@ -11,16 +11,15 @@
 namespace core::events {
 
 /**
- * Message IDs for one-time fullscreen status updates and CV entries.
+ * One milestone in a player's career: a line in their CV, and for some of them
+ * a fullscreen shown when they reach it.
  *
- * Entries 1-97 fire fullscreen events (with a background if non-NONE).
- * Entries 98-99 are unused table slots
- * Entries 100-139 are CV-only milestones
- *
- * Technically this is a combination of LEVENT.E and LEBEN.E, but the first 100
- * entries in both those files have a one-to-one mapping for the first 99 lines
+ * The id is the line number in both original text files. LEBEN.E holds the
+ * short CV label for all 139. LEVENT.E holds the fullscreen prose and runs out
+ * at 97, so 100 and up only ever reach the CV. Slots 86, 93, 98 and 99 are
+ * dead in the original data.
  */
-enum class LeventId {
+enum class MilestoneId {
   LaughingStock = 1,
   Failure = 2,
   StatusWorker = 3,

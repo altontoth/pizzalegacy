@@ -9,7 +9,7 @@
 #include <optional>
 #include <string>
 
-#include "core/events/LeventId.h"
+#include "core/events/MilestoneId.h"
 #include "engine/DebugLabel.h"
 #include "engine/input/InputListener.h"
 #include "engine/input/ListenerToken.h"
@@ -21,7 +21,7 @@ class FullscreenStatus : public View,
                          public debug::AutoLabel<FullscreenStatus> {
 public:
   FullscreenStatus(GameContext& context, GameState& state,
-                   core::events::LeventId msg_id,
+                   core::events::MilestoneId msg_id,
                    std::function<void()> on_dismiss = nullptr);
 
   ~FullscreenStatus() override = default;
@@ -31,12 +31,12 @@ public:
   bool on_action(const input::ActionEvent& ev) override;
 
 private:
-  void init_from_message_id(core::events::LeventId msg_id);
+  void init_from_message_id(core::events::MilestoneId msg_id);
   void dismiss();
 
   TypewriterTextRenderer typewriter_;
   std::string text_;
-  std::optional<core::events::LeventId> message_id_;
+  std::optional<core::events::MilestoneId> message_id_;
   input::ListenerToken listener_;
   std::function<void()> on_dismiss_;
   const Surface& background_;

@@ -9,7 +9,7 @@
 #include "core/character/Player.h"
 #include "core/city/City.h"
 #include "core/city/CityViewMapState.h"
-#include "core/events/FullscreenMessageManager.h"
+#include "core/events/CareerLog.h"
 #include "core/finance/BankAccountRegistry.h"
 #include "core/food/CustomerTasteProfiles.h"
 #include "core/init/NewGameConfig.h"
@@ -142,7 +142,7 @@ public:
   CompetitionCoordinator& competitions() { return competitions_; }
   const CompetitionCoordinator& competitions() const { return competitions_; }
 
-  // Achievement milestone checks (Levent message scheduling).
+  // Achievement milestone checks.
   MilestoneTracker& milestones() { return milestones_; }
 
   int global_interest_rate() const { return global_interest_rate_; }
@@ -257,17 +257,18 @@ public:
   const GameOptions& options() const;
 
   // Fullscreen message manager
-  core::events::FullscreenMessageManager& message_manager() {
-    return message_manager_;
-  }
-  const core::events::FullscreenMessageManager& message_manager() const {
-    return message_manager_;
-  }
+  core::events::CareerLog& career_log() { return career_log_; }
+  const core::events::CareerLog& career_log() const { return career_log_; }
 
-  // Idempotent message delivery: schedule CV entry + score + push view + mark
-  // shown
-  void deliver_message(core::events::LeventId msg_id,
-                       std::function<void()> on_dismiss = nullptr);
+  // Add the milestone to the player's CV and award its score, once per player.
+  // For human players it also schedules the fullscreen message
+  void record_milestone(core::events::MilestoneId msg_id,
+                        core::PlayerId player_id);
+
+  // Record the milestone and show its fullscreen right away, running on_dismiss
+  // once the player closes it. Shows nothing if they have already seen it.
+  void deliver_milestone(core::events::MilestoneId msg_id,
+                         std::function<void()> on_dismiss = nullptr);
   core::newspaper::ArticleDatabase& article_database() {
     return article_database_;
   }
@@ -319,7 +320,7 @@ public:
 
   // Process all pending messages for the active player immediately:
   // award score, push fullscreen if needed, mark as shown.
-  void process_pending_messages();
+  void process_pending_milestones();
 
   // Presenter for staff event dialogs (to keep popup dependencies out of the
   // core).
@@ -407,7 +408,7 @@ private:
   int fade_duration_frames_{default_fade_length};
   bool pending_fade_midpoint_{false};
   core::newspaper::ArticleDatabase article_database_;
-  core::events::FullscreenMessageManager message_manager_;
+  core::events::CareerLog career_log_;
   BankAccountRegistry bank_accounts_;
   core::food::CustomerTasteProfiles customer_taste_profiles_{
       core::food::default_customer_taste_profiles()};

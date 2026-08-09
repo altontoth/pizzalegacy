@@ -345,8 +345,7 @@ void PlayerProfile::handle_arrow(PageAction action) {
       }
     }
     else {
-      entry_count =
-          state_.message_manager().get_cv_entries_for(player->id()).size();
+      entry_count = state_.career_log().get_cv_entries_for(player->id()).size();
     }
     int total_pages = cv_total_pages(entry_count);
 
@@ -504,7 +503,7 @@ Surface PlayerProfile::create_curriculum_vitae(const Player* player, int page) {
   int y = 80;
   constexpr int row_height = 40;
 
-  auto entries = state_.message_manager().get_cv_entries_for(player->id());
+  auto entries = state_.career_log().get_cv_entries_for(player->id());
   int start = page * cv_events_per_page;
   int end =
       std::min(start + cv_events_per_page, static_cast<int>(entries.size()));
@@ -513,9 +512,8 @@ Surface PlayerProfile::create_curriculum_vitae(const Player* player, int page) {
     const auto& entry = entries[i];
     font->render_line_onto(cv, entry.date.cv_date_string(), {date_x, y},
                            FontFace::PIZ_NUMB, text_color);
-    font->render_text_onto(
-        cv, state_.message_manager().get_cv_text(entry.message_id), {text_x, y},
-        FontFace::PIZ_NUMB, text_color);
+    font->render_text_onto(cv, state_.career_log().cv_label(entry.message_id),
+                           {text_x, y}, FontFace::PIZ_NUMB, text_color);
     y += row_height;
   }
 
@@ -639,7 +637,7 @@ Surface PlayerProfile::create_target_cv(const Player* player, int page) {
   // How closely each target milestone has been matched so far (by event,
   // scored on date closeness; 0% until the event is achieved).
   const auto scores = core::mission::per_milestone_scores(
-      target, state_.message_manager().get_cv_entries_for(player->id()));
+      target, state_.career_log().get_cv_entries_for(player->id()));
 
   constexpr int date_x = 72;
   constexpr int text_x = 160;
@@ -656,9 +654,9 @@ Surface PlayerProfile::create_target_cv(const Player* player, int page) {
     const auto& milestone = milestones[i];
     font->render_line_onto(cv, milestone.date.cv_date_string(), {date_x, y},
                            FontFace::PIZ_NUMB, text_color);
-    font->render_text_onto(
-        cv, state_.message_manager().get_cv_text(milestone.message_id),
-        {text_x, y}, FontFace::PIZ_NUMB, text_color);
+    font->render_text_onto(cv,
+                           state_.career_log().cv_label(milestone.message_id),
+                           {text_x, y}, FontFace::PIZ_NUMB, text_color);
     font->render_line_onto(cv, compat::format("{}%", scores[i]),
                            {percent_x, y + (row_height / 2)},
                            FontFace::PIZ_NUMB, text_color, TextAnchor::End);
