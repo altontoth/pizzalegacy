@@ -317,9 +317,13 @@ void GameState::deliver_message(core::events::LeventId msg_id,
     return;
   }
 
-  // Ensure CV entry exists (no-op if already scheduled)
-  message_manager_.schedule_message(msg_id, player->id(),
-                                    time().current_date());
+  if (!message_manager_.claim_for_delivery(msg_id, player->id(),
+                                           time().current_date())) {
+    if (on_dismiss) {
+      on_dismiss();
+    }
+    return;
+  }
 
   const auto& data = message_manager_.get_data(msg_id);
   if (data.score > 0) {
@@ -350,7 +354,6 @@ void GameState::deliver_message(core::events::LeventId msg_id,
     // CV-only milestones show no fullscreen, end the mission right away.
     on_dismiss();
   }
-  message_manager_.mark_as_shown(msg_id, player->id());
 }
 
 void GameState::eliminate_player(core::PlayerId id, GameOverCause cause) {

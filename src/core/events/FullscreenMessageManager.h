@@ -32,13 +32,16 @@ public:
   bool schedule_message(LeventId msg_id, core::PlayerId player_id,
                         const GameDate& date);
 
-  bool was_scheduled(LeventId msg_id, core::PlayerId player_id) const;
+  bool was_shown(LeventId msg_id, core::PlayerId player_id) const;
+
+  // Claim a message and scheduling it if needed. Returns false once the player
+  // has already seen it.
+  bool claim_for_delivery(LeventId msg_id, core::PlayerId player_id,
+                          const GameDate& date);
 
   const EventData& get_data(LeventId msg_id) const;
 
   std::vector<LeventId> get_pending_for_player(core::PlayerId player_id) const;
-
-  void mark_as_shown(LeventId msg_id, core::PlayerId player_id);
 
   // Levent text for fullscreen status updates:
   std::string get_levent_text(LeventId msg_id) const;
@@ -60,6 +63,9 @@ public:
   std::vector<CvEntry> get_cv_entries_for(core::PlayerId player_id) const;
 
 private:
+  bool was_scheduled(LeventId msg_id, core::PlayerId player_id) const;
+  void mark_as_shown(LeventId msg_id, core::PlayerId player_id);
+
   struct ScheduledMessage {
     GameDate date;
     LeventId message_id;

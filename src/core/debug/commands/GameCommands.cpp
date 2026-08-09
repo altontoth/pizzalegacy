@@ -405,13 +405,13 @@ Example:
           return CommandResult::error("LeventId must be in 1-139");
         }
         const auto msg_id = static_cast<core::events::LeventId>(id);
-        const bool already_recorded =
-            ctx.state.message_manager().was_scheduled(msg_id, player->id());
+        const bool already_shown =
+            ctx.state.message_manager().was_shown(msg_id, player->id());
         ctx.state.deliver_message(msg_id);
         return CommandResult::success().add_message(
             compat::format("Fired levent {}: {}{}", id,
                            ctx.state.message_manager().get_cv_text(msg_id),
-                           already_recorded ? " (was already in the CV)" : ""));
+                           already_shown ? " (already shown)" : ""));
       },
   };
 }

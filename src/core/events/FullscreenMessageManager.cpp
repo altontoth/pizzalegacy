@@ -187,10 +187,34 @@ bool FullscreenMessageManager::was_scheduled(LeventId msg_id,
   }
 
   const auto& messages = it->second;
-  return std::any_of(messages.begin(), messages.end(),
-                     [msg_id](const ScheduledMessage& msg) {
-                       return msg.message_id == msg_id;
-                     });
+  return std::ranges::any_of(messages, [msg_id](const ScheduledMessage& msg) {
+    return msg.message_id == msg_id;
+  });
+}
+
+bool FullscreenMessageManager::was_shown(LeventId msg_id,
+                                         core::PlayerId player_id) const {
+  auto it = player_messages_.find(player_id);
+  if (it == player_messages_.end()) {
+    return false;
+  }
+
+  const auto& messages = it->second;
+  return std::ranges::any_of(messages, [msg_id](const ScheduledMessage& msg) {
+    return msg.message_id == msg_id && msg.shown;
+  });
+}
+
+bool FullscreenMessageManager::claim_for_delivery(LeventId msg_id,
+                                                  core::PlayerId player_id,
+                                                  const GameDate& date) {
+  if (was_shown(msg_id, player_id)) {
+    return false;
+  }
+
+  schedule_message(msg_id, player_id, date);
+  mark_as_shown(msg_id, player_id);
+  return true;
 }
 
 const EventData& FullscreenMessageManager::get_data(LeventId msg_id) const {

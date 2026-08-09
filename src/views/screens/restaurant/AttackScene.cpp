@@ -600,9 +600,6 @@ void AttackScene::run_police_arrest() {
   state_.initiate_arrest(reason, [st_ptr = &state_, attacker_id]() {
     constexpr auto milestone =
         core::events::LeventId::CarriedOutFirstAttackOnCompetitorsRestaurant;
-    if (st_ptr->message_manager().was_scheduled(milestone, attacker_id)) {
-      return;
-    }
     const core::PlayerId prev =
         st_ptr->active_player() ? st_ptr->active_player()->id() : attacker_id;
     st_ptr->active_player(attacker_id);
