@@ -32,7 +32,7 @@ public:
       : bank_id_(bank_id), city_id_(city_id), amount_(amount),
         return_rate_(return_rate), months_(months), months_left_(months) {
     Money total_return = amount * return_rate / 100;
-    monthly_return_ = Money{(total_return / months).whole() * 100};
+    monthly_return_ = (total_return / months).truncated_to_dollars();
   }
 
   static Investment from_save(core::BankId bank_id, core::CityId city_id,

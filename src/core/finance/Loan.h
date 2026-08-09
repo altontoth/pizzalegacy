@@ -23,8 +23,8 @@ public:
         interest_percentage_(interest_percentage), start_months_(start_months),
         months_left_(start_months) {
     Money total_interest = start_amount * interest_percentage / 100;
-    monthly_principal_ = Money{(start_amount / start_months).whole() * 100};
-    monthly_interest_ = Money{(total_interest / start_months).whole() * 100};
+    monthly_principal_ = (start_amount / start_months).truncated_to_dollars();
+    monthly_interest_ = (total_interest / start_months).truncated_to_dollars();
   }
 
   // Restore full state from save data (bypasses payment recalculation)
