@@ -8,7 +8,7 @@ project(plegacy VERSION 1.0.0 LANGUAGES C CXX)
 # SemVer pre-release suffix (e.g. "-beta.1"); empty for final releases.
 # CMake's project(VERSION) only accepts numeric components, so the full
 # version string is assembled here.
-set(PLEGACY_VERSION_SUFFIX "-beta.1")
+set(PLEGACY_VERSION_SUFFIX "-beta.2")
 set(PLEGACY_VERSION_FULL "${PROJECT_VERSION}${PLEGACY_VERSION_SUFFIX}")
 
 # Generate Version.h from the project version
