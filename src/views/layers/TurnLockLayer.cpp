@@ -11,7 +11,6 @@
 #include "engine/DisplayConstants.h"
 #include "engine/geom/Spaces.h"
 #include "engine/ui/InteractionManager.h"
-#include "gfx/Surface.h"
 #include "views/ui/BusyCursor.h"
 #include "views/ui/Icon.h"
 

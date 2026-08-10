@@ -13,7 +13,6 @@
 #include "core/state/TurnOrchestrator.h"
 #include "engine/FormatCompat.h"
 #include "engine/Geometry.h"
-#include "gfx/Surface.h"
 #include "views/ui/ScreenText.h"
 
 namespace {
