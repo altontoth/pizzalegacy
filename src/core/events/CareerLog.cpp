@@ -297,7 +297,7 @@ void CareerLog::restore_scheduled(core::PlayerId pid,
   auto& messages = player_messages_[pid];
   for (const auto& entry : entries) {
     messages.emplace_back(entry.date, entry.message_id);
-    messages.back().shown = true;
+    messages.back().shown = entry.shown;
   }
 }
 
@@ -311,7 +311,7 @@ CareerLog::get_cv_entries_for(core::PlayerId player_id) const {
   }
 
   for (const auto& msg : it->second) {
-    entries.push_back({msg.date, msg.message_id});
+    entries.push_back({msg.date, msg.message_id, msg.shown});
   }
 
   return entries;

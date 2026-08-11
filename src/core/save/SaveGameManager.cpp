@@ -653,7 +653,8 @@ json SaveGameManager::state_to_json(const GameState& state,
           entry_array.push_back({{"id", static_cast<int>(entry.message_id)},
                                  {"y", entry.date.year()},
                                  {"m", entry.date.month()},
-                                 {"d", entry.date.day()}});
+                                 {"d", entry.date.day()},
+                                 {"shown", entry.shown}});
         }
         shown_msgs[std::to_string(pid)] = entry_array;
       }
@@ -890,7 +891,7 @@ void SaveGameManager::json_to_state(const json& j, GameState& state,
             static_cast<core::events::MilestoneId>(val.at("id").get<int>());
         GameDate date{val.at("y").get<int>(), val.at("m").get<int>(),
                       val.at("d").get<int>()};
-        entries.push_back({date, id});
+        entries.push_back({date, id, val.value("shown", true)});
       }
       state.career_log().restore_scheduled(pid, entries);
     }

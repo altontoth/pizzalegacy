@@ -56,6 +56,7 @@ public:
   struct CvEntry {
     GameDate date;
     MilestoneId message_id;
+    bool shown = false;
   };
 
   // For save/load:
