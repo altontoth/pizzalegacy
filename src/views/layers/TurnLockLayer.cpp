@@ -41,6 +41,10 @@ void TurnLockLayer::tick() {
   bool lock = state_.turn().is_pipeline_blocking_input();
   if (lock != locked_) {
     locked_ = lock;
+    // Unlocking needs a render too: only render() drops the lock item (TODO:
+    // move the locking from the render method by introducing a proper
+    // priority system and can use a persistent item instead).
+    mark_dirty();
     if (lock) {
       context_.cursor->custom_cursor(
           views::ui::icon_surface(*context_.vga, LOCK_ICON));

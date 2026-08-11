@@ -8,6 +8,7 @@
 
 #include <cassert>
 #include <optional>
+#include <ranges>
 #include <string>
 #include <utility>
 
@@ -173,32 +174,39 @@ void push_weekly_restaurant_reports(GameContext& context, GameState& gs,
                                     core::PlayerId previous_player_id,
                                     std::function<void()> on_done,
                                     bool interleave_electricity) {
-  std::function<void()> profit_cb = [&context, &gs, previous_player_id,
-                                     on_done = std::move(on_done)] {
+  // The UI stack is LIFO, so build the report backwards to show restaurants
+  // in the same order as the restaurant list. Closed restaurants don't go
+  // on the stack, so their popup is added to the tail instead.
+  std::function<void()> tail = [&context, &gs, previous_player_id,
+                                on_done = std::move(on_done)] {
     show_weekly_city_invoice_popup(context, gs, previous_player_id, on_done);
   };
-  for (auto it = restaurants.rbegin(); it != restaurants.rend(); ++it) {
-    if (!*it || (*it)->property().city().id() != gs.active_city()->id()) {
+  for (auto* restaurant : std::ranges::reverse_view(restaurants)) {
+    if (!restaurant ||
+        restaurant->property().city().id() != gs.active_city()->id()) {
       continue;
     }
-    std::function<void()> cb = std::move(profit_cb);
+    auto rest_id = restaurant->id();
     if (interleave_electricity) {
-      auto rest_id = (*it)->id();
-      cb = [&context, &gs, rest_id, next = std::move(cb)]() mutable {
+      tail = [&context, &gs, rest_id, next = std::move(tail)]() mutable {
         show_electricity_slot_invoice_popup(context, gs, rest_id,
                                             std::move(next));
       };
     }
-    if ((*it)->wants_open() && !(*it)->is_force_closed()) {
-      gs.ui().push<WeeksTakingsState>(
-          WeeksTakingsState{(*it)->id(), true, std::move(cb)});
+    if (restaurant->wants_open() && !restaurant->is_force_closed()) {
+      gs.ui().push<WeeksTakingsState>(WeeksTakingsState{
+          .id = rest_id, .end_of_week_mode = true, .on_done = std::move(tail)});
+      tail = {};
     }
     else {
-      show_staff_invoice_popup(context, gs, (*it)->id(), std::move(cb));
+      tail = [&context, &gs, rest_id, next = std::move(tail)]() mutable {
+        show_staff_invoice_popup(context, gs, rest_id, std::move(next));
+      };
     }
   }
-  if (profit_cb) {
-    profit_cb();
+  // There may still be closed-restaurant popups left in the tail.
+  if (tail) {
+    tail();
   }
 }
 
