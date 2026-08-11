@@ -87,7 +87,13 @@ json_to_pizza(const json& j,
     }
   }
 
-  // Restore flavors and stats first (before finalize)
+  // Finalize if it was finalized when saved
+  if (j["finalized"].get<bool>()) {
+    pizza.finalize(taste_profiles, name);
+  }
+
+  // Finalize recalculates these from the toppings, so restore the saved values
+  // afterwards.
   if (j.contains("flavors")) {
     Flavors flavors;
     flavors.fat = j["flavors"]["fat"].get<int>();
@@ -101,11 +107,6 @@ json_to_pizza(const json& j,
 
     pizza.set_disk_stats(flavors, appearance, refinement, normality,
                          taste_profiles);
-  }
-
-  // Finalize if it was finalized when saved
-  if (j["finalized"].get<bool>()) {
-    pizza.finalize(taste_profiles, name);
   }
 
   return pizza;
