@@ -43,3 +43,27 @@ public:
   // Monthly loans and rent invoice for a player.
   virtual void show_monthly_invoice(core::PlayerId player_id) = 0;
 };
+
+// When there is no presenter registered we use a NoTurnPresenter instead so the
+// turn can stil finish without having popups.
+class NoTurnPresenter : public TurnPresenter {
+public:
+  void show_manager_alert(std::string /*message*/,
+                          const RawRenderable* /*portrait*/,
+                          std::function<void()> on_done) override {
+    on_done();
+  }
+  void show_weekly_reports(const std::vector<Restaurant*>& /*restaurants*/,
+                           core::PlayerId /*previous_player*/,
+                           std::function<void()> on_done,
+                           bool /*interleave_electricity*/) override {
+    if (on_done) {
+      on_done();
+    }
+  }
+  void show_electricity_slot_invoice(core::RestaurantId /*restaurant_id*/,
+                                     std::function<void()> on_done) override {
+    on_done();
+  }
+  void show_monthly_invoice(core::PlayerId /*player_id*/) override {}
+};

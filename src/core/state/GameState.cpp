@@ -49,6 +49,11 @@ void GameState::turn_presenter(std::unique_ptr<TurnPresenter> presenter) {
   turn_presenter_ = std::move(presenter);
 }
 
+TurnPresenter& GameState::turn_presenter() {
+  static NoTurnPresenter nobody;
+  return turn_presenter_ ? *turn_presenter_ : nobody;
+}
+
 std::ostream& operator<<(std::ostream& os, const GameState& state) {
   os << "GameState:\n";
   os << "  active_player=" << state.active_player_ << "\n";

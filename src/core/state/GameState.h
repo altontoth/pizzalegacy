@@ -356,7 +356,7 @@ public:
   // Presenter for the turn-boundary popups (manager alerts, invoices, weekly
   // reports). Registered once at startup; used by TurnOrchestrator.
   void turn_presenter(std::unique_ptr<TurnPresenter> presenter);
-  TurnPresenter& turn_presenter() { return *turn_presenter_; }
+  TurnPresenter& turn_presenter();
 
 private:
   bool is_past_player_end_of_day() const;
