@@ -11,10 +11,9 @@
 
 namespace debug::command {
 
-ValidationResult ValueValidator::validate(const ParsedValue& value,
-                                          const ArgSpec& spec,
-                                          GameState& state) {
-  // 1. Range validation (if applicable)
+ValidationResult ValueValidator::validate_spec_constraints(
+    const ParsedValue& value, const ArgSpec& spec, GameState& state) {
+  // Range validation
   if (spec.min_value || spec.max_value) {
     auto range_result = validate_range(value, spec.min_value, spec.max_value);
     if (!range_result.valid) {
@@ -22,7 +21,7 @@ ValidationResult ValueValidator::validate(const ParsedValue& value,
     }
   }
 
-  // 2. Allowed values (if specified)
+  // Allowed values
   if (spec.allowed_values) {
     auto allowed_result = validate_allowed_values(value, *spec.allowed_values);
     if (!allowed_result.valid) {
@@ -30,7 +29,7 @@ ValidationResult ValueValidator::validate(const ParsedValue& value,
     }
   }
 
-  // 3. Custom validator (if provided)
+  // Custom validator
   if (spec.custom_validator) {
     auto custom_result = (*spec.custom_validator)(value, state);
     if (!custom_result.valid) {
@@ -38,7 +37,18 @@ ValidationResult ValueValidator::validate(const ParsedValue& value,
     }
   }
 
-  // 4. Type-specific existence checks
+  return ValidationResult::success();
+}
+
+ValidationResult ValueValidator::validate(const ParsedValue& value,
+                                          const ArgSpec& spec,
+                                          GameState& state) {
+  auto spec_result = validate_spec_constraints(value, spec, state);
+  if (!spec_result.valid) {
+    return spec_result;
+  }
+
+  // Type-specific existence checks
   switch (value.type) {
   case ArgType::PlayerId: {
     auto result = validate_player_exists(value.as_player_id(), state);

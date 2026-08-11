@@ -25,6 +25,12 @@ public:
   static ValidationResult validate(const ParsedValue& value,
                                    const ArgSpec& spec, GameState& state);
 
+  // Only validate constraints declared by the ArgSpec. Defaults skip existence
+  // checks because some commands use them for things they are about to create.
+  static ValidationResult validate_spec_constraints(const ParsedValue& value,
+                                                    const ArgSpec& spec,
+                                                    GameState& state);
+
 private:
   // Specific validators
   static ValidationResult validate_range(const ParsedValue& value,

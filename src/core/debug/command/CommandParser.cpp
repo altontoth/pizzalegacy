@@ -85,6 +85,14 @@ CommandParser::parse(const CommandDef& root,
         try {
           auto default_val =
               resolve_default(spec.default_provider, spec.type, state);
+          auto validation = ValueValidator::validate_spec_constraints(
+              default_val, spec, state);
+          if (!validation.valid) {
+            result.error_result = CommandResult::error(
+                compat::format("Default for argument '{}' is not usable: {}",
+                               spec.name, validation.error));
+            return result;
+          }
           parsed_args.push_back(std::move(default_val));
         }
         catch (const std::exception& e) {
@@ -186,7 +194,17 @@ CommandParser::parse_argument(const std::string& token, const ArgSpec& spec,
   if (is_default_marker(token)) {
     if (spec.default_provider != DefaultProvider::None) {
       try {
-        return resolve_default(spec.default_provider, spec.type, state);
+        auto default_val =
+            resolve_default(spec.default_provider, spec.type, state);
+        auto validation =
+            ValueValidator::validate_spec_constraints(default_val, spec, state);
+        if (!validation.valid) {
+          result.error_result = CommandResult::error(
+              compat::format("Default for argument '{}' is not usable: {}",
+                             spec.name, validation.error));
+          return std::nullopt;
+        }
+        return default_val;
       }
       catch (const std::exception& e) {
         result.error_result = CommandResult::error(compat::format(
