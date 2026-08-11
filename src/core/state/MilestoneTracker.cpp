@@ -187,7 +187,7 @@ void MilestoneTracker::check_milestone_events(Player& player,
 
 void MilestoneTracker::check_market_share_milestones(const City& city) {
   using core::events::MilestoneId;
-  const auto& pcts = city.control_map().player_percentages();
+  const auto& control_map = city.control_map();
 
   auto domination_event = static_cast<MilestoneId>(
       static_cast<int>(MilestoneId::DominatesMarketInParis) + city.id().value);
@@ -197,17 +197,16 @@ void MilestoneTracker::check_market_share_milestones(const City& city) {
     if (!gs_->player(pid)) {
       continue;
     }
-    float pct = pcts[p];
     // Original game bug: checks 5% but displays "10% market share" message
-    float first_threshold = gs_->options().fix_legacy_bugs ? 10.0f : 5.0f;
-    if (pct >= 50) {
+    int first_threshold = gs_->options().fix_legacy_bugs ? 10 : 5;
+    if (control_map.has_market_share_at_least(p, 50)) {
       gs_->record_milestone(MilestoneId::Achieved50PctMarketShareInCity, pid);
       gs_->record_milestone(domination_event, pid);
     }
-    if (pct >= 20) {
+    if (control_map.has_market_share_at_least(p, 20)) {
       gs_->record_milestone(MilestoneId::Achieved20PctMarketShareInCity, pid);
     }
-    if (pct >= first_threshold) {
+    if (control_map.has_market_share_at_least(p, first_threshold)) {
       gs_->record_milestone(MilestoneId::Achieved10PctMarketShareInCity, pid);
     }
   }
@@ -222,13 +221,13 @@ void MilestoneTracker::check_world_domination() {
     return;
   }
 
-  constexpr float win_threshold = 5.0f;
+  constexpr int win_threshold = 5;
 
   if (!gs_->options().fix_legacy_bugs) {
     // Original: only Paris (city 0) needs >= 5% market share.
     auto* paris = gs_->city(core::CityId{0});
-    if (!paris ||
-        paris->control_map().player_percentage(p->id().value) < win_threshold) {
+    if (!paris || !paris->control_map().has_market_share_at_least(
+                      p->id().value, win_threshold)) {
       return;
     }
   }
@@ -239,7 +238,8 @@ void MilestoneTracker::check_world_domination() {
       return;
     }
     for (auto* c : cities) {
-      if (c->control_map().player_percentage(p->id().value) < win_threshold) {
+      if (!c->control_map().has_market_share_at_least(p->id().value,
+                                                      win_threshold)) {
         return;
       }
     }

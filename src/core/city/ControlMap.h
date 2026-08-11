@@ -30,8 +30,17 @@ public:
     return cell_owners_[cell_index];
   }
 
+  // For display. Milestones and the win condition use
+  // has_market_share_at_least instead.
   float player_percentage(int player_index) const {
     return player_percentages_[player_index];
+  }
+
+  int cells_held(int player_index) const;
+
+  // Market share in whole cells (for stable comparisons).
+  bool has_market_share_at_least(int player_index, int percent) const {
+    return cells_held(player_index) * 100 >= percent * CONTROL_MAP_CELLS;
   }
 
   // Returns the player with the highest market share, or nullopt if nobody

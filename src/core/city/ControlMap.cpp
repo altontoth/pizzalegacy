@@ -117,12 +117,20 @@ void ControlMap::build(const GameState& game_state, const City& city) {
   }
 }
 
+int ControlMap::cells_held(int player_index) const {
+  return static_cast<int>(std::ranges::count_if(
+      cell_owners_, [player_index](const std::optional<core::PlayerId>& owner) {
+        return owner && owner->value == player_index;
+      }));
+}
+
 std::optional<core::PlayerId> ControlMap::market_leader() const {
-  float best = 0.0f;
+  int best = 0;
   std::optional<core::PlayerId> leader;
   for (int p = 0; p < NUMBER_OF_PLAYERS; ++p) {
-    if (player_percentages_[p] > best) {
-      best = player_percentages_[p];
+    const int held = cells_held(p);
+    if (held > best) {
+      best = held;
       leader = core::PlayerId{p};
     }
   }
