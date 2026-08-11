@@ -85,12 +85,12 @@ void StatusDisplay::render(const RenderContext& ctx) {
 
 void StatusDisplay::render_recipe(const StatusDisplayRecipe& recipe,
                                   const RenderContext& ctx) {
-  // A centered or right-aligned column gives its x relative to the panel's
-  // center or right edge.
   struct ColumnAnchor {
     int x;
     TextAnchor anchor;
   };
+  // A centered or right-aligned column gives its x relative to the panel's
+  // center or right edge.
   auto anchor_of = [&ctx](const StatusColumn& col) -> ColumnAnchor {
     switch (col.align) {
     case StatusAlignment::Center:

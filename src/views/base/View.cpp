@@ -10,10 +10,10 @@
 #include "engine/DisplayConstants.h"
 #include "views/base/ViewDefs.h"
 
-View::View(GameContext& context, GameState& state)
+View::View(GameContext& context, GameState& state, int interaction_priority)
     : context_(context), state_(state),
       interactions_(context.interaction->make_layer(),
-                    context.interaction->make_layer()) {}
+                    context.interaction->make_layer(), interaction_priority) {}
 
 void View::mark_dirty() { is_dirty_ = true; }
 

@@ -536,8 +536,7 @@ void RestaurantView::register_interactions_viewport() {
           break;
         }
       },
-      {}, // no tooltip
-      views::ui::InteractionLayer::Background);
+      {.layer = views::ui::InteractionLayer::Background});
 
   rmb_drag_scroller_.add_interaction(interactions_, vp_local,
                                      [this] { mark_dirty(); });

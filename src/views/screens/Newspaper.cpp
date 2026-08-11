@@ -108,10 +108,10 @@ void Newspaper::render(const RenderContext& ctx) {
     }
 
     // Render title centered on the surface
-    context_.font->render_text_onto(title_surface, current_article_->title,
-                                    ViewPoint{title_surface.width() / 2, 0},
-                                    title_font, title_color,
-                                    TextAnchor::Middle);
+    context_.font->render_text_onto(
+        title_surface, current_article_->title,
+        ViewPoint{title_surface.rect().center().x, 0}, title_font, title_color,
+        TextAnchor::Middle);
     // Render article image if present
     if (has_image) {
       // Blank out the side column, if we have a picture we don't display

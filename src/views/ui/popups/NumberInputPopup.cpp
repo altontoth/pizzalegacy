@@ -58,7 +58,7 @@ void NumberInputPopup::render(Surface& surface, ViewPoint origin) {
   auto pop = popup_surface(popup_width_, popup_height_);
 
   // Title
-  const int center_x = pop.width() / 2;
+  const int center_x = pop.rect().center().x;
   font_->render_text_onto(pop, text_, {center_x, 18}, FontFace::ASTANDAR, 6,
                           TextAnchor::Middle);
 

@@ -257,7 +257,6 @@ void Game::run() {
   overlays.push<GameInfoLayer>(context, state);
   overlays.push<TooltipLayer>(context, state, *tooltip_manager_);
 
-  // Before PopupManager: its per-frame popup items must outrank the lock.
   overlays.push<TurnLockLayer>(context, state);
 
   auto& popup_mgr = overlays.push<PopupManager>(context);

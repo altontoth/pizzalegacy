@@ -53,7 +53,7 @@ void InputPanel::layout_buttons() {
     // the names:
     std::string dbg_name = (n == 1) ? base : base + " #" + std::to_string(n);
     interactions_.create_persistent_item(button->location(), dbg_name, cb,
-                                         ttcb);
+                                         {.tooltip = ttcb});
   }
 }
 

@@ -19,7 +19,7 @@ TextInputPopup::TextInputPopup(const GameContext& context, std::string text,
 void TextInputPopup::render(Surface& surface, ViewPoint origin) {
   auto pop_surface = popup_surface(popup_width_, popup_height_);
 
-  const ViewPoint text_origin{pop_surface.width() / 2, 20};
+  const ViewPoint text_origin{pop_surface.rect().center().x, 20};
   const uint8_t text_box_bg = 13;
   const uint8_t text_color = 240;
 

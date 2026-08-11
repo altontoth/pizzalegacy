@@ -160,7 +160,7 @@ void MarketResearch::render_bar_chart(
           {icon_x, icon_y, icon_size, icon_size},
           "bar_chart_" + std::to_string(i),
           [](const views::ui::InteractionEvent&) {},
-          [tip](const views::ui::InteractionEvent& ie) {
+          {.tooltip = [tip](const views::ui::InteractionEvent& ie) {
             return TooltipRequest{
                 .text = tip,
                 .anchor = TooltipAnchor::Mouse,
@@ -171,7 +171,7 @@ void MarketResearch::render_bar_chart(
                 .border_color = 240,
                 .padding = 4,
             };
-          });
+          }});
     }
   }
 }

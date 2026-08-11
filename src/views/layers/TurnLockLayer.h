@@ -14,7 +14,7 @@ class GameState;
 
 // Blocks pointer interaction and shows a busy cursor while the end-of-turn
 // pipeline runs without waiting for player input. Popups the pipeline shows
-// register their interaction items later and stay clickable.
+// rank above the lock and stay clickable.
 class TurnLockLayer : public View, public OverlayBehavior<TurnLockLayer> {
 public:
   TurnLockLayer(GameContext& context, GameState& state);

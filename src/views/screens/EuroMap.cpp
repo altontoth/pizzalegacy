@@ -244,12 +244,11 @@ void EuroMap::render(const RenderContext& ctx) {
   }
   else if (hovered_city_) {
     constexpr int text_color = 255;
-    constexpr int center_offset = -40;
     const int center_x = ctx.surface->rect().center().x;
     context_.font->render_text_onto(
         *ctx.surface, core::city_name(*hovered_city_),
-        ViewPoint{center_x + center_offset, 190}, FontFace::ASTANDAR,
-        text_color, TextAnchor::Middle);
+        ViewPoint{center_x - 40, 190}, FontFace::ASTANDAR, text_color,
+        TextAnchor::Middle);
   }
 }
 

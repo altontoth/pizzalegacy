@@ -88,7 +88,7 @@ void Menu::update_interactions() {
         ++i;
         continue;
       }
-      views::ui::InteractionLayers::TooltipCb ttcb;
+      views::ui::TooltipCb ttcb;
       if (context_.config->options().qol_improvements) {
         if (std::string tt = menu_item->tooltip_text(); !tt.empty()) {
           ttcb = [tt = std::move(tt)](const views::ui::InteractionEvent& ie) {
@@ -143,8 +143,8 @@ void Menu::update_interactions() {
               mark_dirty();
             }
           },
-          std::move(ttcb), views::ui::InteractionLayer::Normal,
-          menu_item->drag_button());
+          {.tooltip = std::move(ttcb),
+           .drag_button = menu_item->drag_button()});
       y += size.h + line_spacing_;
       ++i;
     }

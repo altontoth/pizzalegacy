@@ -18,7 +18,8 @@ class GameState;
 
 class View : public Renderable {
 public:
-  View(GameContext& context, GameState& state);
+  View(GameContext& context, GameState& state,
+       int interaction_priority = views::ui::priority_default);
   virtual ~View() = default;
   void tick() override = 0;
   void render(const RenderContext& ctx) override = 0;

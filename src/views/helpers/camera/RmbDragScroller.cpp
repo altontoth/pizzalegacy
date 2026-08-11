@@ -34,8 +34,9 @@ void RmbDragScroller::add_interaction(views::ui::InteractionLayers& layers,
   // Register over the viewport, with right-button drag enabled.
   layers.create_persistent_item(
       viewport, "rmb_drag_scroller",
-      [this](const InteractionEvent& ev) { on_event(ev); }, {},
-      InteractionLayer::Background, MouseButton::Right);
+      [this](const InteractionEvent& ev) { on_event(ev); },
+      {.layer = InteractionLayer::Background,
+       .drag_button = MouseButton::Right});
 }
 
 void RmbDragScroller::on_event(const views::ui::InteractionEvent& ev) {

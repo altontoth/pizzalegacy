@@ -201,7 +201,6 @@ void GlobalStats::render_month_overview(const RenderContext& ctx) {
   constexpr int line_spacing = 18;
   constexpr uint8_t item_color = 240;
 
-  // Lambda for printing an individual line
   auto draw_label_and_amounts = [&](std::string_view label, Money last_m,
                                     Money this_m, ViewPoint pos) {
     context_.font->render_text_onto(*ctx.surface, compat::format("{}:", label),
@@ -216,11 +215,10 @@ void GlobalStats::render_month_overview(const RenderContext& ctx) {
                                     TextAnchor::End);
   };
 
-  // Clickable row dimensions (original coords * 2)
+  // Clickable row size, in original coords * 2.
   constexpr int row_width = 340;
   constexpr int row_height = 18;
 
-  // Lambda to create a clickable row
   auto create_clickable_row = [&](Account acct, ViewPoint pos, bool is_receipt,
                                   bool is_total, const std::string& label) {
     ViewRect click_area{pos.x, pos.y - 2, row_width, row_height};
@@ -428,8 +426,7 @@ void GlobalStats::render_month_overview_popup(
           mark_dirty();
         }
       },
-      {}, // no tooltip
-      views::ui::InteractionLayer::Exclusive);
+      {.layer = views::ui::InteractionLayer::Exclusive});
 
   // Create interaction for the popup (handles scroll and dismiss)
   interactions_.create_frame_item(
@@ -456,8 +453,7 @@ void GlobalStats::render_month_overview_popup(
           mark_dirty();
         }
       },
-      {}, // no tooltip
-      views::ui::InteractionLayer::Exclusive);
+      {.layer = views::ui::InteractionLayer::Exclusive});
 }
 
 void GlobalStats::render_bar_chart(

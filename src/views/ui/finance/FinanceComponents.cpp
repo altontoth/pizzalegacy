@@ -42,7 +42,7 @@ Surface render_invoice(FontManager& font, const InvoiceConfig& config) {
   ViewRect very_inner_box = inner_box.inset(8, 8);
   invoice.fill_rect(very_inner_box, config.background_color);
 
-  const int center_x = invoice.width() / 2;
+  const int center_x = invoice.rect().center().x;
 
   font.render_text_onto(invoice, config.title,
                         {center_x + config.title_pos.x, config.title_pos.y},
@@ -60,6 +60,27 @@ Surface render_invoice(FontManager& font, const InvoiceConfig& config) {
       {center_x + config.separator_pos.x, config.separator_pos.y},
       FontFace::CSTANDAR, COLOR_BLACK, TextAnchor::Middle);
 
+  // A label with a value is always left aligned, without a value it can
+  // be right or center aligned.
+  struct LabelAnchor {
+    int x;
+    TextAnchor anchor;
+  };
+  auto label_anchor = [&](const InvoiceLine& line) -> LabelAnchor {
+    if (line.value.has_value()) {
+      return {.x = config.label_x, .anchor = TextAnchor::Start};
+    }
+    switch (line.align) {
+    case TextAnchor::Middle:
+      return {.x = center_x, .anchor = TextAnchor::Middle};
+    case TextAnchor::End:
+      return {.x = config.value_x, .anchor = TextAnchor::End};
+    case TextAnchor::Start:
+      break;
+    }
+    return {.x = config.label_x, .anchor = TextAnchor::Start};
+  };
+
   // Render line items
   int y = config.line_start_y;
   for (const auto& line : config.lines) {
@@ -71,24 +92,10 @@ Surface render_invoice(FontManager& font, const InvoiceConfig& config) {
       continue;
     }
 
-    // A label with a value is always the left column; on its own it can also
-    // sit at the center or against the value column.
-    auto label_anchor_x = [&] {
-      switch (line.align) {
-      case TextAnchor::Middle:
-        return center_x;
-      case TextAnchor::End:
-        return config.value_x;
-      case TextAnchor::Start:
-        break;
-      }
-      return config.label_x;
-    };
-    const auto align = has_value ? TextAnchor::Start : line.align;
-    const auto x_pos = has_value ? config.label_x : label_anchor_x();
     if (has_label) {
-      font.render_text_onto(invoice, line.label, ViewPoint{x_pos, y},
-                            config.line_font, COLOR_BLACK, align);
+      const auto label = label_anchor(line);
+      font.render_text_onto(invoice, line.label, ViewPoint{label.x, y},
+                            config.line_font, COLOR_BLACK, label.anchor);
     }
 
     if (has_value) {

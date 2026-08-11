@@ -10,8 +10,9 @@
 #include "engine/ui/InteractionLayers.h"
 
 PopupManager::PopupManager(GameContext& gc)
-    : context_(gc), interactions_(gc.interaction->make_layer(),
-                                  gc.interaction->make_layer()) {}
+    : context_(gc),
+      interactions_(gc.interaction->make_layer(), gc.interaction->make_layer(),
+                    views::ui::priority_popup) {}
 
 void PopupManager::origin(ViewPoint p) { pending_origin_ = p; }
 
@@ -68,8 +69,7 @@ void PopupManager::render(const RenderContext& ctx) {
                  DisplayConstants::SCREEN_HEIGHT},
         "popup_backdrop",
         [](const views::ui::InteractionEvent& ev) { /* No-op */ },
-        {}, // no tooltip
-        views::ui::InteractionLayer::Exclusive);
+        {.layer = views::ui::InteractionLayer::Exclusive});
 
     views::ui::InteractionContext ui{
         .layers = interactions_, .invalidate = [this] { mark_self_dirty(); }};

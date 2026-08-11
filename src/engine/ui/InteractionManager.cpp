@@ -8,11 +8,56 @@
 
 #include <algorithm>
 #include <cstdlib>
+#include <utility>
+#include <vector>
 
 #include "engine/DisplayConstants.h"
 #include "engine/SDL_include.h"
 
 namespace views::ui {
+
+InteractionManager::HitResult InteractionManager::hit_test(ViewPoint p) const {
+  HitResult result;
+  std::optional<Rank> top;
+
+  for (const auto& item : items_) {
+    if (item.layer_type == InteractionLayer::Background ||
+        !item.rect.contains(p)) {
+      continue;
+    }
+    const Rank rank = rank_of(item);
+    if (!top || rank.outranks(*top)) {
+      top = rank;
+      result.normal = item.id;
+    }
+    if (item.layer_type == InteractionLayer::Exclusive &&
+        (!result.blocker || rank.outranks(*result.blocker))) {
+      result.blocker = rank;
+    }
+  }
+
+  std::vector<std::pair<Rank, ItemID>> background;
+  for (const auto& item : items_) {
+    if (item.layer_type != InteractionLayer::Background ||
+        !item.rect.contains(p)) {
+      continue;
+    }
+    const Rank rank = rank_of(item);
+    if (result.blocker && !rank.outranks(*result.blocker)) {
+      continue;
+    }
+    background.emplace_back(rank, item.id);
+  }
+  std::sort(
+      background.begin(), background.end(),
+      [](const auto& a, const auto& b) { return a.first.outranks(b.first); });
+
+  result.background.reserve(background.size());
+  for (const auto& [rank, id] : background) {
+    result.background.push_back(id);
+  }
+  return result;
+}
 
 // Handles items_ being modified during iteration (callbacks can destroy items).
 void InteractionManager::process(const SDL_Event& e) {
@@ -22,28 +67,9 @@ void InteractionManager::process(const SDL_Event& e) {
     ViewPoint p = screen_to_view_point(sp);
     MouseButton btn = to_button(e);
 
-    ItemID normal_id = 0;
-    std::vector<ItemID> background_ids;
-    bool is_exclusive = false;
-
-    for (const auto& item : items_) {
-      if (!item.rect.contains(p)) {
-        continue;
-      }
-
-      if (item.layer_type == InteractionLayer::Normal && normal_id == 0) {
-        normal_id = item.id;
-      }
-      else if (item.layer_type == InteractionLayer::Exclusive) {
-        if (normal_id == 0) {
-          normal_id = item.id;
-        }
-        is_exclusive = true;
-      }
-      else if (item.layer_type == InteractionLayer::Background) {
-        background_ids.push_back(item.id);
-      }
-    }
+    const auto hit = hit_test(p);
+    const ItemID normal_id = hit.normal;
+    const auto& background_ids = hit.background;
 
     if (normal_id != 0) {
       auto* item = lookup_item(normal_id);
@@ -60,18 +86,16 @@ void InteractionManager::process(const SDL_Event& e) {
       }
     }
 
-    if (!is_exclusive) {
-      for (ItemID id : background_ids) {
-        auto* item = lookup_item(id);
-        if (item) {
-          if (btn == MouseButton::Left) {
-            item->active_left = true;
-          }
-          else {
-            item->active_right = true;
-          }
-          dispatch(*item, InteractionEvent::Type::ButtonDown, btn, p);
+    for (ItemID id : background_ids) {
+      auto* item = lookup_item(id);
+      if (item) {
+        if (btn == MouseButton::Left) {
+          item->active_left = true;
         }
+        else {
+          item->active_right = true;
+        }
+        dispatch(*item, InteractionEvent::Type::ButtonDown, btn, p);
       }
     }
 
@@ -85,7 +109,7 @@ void InteractionManager::process(const SDL_Event& e) {
           drag_id = normal_id;
         }
       }
-      if (drag_id == 0 && !is_exclusive) {
+      if (drag_id == 0) {
         for (ItemID id : background_ids) {
           if (auto* it = lookup_item(id); it && it->drag_button == btn) {
             drag_id = id;
@@ -201,28 +225,9 @@ void InteractionManager::process(const SDL_Event& e) {
   case SDL_EVENT_MOUSE_WHEEL: {
     ViewPoint p = last_logical_mouse_pos_;
 
-    ItemID normal_id = 0;
-    std::vector<ItemID> background_ids;
-    bool is_exclusive = false;
-
-    for (const auto& item : items_) {
-      if (!item.rect.contains(p)) {
-        continue;
-      }
-
-      if (item.layer_type == InteractionLayer::Normal && normal_id == 0) {
-        normal_id = item.id;
-      }
-      else if (item.layer_type == InteractionLayer::Exclusive) {
-        if (normal_id == 0) {
-          normal_id = item.id;
-        }
-        is_exclusive = true;
-      }
-      else if (item.layer_type == InteractionLayer::Background) {
-        background_ids.push_back(item.id);
-      }
-    }
+    const auto hit = hit_test(p);
+    const ItemID normal_id = hit.normal;
+    const auto& background_ids = hit.background;
 
     int scroll_delta = static_cast<int>(e.wheel.y);
     int scroll_delta_x = static_cast<int>(e.wheel.x);
@@ -241,19 +246,17 @@ void InteractionManager::process(const SDL_Event& e) {
       }
     }
 
-    if (!is_exclusive) {
-      for (ItemID id : background_ids) {
-        auto* item = lookup_item(id);
-        if (item) {
-          InteractionEvent ie;
-          ie.type = InteractionEvent::Type::Scroll;
-          ie.button = MouseButton::Left;
-          ie.pos = p;
-          ie.local = ViewPoint{p.x - item->rect.x, p.y - item->rect.y};
-          ie.scroll_delta = scroll_delta;
-          ie.scroll_delta_x = scroll_delta_x;
-          item->callback(ie);
-        }
+    for (ItemID id : background_ids) {
+      auto* item = lookup_item(id);
+      if (item) {
+        InteractionEvent ie;
+        ie.type = InteractionEvent::Type::Scroll;
+        ie.button = MouseButton::Left;
+        ie.pos = p;
+        ie.local = ViewPoint{p.x - item->rect.x, p.y - item->rect.y};
+        ie.scroll_delta = scroll_delta;
+        ie.scroll_delta_x = scroll_delta_x;
+        item->callback(ie);
       }
     }
     break;
@@ -295,21 +298,9 @@ void InteractionManager::update_mouse(ScreenPoint sp) {
   ViewPoint p = screen_to_view_point(sp);
   last_logical_mouse_pos_ = p;
 
-  ItemID found_normal = 0;
-  bool is_exclusive = false;
-  for (const auto& it : items_) {
-    if (it.layer_type == InteractionLayer::Background) {
-      continue;
-    }
-    if (it.rect.contains(p)) {
-      if (found_normal == 0) {
-        found_normal = it.id;
-      }
-      if (it.layer_type == InteractionLayer::Exclusive) {
-        is_exclusive = true;
-      }
-    }
-  }
+  const auto hit = hit_test(p);
+  ItemID found_normal = hit.normal;
+  auto blocker = hit.blocker;
 
   // If the drag source vanished, abandon the drag
   if (drag_source_ != 0 && lookup_item(drag_source_) == nullptr) {
@@ -343,7 +334,7 @@ void InteractionManager::update_mouse(ScreenPoint sp) {
       drag_last_pos_ = p;
     }
     found_normal = 0;
-    is_exclusive = false;
+    blocker.reset();
   }
 
   if (found_normal != current_hover_) {
@@ -373,7 +364,7 @@ void InteractionManager::update_mouse(ScreenPoint sp) {
   }
 
   // Collect background states upfront to avoid iterator invalidation
-  if (!is_exclusive) {
+  {
     struct BgItemState {
       ItemID id;
       bool was_hovered;
@@ -385,9 +376,12 @@ void InteractionManager::update_mouse(ScreenPoint sp) {
       if (item.layer_type != InteractionLayer::Background) {
         continue;
       }
+      // A blocked item counts as outside, so it gets a Leave rather than
+      // holding its hover state until the blocker goes away.
+      const bool blocked = blocker && !rank_of(item).outranks(*blocker);
       bg_states.push_back({.id = item.id,
                            .was_hovered = item.hovered,
-                           .now_inside = item.rect.contains(p)});
+                           .now_inside = !blocked && item.rect.contains(p)});
     }
 
     for (const auto& state : bg_states) {
@@ -414,10 +408,22 @@ void InteractionManager::update_mouse(ScreenPoint sp) {
 }
 
 void InteractionManager::dump_layers(std::ostream& os) const {
-  os << "Interaction Layers\n";
-  for (auto const& it : items_) {
-    os << "ID: " << it.id << "  Layer: " << it.layer << "  Name: \"" << it.name
-       << "\""
+  os << "Interaction Layers (topmost first)\n";
+
+  std::vector<const InteractionItem*> ranked;
+  ranked.reserve(items_.size());
+  for (const auto& it : items_) {
+    ranked.push_back(&it);
+  }
+  std::sort(ranked.begin(), ranked.end(),
+            [](const InteractionItem* a, const InteractionItem* b) {
+              return rank_of(*a).outranks(rank_of(*b));
+            });
+
+  for (const auto* item : ranked) {
+    const auto& it = *item;
+    os << "ID: " << it.id << "  Layer: " << it.layer
+       << "  Priority: " << it.priority << "  Name: \"" << it.name << "\""
        << "  ViewRect: {x=" << it.rect.x << ", y=" << it.rect.y
        << ", w=" << it.rect.w << ", h=" << it.rect.h << "}\n";
   }

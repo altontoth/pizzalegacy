@@ -54,13 +54,16 @@ template <typename Tag> struct TypedRect {
     return TypedPoint<Tag>{x, y};
   }
 
-  [[nodiscard]] TypedPoint<Tag> center() const noexcept {
+  [[nodiscard]] constexpr TypedPoint<Tag> center() const noexcept {
     return TypedPoint<Tag>{x + (w / 2), y + (h / 2)};
   }
 
+  // Edges are inclusive, matching contains().
   [[nodiscard]] constexpr int right() const noexcept { return x + w; }
 
-  [[nodiscard]] Size size() const noexcept { return Size{w, h}; }
+  [[nodiscard]] constexpr int bottom() const noexcept { return y + h; }
+
+  [[nodiscard]] constexpr Size size() const noexcept { return Size{w, h}; }
 
   // Operator Overloads
   [[nodiscard]] bool operator==(const TypedRect& other) const noexcept {

@@ -628,7 +628,7 @@ void AnimatedStats::render_capacity(const RenderContext& ctx) {
     auto tooltip = [&](ViewRect r, std::string_view id, std::string_view text) {
       interactions_.create_frame_item(
           r, id, [](const views::ui::InteractionEvent&) {},
-          [text](const views::ui::InteractionEvent& ie) {
+          {.tooltip = [text](const views::ui::InteractionEvent& ie) {
             return TooltipRequest{.text = std::string(text),
                                   .anchor = TooltipAnchor::Mouse,
                                   .screenPos = ie.pos,
@@ -637,7 +637,7 @@ void AnimatedStats::render_capacity(const RenderContext& ctx) {
                                   .text_color = 240,
                                   .border_color = 240,
                                   .padding = 4};
-          });
+          }});
     };
 
     static constexpr std::array<std::string_view, 5> CAT_IDS = {
@@ -967,7 +967,7 @@ void AnimatedStats::render_production(const RenderContext& ctx) {
     auto tip = [&](ViewRect r, std::string_view id, std::string_view text) {
       interactions_.create_frame_item(
           r, id, [](const views::ui::InteractionEvent&) {},
-          [text](const views::ui::InteractionEvent& ie) {
+          {.tooltip = [text](const views::ui::InteractionEvent& ie) {
             return TooltipRequest{.text = std::string(text),
                                   .anchor = TooltipAnchor::Mouse,
                                   .screenPos = ie.pos,
@@ -976,7 +976,7 @@ void AnimatedStats::render_production(const RenderContext& ctx) {
                                   .text_color = 240,
                                   .border_color = 240,
                                   .padding = 4};
-          });
+          }});
     };
 
     tip({(76 * 2) - WL, (34 * 2) - WT, 63 * 2, 44 * 2}, "prod_north",
