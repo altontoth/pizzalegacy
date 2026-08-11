@@ -404,6 +404,11 @@ public:
   void ai_adjust_profit_days(int delta) { ai_profit_days_ += delta; }
   void ai_increment_profit_days() { ai_adjust_profit_days(1); }
 
+  // For the save system; during play these come from init_ai_economy.
+  void ai_tier(int tier) { ai_tier_ = tier; }
+  void ai_capacity_target(int seats) { ai_capacity_target_ = seats; }
+  void ai_profit_days(int days) { ai_profit_days_ = days; }
+
   int ai_layout_index() const { return ai_layout_index_; }
   // Furniture pieces placed, and the daily percentage chance of placing no
   // more, so an AI restaurant fills up and then stops.

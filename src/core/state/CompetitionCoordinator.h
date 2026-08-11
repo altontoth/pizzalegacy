@@ -52,6 +52,7 @@ public:
   void tick();
 
   int competition_count() const { return competition_count_; }
+  void competition_count(int count) { competition_count_ = count; }
   void increment_competition_count() {
     competition_count_ = std::min(competition_count_ + 1, 255);
   }

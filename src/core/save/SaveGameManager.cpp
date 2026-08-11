@@ -641,6 +641,28 @@ json SaveGameManager::state_to_json(const GameState& state,
     j["deferred_racket_offers"] = racket_array;
   }
 
+  {
+    json alert_array = json::array();
+    for (const auto& alert : state.turn().deferred_manager_alerts()) {
+      alert_array.push_back({{"restaurant_id", alert.restaurant_id.value},
+                             {"message", alert.message},
+                             {"display_block", alert.display_block}});
+    }
+    j["deferred_manager_alerts"] = alert_array;
+  }
+
+  j["floor_editing_bonus_shown"] = state.turn().floor_editing_bonus_shown();
+  j["competition_count"] = state.competitions().competition_count();
+  j["global_interest_rate"] = state.global_interest_rate();
+  j["protection_roll_phase"] = state.protection_roll_phase();
+  j["refused_call_actors"] = state.refused_call_actors();
+
+  json player_cities = json::array();
+  for (const auto& city_id : state.player_cities()) {
+    player_cities.push_back(city_id ? json(city_id->value) : json(nullptr));
+  }
+  j["player_cities"] = player_cities;
+
   // Save shown message history with dates (for CV display and deduplication)
   json shown_msgs;
   for (size_t pid = 0; pid < players.size(); ++pid) {
@@ -894,6 +916,42 @@ void SaveGameManager::json_to_state(const json& j, GameState& state,
         entries.push_back({date, id, val.value("shown", true)});
       }
       state.career_log().restore_scheduled(pid, entries);
+    }
+  }
+
+  if (j.contains("deferred_manager_alerts")) {
+    for (const auto& alert : j["deferred_manager_alerts"]) {
+      state.turn().restore_deferred_manager_alert(
+          {.restaurant_id =
+               core::RestaurantId{alert["restaurant_id"].get<int>()},
+           .message = alert["message"].get<std::string>(),
+           .display_block = alert["display_block"].get<int>()});
+    }
+  }
+
+  state.turn().floor_editing_bonus_shown(
+      j.value("floor_editing_bonus_shown", false));
+  state.competitions().competition_count(j.value("competition_count", 0));
+  state.global_interest_rate(j.value("global_interest_rate", 8));
+  state.protection_roll_phase(j.value("protection_roll_phase", 0));
+
+  if (j.contains("refused_call_actors")) {
+    for (const auto& actor_id : j["refused_call_actors"]) {
+      state.refuse_calls_from(actor_id.get<int>());
+    }
+  }
+
+  if (j.contains("player_cities")) {
+    const auto& cities = j["player_cities"];
+    for (int i = 0;
+         i < NUMBER_OF_PLAYERS && i < static_cast<int>(cities.size()); ++i) {
+      if (cities[i].is_null()) {
+        state.player_city(core::PlayerId{i}, std::nullopt);
+      }
+      else {
+        state.player_city(core::PlayerId{i},
+                          core::CityId{cities[i].get<int>()});
+      }
     }
   }
 

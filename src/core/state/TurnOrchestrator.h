@@ -162,6 +162,18 @@ public:
   void restore_deferred_racket_offer(const DeferredRacketOffer& offer) {
     deferred_racket_offers_.push_back(offer);
   }
+  const std::vector<DeferredManagerAlert>& deferred_manager_alerts() const {
+    return deferred_manager_alerts_;
+  }
+  void restore_deferred_manager_alert(const DeferredManagerAlert& alert) {
+    deferred_manager_alerts_.push_back(alert);
+  }
+
+  // Once per game, to the first human ending a turn on the anniversary.
+  bool floor_editing_bonus_shown() const { return floor_editing_bonus_shown_; }
+  void floor_editing_bonus_shown(bool shown) {
+    floor_editing_bonus_shown_ = shown;
+  }
 
 private:
   turn::StepResult execute_pipeline_step(const turn::Step& step);

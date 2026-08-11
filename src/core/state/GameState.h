@@ -284,6 +284,7 @@ public:
   void refuse_calls_from(int actor_id);
   bool is_refusing_calls(int actor_id) const;
   void clear_all_refused_calls();
+  std::vector<int> refused_call_actors() const;
   void eliminate_player(core::PlayerId id, GameOverCause cause);
   void trigger_win_sequence(core::PlayerId pid);
 
@@ -311,6 +312,18 @@ public:
 
   void on_city_entered(core::CityId city_id, const Player& player);
   void check_mafia_events();
+
+  // Which city each player is standing in; decides what gets simulated.
+  const std::array<std::optional<core::CityId>, NUMBER_OF_PLAYERS>&
+  player_cities() const {
+    return player_city_;
+  }
+  void player_city(core::PlayerId pid, std::optional<core::CityId> city_id) {
+    player_city_[pid.value] = city_id;
+  }
+
+  int protection_roll_phase() const { return protection_roll_phase_; }
+  void protection_roll_phase(int phase) { protection_roll_phase_ = phase; }
 
   struct RacketOffer {
     core::RestaurantId restaurant_id;

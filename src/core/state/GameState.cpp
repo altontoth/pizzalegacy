@@ -1320,6 +1320,13 @@ void GameState::refuse_calls_from(int actor_id) {
   actors_refusing_calls_.insert(actor_id);
 }
 
+std::vector<int> GameState::refused_call_actors() const {
+  std::vector<int> ids(actors_refusing_calls_.begin(),
+                       actors_refusing_calls_.end());
+  std::ranges::sort(ids);
+  return ids;
+}
+
 bool GameState::is_refusing_calls(int actor_id) const {
   return actors_refusing_calls_.contains(actor_id);
 }

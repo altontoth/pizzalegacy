@@ -9,6 +9,7 @@
 #include "core/city/CityNames.h"
 #include "core/city/District.h"
 #include "core/city/Property.h"
+#include "core/finance/Money.h"
 #include "core/food/Ingredient.h"
 #include "core/food/IngredientCategory.h"
 #include "core/util/Constants.h"
@@ -31,7 +32,7 @@ std::ostream& operator<<(std::ostream& os, const City& city) {
   return os;
 }
 
-City::City(core::CityId id) : id_(id) { init_advertising_options(); }
+City::City(core::CityId id) : id_(id) {}
 
 City::~City() = default;
 
@@ -78,20 +79,21 @@ void City::replenish_supplier_stock_levels() {
 }
 
 void City::init_advertising_options() {
+  // The original just has one loop for posters and tv ads combined, so the
+  // randomization is slightly different from the original. I prefer having
+  // separate counts of posters and TV ads so that's why I split it across two
+  // loops.
   for (int i = 0; i < NUMBER_OF_POSTERS; ++i) {
     int effectiveness = engine::random::rand_max_n(30) + 30;
-    int random_component = engine::random::rand_max_n(25);
-    int cost = (random_component + effectiveness) * 40;
-
-    poster_rates_[i] = {.effectiveness = effectiveness, .cost = cost};
+    int dollars = (effectiveness + engine::random::rand_max_n(25)) * 40;
+    poster_rates_[i] = {.effectiveness = effectiveness,
+                        .cost = dollars * 1_usd};
   }
 
   for (int i = 0; i < NUMBER_OF_TV_ADS; ++i) {
     int effectiveness = engine::random::rand_max_n(50) + 50;
-    int random_component = engine::random::rand_max_n(20);
-    int cost = (random_component + effectiveness) * 100;
-
-    tv_ad_rates_[i] = {.effectiveness = effectiveness, .cost = cost};
+    int dollars = (effectiveness + engine::random::rand_max_n(20)) * 100;
+    tv_ad_rates_[i] = {.effectiveness = effectiveness, .cost = dollars * 1_usd};
   }
 }
 
@@ -548,6 +550,18 @@ Money City::vendor_spending_this_week(core::PlayerId player_id,
     return it->second;
   }
   return Money{0};
+}
+
+void City::restore_vendor_spending(core::PlayerId player_id, uint8_t vendor_id,
+                                   Money amount) {
+  assert(player_id.value >= 0 && player_id.value < NUMBER_OF_PLAYERS);
+  weekly_vendor_spending_[player_id.value][vendor_id] = amount;
+}
+
+const std::unordered_map<uint8_t, Money>&
+City::weekly_vendor_spending(core::PlayerId player_id) const {
+  assert(player_id.value >= 0 && player_id.value < NUMBER_OF_PLAYERS);
+  return weekly_vendor_spending_[player_id.value];
 }
 
 void City::reset_weekly_vendor_spending() {

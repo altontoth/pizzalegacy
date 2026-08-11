@@ -197,11 +197,14 @@ public:
   }
 
   // Advertising campaign options (randomized at city init)
-  void poster_rates(const std::array<AdvertisingRate, 9>& rates) {
+  void init_advertising_options();
+
+  void
+  poster_rates(const std::array<AdvertisingRate, NUMBER_OF_POSTERS>& rates) {
     poster_rates_ = rates;
   }
 
-  void tv_ad_rates(const std::array<AdvertisingRate, 9>& rates) {
+  void tv_ad_rates(const std::array<AdvertisingRate, NUMBER_OF_TV_ADS>& rates) {
     tv_ad_rates_ = rates;
   }
 
@@ -284,6 +287,11 @@ public:
                               Money amount);
   Money vendor_spending_this_week(core::PlayerId player_id,
                                   uint8_t vendor_id) const;
+  const std::unordered_map<uint8_t, Money>&
+  weekly_vendor_spending(core::PlayerId player_id) const;
+  // Overwrites the running total rather than adding to it.
+  void restore_vendor_spending(core::PlayerId player_id, uint8_t vendor_id,
+                               Money amount);
   void reset_weekly_vendor_spending();
 
   // Arms dealer visibility tracking (per-player)
@@ -325,7 +333,6 @@ public:
   }
 
 private:
-  void init_advertising_options();
   void init_supplier_stock_levels();
   void replenish_supplier_stock_levels();
 
@@ -339,8 +346,8 @@ private:
 
   // Suppliers:
   std::vector<std::unique_ptr<FoodSupplier>> suppliers_;
-  std::array<AdvertisingRate, 9> poster_rates_;
-  std::array<AdvertisingRate, 9> tv_ad_rates_;
+  std::array<AdvertisingRate, NUMBER_OF_POSTERS> poster_rates_{};
+  std::array<AdvertisingRate, NUMBER_OF_TV_ADS> tv_ad_rates_{};
 
   // Named buildings and related info:
   std::map<int, std::string> named_buildings_;

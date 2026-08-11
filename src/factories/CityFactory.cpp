@@ -562,29 +562,7 @@ void CityFactory::build_city_object(City& city, int id) {
   city.suppliers(std::move(suppliers_));
   city.ingredient_base_prices(ingredient_base_prices_);
 
-  // Initialize advertising campaign options (randomized per city)
-  // Assembly: init_city.asm lines 342-367
-  std::array<AdvertisingRate, 9> poster_options;
-  std::array<AdvertisingRate, 9> tv_ad_options;
-
-  for (int i = 0; i < 9; i++) {
-    // Poster effectiveness: random(30) + 30 = 30-59%
-    int poster_eff = engine::random::rand_max_n(30) + 30;
-    poster_options[i].effectiveness = poster_eff;
-    // Poster cost: (effectiveness + random(25)) * 40
-    poster_options[i].cost =
-        (poster_eff + engine::random::rand_max_n(25)) * 40 * 100;
-
-    // TV ad effectiveness: random(50) + 50 = 50-99%
-    int tv_eff = engine::random::rand_max_n(50) + 50;
-    tv_ad_options[i].effectiveness = tv_eff;
-    // TV ad cost: (effectiveness + random(20)) * 100
-    tv_ad_options[i].cost =
-        (tv_eff + engine::random::rand_max_n(20)) * 100 * 100;
-  }
-
-  city.poster_rates(poster_options);
-  city.tv_ad_rates(tv_ad_options);
+  city.init_advertising_options();
 
   // Initialize known arms dealers for all players
   for (int player_idx = 0; player_idx < NUMBER_OF_PLAYERS; ++player_idx) {

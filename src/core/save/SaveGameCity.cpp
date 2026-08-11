@@ -15,6 +15,7 @@
 #include "core/city/MayorOffice.h"
 #include "core/city/Property.h"
 #include "core/food/IngredientCategory.h"
+#include "core/marketing/AdvertisingCampaign.h"
 #include "core/newspaper/NewspaperEventSystem.h"
 #include "core/newspaper/NewspaperState.h"
 #include "core/supply/FoodSupplier.h"
@@ -522,6 +523,41 @@ json city_to_json(const City& city) {
   j["control_map"] = control_map_to_json(city.control_map());
   j["economy_trend"] = economy_trend_to_json(city.economy_trend());
 
+  json embargoes = json::array();
+  for (auto cat : ALL_INGREDIENT_CATEGORIES) {
+    embargoes.push_back(city.trade_embargo_counter(cat));
+  }
+  j["trade_embargoes"] = embargoes;
+
+  // The rates are rolled per city when it is first built, so a reload would
+  // otherwise offer the player different prices than the ones they saved on.
+  json poster_rates = json::array();
+  for (int i = 0; i < NUMBER_OF_POSTERS; ++i) {
+    const auto& poster = city.poster_option(i);
+    poster_rates.push_back(
+        {{"effectiveness", poster.effectiveness}, {"cost", poster.cost.cents}});
+  }
+  j["poster_rates"] = poster_rates;
+
+  json tv_ad_rates = json::array();
+  for (int i = 0; i < NUMBER_OF_TV_ADS; ++i) {
+    const auto& tv_ad = city.tv_ad_option(i);
+    tv_ad_rates.push_back(
+        {{"effectiveness", tv_ad.effectiveness}, {"cost", tv_ad.cost.cents}});
+  }
+  j["tv_ad_rates"] = tv_ad_rates;
+
+  json vendor_spending = json::array();
+  for (int player_idx = 0; player_idx < NUMBER_OF_PLAYERS; ++player_idx) {
+    json per_player = json::object();
+    for (const auto& [vendor_id, spent] :
+         city.weekly_vendor_spending(core::PlayerId{player_idx})) {
+      per_player[std::to_string(vendor_id)] = spent.cents;
+    }
+    vendor_spending.push_back(per_player);
+  }
+  j["weekly_vendor_spending"] = vendor_spending;
+
   // Save known arms dealers per player
   json known_arms_dealers_array = json::array();
   for (int player_idx = 0; player_idx < NUMBER_OF_PLAYERS; ++player_idx) {
@@ -757,6 +793,49 @@ void json_to_city(const json& j, City& city) {
       }
     }
     city.newspaper_event_system().restore_scheduled(types, countdowns);
+  }
+
+  if (j.contains("trade_embargoes")) {
+    const auto& embargoes = j["trade_embargoes"];
+    for (std::size_t c = 0;
+         c < ALL_INGREDIENT_CATEGORIES.size() && c < embargoes.size(); ++c) {
+      city.trade_embargo_counter(ALL_INGREDIENT_CATEGORIES[c],
+                                 embargoes[c].get<int>());
+    }
+  }
+
+  if (j.contains("poster_rates")) {
+    const auto& saved = j["poster_rates"];
+    std::array<AdvertisingRate, NUMBER_OF_POSTERS> posters{};
+    for (std::size_t i = 0; i < posters.size() && i < saved.size(); ++i) {
+      posters[i].effectiveness = saved[i]["effectiveness"].get<int>();
+      posters[i].cost = Money{saved[i]["cost"].get<int64_t>()};
+    }
+    city.poster_rates(posters);
+  }
+
+  if (j.contains("tv_ad_rates")) {
+    const auto& saved = j["tv_ad_rates"];
+    std::array<AdvertisingRate, NUMBER_OF_TV_ADS> tv_ads{};
+    for (std::size_t i = 0; i < tv_ads.size() && i < saved.size(); ++i) {
+      tv_ads[i].effectiveness = saved[i]["effectiveness"].get<int>();
+      tv_ads[i].cost = Money{saved[i]["cost"].get<int64_t>()};
+    }
+    city.tv_ad_rates(tv_ads);
+  }
+
+  if (j.contains("weekly_vendor_spending")) {
+    const auto& spending = j["weekly_vendor_spending"];
+    for (int player_idx = 0; player_idx < NUMBER_OF_PLAYERS &&
+                             player_idx < static_cast<int>(spending.size());
+         ++player_idx) {
+      for (const auto& [vendor_key, cents] : spending[player_idx].items()) {
+        city.restore_vendor_spending(
+            core::PlayerId{player_idx},
+            static_cast<uint8_t>(std::stoi(vendor_key)),
+            Money{cents.get<int64_t>()});
+      }
+    }
   }
 }
 

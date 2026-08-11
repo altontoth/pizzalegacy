@@ -299,6 +299,15 @@ json restaurant_to_json(const Restaurant& restaurant) {
   j["forced_days_remaining"] = restaurant.forced_days_remaining();
   j["ai_layout_index"] = restaurant.ai_layout_index();
   j["ai_furniture_count"] = restaurant.ai_furniture_count();
+  j["ai_tier"] = restaurant.ai_tier();
+  j["ai_capacity_target"] = restaurant.ai_capacity_target();
+  j["ai_profit_days"] = restaurant.ai_profit_days();
+
+  json suppliers = json::array();
+  for (const auto& chosen : restaurant.preferred_suppliers()) {
+    suppliers.push_back(chosen ? json(*chosen) : json(nullptr));
+  }
+  j["preferred_suppliers"] = suppliers;
   j["kitchen_size"] = {{"w", restaurant.kitchen_size().w},
                        {"h", restaurant.kitchen_size().h}};
 
@@ -431,6 +440,22 @@ std::unique_ptr<Restaurant> json_to_restaurant(const json& j,
   if (j.contains("ai_layout_index")) {
     restaurant->ai_layout(j["ai_layout_index"].get<int>(),
                           j.value("ai_furniture_count", 0));
+  }
+
+  if (j.contains("ai_tier")) {
+    restaurant->ai_tier(j["ai_tier"].get<int>());
+    restaurant->ai_capacity_target(j.value("ai_capacity_target", 0));
+    restaurant->ai_profit_days(j.value("ai_profit_days", 0));
+  }
+
+  if (j.contains("preferred_suppliers")) {
+    auto& chosen = restaurant->preferred_suppliers().data();
+    const auto& arr = j["preferred_suppliers"];
+    for (std::size_t c = 0; c < chosen.size() && c < arr.size(); ++c) {
+      if (!arr[c].is_null()) {
+        chosen[c] = arr[c].get<int>();
+      }
+    }
   }
 
   // Restore open state

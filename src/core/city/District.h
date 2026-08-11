@@ -113,12 +113,12 @@ private:
       population_percentages_;
   // Raw unnormalized demographic demand values (for customer calculations)
   std::array<float, static_cast<std::size_t>(PopulationType::count)>
-      demographic_demand_;
-  uint16_t average_income_factor_;
-  DistrictType district_type_;
+      demographic_demand_{};
+  uint16_t average_income_factor_{0};
+  DistrictType district_type_{DistrictType::unknown};
   int traffic_density_{0};
   int crime_statistics_{0};
-  uint8_t color_;
+  uint8_t color_{0};
   int average_size_{-1};
   int average_size_modifier_{-1};
   int premises_availability_{-1};
