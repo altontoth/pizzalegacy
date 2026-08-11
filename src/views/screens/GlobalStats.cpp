@@ -194,8 +194,10 @@ void GlobalStats::render_month_overview(const RenderContext& ctx) {
   auto restaurants = state_.restaurants_for(state_.active_player()->id());
 
   // Value columns, right-aligned against the panel edge.
-  const int last_month_x = ctx.surface->width() - 146;
-  const int this_month_x = ctx.surface->width() - 30;
+  const int right_edge = ctx.surface->rect().right();
+  const int last_month_x = right_edge - 146;
+  const int this_month_x = right_edge - 30;
+  constexpr int label_x = 18;
   constexpr int line_spacing = 18;
   constexpr uint8_t item_color = 240;
 
@@ -215,14 +217,13 @@ void GlobalStats::render_month_overview(const RenderContext& ctx) {
   };
 
   // Clickable row dimensions (original coords * 2)
-  constexpr int row_x = 18;
   constexpr int row_width = 340;
   constexpr int row_height = 18;
 
   // Lambda to create a clickable row
   auto create_clickable_row = [&](Account acct, ViewPoint pos, bool is_receipt,
                                   bool is_total, const std::string& label) {
-    ViewRect click_area{row_x, pos.y - 2, row_width, row_height};
+    ViewRect click_area{pos.x, pos.y - 2, row_width, row_height};
     interactions_.create_frame_item(
         click_area, label, [this, acct, is_receipt, is_total](auto& ie) {
           if (ie.type == views::ui::InteractionEvent::Type::Click &&
@@ -242,7 +243,7 @@ void GlobalStats::render_month_overview(const RenderContext& ctx) {
   Money receipts_this = 0_usd;
   Money receipts_last = 0_usd;
   {
-    ViewPoint pos{18, 72};
+    ViewPoint pos{label_x, 72};
 
     // Current month is summed per restaurant (so the drill-down matches);
     // previous month is a per-player figure read with one player-level query.
@@ -272,7 +273,7 @@ void GlobalStats::render_month_overview(const RenderContext& ctx) {
   Money exp_this = 0_usd;
   Money exp_last = 0_usd;
   {
-    ViewPoint pos{18, 160};
+    ViewPoint pos{label_x, 160};
 
     for (auto acct : PlayerFinancials::expenditure_accounts()) {
       exp_last += financials.previous_month_operational(acct, date);
@@ -297,7 +298,7 @@ void GlobalStats::render_month_overview(const RenderContext& ctx) {
 
   // Result = income - expenses (both displayed as positive)
   draw_label_and_amounts("result", -receipts_last - exp_last,
-                         -receipts_this - exp_this, ViewPoint{18, 330});
+                         -receipts_this - exp_this, ViewPoint{label_x, 330});
 
   // Render popup if visible
   if (popup_state_.visible && !restaurants.empty()) {

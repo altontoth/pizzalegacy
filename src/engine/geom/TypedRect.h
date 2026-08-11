@@ -58,6 +58,8 @@ template <typename Tag> struct TypedRect {
     return TypedPoint<Tag>{x + (w / 2), y + (h / 2)};
   }
 
+  [[nodiscard]] constexpr int right() const noexcept { return x + w; }
+
   [[nodiscard]] Size size() const noexcept { return Size{w, h}; }
 
   // Operator Overloads

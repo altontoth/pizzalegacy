@@ -71,10 +71,21 @@ Surface render_invoice(FontManager& font, const InvoiceConfig& config) {
       continue;
     }
 
+    // A label with a value is always the left column; on its own it can also
+    // sit at the center or against the value column.
+    auto label_anchor_x = [&] {
+      switch (line.align) {
+      case TextAnchor::Middle:
+        return center_x;
+      case TextAnchor::End:
+        return config.value_x;
+      case TextAnchor::Start:
+        break;
+      }
+      return config.label_x;
+    };
     const auto align = has_value ? TextAnchor::Start : line.align;
-    const auto x_pos = (has_value || line.align == TextAnchor::Start)
-                           ? config.label_x
-                           : center_x;
+    const auto x_pos = has_value ? config.label_x : label_anchor_x();
     if (has_label) {
       font.render_text_onto(invoice, line.label, ViewPoint{x_pos, y},
                             config.line_font, COLOR_BLACK, align);

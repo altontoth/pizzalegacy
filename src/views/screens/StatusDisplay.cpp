@@ -85,29 +85,24 @@ void StatusDisplay::render(const RenderContext& ctx) {
 
 void StatusDisplay::render_recipe(const StatusDisplayRecipe& recipe,
                                   const RenderContext& ctx) {
-  auto to_alignment = [](StatusAlignment a) {
-    switch (a) {
-    case StatusAlignment::Left:
-      return TextAnchor::Start;
-    case StatusAlignment::Center:
-      return TextAnchor::Middle;
-    case StatusAlignment::Right:
-      return TextAnchor::End;
-    }
-    return TextAnchor::Start;
-  };
   // A centered or right-aligned column gives its x relative to the panel's
   // center or right edge.
-  auto to_x = [&ctx](const StatusColumn& col) {
+  struct ColumnAnchor {
+    int x;
+    TextAnchor anchor;
+  };
+  auto anchor_of = [&ctx](const StatusColumn& col) -> ColumnAnchor {
     switch (col.align) {
-    case StatusAlignment::Left:
-      return col.x;
     case StatusAlignment::Center:
-      return (ctx.surface->width() / 2) + col.x;
+      return {.x = ctx.surface->rect().center().x + col.x,
+              .anchor = TextAnchor::Middle};
     case StatusAlignment::Right:
-      return ctx.surface->width() + col.x;
+      return {.x = ctx.surface->rect().right() + col.x,
+              .anchor = TextAnchor::End};
+    case StatusAlignment::Left:
+      break;
     }
-    return col.x;
+    return {.x = col.x, .anchor = TextAnchor::Start};
   };
   int y = 16;
   const int color_yellow = 16;
@@ -122,23 +117,25 @@ void StatusDisplay::render_recipe(const StatusDisplayRecipe& recipe,
       y += 12;
       break;
     case StatusItemKind::TwoColumn: {
-      const auto& col1 = item.col1;
-      const auto& col2 = item.col2;
-      context_.font->render_text_onto(
-          *ctx.surface, col1.text, ViewPoint{to_x(col1), y}, FontFace::SUPERSMA,
-          c, to_alignment(col1.align));
-      context_.font->render_text_onto(
-          *ctx.surface, col2.text, ViewPoint{to_x(col2), y}, FontFace::SUPERSMA,
-          c, to_alignment(col2.align));
+      const auto col1 = anchor_of(item.col1);
+      const auto col2 = anchor_of(item.col2);
+      context_.font->render_text_onto(*ctx.surface, item.col1.text,
+                                      ViewPoint{col1.x, y}, FontFace::SUPERSMA,
+                                      c, col1.anchor);
+      context_.font->render_text_onto(*ctx.surface, item.col2.text,
+                                      ViewPoint{col2.x, y}, FontFace::SUPERSMA,
+                                      c, col2.anchor);
       y += 12;
       break;
     }
-    case StatusItemKind::Single:
-      context_.font->render_line_onto(
-          *ctx.surface, item.col1.text, ViewPoint{to_x(item.col1), y},
-          FontFace::SUPERSMA, c, to_alignment(item.col1.align));
+    case StatusItemKind::Single: {
+      const auto col = anchor_of(item.col1);
+      context_.font->render_line_onto(*ctx.surface, item.col1.text,
+                                      ViewPoint{col.x, y}, FontFace::SUPERSMA,
+                                      c, col.anchor);
       y += 12;
       break;
+    }
     case StatusItemKind::Spacer:
       y += item.lines * 12;
       break;

@@ -280,7 +280,9 @@ void MarketResearch::render_area_info(const RenderContext& ctx) {
                        "extremely high",
                        "out of range"};
 
-  ViewPoint position{ctx.surface->width() / 2, 28};
+  const int percent_x = ctx.surface->rect().right() - 100;
+
+  ViewPoint position{ctx.surface->rect().center().x, 28};
   context_.font->render_text_onto(*ctx.surface, "zone info", position,
                                   FontFace::RUBY, text_color,
                                   TextAnchor::Middle);
@@ -306,8 +308,8 @@ void MarketResearch::render_area_info(const RenderContext& ctx) {
                                     TextAnchor::Start);
     context_.font->render_text_onto(
         *ctx.surface, std::to_string(percentages[i]) + " %",
-        ViewPoint{ctx.surface->width() - 100, position.y}, FontFace::PIZ_NUMB,
-        text_color, TextAnchor::End);
+        ViewPoint{percent_x, position.y}, FontFace::PIZ_NUMB, text_color,
+        TextAnchor::End);
     position.y += 20;
   }
 
@@ -361,7 +363,7 @@ void MarketResearch::render_property_info(const RenderContext& ctx) {
                                     context_.vga->get("gfx/permap"));
   render_paper(ctx, ViewRect{10, 14, 360, 328});
 
-  ViewPoint position(ctx.surface->width() / 2, 28);
+  ViewPoint position(ctx.surface->rect().center().x, 28);
   context_.font->render_text_onto(*ctx.surface, "Property Info", position,
                                   FontFace::RUBY, text_color,
                                   TextAnchor::Middle);

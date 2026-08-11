@@ -90,7 +90,7 @@ void Terminal::draw_main_menu(const RenderContext& ctx) {
   // TODO: Some less hardcoded way of figuring out the positions, make it more
   // centered too
   ViewRect location(blitmap_offset_x, blitmap_offset_y, 218, 42);
-  int x = (ctx.surface->width() / 2) - 6;
+  int x = ctx.surface->rect().center().x - 6;
   int y = 68;
   int y_offset = 45;
   for (const auto& [key, value] : category_to_string) {
@@ -248,9 +248,10 @@ void Terminal::draw_category(const RenderContext& ctx, TerminalCategory cat) {
   clear_current_screen();
 
   std::string title = category_to_string.at(cat);
+  const int center_x = ctx.surface->rect().center().x;
   context_.font->render_text_onto(
-      *ctx.surface, title, ViewPoint{(ctx.surface->width() / 2) - 18, 46},
-      FontFace::PIZ_NUMB, highlight_color, TextAnchor::Middle);
+      *ctx.surface, title, ViewPoint{center_x - 18, 46}, FontFace::PIZ_NUMB,
+      highlight_color, TextAnchor::Middle);
 
   // Constants for table rendering
   constexpr int CELL_PADDING = 6;

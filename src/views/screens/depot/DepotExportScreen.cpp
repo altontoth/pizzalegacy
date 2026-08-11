@@ -81,9 +81,10 @@ void DepotExportScreen::draw_page_header(const RenderContext& ctx) {
   blitmap1.render_icon(icon, *ctx.surface, ViewPoint{42, 6});
 
   std::string title = compat::format("export --> {}", target_city_->name());
-  context_.font->render_text_onto(
-      *ctx.surface, title, ViewPoint{(ctx.surface->width() / 2) + 40, 12},
-      FontFace::PIZ_NUMB, 8, TextAnchor::Middle);
+  const int center_x = ctx.surface->rect().center().x;
+  context_.font->render_text_onto(*ctx.surface, title,
+                                  ViewPoint{center_x + 40, 12},
+                                  FontFace::PIZ_NUMB, 8, TextAnchor::Middle);
 }
 
 void DepotExportScreen::draw_ingredient_list(const RenderContext& ctx) {
@@ -96,7 +97,7 @@ void DepotExportScreen::draw_ingredient_list(const RenderContext& ctx) {
   std::string_view src_name = source_city_->name().substr(0, 5);
   std::string_view tgt_name = target_city_->name().substr(0, 5);
 
-  const int right_edge = ctx.surface->width();
+  const int right_edge = ctx.surface->rect().right();
   const int src_x = right_edge - 170;
   const int amount_x = right_edge - 110;
   const int tgt_x = right_edge - 50;
