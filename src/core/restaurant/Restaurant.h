@@ -25,7 +25,6 @@ struct RestaurantLoader;
 #include "core/restaurant/RestaurantStats.h"
 #include "core/restaurant/StaffEventData.h"
 #include "core/time/TimeOfDay.h"
-#include "engine/Random.h"
 
 namespace core::food {
 struct PlayerRecipes;
@@ -540,7 +539,7 @@ private:
   std::vector<core::restaurant::StaffEventData> pending_staff_events_;
 
   // Mayor inspection countdown
-  int inspection_days_remaining_{engine::random::rand_max_n(20) + 12};
+  int inspection_days_remaining_{0};
   bool first_inspection_pending_{true};
   std::optional<bool> pending_inspection_; // true=first, false=regular
 

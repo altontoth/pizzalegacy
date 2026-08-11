@@ -24,6 +24,7 @@
 #include "engine/Endian.h"
 #include "engine/Fatal.h"
 #include "engine/Logger.h"
+#include "engine/Random.h"
 #include "resources/util/FileUtils.h"
 #include "resources/util/TextEncoding.h"
 

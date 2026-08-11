@@ -17,6 +17,7 @@
 #include "core/restaurant/Restaurant.h"
 #include "core/state/GameState.h"
 #include "engine/Logger.h"
+#include "engine/Random.h"
 
 namespace ai {
 

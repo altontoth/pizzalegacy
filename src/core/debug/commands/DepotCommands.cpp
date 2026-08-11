@@ -9,6 +9,7 @@
 #include "core/city/Property.h"
 #include "core/state/GameState.h"
 #include "core/util/Constants.h"
+#include "engine/Random.h"
 
 using namespace debug::command;
 

@@ -16,6 +16,7 @@
 #include "core/restaurant/Menu.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/state/GameState.h"
+#include "engine/Random.h"
 
 namespace {
 int calculate_competition_penalty(const Restaurant& competitor,

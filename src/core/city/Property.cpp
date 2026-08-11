@@ -13,6 +13,7 @@
 #include "core/restaurant/Restaurant.h"
 #include "core/util/Constants.h"
 #include "engine/Logger.h"
+#include "engine/Random.h"
 
 #include <algorithm>
 #include <cmath>

@@ -46,6 +46,9 @@ Restaurant::Restaurant(Property& property, Size kitchen_size,
     : property_(property), kitchen_size_(kitchen_size), restaurant_id_(id),
       name_(std::move(name)), layout_(std::make_unique<RestaurantLayout>(
                                   property.size(), kitchen_size)) {
+  // The mayor's first inspection:
+  inspection_days_remaining_ = engine::random::rand_max_n(20) + 12;
+
   // Grace period before the mafia's first protection demand: 2 days plus up
   // to (100 - crime rate) / 4 days, so safer districts wait longer.
   int crime = std::clamp(property.district().crime_statistics(), 0, 100);

@@ -10,6 +10,7 @@
 #include <magic_enum/magic_enum.hpp>
 #include "core/city/City.h"
 #include "core/util/Constants.h"
+#include "engine/Random.h"
 
 Car Car::spawn(int tile_x, int tile_y, int car_type, const City& city,
                const std::function<int(int)>& rand_int) {

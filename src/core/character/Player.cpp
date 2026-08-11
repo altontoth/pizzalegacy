@@ -20,6 +20,7 @@
 #include "core/time/TimeOfDay.h"
 #include "engine/FormatCompat.h"
 #include "engine/Logger.h"
+#include "engine/Random.h"
 
 #include <algorithm>
 #include <array>

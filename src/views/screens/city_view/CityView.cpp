@@ -29,6 +29,7 @@
 #include "core/restaurant/RestaurantTypes.h"
 #include "core/time/GameTime.h"
 #include "core/util/Constants.h"
+#include "engine/Random.h"
 #include "engine/audio/AudioManager.h"
 #include "engine/geom/Spaces.h"
 #include "engine/ui/ICursorManager.h"

@@ -20,6 +20,7 @@
 #include "core/supply/SupplierRelationship.h"
 #include "engine/FormatCompat.h"
 #include "engine/Logger.h"
+#include "engine/Random.h"
 
 SupplierConversation::SupplierConversation(GameState& state,
                                            const FoodSupplier* supplier,
