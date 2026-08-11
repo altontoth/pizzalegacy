@@ -6,6 +6,7 @@
 
 #include "engine/DebugConsole.h"
 #include "core/debug/command/CommandRegistry.h"
+#include "core/debug/command/CommandResult.h"
 #include "core/state/GameState.h"
 #include "core/util/GameContext.h"
 
@@ -16,23 +17,25 @@ void DebugConsole::init(debug::command::CommandRegistry& registry,
   context_ = &context;
 }
 
-void DebugConsole::execute_command(const std::string& line) {
+bool DebugConsole::execute_command(const std::string& line) {
   add_line(ConsoleLineType::Command, "> " + line);
 
   if (line.empty() || line.find_first_not_of(' ') == std::string::npos) {
     add_line(ConsoleLineType::Result, "");
-    return;
+    return true;
   }
 
   if (!registry_ || !state_ || !context_) {
     add_line(ConsoleLineType::Result, "Console not initialized");
-    return;
+    return false;
   }
 
-  report_result(registry_->execute(line, *state_, *context_));
+  auto result = registry_->execute(line, *state_, *context_);
+  report_result(result);
+  return result.status == debug::command::CommandStatus::Success;
 }
 
-void DebugConsole::execute_command(const std::vector<std::string>& args) {
+bool DebugConsole::execute_command(const std::vector<std::string>& args) {
   std::string display;
   for (const auto& arg : args) {
     if (!display.empty()) {
@@ -44,15 +47,17 @@ void DebugConsole::execute_command(const std::vector<std::string>& args) {
 
   if (args.empty()) {
     add_line(ConsoleLineType::Result, "");
-    return;
+    return true;
   }
 
   if (!registry_ || !state_ || !context_) {
     add_line(ConsoleLineType::Result, "Console not initialized");
-    return;
+    return false;
   }
 
-  report_result(registry_->execute(args, *state_, *context_));
+  auto result = registry_->execute(args, *state_, *context_);
+  report_result(result);
+  return result.status == debug::command::CommandStatus::Success;
 }
 
 void DebugConsole::report_result(const debug::command::CommandResult& result) {

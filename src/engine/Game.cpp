@@ -10,6 +10,7 @@
 #include <cassert>
 #include <cstdlib>
 #include <filesystem>
+#include <fstream>
 #include <limits>
 #include <numeric>
 
@@ -118,6 +119,7 @@ Game::Game(LaunchOptions opts)
       config_path_(std::move(opts.config_path)),
       game_path_override_(std::move(opts.game_path)),
       startup_console_args_(std::move(opts.console_args)),
+      exec_script_(std::move(opts.exec_script)),
       vga_viewer_path_(std::move(opts.vga_viewer)),
       bob_viewer_path_(std::move(opts.bob_viewer)) {}
 
@@ -125,11 +127,11 @@ Game::Game(LaunchOptions opts)
 // unique_ptrs
 Game::~Game() = default;
 
-void Game::run() {
+int Game::run() {
 
   if (!sdl_session_.initialized()) {
     std::cerr << "SDL failed to init: " << SDL_GetError() << "\n";
-    return;
+    return 1;
   }
   platform_paths::init();
 
@@ -155,7 +157,7 @@ void Game::run() {
     std::string location = configManager.prompt_for_game_location();
     if (location.empty()) {
       std::cout << "Didn't find the original game, giving up.\n";
-      return;
+      return 1;
     }
     configManager.value("game_path_english", location);
     configManager.save_config();
@@ -168,7 +170,7 @@ void Game::run() {
     active_path = configManager.prompt_for_game_location();
     if (active_path.empty()) {
       std::cout << "No valid game path found, exiting.\n";
-      return;
+      return 1;
     }
     configManager.save_config();
   }
@@ -187,7 +189,7 @@ void Game::run() {
 
   if (!init(display_height, configManager)) {
     std::cerr << "Init failed!\n";
-    return;
+    return 1;
   }
 
   // Set up ConfigManager in context for options access
@@ -312,6 +314,11 @@ void Game::run() {
   // console, save some time during development)
   if (startup_console_args_) {
     debug_console.execute_command(*startup_console_args_);
+  }
+
+  // Batch mode: run the script and leave without ever opening the loop.
+  if (exec_script_) {
+    return run_exec_script(debug_console, state);
   }
 
   Renderer renderer(sdl_, display_height_);
@@ -512,6 +519,43 @@ void Game::run() {
   }
   // Make sure to reset view which might use GameState in their destructor:
   current_view_.reset();
+  return 0;
+}
+
+int Game::run_exec_script(DebugConsole& console, GameState& state) const {
+  std::ifstream script(*exec_script_);
+  if (!script) {
+    std::cerr << "error: cannot read script: " << *exec_script_ << "\n";
+    return 2;
+  }
+
+  int failures = 0;
+  std::string line;
+  while (std::getline(script, line)) {
+    // Allow newlines and indentation
+    while (!line.empty() &&
+           (line.back() == '\r' || line.back() == ' ' || line.back() == '\t')) {
+      line.pop_back();
+    }
+    std::size_t start = line.find_first_not_of(" \t");
+    if (start == std::string::npos) {
+      continue;
+    }
+    line.erase(0, start);
+    if (line[0] == '#') {
+      continue;
+    }
+
+    if (!console.execute_command(line)) {
+      ++failures;
+      std::cerr << "error: command failed: " << line << "\n";
+    }
+    if (state.should_exit()) {
+      break;
+    }
+  }
+
+  return failures == 0 ? 0 : 1;
 }
 
 ScreenPoint Game::global_cursor_pos_clamped() const {

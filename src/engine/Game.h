@@ -29,6 +29,7 @@
 const int FRAMES_PER_SECOND = 30;
 
 class ConsoleLayer;
+class DebugConsole;
 
 class Game {
 public:
@@ -39,14 +40,16 @@ public:
         viewer_target; // positional <file|fonts|pal|char>
     // "console <...>", one entry per argv word
     std::optional<std::vector<std::string>> console_args;
-    std::optional<bool> crt_mode;          // --crt to force CRT mode
-    std::optional<std::string> vga_viewer; // --vga <path>
-    std::optional<std::string> bob_viewer; // --bob <path>
+    std::optional<std::string> exec_script; // --exec <file>, then exit
+    std::optional<bool> crt_mode;           // --crt to force CRT mode
+    std::optional<std::string> vga_viewer;  // --vga <path>
+    std::optional<std::string> bob_viewer;  // --bob <path>
   };
 
   Game(LaunchOptions opts);
   ~Game();
-  void run();
+  // Process exit code; non-zero when a --exec script had a command fail.
+  int run();
 
 private:
   struct LoopState {
@@ -99,6 +102,10 @@ private:
   std::string config_path_;
   std::optional<std::string> game_path_override_;
   std::optional<std::vector<std::string>> startup_console_args_;
+  std::optional<std::string> exec_script_;
+
+  // Returns process exit code.
+  int run_exec_script(DebugConsole& console, GameState& state) const;
   std::optional<std::string> vga_viewer_path_;
   std::optional<std::string> bob_viewer_path_;
 };

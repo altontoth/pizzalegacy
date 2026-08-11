@@ -32,11 +32,11 @@ public:
   void init(debug::command::CommandRegistry& registry, GameState& state,
             GameContext& context);
 
-  // Execute a command line (delegates to registry)
-  void execute_command(const std::string& line);
+  // Execute a command line (delegates to registry). False if it failed.
+  bool execute_command(const std::string& line);
 
   // Execute a command from already separated arguments, e.g. argv
-  void execute_command(const std::vector<std::string>& args);
+  bool execute_command(const std::vector<std::string>& args);
 
   // history
   [[nodiscard]] const std::deque<ConsoleLine>& lines() const { return lines_; }

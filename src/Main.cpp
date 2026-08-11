@@ -37,6 +37,8 @@ namespace { // anonymous
       << "  --config <file>                        # config path (default: "
          "platform pref dir)\n"
       << "  --game-path <dir>                      # override game data dir\n"
+      << "  --exec <file>                          # run console commands "
+         "from a file, then exit\n"
       << "  --vga <path>                           # open VGA viewer with "
          "file\n"
       << "  --bob <path>                           # open BOB viewer with "
@@ -79,6 +81,12 @@ static Game::LaunchOptions parse_args(int argc, char* argv[]) {
         usage(argv[0], 2);
       }
       opts.game_path = std::string(argv[++i]);
+    }
+    else if (arg == "--exec") {
+      if (i + 1 >= argc) {
+        usage(argv[0], 2);
+      }
+      opts.exec_script = std::string(argv[++i]);
     }
     else if (arg == "--crt") {
       opts.crt_mode = true;
@@ -136,7 +144,5 @@ int main(int argc, char* argv[]) {
   Game::LaunchOptions opts = parse_args(argc, argv);
 
   auto game = std::make_unique<Game>(std::move(opts));
-  game->run();
-
-  return 0;
+  return game->run();
 }
