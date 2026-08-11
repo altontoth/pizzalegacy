@@ -73,7 +73,8 @@ Restaurant* RealEstate::rent_restaurant(Property& property, Player& player,
   }
 
   if (!free) {
-    player.spend_cash(today, Account::Rents, price, restaurant->id());
+    // We already check player has enough money, so this can't be false.
+    (void)player.spend_cash(today, Account::Rents, price, restaurant->id());
     gs_->adjust_social_score(player, 50);
   }
   return restaurant;
