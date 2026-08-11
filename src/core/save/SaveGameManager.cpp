@@ -669,12 +669,6 @@ void SaveGameManager::json_to_state(const json& j, GameState& state,
   // Clear all existing restaurants and reset property states before loading
   state.reset_for_load();
 
-  // Restore RNG state so the loaded game continues with the same random
-  // sequence
-  if (j.contains("rng_state")) {
-    engine::random::set_state(j["rng_state"].get<uint32_t>());
-  }
-
   // Load game time
   if (j.contains("time")) {
     GameTime loaded_time = json_to_time(j["time"]);
@@ -900,6 +894,13 @@ void SaveGameManager::json_to_state(const json& j, GameState& state,
       }
       state.career_log().restore_scheduled(pid, entries);
     }
+  }
+
+  // This has to go last because the cities and restaurants above draw from the
+  // generator and would otherwise leave the loaded game on a different
+  // sequence than the saved one.
+  if (j.contains("rng_state")) {
+    engine::random::set_state(j["rng_state"].get<uint32_t>());
   }
 }
 
