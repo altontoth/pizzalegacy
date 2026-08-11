@@ -190,6 +190,11 @@ std::vector<City*> GameState::visited_cities(const Player& player) const {
       result.push_back(c);
     }
   }
+
+  // Sorted so callers get the same order every run; the weekly profits are
+  // posted to the ledger in whatever order this returns.
+  std::ranges::sort(
+      result, [](const City* a, const City* b) { return a->id() < b->id(); });
   return result;
 }
 

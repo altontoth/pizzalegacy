@@ -49,10 +49,14 @@ IngredientSupplierList::IngredientSupplierList(GameContext& context,
   // Get and sort suppliers by quality (ascending - lowest quality first)
   const City* city = state.active_city();
   auto suppliers = city->food_suppliers(category_to_actor_type(category));
-  std::sort(suppliers.begin(), suppliers.end(),
-            [](const FoodSupplier* a, const FoodSupplier* b) {
-              return a->quality() < b->quality();
-            });
+  // Order by id if quality is the same
+  std::ranges::sort(suppliers,
+                    [](const FoodSupplier* a, const FoodSupplier* b) {
+                      if (a->quality() != b->quality()) {
+                        return a->quality() < b->quality();
+                      }
+                      return a->id() < b->id();
+                    });
 
   // Initialize renderer with click callback and extra info renderer
   renderer_.emplace(

@@ -48,10 +48,13 @@ DepotIngredientSupplierList::DepotIngredientSupplierList(
 
   const City* city = state.active_city();
   auto suppliers = city->food_suppliers(category_to_actor_type(category));
-  std::sort(suppliers.begin(), suppliers.end(),
-            [](const FoodSupplier* a, const FoodSupplier* b) {
-              return a->quality() < b->quality();
-            });
+  std::ranges::sort(suppliers,
+                    [](const FoodSupplier* a, const FoodSupplier* b) {
+                      if (a->quality() != b->quality()) {
+                        return a->quality() < b->quality();
+                      }
+                      return a->id() < b->id();
+                    });
 
   renderer_.emplace(
       std::move(suppliers),

@@ -972,10 +972,10 @@ bool SaveGameManager::add_high_score(HighScoreEntry entry) {
     auto entries = load_high_scores();
     entries.push_back(std::move(entry));
 
-    std::sort(entries.begin(), entries.end(),
-              [](const HighScoreEntry& a, const HighScoreEntry& b) {
-                return a.score > b.score;
-              });
+    std::ranges::stable_sort(
+        entries, [](const HighScoreEntry& a, const HighScoreEntry& b) {
+          return a.score > b.score;
+        });
     if (static_cast<int>(entries.size()) > HIGH_SCORE_MAX_ENTRIES) {
       entries.resize(HIGH_SCORE_MAX_ENTRIES);
     }
