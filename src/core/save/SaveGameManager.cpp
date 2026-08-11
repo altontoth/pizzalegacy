@@ -842,6 +842,12 @@ void SaveGameManager::json_to_state(const json& j, GameState& state,
   }
   if (j.contains("active_city")) {
     core::CityId cid{j["active_city"].get<int>()};
+    // If somehow there is no valid active city, just pick one.
+    if (!is_valid_city_id(cid)) {
+      cid = state.default_city_id();
+      Logger::warn("Save has no active city; falling back to city {}",
+                   cid.value);
+    }
     state.active_city(cid);
     Logger::info("Set active city to {}", cid.value);
   }

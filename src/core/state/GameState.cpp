@@ -169,7 +169,7 @@ void GameState::deduct_staff_wages_for_restaurant(
 }
 
 City* GameState::city(core::CityId city_id) const {
-  assert(city_id.value >= 0 && city_id.value < NUMBER_OF_CITIES);
+  assert(is_valid_city_id(city_id));
   return cities_[city_id.value].get();
 }
 
@@ -199,15 +199,14 @@ std::vector<City*> GameState::visited_cities(const Player& player) const {
 }
 
 bool GameState::is_city_loaded(core::CityId city_id) const {
-  assert(city_id.value >= 0 && city_id.value < NUMBER_OF_CITIES);
+  assert(is_valid_city_id(city_id));
   return cities_[city_id.value] != nullptr;
 }
 
 core::CityId GameState::active_city_id() const { return active_city_; }
 
 City* GameState::active_city() const {
-  assert(active_city_.value >= 0 && active_city_.value < NUMBER_OF_CITIES);
-
+  assert(is_valid_city_id(active_city_));
   return cities_[active_city_.value].get();
 }
 
@@ -233,6 +232,7 @@ void GameState::initialise_city_for_ai(City& city) {
 }
 
 City& GameState::city_or_create(core::CityId city_id) {
+  assert(is_valid_city_id(city_id));
   auto& city = cities_[city_id.value];
   if (city == nullptr) {
     city = CityFactory::create_city(city_id, build_player_chars());
@@ -240,7 +240,20 @@ City& GameState::city_or_create(core::CityId city_id) {
   return *city;
 }
 
+core::CityId GameState::default_city_id() const {
+  if (is_valid_city_id(active_city_)) {
+    return active_city_;
+  }
+  for (int i = 0; i < NUMBER_OF_CITIES; ++i) {
+    if (cities_[i]) {
+      return core::CityId{i};
+    }
+  }
+  return core::CityId{0};
+}
+
 void GameState::active_city(core::CityId city_id) {
+  assert(is_valid_city_id(city_id));
   active_city_ = city_id;
   City& city = city_or_create(city_id);
   if (!city_initialised_[city_id.value]) {

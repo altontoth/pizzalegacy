@@ -42,6 +42,10 @@
 class GameContext;
 class TurnPresenter;
 
+constexpr bool is_valid_city_id(core::CityId city_id) {
+  return city_id.value >= 0 && city_id.value < NUMBER_OF_CITIES;
+}
+
 class GameState {
   friend std::ostream& operator<<(std::ostream& os, const GameState& state);
   // The orchestrator and competition coordinator are halves of this class,
@@ -312,6 +316,10 @@ public:
 
   void on_city_entered(core::CityId city_id, const Player& player);
   void check_mafia_events();
+
+  // Returns active city if possible, otherwise first loaded city, otherwise
+  // city 0.
+  core::CityId default_city_id() const;
 
   // Which city each player is standing in; decides what gets simulated.
   const std::array<std::optional<core::CityId>, NUMBER_OF_PLAYERS>&

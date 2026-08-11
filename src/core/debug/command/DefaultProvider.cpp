@@ -53,7 +53,7 @@ ParsedValue resolve_default(DefaultProvider provider, ArgType type,
   }
 
   case DefaultProvider::ActiveCity: {
-    result.value = state.active_city_id();
+    result.value = state.default_city_id();
     break;
   }
 

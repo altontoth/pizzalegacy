@@ -599,6 +599,11 @@ Examples:
               compat::format("Player {} does not exist", player_id.value));
         }
 
+        // Ensure there is a valid active city
+        if (!is_valid_city_id(ctx.state.active_city_id())) {
+          ctx.state.active_city(city_id);
+        }
+
         // Create small restaurant with layout 1
         auto* restaurant =
             ctx.state.real_estate().create_restaurant_with_layout(
