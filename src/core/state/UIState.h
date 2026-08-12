@@ -239,6 +239,7 @@ struct SupplierContractState {
 struct PlayerTurnCardState {
   core::PlayerId player;
   GameDate date;
+  std::function<void()> on_closed;
 };
 struct FullscreenStatusState {
   core::events::MilestoneId message_id;

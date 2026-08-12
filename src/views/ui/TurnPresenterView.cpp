@@ -6,6 +6,7 @@
 
 #include "views/ui/TurnPresenterView.h"
 
+#include "core/state/GameState.h"
 #include "core/util/GameContext.h"
 #include "views/ui/PopupManager.h"
 #include "views/ui/finance/TurnInvoicePopups.h"
@@ -36,6 +37,12 @@ void TurnPresenterView::show_electricity_slot_invoice(
 
 void TurnPresenterView::show_monthly_invoice(core::PlayerId player_id) {
   views::ui::finance::show_monthly_invoice_popup(context_, gs_, player_id);
+}
+
+void TurnPresenterView::show_player_turn_card(core::PlayerId player,
+                                              const GameDate& date,
+                                              std::function<void()> on_closed) {
+  gs_.ui().push<PlayerTurnCardState>(player, date, std::move(on_closed));
 }
 
 } // namespace views::ui

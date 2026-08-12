@@ -35,7 +35,6 @@ public:
   // Defer end_of_turn to the next GameState::update() tick.
   void request_end_of_turn();
   void skip_to_next_player(); // jail/holiday release: non-interactive
-  void on_player_turn_card_finished();
 
   // Drain the end-of-turn pipeline until a step yields to the UI. Async
   // steps resume by calling this from their completion callback.
@@ -176,6 +175,9 @@ public:
   }
 
 private:
+  // Gives control to the next player once their turn card is gone. If that
+  // player is AI their turn ends here.
+  void on_player_turn_card_finished();
   turn::StepResult execute_pipeline_step(const turn::Step& step);
   turn::StepResult process_restaurant_step(const turn::ProcessRestaurant& step);
   turn::StepResult finish_end_of_turn(const turn::FinishTurn& step);

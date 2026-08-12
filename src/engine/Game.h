@@ -26,8 +26,6 @@
 #include "views/base/View.h"
 #include "views/helpers//OverlayManager.h"
 
-const int FRAMES_PER_SECOND = 30;
-
 class ConsoleLayer;
 class DebugConsole;
 

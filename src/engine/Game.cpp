@@ -25,6 +25,7 @@
 #include "engine/DebugConsole.h"
 #include "engine/FpsManager.h"
 #include "engine/Logger.h"
+#include "engine/PendingFade.h"
 #include "engine/PlatformPaths.h"
 #include "engine/Random.h"
 #include "engine/Renderer.h"
@@ -230,22 +231,23 @@ int Game::run() {
   }
   create_some_players(state);
 
-  // Presentation callbacks core code invokes without depending on popup types
-  state.staff_event_presenter(
-      [this](const core::restaurant::StaffEventData& event,
-             Restaurant* restaurant, std::function<void()> on_done) {
-        views::ui::staff::show_staff_event_dialog(context, event, restaurant,
-                                                  std::move(on_done));
-      });
-  state.monthly_entry_presenter(
-      [this, &state](
-          core::PlayerId pid, bool ask_speed,
-          std::function<void(std::optional<MonthlyCompetitionEntry>)> reply) {
-        views::ui::competition::ask_monthly_entry(context, state, pid,
-                                                  ask_speed, std::move(reply));
-      });
-  state.turn_presenter(
-      std::make_unique<views::ui::TurnPresenterView>(context, state));
+  if (!exec_script_) {
+    state.staff_event_presenter(
+        [this](const core::restaurant::StaffEventData& event,
+               Restaurant* restaurant, std::function<void()> on_done) {
+          views::ui::staff::show_staff_event_dialog(context, event, restaurant,
+                                                    std::move(on_done));
+        });
+    state.monthly_entry_presenter(
+        [this, &state](
+            core::PlayerId pid, bool ask_speed,
+            std::function<void(std::optional<MonthlyCompetitionEntry>)> reply) {
+          views::ui::competition::ask_monthly_entry(
+              context, state, pid, ask_speed, std::move(reply));
+        });
+    state.turn_presenter(
+        std::make_unique<views::ui::TurnPresenterView>(context, state));
+  }
 
   // Main game loop prep
   DebugConsole debug_console;
@@ -321,6 +323,10 @@ int Game::run() {
     return run_exec_script(debug_console, state);
   }
 
+  auto owned_pending_fade = std::make_unique<PendingFade>();
+  auto* pending_fade = owned_pending_fade.get();
+  state.fade_presenter(std::move(owned_pending_fade));
+
   Renderer renderer(sdl_, display_height_);
   renderer.set_cursor_manager(cursor_manager_.get());
   cursor_manager_->software_mode(state.options().software_cursor);
@@ -341,7 +347,6 @@ int Game::run() {
   std::ranges::for_each(overlays.renderables(),
                         [&](Renderable* r) { renderer.add_layers(r); });
 
-  constexpr uint32_t TICK_MS = 1000 / FRAMES_PER_SECOND;
   constexpr int MAX_TICKS_PER_FRAME = 5;
 
   auto apply_window_size = [&](int target_w, int target_h) {
@@ -387,9 +392,9 @@ int Game::run() {
     const int time_scale = state.time_scale();
     tick_accumulator_ms += context.clock.dt_ms * time_scale;
     int ticks_this_frame = 0;
-    while (tick_accumulator_ms >= TICK_MS &&
+    while (tick_accumulator_ms >= simulation_tick_ms &&
            ticks_this_frame < MAX_TICKS_PER_FRAME * time_scale) {
-      tick_accumulator_ms -= TICK_MS;
+      tick_accumulator_ms -= simulation_tick_ms;
       ++ticks_this_frame;
 
       input_manager_->tick();
@@ -403,7 +408,7 @@ int Game::run() {
       overlays.tick_all();
 
       if (!overlays.simulation_frozen()) {
-        state.update(TICK_MS);
+        state.update(simulation_tick_ms);
       }
 
       bool fade_completed = renderer.tick_fade();
@@ -433,14 +438,14 @@ int Game::run() {
         apply_window_size(w, h);
       }
 
-      if (state.fade_requested() && !renderer.is_fading()) {
-        // Include pending_fade_midpoint: a UI push is about to happen at the
-        // midpoint (while black), so we must expect a transition even if the
-        // UI stack hasn't changed yet.
+      if (pending_fade->requested() && !renderer.is_fading()) {
+        // The midpoint may push a view while the screen is black, so a
+        // transition can be coming even though the UI stack has not changed
+        // yet.
         loop_state.fade_on_next_transition =
-            state.ui().ui_changed() || state.pending_fade_midpoint();
-        state.clear_fade_request();
-        renderer.start_fade_out(state.fade_duration_frames());
+            state.ui().ui_changed() || pending_fade->has_midpoint();
+        pending_fade->clear_request();
+        renderer.start_fade_out(pending_fade->duration_frames());
       }
 
       const bool fade_out_finished_and_pending =
@@ -460,7 +465,7 @@ int Game::run() {
         if (fade_out_finished_and_pending) {
           // Fire midpoint callback while black so we can do the date advance
           // then
-          state.on_fade_midpoint();
+          pending_fade->run_midpoint();
         }
 
         auto* new_view = change_state(state);
@@ -477,14 +482,14 @@ int Game::run() {
         if (fade_out_finished_and_pending) {
           loop_state.fade_on_next_transition = false;
           loop_state.skip_tick_during_fade_in = true;
-          renderer.start_fade_in(state.fade_duration_frames());
+          renderer.start_fade_in(pending_fade->duration_frames());
         }
       }
     }
 
     // If we hit the catch-up cap, drop the backlog rather than replaying it
     // forever.
-    if (tick_accumulator_ms >= TICK_MS) {
+    if (tick_accumulator_ms >= simulation_tick_ms) {
       tick_accumulator_ms = 0;
     }
 

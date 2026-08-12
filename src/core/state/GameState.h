@@ -41,6 +41,10 @@
 
 class GameContext;
 class TurnPresenter;
+class FadePresenter;
+
+constexpr int simulation_ticks_per_second = 30;
+constexpr uint32_t simulation_tick_ms = 1000 / simulation_ticks_per_second;
 
 constexpr bool is_valid_city_id(core::CityId city_id) {
   return city_id.value >= 0 && city_id.value < NUMBER_OF_CITIES;
@@ -65,19 +69,6 @@ public:
 
   bool should_exit() const { return quit_; }
   void request_exit() { quit_ = true; }
-
-  // Fade transition control
-  void request_fade_transition(int duration_frames = default_fade_length);
-  [[nodiscard]] bool fade_requested() const;
-  [[nodiscard]] int fade_duration_frames() const;
-  void clear_fade_request();
-
-  // Called by the engine when the screen is fully black (just before fading
-  // back again)
-  void on_fade_midpoint();
-  [[nodiscard]] bool pending_fade_midpoint() const {
-    return pending_fade_midpoint_;
-  }
 
   // Resolution change request (consumed by engine)
   void request_resolution_change(ScreenResolution res);
@@ -232,6 +223,10 @@ public:
     return time_advancement_enabled_;
   }
 
+  // In realtime play the clock runs and the day can end on its own.
+  void enter_realtime_play();
+  void leave_realtime_play();
+
   // Advance time by n blocks (10 min each) - used for explicit time costs
   // (furniture placement, phone calls, etc.). Stops early if end-of-day
   // is reached.
@@ -379,6 +374,9 @@ public:
   void turn_presenter(std::unique_ptr<TurnPresenter> presenter);
   TurnPresenter& turn_presenter();
 
+  void fade_presenter(std::unique_ptr<FadePresenter> presenter);
+  FadePresenter& fade_presenter();
+
 private:
   bool is_past_player_end_of_day() const;
   // Status bar message posted when spend_cash fails.
@@ -429,9 +427,6 @@ private:
   RealEstate real_estate_{*this};
   std::optional<ScreenResolution> pending_resolution_;
   std::optional<bool> pending_crt_;
-  bool fade_requested_{false};
-  int fade_duration_frames_{default_fade_length};
-  bool pending_fade_midpoint_{false};
   core::newspaper::ArticleDatabase article_database_;
   core::events::CareerLog career_log_;
   BankAccountRegistry bank_accounts_;
@@ -446,6 +441,7 @@ private:
   StaffEventPresenter staff_event_presenter_;
   MonthlyEntryPresenter monthly_entry_presenter_;
   std::unique_ptr<TurnPresenter> turn_presenter_;
+  std::unique_ptr<FadePresenter> fade_presenter_;
 
   // Global interest rate to influence loans and investments
   int global_interest_rate_{8};

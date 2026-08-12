@@ -29,6 +29,8 @@ public:
   void show_electricity_slot_invoice(core::RestaurantId restaurant_id,
                                      std::function<void()> on_done) override;
   void show_monthly_invoice(core::PlayerId player_id) override;
+  void show_player_turn_card(core::PlayerId player, const GameDate& date,
+                             std::function<void()> on_closed) override;
 
 private:
   GameContext& context_;

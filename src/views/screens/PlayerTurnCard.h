@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <functional>
 #include "core/state/UIState.h"
 #include "views/base/MainPanelView.h"
 
@@ -20,4 +21,5 @@ private:
   core::PlayerId player_;
   int delay_ticks_{2};
   GameDate date_;
+  std::function<void()> on_closed_;
 };

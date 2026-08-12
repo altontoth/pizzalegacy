@@ -24,6 +24,7 @@
 #include "core/restaurant/AIEconomy.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/save/SaveGameManager.h"
+#include "core/state/FadePresenter.h"
 #include "core/state/GameOptions.h"
 #include "core/state/GameState.h"
 #include "core/state/Overloaded.h"
@@ -882,10 +883,15 @@ TurnOrchestrator::execute_pipeline_step(const turn::Step& step) {
           },
 
           [&](const turn::FadeTransition& s) {
-            // Resumes from GameState::on_fade_midpoint().
-            gs_->pending_fade_midpoint_ = true;
-            gs_->request_fade_transition(s.frames);
-            return StepResult::Waiting;
+            return gs_->fade_presenter().fade_through_black(
+                       s.frames,
+                       [this] {
+                         Logger::debug("TurnPipeline: fade midpoint reached, "
+                                       "advancing pipeline");
+                         advance_pipeline();
+                       })
+                       ? StepResult::Waiting
+                       : StepResult::Done;
           },
 
           [&](const turn::AdvanceDate& s) {
@@ -961,8 +967,9 @@ TurnOrchestrator::execute_pipeline_step(const turn::Step& step) {
           },
 
           [&](const turn::PlayerTurnCard&) {
-            gs_->ui().push<PlayerTurnCardState>(gs_->active_player_,
-                                                gs_->time().current_date());
+            gs_->turn_presenter().show_player_turn_card(
+                gs_->active_player_, gs_->time().current_date(),
+                [this] { on_player_turn_card_finished(); });
             return StepResult::Done;
           },
 

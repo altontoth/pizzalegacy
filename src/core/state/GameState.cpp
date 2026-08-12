@@ -6,6 +6,7 @@
 
 #include "core/state/GameState.h"
 
+#include "core/state/FadePresenter.h"
 #include "core/state/TurnPresenter.h"
 
 #include <algorithm>
@@ -52,6 +53,15 @@ void GameState::turn_presenter(std::unique_ptr<TurnPresenter> presenter) {
 TurnPresenter& GameState::turn_presenter() {
   static NoTurnPresenter nobody;
   return turn_presenter_ ? *turn_presenter_ : nobody;
+}
+
+void GameState::fade_presenter(std::unique_ptr<FadePresenter> presenter) {
+  fade_presenter_ = std::move(presenter);
+}
+
+FadePresenter& GameState::fade_presenter() {
+  static NoFadePresenter nobody;
+  return fade_presenter_ ? *fade_presenter_ : nobody;
 }
 
 std::ostream& operator<<(std::ostream& os, const GameState& state) {
@@ -422,6 +432,16 @@ void GameState::resume_time_advancement() {
   }
 }
 
+void GameState::enter_realtime_play() {
+  resume_time_advancement();
+  turn_.prevent_auto_end_of_turn(false);
+}
+
+void GameState::leave_realtime_play() {
+  turn_.prevent_auto_end_of_turn(true);
+  pause_time_advancement();
+}
+
 bool GameState::is_past_player_end_of_day() const {
   auto end_time = active_player()->end_of_day_time();
   return time_.is_past_time(end_time.hour, end_time.minute);
@@ -443,6 +463,9 @@ bool GameState::floor_editing_unlocked() const {
 }
 
 void GameState::update(uint32_t elapsed_ms) {
+  // Ahead of the world step.
+  turn_presenter().tick();
+
   if (active_player_.value < 0) {
     return;
   }
@@ -1026,6 +1049,7 @@ void GameState::reset_for_load() {
   auto staff_presenter = std::move(staff_event_presenter_);
   auto entry_presenter = std::move(monthly_entry_presenter_);
   auto turn_presenter = std::move(turn_presenter_);
+  auto fade_presenter = std::move(fade_presenter_);
   auto hub = std::move(status_hub_);
 
   *this = GameState{};
@@ -1041,6 +1065,7 @@ void GameState::reset_for_load() {
   staff_event_presenter_ = std::move(staff_presenter);
   monthly_entry_presenter_ = std::move(entry_presenter);
   turn_presenter_ = std::move(turn_presenter);
+  fade_presenter_ = std::move(fade_presenter);
 }
 
 const CityViewMapState& GameState::city_view_view_state() const {
@@ -1345,26 +1370,6 @@ bool GameState::is_refusing_calls(int actor_id) const {
 }
 
 void GameState::clear_all_refused_calls() { actors_refusing_calls_.clear(); }
-
-void GameState::request_fade_transition(int duration_frames) {
-  fade_requested_ = true;
-  fade_duration_frames_ = duration_frames;
-}
-
-bool GameState::fade_requested() const { return fade_requested_; }
-
-int GameState::fade_duration_frames() const { return fade_duration_frames_; }
-
-void GameState::clear_fade_request() { fade_requested_ = false; }
-
-void GameState::on_fade_midpoint() {
-  if (!pending_fade_midpoint_) {
-    return;
-  }
-  pending_fade_midpoint_ = false;
-  Logger::debug("TurnPipeline: fade midpoint reached, advancing pipeline");
-  turn_.advance_pipeline();
-}
 
 void GameState::request_resolution_change(ScreenResolution res) {
   pending_resolution_ = res;

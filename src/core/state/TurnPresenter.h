@@ -7,9 +7,11 @@
 #pragma once
 
 #include "core/common/Ids.h"
+#include "core/time/GameDate.h"
 
 #include <functional>
 #include <string>
+#include <utility>
 #include <vector>
 
 class Restaurant;
@@ -42,10 +44,17 @@ public:
 
   // Monthly loans and rent invoice for a player.
   virtual void show_monthly_invoice(core::PlayerId player_id) = 0;
+
+  // The steps queued behind the turn card keep running while it is being shown.
+  virtual void show_player_turn_card(core::PlayerId player,
+                                     const GameDate& date,
+                                     std::function<void()> on_closed) = 0;
+
+  virtual void tick() {}
 };
 
 // When there is no presenter registered we use a NoTurnPresenter instead so the
-// turn can stil finish without having popups.
+// turn can still finish without having popups.
 class NoTurnPresenter : public TurnPresenter {
 public:
   void show_manager_alert(std::string /*message*/,
@@ -66,4 +75,18 @@ public:
     on_done();
   }
   void show_monthly_invoice(core::PlayerId /*player_id*/) override {}
+  // Held until the next tick so the steps queued behind the card run first.
+  void show_player_turn_card(core::PlayerId /*player*/,
+                             const GameDate& /*date*/,
+                             std::function<void()> on_closed) override {
+    pending_close_ = std::move(on_closed);
+  }
+  void tick() override {
+    if (auto callback = std::exchange(pending_close_, nullptr)) {
+      callback();
+    }
+  }
+
+private:
+  std::function<void()> pending_close_;
 };

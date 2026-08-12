@@ -14,7 +14,8 @@
 
 PlayerTurnCard::PlayerTurnCard(GameContext& context, GameState& state,
                                PlayerTurnCardState ps)
-    : MainPanelView(context, state), player_(ps.player), date_(ps.date) {}
+    : MainPanelView(context, state), player_(ps.player), date_(ps.date),
+      on_closed_(std::move(ps.on_closed)) {}
 
 void PlayerTurnCard::render(const RenderContext& ctx) {
   interactions_.begin_frame();
@@ -48,6 +49,8 @@ void PlayerTurnCard::render(const RenderContext& ctx) {
 void PlayerTurnCard::tick() {
   if (delay_ticks_-- == 0) {
     state_.ui().pop();
-    state_.turn().on_player_turn_card_finished();
+    if (on_closed_) {
+      on_closed_();
+    }
   }
 }

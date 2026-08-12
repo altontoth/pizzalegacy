@@ -107,8 +107,7 @@ CityView::CityView(GameContext& context, GameState& state, core::CityId id)
 
   // Keep time paused and events deferred while the end-of-turn pipeline runs.
   if (!state_.turn().is_processing_end_of_turn()) {
-    state_.resume_time_advancement();
-    state_.turn().prevent_auto_end_of_turn(false);
+    state_.enter_realtime_play();
   }
 
   for (int i = 0; i < city_->data_length(); ++i) {
