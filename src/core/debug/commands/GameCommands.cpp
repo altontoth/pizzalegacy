@@ -555,6 +555,111 @@ Example:
   };
 }
 
+static CommandDef make_game_realtime() {
+  return CommandDef{
+      .name = "realtime",
+      .description = "Run the clock as if the player were on a live screen",
+      .help_text = R"(Usage: game realtime <on|off>
+
+The clock only runs, and the day only ends by itself, while the player is on
+the city map or in a restaurant. A script reaches no such screen, so it has to
+turn this on before time will pass.
+
+Example:
+  game realtime on
+)",
+      .args =
+          {
+              ArgSpec{
+                  .name = "mode",
+                  .type = ArgType::String,
+                  .optional = false,
+                  .default_provider = DefaultProvider::None,
+                  .description = "on or off",
+                  .allowed_values = std::vector<std::string>{"on", "off"},
+              },
+          },
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        const bool on = ctx.string_arg(0) == "on";
+        if (on) {
+          ctx.state.enter_realtime_play();
+        }
+        else {
+          ctx.state.leave_realtime_play();
+        }
+        return CommandResult::success().add_message(
+            compat::format("Real-time play {}", on ? "on" : "off"));
+      },
+  };
+}
+
+static CommandDef make_game_turn_end() {
+  return CommandDef{
+      .name = "end",
+      .description = "End the active player's turn",
+      .help_text = R"(Usage: game turn end
+
+Ends the active player's turn on the next simulation tick, the same way
+running out of day does. Run `game tick` afterwards to let the turn boundary
+play out.
+)",
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        if (!ctx.state.active_player()) {
+          return CommandResult::error("No active player");
+        }
+        ctx.state.turn().request_end_of_turn();
+        return CommandResult::success().add_message("End of turn requested");
+      },
+  };
+}
+
+static CommandDef make_game_turn() {
+  return CommandDef{
+      .name = "turn",
+      .description = "Turn control",
+      .help_text = "End the active player's turn",
+  }
+      .add_subcommand(make_game_turn_end());
+}
+
+static CommandDef make_game_tick() {
+  return CommandDef{
+      .name = "tick",
+      .description = "Advance the simulation by whole ticks",
+      .help_text = R"(Usage: game tick [n]
+
+Runs n simulation steps, the same step the game loop runs 30 times a second.
+This is what lets a script get anywhere that needs time to pass: the turn
+boundary, a day rollover, the clock reaching closing time.
+
+Example:
+  game tick 100
+)",
+      .args =
+          {
+              ArgSpec{
+                  .name = "count",
+                  .type = ArgType::Int,
+                  .optional = true,
+                  .default_provider = DefaultProvider::None,
+                  .description = "Number of ticks (default 1)",
+              },
+          },
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        const int count =
+            ctx.args.empty() ? 1 : static_cast<int>(ctx.int_arg(0));
+        if (count < 1) {
+          return CommandResult::error("Tick count must be at least 1");
+        }
+        for (int i = 0; i < count; ++i) {
+          ctx.state.update(simulation_tick_ms);
+        }
+        return CommandResult::success().add_message(compat::format(
+            "Ran {} tick(s); now {}", count, ctx.state.time().to_string()));
+      },
+  };
+}
+
 CommandDef make_game_commands() {
   return CommandDef{
       .name = "game",
@@ -570,7 +675,10 @@ CommandDef make_game_commands() {
       .add_subcommand(make_game_end())
       .add_subcommand(make_game_levent())
       .add_subcommand(make_game_mission())
-      .add_subcommand(make_game_timescale());
+      .add_subcommand(make_game_timescale())
+      .add_subcommand(make_game_realtime())
+      .add_subcommand(make_game_turn())
+      .add_subcommand(make_game_tick());
 }
 
 } // namespace debug::commands
