@@ -36,8 +36,13 @@ using namespace LegacyConstants;
 
 namespace views::screens::restaurant {
 
-// Walker advances one cell every WALKER_MOVE_INTERVAL render frames
+// Render frames per animation frame; a walker advances one cell each
+// animation frame.
 static constexpr int WALKER_MOVE_INTERVAL = 4;
+
+// The kitchen doorway is one tile deep.
+static constexpr int KITCHEN_DOOR_CELLS =
+    RESTAURANT_TILE_WIDTH / WALK_CELL_SIZE;
 
 void GuestWalkScene::tick() {
   if (walking_guest_) {
@@ -48,8 +53,8 @@ void GuestWalkScene::tick() {
       view_.kitchen_view_) {
     return;
   }
-  // Only roll once per animation frame (every WALKER_MOVE_INTERVAL renders)
-  // so the effective spawn rate matches the original
+  // Only roll once per animation frame so the effective spawn rate matches the
+  // original.
   ++spawn_anim_gate_;
   if (spawn_anim_gate_ < WALKER_MOVE_INTERVAL) {
     return;
@@ -85,49 +90,133 @@ void GuestWalkScene::render() {
 void GuestWalkScene::walking_tick() {
   auto& walker = *walking_guest_;
 
-  // Walkers move one whole cell every WALKER_MOVE_INTERVAL render frames.
   ++walker.anim_tick;
   if (walker.anim_tick < WALKER_MOVE_INTERVAL) {
     return;
   }
   walker.anim_tick = 0;
 
-  if (walker.path_index >= static_cast<int>(walker.path.size())) {
-    switch (walker.kind) {
-    case WalkingGuest::WalkerKind::GUEST:
-      if (walker.walking_out) {
-        const core::FurnitureId failed_id = walker.destination_chair_id;
-        auto it = std::ranges::find_if(
-            view_.shuffled_chairs_,
-            [&](const PlacedFurniture* pf) { return pf->id() == failed_id; });
-        if (it != view_.shuffled_chairs_.end()) {
-          std::rotate(it, it + 1, view_.shuffled_chairs_.end());
-        }
-        walking_guest_.reset();
-      }
-      else {
-        seat_arrived_guest();
-      }
-      break;
-    case WalkingGuest::WalkerKind::GUEST_DEPARTING:
-      departing_chair_id_.reset();
-      walking_guest_.reset();
-      break;
-    case WalkingGuest::WalkerKind::WAITER_DELIVERING:
-      waiter_delivered();
-      break;
-    case WalkingGuest::WalkerKind::WAITER_RETURNING:
-    case WalkingGuest::WalkerKind::WAITER_RETURNING_WITH_PIZZA:
-      walking_guest_.reset();
-      break;
+  while (walker.path_index >= static_cast<int>(walker.path.size())) {
+    if (!advance_leg(walker)) {
+      return;
     }
-    view_.mark_dirty();
-    return;
+  }
+
+  // The original re-pathfinds at every waypoint, so look for a better route
+  // each time the route turns a corner.
+  if (walker.phase == WalkingGuest::Phase::NAVIGATING &&
+      walker.path_index > 0 &&
+      walker.path[walker.path_index] != walker.path[walker.path_index - 1]) {
+    try_replan(walker);
   }
 
   walker.direction = walker.path[walker.path_index++];
   step_one_cell(walker.position, walker.walk_cycle, walker.direction);
+  if (walker.phase == WalkingGuest::Phase::NAVIGATING) {
+    walker.trail.push_back(walker.direction);
+  }
   view_.mark_dirty();
+}
+
+bool GuestWalkScene::advance_leg(WalkingGuest& walker) {
+  switch (walker.phase) {
+  case WalkingGuest::Phase::SCRIPTED_IN:
+    walker.phase = WalkingGuest::Phase::NAVIGATING;
+    return plan_route(walker) ? true : give_up(walker);
+  case WalkingGuest::Phase::NAVIGATING:
+    // Routes always end on the goal cell, so a spent route means arrival.
+    return goal_reached(walker);
+  case WalkingGuest::Phase::SCRIPTED_OUT:
+    return finish();
+  }
+  return finish();
+}
+
+bool GuestWalkScene::plan_route(WalkingGuest& walker) {
+  auto wp = compute_walking_path(view_.navigation_grid(), walker.position,
+                                 walker.goal, walker.goal_passable);
+  snapshot_walk_debug_grid(walker, wp);
+  if (!wp.reachable) {
+    return false;
+  }
+  walker.path = std::move(wp.steps);
+  walker.path_index = 0;
+  return true;
+}
+
+// Adopt a fresh route only when it is shorter than what is left of the
+// current one.
+void GuestWalkScene::try_replan(WalkingGuest& walker) {
+  const int remaining =
+      static_cast<int>(walker.path.size()) - walker.path_index;
+  auto wp = compute_walking_path(view_.navigation_grid(), walker.position,
+                                 walker.goal, walker.goal_passable);
+  if (!wp.reachable || wp.steps.empty() ||
+      static_cast<int>(wp.steps.size()) >= remaining) {
+    return;
+  }
+  snapshot_walk_debug_grid(walker, wp);
+  walker.path = std::move(wp.steps);
+  walker.path_index = 0;
+}
+
+bool GuestWalkScene::give_up(WalkingGuest& walker) {
+  if (walker.kind == WalkingGuest::WalkerKind::WAITER_DELIVERING) {
+    // Abandon the delivery and head back to the kitchen; the guest keeps
+    // waiting for a pizza.
+    walker.kind = WalkingGuest::WalkerKind::WAITER_RETURNING_WITH_PIZZA;
+    walker.goal = kitchen_door();
+    return plan_route(walker) ? true : begin_scripted_out(walker);
+  }
+  if (walker.kind == WalkingGuest::WalkerKind::GUEST) {
+    retire_chair(walker.chair_id);
+  }
+  return begin_scripted_out(walker);
+}
+
+bool GuestWalkScene::goal_reached(WalkingGuest& walker) {
+  switch (walker.kind) {
+  case WalkingGuest::WalkerKind::GUEST:
+    seat_arrived_guest();
+    return finish();
+  case WalkingGuest::WalkerKind::WAITER_DELIVERING:
+    return waiter_delivered(walker);
+  case WalkingGuest::WalkerKind::GUEST_DEPARTING:
+  case WalkingGuest::WalkerKind::WAITER_RETURNING:
+  case WalkingGuest::WalkerKind::WAITER_RETURNING_WITH_PIZZA:
+    return begin_scripted_out(walker);
+  }
+  return finish();
+}
+
+bool GuestWalkScene::begin_scripted_out(WalkingGuest& walker) {
+  walker.phase = WalkingGuest::Phase::SCRIPTED_OUT;
+  walker.path = std::move(walker.tail);
+  walker.path_index = 0;
+  if (walker.path.empty()) {
+    return finish();
+  }
+  return true;
+}
+
+bool GuestWalkScene::finish() {
+  if (walking_guest_->kind == WalkingGuest::WalkerKind::GUEST_DEPARTING) {
+    departing_chair_id_.reset();
+  }
+  walking_guest_.reset();
+  view_.mark_dirty();
+  return false;
+}
+
+// Move a chair to the back of the seating order so it falls outside the
+// occupied range (0..effective_guests-1).
+void GuestWalkScene::retire_chair(core::FurnitureId chair_id) {
+  auto it = std::ranges::find_if(
+      view_.shuffled_chairs_,
+      [&](const PlacedFurniture* pf) { return pf->id() == chair_id; });
+  if (it != view_.shuffled_chairs_.end()) {
+    std::rotate(it, it + 1, view_.shuffled_chairs_.end());
+  }
 }
 
 void GuestWalkScene::seat_arrived_guest() {
@@ -137,90 +226,61 @@ void GuestWalkScene::seat_arrived_guest() {
   ctrl.set_eating(false);
   ctrl.set_guest_type(walker.guest_type);
   ctrl.set_face_index(walker.face_index);
-  view_.guest_controllers_[walker.destination_chair_id] = ctrl;
+  view_.guest_controllers_[walker.chair_id] = ctrl;
   ++guest_occupancy_delta_;
-  walking_guest_.reset();
-  view_.mark_dirty();
 }
 
 void GuestWalkScene::spawn_guest_departure() {
-  if (view_.guest_controllers_.empty()) {
-    return;
-  }
+  const WorldPoint exit_pos = customer_door();
 
   auto it = view_.guest_controllers_.begin();
-  const core::FurnitureId chair_id = it->first;
-  const auto& ctrl = it->second;
-
+  if (it == view_.guest_controllers_.end()) {
+    return;
+  }
   const PlacedFurniture* chair =
-      view_.restaurant_->layout()->find_by_id(chair_id, false);
+      view_.restaurant_->layout()->find_by_id(it->first, false);
   if (!chair) {
     view_.guest_controllers_.erase(it);
     return;
   }
 
-  const Size chair_sz = view_.bob_renderer_for(*chair).size(*chair);
-  const WorldPoint from_pos{chair->origin().x + (chair_sz.w / 2),
-                            chair->origin().y + (chair_sz.h / 2)};
+  const WorldRect chair_rect = furniture_rect(*chair);
+  WalkingPath route = compute_walking_path(
+      view_.navigation_grid(), chair_rect.center(), exit_pos, chair_rect);
+  if (!route.reachable) {
+    return;
+  }
 
-  constexpr int tile_w = RESTAURANT_TILE_WIDTH;
-  constexpr int tile_h = RESTAURANT_TILE_HEIGHT;
-  const auto room_size = view_.restaurant_->size();
-  const int entrance_offset = view_.restaurant_->layout()->entrance_offset();
-  const int logical_x = (entrance_offset * tile_w) + (3 * tile_w / 2);
-  const int entry_y = (room_size.h - 1) * tile_h;
-  const int entry_cells =
-      (view_.background_height_ - entry_y + WALK_CELL_SIZE - 1) /
-      WALK_CELL_SIZE;
-
-  const ConsumerType demographic = ctrl.pose().customer_type;
-  const int guest_type = ctrl.guest_type();
-  const int face_index = ctrl.face_index();
-
-  const auto& walk_bob =
-      context_.bob->get(compat::format("bob/walk{}.bob", guest_type));
-  const int blit_offset_x = (walk_bob.width(0) / 2) + 10;
-  const int blit_offset_y = (walk_bob.height(0) / 2) + 16;
-
-  const WorldPoint exit_pos{logical_x, entry_y};
-  auto wp = compute_walking_path(view_.navigation_grid(), from_pos, exit_pos,
-                                 chair->origin(), chair_sz);
-
-  std::vector<Orientation> path = std::move(wp.steps);
-  path.insert(path.end(), entry_cells, Orientation::S);
+  const core::FurnitureId chair_id = chair->id();
+  const ConsumerType demographic = it->second.pose().customer_type;
+  const int guest_type = it->second.guest_type();
+  const int face_index = it->second.face_index();
+  const ViewPoint anchor = sprite_anchor_offset(guest_type);
 
   // Remove from seated state before the walker starts moving (matches
   // original).
   --guest_occupancy_delta_;
   view_.guest_controllers_.erase(it);
-
-  // Rotate the departing chair to the back so it falls outside the occupied
-  // range (0..effective_guests-1) immediately.
-  {
-    auto sit = std::ranges::find_if(
-        view_.shuffled_chairs_,
-        [&](const PlacedFurniture* pf) { return pf->id() == chair_id; });
-    if (sit != view_.shuffled_chairs_.end()) {
-      std::rotate(sit, sit + 1, view_.shuffled_chairs_.end());
-    }
-  }
-
+  retire_chair(chair_id);
   departing_chair_id_ = chair_id;
 
   record_walk_debug_destination(exit_pos);
   walking_guest_ = WalkingGuest{
-      .position = from_pos,
+      .position = chair_rect.center(),
       .kind = WalkingGuest::WalkerKind::GUEST_DEPARTING,
+      .phase = WalkingGuest::Phase::NAVIGATING,
       .demographic = demographic,
-      .destination = exit_pos,
-      .destination_chair_id = chair_id,
+      .goal = exit_pos,
+      .goal_passable = chair_rect,
+      .chair_id = chair_id,
       .guest_type = guest_type,
       .face_index = face_index,
-      .path = std::move(path),
-      .sprite_blit_offset_x = blit_offset_x,
-      .sprite_blit_offset_y = blit_offset_y,
+      .path = std::move(route.steps),
+      .tail = std::vector<Orientation>(customer_door_cells(), Orientation::S),
+      .sprite_blit_offset_x = anchor.x,
+      .sprite_blit_offset_y = anchor.y,
   };
-  snapshot_walk_debug_grid(*walking_guest_, wp);
+  snapshot_walk_debug_grid(*walking_guest_, route);
 
   view_.mark_dirty();
 }
@@ -231,63 +291,29 @@ void GuestWalkScene::spawn_guest() {
     return;
   }
 
-  constexpr int tile_w = RESTAURANT_TILE_WIDTH;
-  constexpr int tile_h = RESTAURANT_TILE_HEIGHT;
-  const auto room_size = view_.restaurant_->size();
-  const int entrance_offset = view_.restaurant_->layout()->entrance_offset();
-  const int logical_x = (entrance_offset * tile_w) + (3 * tile_w / 2);
-  const int entry_y = (room_size.h - 1) * tile_h;
-  const int entry_cells =
-      (view_.background_height_ - entry_y + WALK_CELL_SIZE - 1) /
-      WALK_CELL_SIZE;
-  const int spawn_y = entry_y + (entry_cells * WALK_CELL_SIZE);
+  const WorldPoint door = customer_door();
+  const int lead_cells = customer_door_cells();
 
   const ConsumerType demographic =
       pick_weighted_demographic(view_.restaurant_->economy().customer_counts());
   const int guest_type = pick_guest_type(demographic);
+  const ViewPoint anchor = sprite_anchor_offset(guest_type);
+  const WorldRect chair_rect = furniture_rect(*chair);
 
-  // World pos = sprite_center + (5, 8) (from original, then 2x)
-  const auto& walk_bob =
-      context_.bob->get(compat::format("bob/walk{}.bob", guest_type));
-  const int blit_offset_x = (walk_bob.width(0) / 2) + 10;
-  const int blit_offset_y = (walk_bob.height(0) / 2) + 16;
-
-  const Size chair_sz = view_.bob_renderer_for(*chair).size(*chair);
-  const WorldPoint destination{chair->origin().x + (chair_sz.w / 2),
-                               chair->origin().y + (chair_sz.h / 2)};
-  const core::FurnitureId chair_id = chair->id();
-  const int face_index = pick_face_index(guest_type);
-
-  std::vector<Orientation> path(entry_cells, Orientation::N);
-
-  record_walk_debug_destination(destination);
-  auto wp = compute_walking_path(view_.navigation_grid(),
-                                 WorldPoint{logical_x, entry_y}, destination,
-                                 chair->origin(), chair_sz);
-
-  bool walking_out = false;
-  if (wp.steps.empty()) {
-    // No path to chair: append exit steps (south) so the guest walks back out.
-    path.insert(path.end(), entry_cells, Orientation::S);
-    walking_out = true;
-  }
-  else {
-    path.insert(path.end(), wp.steps.begin(), wp.steps.end());
-  }
-
+  record_walk_debug_destination(chair_rect.center());
   walking_guest_ = WalkingGuest{
-      .position = {logical_x, spawn_y},
+      .position = {door.x, door.y + (lead_cells * WALK_CELL_SIZE)},
       .demographic = demographic,
-      .destination = destination,
-      .destination_chair_id = chair_id,
+      .goal = chair_rect.center(),
+      .goal_passable = chair_rect,
+      .chair_id = chair->id(),
       .guest_type = guest_type,
-      .face_index = face_index,
-      .path = std::move(path),
-      .sprite_blit_offset_x = blit_offset_x,
-      .sprite_blit_offset_y = blit_offset_y,
-      .walking_out = walking_out,
+      .face_index = pick_face_index(guest_type),
+      .path = std::vector<Orientation>(lead_cells, Orientation::N),
+      .tail = std::vector<Orientation>(lead_cells, Orientation::S),
+      .sprite_blit_offset_x = anchor.x,
+      .sprite_blit_offset_y = anchor.y,
   };
-  snapshot_walk_debug_grid(*walking_guest_, wp);
 }
 
 void GuestWalkScene::spawn_waiter() {
@@ -296,108 +322,81 @@ void GuestWalkScene::spawn_waiter() {
     return;
   }
 
-  constexpr int tile_w = RESTAURANT_TILE_WIDTH;
-  constexpr int tile_h = RESTAURANT_TILE_HEIGHT;
-
-  // +1 skips the top wall tile; KITCHEN_ENTRANCE_ROWS/2 picks the middle row.
-  const int entrance_row = view_.restaurant_->layout()->kitchen_entry_offset();
-  const int kitchen_y =
-      ((entrance_row + 1 + KITCHEN_ENTRANCE_ROWS / 2) * tile_h) + (tile_h / 2);
-
-  constexpr int entry_x = tile_w;
-  constexpr int entry_cells = entry_x / WALK_CELL_SIZE;
-
+  const WorldPoint door = kitchen_door();
   constexpr int waiter_bob_index = 12;
-  const auto& walk_bob =
-      context_.bob->get(compat::format("bob/walk{}.bob", waiter_bob_index));
-  // World pos = sprite_center + (5, 8) (from original); at 2x: +10, +16.
-  const int blit_offset_x = (walk_bob.width(0) / 2) + 10;
-  const int blit_offset_y = (walk_bob.height(0) / 2) + 16;
+  const ViewPoint anchor = sprite_anchor_offset(waiter_bob_index);
+  const WorldRect chair_rect = furniture_rect(*chair);
 
-  const Size chair_sz = view_.bob_renderer_for(*chair).size(*chair);
-  const WorldPoint destination{chair->origin().x + (chair_sz.w / 2),
-                               chair->origin().y + (chair_sz.h / 2)};
-  const core::FurnitureId chair_id = chair->id();
-
-  std::vector<Orientation> path(entry_cells, Orientation::E);
-
-  record_walk_debug_destination(destination);
-  auto wp = compute_walking_path(view_.navigation_grid(),
-                                 WorldPoint{entry_x, kitchen_y}, destination,
-                                 chair->origin(), chair_sz);
-  if (wp.steps.empty()) {
-    // No route: walk out a few steps then immediately return.
-    constexpr int turn_steps = 3;
-    std::vector<Orientation> fail_path(entry_cells + turn_steps,
-                                       Orientation::E);
-    fail_path.insert(fail_path.end(), entry_cells + turn_steps, Orientation::W);
-
-    walking_guest_ = WalkingGuest{
-        .position = {0, kitchen_y},
-        .kind = WalkingGuest::WalkerKind::WAITER_RETURNING_WITH_PIZZA,
-        .guest_type = waiter_bob_index,
-        .path = std::move(fail_path),
-        .sprite_blit_offset_x = blit_offset_x,
-        .sprite_blit_offset_y = blit_offset_y,
-    };
-    return;
-  }
-  path.insert(path.end(), wp.steps.begin(), wp.steps.end());
-
+  record_walk_debug_destination(chair_rect.center());
   walking_guest_ = WalkingGuest{
-      .position = {0, kitchen_y},
+      .position = {door.x - (KITCHEN_DOOR_CELLS * WALK_CELL_SIZE), door.y},
       .kind = WalkingGuest::WalkerKind::WAITER_DELIVERING,
-      .destination = destination,
-      .destination_chair_id = chair_id,
+      .goal = chair_rect.center(),
+      .goal_passable = chair_rect,
+      .chair_id = chair->id(),
       .guest_type = waiter_bob_index,
-      .path = std::move(path),
-      .sprite_blit_offset_x = blit_offset_x,
-      .sprite_blit_offset_y = blit_offset_y,
+      .path = std::vector<Orientation>(KITCHEN_DOOR_CELLS, Orientation::E),
+      .tail = std::vector<Orientation>(KITCHEN_DOOR_CELLS, Orientation::W),
+      .sprite_blit_offset_x = anchor.x,
+      .sprite_blit_offset_y = anchor.y,
   };
-  snapshot_walk_debug_grid(*walking_guest_, wp);
 }
 
-void GuestWalkScene::waiter_delivered() {
-  auto& walker = *walking_guest_;
-
-  auto it = view_.guest_controllers_.find(walker.destination_chair_id);
+bool GuestWalkScene::waiter_delivered(WalkingGuest& walker) {
+  auto it = view_.guest_controllers_.find(walker.chair_id);
   if (it != view_.guest_controllers_.end()) {
     it->second.set_eating(true);
   }
   view_.mark_dirty();
 
-  constexpr int tile_w = RESTAURANT_TILE_WIDTH;
-  constexpr int tile_h = RESTAURANT_TILE_HEIGHT;
-  const int entrance_row = view_.restaurant_->layout()->kitchen_entry_offset();
-  const int kitchen_y =
-      ((entrance_row + 1 + KITCHEN_ENTRANCE_ROWS / 2) * tile_h) + (tile_h / 2);
-  constexpr int entry_x = tile_w;
-  constexpr int exit_cells = entry_x / WALK_CELL_SIZE;
-
-  // Unblock the served chair so the return path can start from inside it.
-  const auto* chair = view_.restaurant_->layout()->find_by_id(
-      walker.destination_chair_id, false);
-  WorldPoint unblock_origin = walker.destination;
-  Size unblock_size{WALK_CELL_SIZE, WALK_CELL_SIZE};
-  if (chair) {
-    unblock_origin = chair->origin();
-    unblock_size = view_.bob_renderer_for(*chair).size(*chair);
-  }
-
-  auto wp = compute_walking_path(view_.navigation_grid(), walker.destination,
-                                 WorldPoint{entry_x, kitchen_y}, unblock_origin,
-                                 unblock_size);
-
-  std::vector<Orientation> path = std::move(wp.steps);
-  for (int i = 0; i < exit_cells; ++i) {
-    path.push_back(Orientation::W);
-  }
-
   walker.kind = WalkingGuest::WalkerKind::WAITER_RETURNING;
-  walker.path = std::move(path);
+  walker.goal = kitchen_door();
+  std::vector<Orientation> outbound = std::move(walker.trail);
+  walker.trail.clear();
+  if (plan_route(walker)) {
+    return true;
+  }
+  // The greedy search can miss a route that exists, so retrace the steps that
+  // got the waiter here.
+  walker.path.assign(outbound.rbegin(), outbound.rend());
+  for (Orientation& step : walker.path) {
+    step = opposite(step);
+  }
   walker.path_index = 0;
-  walker.anim_tick = 0;
-  snapshot_walk_debug_grid(walker, wp);
+  return walker.path.empty() ? begin_scripted_out(walker) : true;
+}
+
+WorldPoint GuestWalkScene::customer_door() const {
+  const int entrance_offset = view_.restaurant_->layout()->entrance_offset();
+  return {(entrance_offset * RESTAURANT_TILE_WIDTH) +
+              (3 * RESTAURANT_TILE_WIDTH / 2),
+          (view_.restaurant_->size().h - 1) * RESTAURANT_TILE_HEIGHT};
+}
+
+WorldPoint GuestWalkScene::kitchen_door() const {
+  // +1 skips the top wall tile; KITCHEN_ENTRANCE_ROWS/2 picks the middle row.
+  const int entrance_row = view_.restaurant_->layout()->kitchen_entry_offset();
+  return {RESTAURANT_TILE_WIDTH,
+          ((entrance_row + 1 + (KITCHEN_ENTRANCE_ROWS / 2)) *
+           RESTAURANT_TILE_HEIGHT) +
+              (RESTAURANT_TILE_HEIGHT / 2)};
+}
+
+int GuestWalkScene::customer_door_cells() const {
+  return (view_.background_height_ - customer_door().y + WALK_CELL_SIZE - 1) /
+         WALK_CELL_SIZE;
+}
+
+WorldRect GuestWalkScene::furniture_rect(const PlacedFurniture& pf) const {
+  return {pf.origin(), view_.bob_renderer_for(pf).size(pf)};
+}
+
+// World pos sits 10 right and 16 down from the sprite center, the original's
+// offset at our scale.
+ViewPoint GuestWalkScene::sprite_anchor_offset(int guest_type) const {
+  const auto& walk_bob =
+      context_.bob->get(compat::format("bob/walk{}.bob", guest_type));
+  return {(walk_bob.width(0) / 2) + 10, (walk_bob.height(0) / 2) + 16};
 }
 
 const PlacedFurniture* GuestWalkScene::get_guest_destination_chair() {

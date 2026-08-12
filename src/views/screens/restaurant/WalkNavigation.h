@@ -26,8 +26,10 @@ struct NavGrid {
 
 struct WalkingPath {
   std::vector<Orientation> steps;
-  // Grid snapshot the path was computed on (with the destination unblocked),
-  // kept for the walk debug overlay.
+  // True when the destination was reached. steps is empty both for an
+  // unreachable destination and for one the walker already stands on.
+  bool reachable{false};
+  // Grid snapshot the path was computed on, kept for the walk debug overlay.
   std::vector<bool> blocked;
   int grid_w{0};
   int grid_h{0};
@@ -40,12 +42,11 @@ struct WalkingPath {
 build_navigation_grid(Size room_size, int entrance_offset,
                       std::span<const WorldRect> obstacles);
 
-// Find a path between two world points on the grid. The destination furniture
-// rect (dest_origin/dest_size) is unblocked so the path may end inside it.
-// steps is empty when no path was found.
+// Find a path between two world points on the grid. The passable arg tells us
+// which part we can pass through regardless so the route can start or end
+// inside a chair.
 [[nodiscard]] WalkingPath compute_walking_path(const NavGrid& grid,
                                                WorldPoint from, WorldPoint to,
-                                               WorldPoint dest_origin,
-                                               Size dest_size);
+                                               WorldRect passable);
 
 } // namespace views::screens::restaurant

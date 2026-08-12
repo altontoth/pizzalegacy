@@ -259,9 +259,7 @@ NavGrid build_navigation_grid(Size room_size, int entrance_offset,
 }
 
 WalkingPath compute_walking_path(const NavGrid& grid, WorldPoint from,
-                                 WorldPoint to, WorldPoint dest_origin,
-                                 Size dest_size) {
-  // Copy the grid so we can mutate it (unblock the destination chair).
+                                 WorldPoint to, WorldRect passable) {
   std::vector<bool> blocked = grid.blocked;
   const int grid_w = grid.w;
   const int grid_h = grid.h;
@@ -271,14 +269,16 @@ WalkingPath compute_walking_path(const NavGrid& grid, WorldPoint from,
     return std::clamp(v, 0, hi - 1);
   };
 
-  // Unblock the destination chair so DFS can enter from any exposed edge
   const int dest_gx = clamp_cell(to.x / WALK_CELL_SIZE, grid_w);
   const int dest_gy = clamp_cell(to.y / WALK_CELL_SIZE, grid_h);
+
+  // Free the furniture this trip starts from or ends in, so the DFS can leave
+  // or enter it from any exposed edge.
   {
-    const int ux0 = dest_origin.x / WALK_CELL_SIZE;
-    const int uy0 = dest_origin.y / WALK_CELL_SIZE;
-    const int ux1 = (dest_origin.x + dest_size.w - 1) / WALK_CELL_SIZE;
-    const int uy1 = (dest_origin.y + dest_size.h - 1) / WALK_CELL_SIZE;
+    const int ux0 = passable.x / WALK_CELL_SIZE;
+    const int uy0 = passable.y / WALK_CELL_SIZE;
+    const int ux1 = (passable.x + passable.w - 1) / WALK_CELL_SIZE;
+    const int uy1 = (passable.y + passable.h - 1) / WALK_CELL_SIZE;
     for (int y = std::max(0, uy0); y <= std::min(grid_h - 1, uy1); ++y) {
       for (int x = std::max(0, ux0); x <= std::min(grid_w - 1, ux1); ++x) {
         blocked[(y * grid_w) + x] = false;
@@ -292,10 +292,11 @@ WalkingPath compute_walking_path(const NavGrid& grid, WorldPoint from,
   std::vector<Orientation> path;
   std::vector<bool> visited(static_cast<size_t>(grid_w * grid_h), false);
   int ops = WALK_MAX_OPS;
-  walk_dfs(from_gx, from_gy, dest_gx, dest_gy, grid_w, grid_h, blocked, visited,
-           path, ops, 0);
+  const bool reachable = walk_dfs(from_gx, from_gy, dest_gx, dest_gy, grid_w,
+                                  grid_h, blocked, visited, path, ops, 0);
   path = straighten_path(from_gx, from_gy, path, grid_w, grid_h, blocked);
   return {.steps = std::move(path),
+          .reachable = reachable,
           .blocked = std::move(blocked),
           .grid_w = grid_w,
           .grid_h = grid_h};

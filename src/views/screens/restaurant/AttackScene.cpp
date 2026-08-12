@@ -238,7 +238,6 @@ void AttackScene::begin_attack(core::item::Item weapon) {
     }
   }
 
-  view_.walk_scene_.clear_walker();
   attack_active_ = true;
   break_in_music_stopped_ = false;
   state_.pause_time_advancement();

@@ -27,6 +27,14 @@ constexpr std::array<int, ORIENTATION_COUNT> WALK_DY = {1, 0, -1, 0};
 constexpr int walk_dx(Orientation o) { return WALK_DX[static_cast<int>(o)]; }
 constexpr int walk_dy(Orientation o) { return WALK_DY[static_cast<int>(o)]; }
 
+constexpr Orientation opposite(Orientation o) {
+  int turned = static_cast<int>(o) + (ORIENTATION_COUNT / 2);
+  if (turned >= ORIENTATION_COUNT) {
+    turned -= ORIENTATION_COUNT;
+  }
+  return static_cast<Orientation>(turned);
+}
+
 // Advance a walker one grid cell in the given direction and bump its
 // animation phase.
 inline void step_one_cell(WorldPoint& position, int& walk_cycle,
