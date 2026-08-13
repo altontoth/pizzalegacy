@@ -440,6 +440,7 @@ set(PLEGACY_HEADERS
     src/core/state/AnnualCompetitionFlow.h
     src/core/state/CompetitionCoordinator.h
     src/core/state/CompetitionSession.h
+    src/core/state/FadePresenter.h
     src/core/state/GameOptions.h
     src/core/state/GameState.h
     src/core/state/MilestoneTracker.h
@@ -483,6 +484,7 @@ set(PLEGACY_HEADERS
     src/engine/LayerInfo.h
     src/engine/Logger.h
     src/engine/Math.h
+    src/engine/PendingFade.h
     src/engine/PlatformPaths.h
     src/engine/Point.h
     src/engine/Random.h
