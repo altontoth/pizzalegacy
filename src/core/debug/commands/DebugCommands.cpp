@@ -6,8 +6,10 @@
 
 #include "core/debug/commands/DebugCommands.h"
 
+#include <fstream>
 #include <sstream>
 #include "core/debug/command/CommandRegistry.h"
+#include "core/save/SaveGameManager.h"
 #include "core/state/GameState.h"
 #include "core/util/GameContext.h"
 #include "engine/input/InputManager.h"
@@ -189,6 +191,61 @@ Example:
   };
 }
 
+static CommandDef make_debug_dump_fingerprint() {
+  return CommandDef{
+      .name = "fingerprint",
+      .description = "Print a hash of the entire game state",
+      .help_text = R"(Usage: dump fingerprint [file]
+
+Hashes the save document, minus the timestamp, so two runs of the same script
+can be compared. Give a file to write the document that was hashed; when a
+fingerprint does not match, diffing those two files says which field moved.
+
+Only meaningful when nothing is in progress: mid-turn the pipeline holds state
+that never reaches a save.
+
+Examples:
+  dump fingerprint
+  dump fingerprint state.json
+)",
+      .args =
+          {
+              ArgSpec{
+                  .name = "file",
+                  .type = ArgType::String,
+                  .optional = true,
+                  .default_provider = DefaultProvider::EmptyString,
+                  .description = "Where to write the hashed document",
+              },
+          },
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        const save::StateFingerprint fp =
+            save::SaveGameManager::fingerprint(ctx.state, ctx.context);
+        const std::string document = fp.document.dump(2);
+
+        CommandResult result = CommandResult::success();
+        result.add_message(fp.hash);
+
+        const std::string file = ctx.string_arg(0);
+        if (!file.empty()) {
+          std::ofstream out(file);
+          if (!out) {
+            return CommandResult::error(
+                compat::format("Cannot write {}", file));
+          }
+          out << document << "\n";
+          if (!out) {
+            return CommandResult::error(
+                compat::format("Failed writing {}", file));
+          }
+          result.add_message(compat::format("Wrote {}", file));
+        }
+
+        return result.with_json(document);
+      },
+  };
+}
+
 static CommandDef make_debug_dump_layers() {
   return CommandDef{
       .name = "layers",
@@ -342,6 +399,7 @@ static CommandDef make_debug_dump() {
       .add_subcommand(make_debug_dump_players())
       .add_subcommand(make_debug_dump_ledger())
       .add_subcommand(make_debug_dump_state())
+      .add_subcommand(make_debug_dump_fingerprint())
       .add_subcommand(make_debug_dump_layers())
       .add_subcommand(make_debug_dump_inventory())
       .add_subcommand(make_debug_dump_input());
@@ -366,6 +424,7 @@ CommandDef make_dump_command() {
       .add_subcommand(make_debug_dump_players())
       .add_subcommand(make_debug_dump_ledger())
       .add_subcommand(make_debug_dump_state())
+      .add_subcommand(make_debug_dump_fingerprint())
       .add_subcommand(make_debug_dump_layers())
       .add_subcommand(make_debug_dump_inventory())
       .add_subcommand(make_debug_dump_input());

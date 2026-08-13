@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cstdint>
 #include <ctime>
 #include <filesystem>
 #include <fstream>
@@ -39,6 +40,7 @@
 #include "core/time/GameTime.h"
 #include "core/util/GameContext.h"
 #include "engine/Endian.h"
+#include "engine/FormatCompat.h"
 #include "engine/Logger.h"
 #include "engine/Random.h"
 
@@ -1082,6 +1084,29 @@ bool SaveGameManager::add_high_score(HighScoreEntry entry) {
   catch (...) {
     return false;
   }
+}
+
+StateFingerprint SaveGameManager::fingerprint(const GameState& state,
+                                              const GameContext& context) {
+  json document = state_to_json(state, context);
+  document.erase("saved_at");
+
+  // nlohmann::json orders objects by key, so the same state always dumps to the
+  // same bytes.
+  const std::string bytes = document.dump();
+
+  // FNV-1a
+  constexpr uint64_t fnv_offset_basis = 14695981039346656037ULL;
+  constexpr uint64_t fnv_prime = 1099511628211ULL;
+
+  uint64_t hash = fnv_offset_basis;
+  for (unsigned char byte : bytes) {
+    hash ^= byte;
+    hash *= fnv_prime;
+  }
+
+  return StateFingerprint{.hash = compat::format("{:016x}", hash),
+                          .document = std::move(document)};
 }
 
 } // namespace save

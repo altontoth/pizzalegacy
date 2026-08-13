@@ -10,6 +10,7 @@
 #include <nlohmann/json.hpp>
 #include <optional>
 #include <string>
+#include <vector>
 
 #include "core/util/Constants.h"
 
@@ -42,6 +43,11 @@ struct HighScoreEntry {
 
 constexpr int HIGH_SCORE_MAX_ENTRIES = 8;
 
+struct StateFingerprint {
+  std::string hash; // 16 hex digits
+  json document;    // the state we hashed, everything but the save timestamp
+};
+
 class SaveGameManager {
 public:
   static bool save(const GameState& state, const GameContext& context,
@@ -61,6 +67,9 @@ public:
 
   static std::vector<HighScoreEntry> load_high_scores();
   static bool add_high_score(HighScoreEntry entry);
+
+  static StateFingerprint fingerprint(const GameState& state,
+                                      const GameContext& context);
 
 private:
   static std::optional<json> read_save_json(const std::string& filename);
