@@ -85,7 +85,7 @@ GuestTalkPopup::select_dialogue(const Restaurant* restaurant,
   };
 
   // picks between the two lines within each rating tier
-  const int variation = engine::random::rand_max_n(2);
+  const int variation = engine::random::presentation::rand_max_n(2);
 
   // Repeat click
   if (info_.been_talked_to) {
@@ -93,14 +93,14 @@ GuestTalkPopup::select_dialogue(const Restaurant* restaurant,
   }
 
   // 10% flat refusal
-  if (engine::random::rand_percentage_chance(10)) {
+  if (engine::random::presentation::rand_percentage_chance(10)) {
     return line(56); // "Get lost, old man..."
   }
 
   // No pizza yet (or empty menu)
   if (!info_.has_pizza || restaurant->count_menu_items() == 0) {
 
-    if (engine::random::coin_flip()) {
+    if (engine::random::presentation::coin_flip()) {
       // Branch A: furniture / decor comment
       const auto demo = static_cast<ConsumerType>(info_.demographic);
       const int score = restaurant->economy().furniture_appeal()[demo];
@@ -144,7 +144,7 @@ GuestTalkPopup::select_dialogue(const Restaurant* restaurant,
 
   auto pizza_line = [&](int n) { return prefix + line(n); };
 
-  switch (engine::random::rand_max_n(3)) {
+  switch (engine::random::presentation::rand_max_n(3)) {
   case 0: {
     // Taste
     const int rating = std::min(info_.pizza_taste / 19, 4);
@@ -238,7 +238,8 @@ void GuestTalkPopup::advance_blink() {
     if (blink_duration_ <= 0) {
       eye_blink_ = false;
       blink_cooldown_ =
-          BLINK_MIN_INTERVAL + engine::random::rand_max_n(BLINK_RANDOM_RANGE);
+          BLINK_MIN_INTERVAL +
+          engine::random::presentation::rand_max_n(BLINK_RANDOM_RANGE);
     }
   }
   else if (blink_cooldown_ > 0) {
@@ -268,7 +269,8 @@ void GuestTalkPopup::tick() {
       mouth_state_ = MOUTH_SEQ[0].first;
       // Schedule first independent blink after a short delay
       blink_cooldown_ =
-          BLINK_MIN_INTERVAL + engine::random::rand_max_n(BLINK_RANDOM_RANGE);
+          BLINK_MIN_INTERVAL +
+          engine::random::presentation::rand_max_n(BLINK_RANDOM_RANGE);
     }
     dirty = true;
     break;

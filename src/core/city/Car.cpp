@@ -12,8 +12,7 @@
 #include "core/util/Constants.h"
 #include "engine/Random.h"
 
-Car Car::spawn(int tile_x, int tile_y, int car_type, const City& city,
-               const std::function<int(int)>& rand_int) {
+Car Car::spawn(int tile_x, int tile_y, int car_type, const City& city) {
   if (tile_x < 0 || tile_x >= MAP_TILES_PER_ROW || tile_y < 0 ||
       tile_y >= MAP_TILES_PER_COLUMN) {
     // Return a car with invalid position that will be removed
@@ -30,8 +29,7 @@ Car::Car(int tile_x, int tile_y, Dir d, int car_type)
   calc_screen_pos();
 }
 
-void Car::update(const WorldRect& view, const City& city,
-                 const std::function<int(int)>& rand_int) {
+void Car::update(const WorldRect& view, const City& city) {
 
   if (remaining_cooldown_ > 0) {
     --remaining_cooldown_;
@@ -104,7 +102,7 @@ void Car::update(const WorldRect& view, const City& city,
       dir_ = Dir::N;
       break;
     }
-    car_type_ = engine::random::rand_max_n(4);
+    car_type_ = engine::random::presentation::rand_max_n(4);
     step_timer_ = INITIAL_STEP_TIMER;
   }
   else {
@@ -236,7 +234,7 @@ Dir Car::direction_for_tile(uint8_t tile_type) {
     }
   }
 
-  return dirs[engine::random::rand_max_n(n)];
+  return dirs[engine::random::presentation::rand_max_n(n)];
 }
 
 Dir Car::choose_turn(bool previous_left_turn, Dir straight_dir,
@@ -247,7 +245,7 @@ Dir Car::choose_turn(bool previous_left_turn, Dir straight_dir,
   }
 
   // Otherwise toss a coin
-  bool pickTurn = engine::random::rand_percentage_chance(50);
+  bool pickTurn = engine::random::presentation::rand_percentage_chance(50);
 
   return pickTurn ? turn_dir : straight_dir;
 }

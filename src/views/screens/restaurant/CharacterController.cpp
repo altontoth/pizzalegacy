@@ -11,7 +11,7 @@
 using namespace views::screens::restaurant;
 
 int CharacterController::rnd(int lo, int hi) {
-  return engine::random::rand_between(lo, hi);
+  return engine::random::presentation::rand_between(lo, hi);
 }
 
 void CharacterController::reset_for_mode(bool eat) {

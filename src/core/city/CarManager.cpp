@@ -10,6 +10,7 @@
 
 #include "core/city/City.h"
 #include "core/city/District.h"
+#include "engine/Random.h"
 #include "engine/RenderContext.h"
 #include "engine/geom/Spaces.h"
 
@@ -17,10 +18,8 @@ static int floor_div(int value, int denom) {
   return (value >= 0) ? value / denom : -((-value + denom - 1) / denom);
 }
 
-CarManager::CarManager(BobManager* bob, const City& city,
-                       std::function<int(int)> rng)
-    : city_(city), rng_(std::move(rng)),
-      stanbobs_(bob->get("bob/stanbobs.bob")) {
+CarManager::CarManager(BobManager* bob, const City& city)
+    : city_(city), stanbobs_(bob->get("bob/stanbobs.bob")) {
 
   car_surfaces_.reserve(TOTAL_FRAMES);
   for (int i = 0; i < TOTAL_FRAMES; ++i) {
@@ -37,7 +36,7 @@ void CarManager::update(const WorldRect& view, int ticks) {
   for (int t = 0; t < ticks; ++t) {
     resolve_collisions();
     for (Car& c : cars_) {
-      c.update(view, city_, rng_);
+      c.update(view, city_);
     }
     constexpr int margin = CAR_KEEPALIVE_MARGIN_PIXELS;
     std::erase_if(cars_, [&](const Car& c) {
@@ -263,14 +262,14 @@ void CarManager::spawn_cars_in_region(const WorldRect& region,
   }
 
   // Shuffle & spawn up to target_cars
-  std::shuffle(sites.begin(), sites.end(), shuffle_rng_);
+  engine::random::presentation::shuffle(sites.begin(), sites.end());
 
   const std::size_t spawn_count =
       std::min(static_cast<std::size_t>(target_cars), sites.size());
   for (std::size_t i = 0; i < spawn_count; ++i) {
     const auto& s = sites[i];
-    int type = rng_(MAX_CAR_TYPES);
-    cars_.push_back(Car::spawn(s.tx, s.ty, type, city_, rng_));
+    int type = engine::random::presentation::rand_max_n(MAX_CAR_TYPES);
+    cars_.push_back(Car::spawn(s.tx, s.ty, type, city_));
   }
 }
 

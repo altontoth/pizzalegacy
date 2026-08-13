@@ -7,7 +7,6 @@
 #pragma once
 
 #include <cstdint>
-#include <functional>
 #include <magic_enum/magic_enum.hpp>
 #include <ostream>
 #include "engine/geom/Spaces.h"
@@ -42,12 +41,10 @@ class Car {
   }
 
 public:
-  static Car spawn(int tile_x, int tile_y, int type, const City& city,
-                   const std::function<int(int)>& rand_int);
+  static Car spawn(int tile_x, int tile_y, int type, const City& city);
 
-  // Advance one frame. Random callback must return integer in [0, upper)
-  void update(const WorldRect& view, const City& city,
-              const std::function<int(int)>& rand_int);
+  // Advance one frame.
+  void update(const WorldRect& view, const City& city);
 
   int tile_x() const { return tile_x_; }
   int tile_y() const { return tile_y_; }

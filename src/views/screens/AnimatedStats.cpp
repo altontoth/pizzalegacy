@@ -804,7 +804,7 @@ void AnimatedStats::render_turnover(const RenderContext& ctx) {
     // Takings coins (left side)
     if (takings_value > i) {
       // Add random horizontal jitter
-      int jitter_x = engine::random::rand_max_n(6);
+      int jitter_x = engine::random::presentation::rand_max_n(6);
       int coin_x = takings_coin_base_x + jitter_x;
 
       // Sprite selection: first coin (i=0) uses sprite 21, rest use sprite 22
@@ -815,7 +815,7 @@ void AnimatedStats::render_turnover(const RenderContext& ctx) {
 
     // Expenses coins (right side)
     if (expenses_value > i) {
-      int jitter_x = engine::random::rand_max_n(6);
+      int jitter_x = engine::random::presentation::rand_max_n(6);
       int coin_x = expenses_coin_base_x + jitter_x;
 
       int sprite_index = (i == 0) ? 21 : 22;

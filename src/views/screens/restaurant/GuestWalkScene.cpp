@@ -61,10 +61,10 @@ void GuestWalkScene::tick() {
   }
   spawn_anim_gate_ = 0;
   // Two independent 10% rolls each tick for a 1% spawn chance per tick.
-  const bool roll1 = engine::random::rand_percentage_chance(10);
-  const bool roll2 = engine::random::rand_percentage_chance(10);
+  const bool roll1 = engine::random::presentation::rand_percentage_chance(10);
+  const bool roll2 = engine::random::presentation::rand_percentage_chance(10);
   if (roll1 && roll2) {
-    const int mode = engine::random::rand_max_n(3) + 1;
+    const int mode = engine::random::presentation::rand_max_n(3) + 1;
 
     if (mode == 1) {
       spawn_guest();

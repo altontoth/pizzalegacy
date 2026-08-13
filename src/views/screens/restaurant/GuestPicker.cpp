@@ -18,9 +18,10 @@ ConsumerType pick_weighted_demographic(const CustomerCounts& counts) {
   }
   if (total == 0) {
     constexpr int DEMO_COUNT = static_cast<int>(ConsumerType::Count);
-    return static_cast<ConsumerType>(engine::random::rand_max_n(DEMO_COUNT));
+    return static_cast<ConsumerType>(
+        engine::random::presentation::rand_max_n(DEMO_COUNT));
   }
-  int roll = engine::random::rand_max_n(total);
+  int roll = engine::random::presentation::rand_max_n(total);
   for (ConsumerType ct : ALL_CONSUMER_TYPES) {
     roll -= counts[ct];
     if (roll < 0) {
@@ -31,11 +32,12 @@ ConsumerType pick_weighted_demographic(const CustomerCounts& counts) {
 }
 
 int pick_guest_type(ConsumerType demo) {
-  return static_cast<int>(demo) + (engine::random::coin_flip() ? 6 : 0);
+  return static_cast<int>(demo) +
+         (engine::random::presentation::coin_flip() ? 6 : 0);
 }
 
 int pick_face_index(int guest_type) {
-  return (guest_type * 2) + (engine::random::coin_flip() ? 1 : 0);
+  return (guest_type * 2) + (engine::random::presentation::coin_flip() ? 1 : 0);
 }
 
 } // namespace views::screens::restaurant

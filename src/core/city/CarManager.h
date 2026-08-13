@@ -6,9 +6,7 @@
 
 #pragma once
 
-#include <functional>
 #include <optional>
-#include <random>
 #include <vector>
 #include "core/city/Car.h"
 #include "engine/geom/Camera.h"
@@ -24,7 +22,7 @@ constexpr int TOTAL_FRAMES = MAX_CAR_TYPES * FRAMES_PER_CAR;
 
 class CarManager {
 public:
-  CarManager(BobManager* bob, const City& city, std::function<int(int)> rng);
+  CarManager(BobManager* bob, const City& city);
 
   void update(const WorldRect& view, int ticks = 1);
   void render(const RenderContext& ctx, const Camera& camera) const;
@@ -42,9 +40,7 @@ private:
 
   const City& city_;
   std::vector<Car> cars_;
-  std::function<int(int)> rng_;
   Bob& stanbobs_;
-  std::mt19937 shuffle_rng_;
   std::vector<Surface> car_surfaces_;
   std::optional<WorldRect> prev_viewport_;
 };

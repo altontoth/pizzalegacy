@@ -706,7 +706,7 @@ bool Game::init(int display_height, ConfigManager& config_manager) {
   assert(display_height_ == DisplayConstants::LOGICAL_HEIGHT ||
          display_height_ == DisplayConstants::CRT_DISPLAY_HEIGHT);
 
-  // Seed the LCG from wall-clock time so each run differs.
+  // Seed from wall-clock time so each run differs.
   engine::random::seed(
       rng_seed_.value_or(static_cast<uint32_t>(time(nullptr))));
 

@@ -352,8 +352,7 @@ void CityView::stop_city_sound() {
 void CityView::on_zoom_close() {
   water_animation_.request_start();
   if (!car_mgr_) {
-    car_mgr_.emplace(context_.bob, *city_,
-                     [](int max) { return engine::random::rand_max_n(max); });
+    car_mgr_.emplace(context_.bob, *city_);
   }
   update_city_sound();
 }

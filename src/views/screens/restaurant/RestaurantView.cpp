@@ -914,7 +914,8 @@ void RestaurantView::rebuild_guest_cache() {
       }
       shuffled_chairs_.push_back(pf.get());
     }
-    engine::random::shuffle(shuffled_chairs_.begin(), shuffled_chairs_.end());
+    engine::random::presentation::shuffle(shuffled_chairs_.begin(),
+                                          shuffled_chairs_.end());
   }
 
   if (shuffled_chairs_.empty()) {
@@ -982,9 +983,11 @@ void RestaurantView::rebuild_guest_cache() {
       CharacterController controller;
       controller.set_customer_type(demo);
       // Directly seated guests are mid-visit, so most already have a pizza.
-      int preseated_eating_percent = 60 + engine::random::rand_max_n(25);
+      int preseated_eating_percent =
+          60 + engine::random::presentation::rand_max_n(25);
       controller.set_eating(
-          engine::random::rand_percentage_chance(preseated_eating_percent));
+          engine::random::presentation::rand_percentage_chance(
+              preseated_eating_percent));
       const int gt = pick_guest_type(demo);
       controller.set_guest_type(gt);
       controller.set_face_index(pick_face_index(gt));
@@ -1044,7 +1047,7 @@ std::optional<int> RestaurantView::click_guest(core::FurnitureId chair_id) {
       // Pick a random pizza from the menu and fill in pizza feedback data
       const auto& entries = restaurant_->menu().entries();
       if (!entries.empty()) {
-        const auto& entry = entries[engine::random::rand_max_n(
+        const auto& entry = entries[engine::random::presentation::rand_max_n(
             static_cast<int>(entries.size()))];
         const auto* recipe =
             state_.active_player()->recipes().find(entry.recipe_id);
