@@ -45,7 +45,16 @@ public:
   void start_of_day(const GameDate& date, BankAccountRegistry& registry);
 
   int public_bank_account() const { return public_bank_account_; }
+  void public_bank_account(int account) { public_bank_account_ = account; }
   int private_bank_account() const { return private_bank_account_; }
+  void private_bank_account(int account) { private_bank_account_ = account; }
+
+  const std::optional<GameDate>& last_rotation_date() const {
+    return last_rotation_date_;
+  }
+  void last_rotation_date(const std::optional<GameDate>& date) {
+    last_rotation_date_ = date;
+  }
 
   // Mayor favor score for a player (0-200). Increased by donations to the
   // private account; decays 1/day. Used as a % chance to pass inspections.

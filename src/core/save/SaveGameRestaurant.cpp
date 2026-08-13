@@ -369,6 +369,19 @@ json restaurant_to_json(const Restaurant& restaurant) {
   j["closing_time"] = {{"hours", restaurant.closing_time().hour},
                        {"minutes", restaurant.closing_time().minute}};
 
+  // The components of total_popularity.
+  const RestaurantPopularity popularity = restaurant.popularity();
+  j["popularity"] = {
+      {"waiting_time", popularity.waiting_time},
+      {"pizza_prices", popularity.pizza_prices},
+      {"recipes_on_menu", popularity.recipes_on_menu},
+      {"advertising", popularity.advertising},
+      {"star_rating", popularity.star_rating},
+      {"furnishing", popularity.furnishing},
+      {"demand_fulfillment", popularity.demand_fulfillment},
+      {"unexpected_events", popularity.unexpected_events},
+  };
+
   // Save full economy state
   j["total_popularity"] = restaurant.economy().total_popularity();
   j["quality_rating"] = restaurant.economy().quality_rating();
@@ -538,6 +551,20 @@ std::unique_ptr<Restaurant> json_to_restaurant(const json& j,
     core::time::TimeOfDay closing{j["closing_time"]["hours"].get<int>(),
                                   j["closing_time"]["minutes"].get<int>()};
     restaurant->closing_time(closing);
+  }
+
+  if (j.contains("popularity")) {
+    const auto& p = j["popularity"];
+    RestaurantPopularity popularity;
+    popularity.waiting_time = p.value("waiting_time", 0);
+    popularity.pizza_prices = p.value("pizza_prices", 0);
+    popularity.recipes_on_menu = p.value("recipes_on_menu", 0);
+    popularity.advertising = p.value("advertising", 0);
+    popularity.star_rating = p.value("star_rating", 0);
+    popularity.furnishing = p.value("furnishing", 0);
+    popularity.demand_fulfillment = p.value("demand_fulfillment", 0);
+    popularity.unexpected_events = p.value("unexpected_events", 0);
+    restaurant->popularity(popularity);
   }
 
   // Restore full economy state

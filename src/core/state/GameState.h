@@ -86,6 +86,8 @@ public:
   init::Config& initializer();
   void finalize_initialization(GameContext& context);
 
+  void register_bank_accounts();
+
   // Player management
   std::array<Player*, NUMBER_OF_PLAYERS> players() const;
   Player* active_player() const; // returns active player

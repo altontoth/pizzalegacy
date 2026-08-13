@@ -139,6 +139,7 @@ public:
   void award(AwardCategory, AwardLevel);
 
   void ai_expansion_cooldown(int days) { ai_expansion_cooldown_ = days; }
+  int ai_expansion_cooldown() const { return ai_expansion_cooldown_; }
 
   using MenuSlots = std::array<AiMenuSlot, ai_menu_slot_count>;
   MenuSlots& ai_menu_slots() { return ai_menu_slots_; }

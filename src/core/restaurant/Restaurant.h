@@ -232,6 +232,9 @@ public:
   int range_raw() const { return economy_.range_raw(); }
   void range_raw(int raw) { economy_.range_raw(raw); }
   RestaurantPopularity popularity() const { return popularity_; }
+  void popularity(const RestaurantPopularity& popularity) {
+    popularity_ = popularity;
+  }
   int total_popularity() const;
 
   // Jukebox/TV settings (0 = none, 1-6 = demographic targeting)

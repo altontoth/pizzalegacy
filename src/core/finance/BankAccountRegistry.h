@@ -8,6 +8,7 @@
 
 #include <optional>
 #include <unordered_map>
+#include <vector>
 #include "core/common/Ids.h"
 #include "core/finance/Money.h"
 
@@ -15,7 +16,7 @@
 // cash balance; dynamic accounts (mayor bribes, mafia laundering) just
 // accumulate a running total that the owning system can query.
 struct BankAccount {
-  int number;
+  int number{0};
   std::optional<core::PlayerId> player_id;
   Money deposited{0};
 };
@@ -34,10 +35,15 @@ public:
   BankAccount* find(int number);
 
   // Record a deposit into the account (updates deposited total).
-  // Does NOT handle debiting the sender — caller is responsible for that.
+  // The caller debits the sender.
   void deposit(int account_number, Money amount);
 
   static int player_account_number(core::PlayerId pid);
+
+  // For a stable save.
+  std::vector<BankAccount> accounts_sorted() const;
+
+  void restore_account(const BankAccount& account);
 
 private:
   std::unordered_map<int, BankAccount> accounts_;

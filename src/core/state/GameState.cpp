@@ -910,6 +910,21 @@ init::Config& GameState::initializer() {
   return *initializer_;
 }
 
+void GameState::register_bank_accounts() {
+  // Fixed player accounts, 111111 through 888888.
+  for (int i = 0; i < NUMBER_OF_PLAYERS; ++i) {
+    if (players_[i]) {
+      bank_accounts_.register_player_account(core::PlayerId{i});
+    }
+  }
+
+  for (auto& city : cities_) {
+    if (city) {
+      city->mayor_office().register_accounts(bank_accounts_);
+    }
+  }
+}
+
 void GameState::finalize_initialization(GameContext& context) {
   context_ = &context;
 
@@ -972,19 +987,7 @@ void GameState::finalize_initialization(GameContext& context) {
     }
   }
 
-  // Register fixed bank accounts for each player (111111 through 888888)
-  for (int i = 0; i < NUMBER_OF_PLAYERS; ++i) {
-    if (players_[i]) {
-      bank_accounts_.register_player_account(core::PlayerId{i});
-    }
-  }
-
-  // Register mayor bank accounts for all loaded cities
-  for (auto& city : cities_) {
-    if (city) {
-      city->mayor_office().register_accounts(bank_accounts_);
-    }
-  }
+  register_bank_accounts();
 
   initialise_city_for_ai(*active_city());
 

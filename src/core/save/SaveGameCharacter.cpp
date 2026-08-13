@@ -15,6 +15,7 @@
 #include "core/common/Ids.h"
 #include "core/food/IngredientCategoryType.h"
 #include "core/marketing/NewspaperAdFormat.h"
+#include "core/save/SaveGameDate.h"
 #include "core/state/GameState.h"
 #include "core/status/StatusHub.h"
 #include "core/supply/ActiveContract.h"
@@ -173,6 +174,7 @@ json player_to_json(const Player& player) {
   j["financials"] = player_financials_to_json(player.financials());
 
   j["start_of_day_hour"] = player.start_of_day_hour();
+  j["ai_expansion_cooldown"] = player.ai_expansion_cooldown();
   if (player.holiday_days_left().has_value()) {
     j["holiday_days_left"] = *player.holiday_days_left();
   }
@@ -346,6 +348,9 @@ json_to_player(const json& j, GameContext& context,
     player->financials() = json_to_player_financials(j["financials"]);
   }
 
+  if (j.contains("ai_expansion_cooldown")) {
+    player->ai_expansion_cooldown(j["ai_expansion_cooldown"].get<int>());
+  }
   if (j.contains("start_of_day_hour")) {
     player->start_of_day_hour(j["start_of_day_hour"].get<uint8_t>());
   }
@@ -523,15 +528,6 @@ json_to_player(const json& j, GameContext& context,
   }
 
   return player;
-}
-
-static json date_to_json(const GameDate& d) {
-  return {{"year", d.year()}, {"month", d.month()}, {"day", d.day()}};
-}
-
-static GameDate json_to_date(const json& j) {
-  return GameDate{j["year"].get<int>(), j["month"].get<int>(),
-                  j["day"].get<int>()};
 }
 
 static json mission_location_to_json(const MissionLocation& loc) {
