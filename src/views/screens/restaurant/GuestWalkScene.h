@@ -119,9 +119,9 @@ private:
   // Where walkers join and leave the navigation grid.
   WorldPoint customer_door() const;
   WorldPoint kitchen_door() const;
-  // Length of the fixed leg between the customer door and the edge of the
-  // drawn room.
-  int customer_door_cells() const;
+  // Length of the fixed leg through the customer door, far enough for a sprite
+  // with this anchor offset to leave the room completely.
+  int customer_door_cells(int sprite_anchor_y) const;
   const PlacedFurniture* get_guest_destination_chair();
   const PlacedFurniture* find_unserved_guest_chair();
   void render_walking_guest();

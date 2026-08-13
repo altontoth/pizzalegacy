@@ -276,7 +276,8 @@ void GuestWalkScene::spawn_guest_departure() {
       .guest_type = guest_type,
       .face_index = face_index,
       .path = std::move(route.steps),
-      .tail = std::vector<Orientation>(customer_door_cells(), Orientation::S),
+      .tail = std::vector<Orientation>(customer_door_cells(anchor.y),
+                                       Orientation::S),
       .sprite_blit_offset_x = anchor.x,
       .sprite_blit_offset_y = anchor.y,
   };
@@ -292,12 +293,12 @@ void GuestWalkScene::spawn_guest() {
   }
 
   const WorldPoint door = customer_door();
-  const int lead_cells = customer_door_cells();
 
   const ConsumerType demographic =
       pick_weighted_demographic(view_.restaurant_->economy().customer_counts());
   const int guest_type = pick_guest_type(demographic);
   const ViewPoint anchor = sprite_anchor_offset(guest_type);
+  const int lead_cells = customer_door_cells(anchor.y);
   const WorldRect chair_rect = furniture_rect(*chair);
 
   record_walk_debug_destination(chair_rect.center());
@@ -382,9 +383,10 @@ WorldPoint GuestWalkScene::kitchen_door() const {
               (RESTAURANT_TILE_HEIGHT / 2)};
 }
 
-int GuestWalkScene::customer_door_cells() const {
-  return (view_.background_height_ - customer_door().y + WALK_CELL_SIZE - 1) /
-         WALK_CELL_SIZE;
+int GuestWalkScene::customer_door_cells(int sprite_anchor_y) const {
+  const int distance =
+      view_.background_height_ - customer_door().y + sprite_anchor_y;
+  return (distance + WALK_CELL_SIZE - 1) / WALK_CELL_SIZE;
 }
 
 WorldRect GuestWalkScene::furniture_rect(const PlacedFurniture& pf) const {
@@ -471,7 +473,16 @@ void GuestWalkScene::render_walking_guest() {
   }
   const auto& walker = walking_guest_.value();
 
-  if (!view_.camera_.visible_world_rect().contains(walker.position)) {
+  const auto& guest_bob =
+      context_.bob->get(compat::format("bob/walk{}.bob", walker.guest_type));
+  const int frame = walk_frame_for(walker.direction, walker.walk_cycle);
+  const ViewPoint blit_pos{walker.position.x - walker.sprite_blit_offset_x,
+                           walker.position.y - walker.sprite_blit_offset_y};
+
+  const WorldRect sprite_rect{
+      blit_pos.x, blit_pos.y, guest_bob.width(static_cast<std::size_t>(frame)),
+      guest_bob.height(static_cast<std::size_t>(frame))};
+  if (!view_.camera_.possibly_visible(sprite_rect)) {
     return;
   }
 
@@ -568,13 +579,7 @@ void GuestWalkScene::render_walking_guest() {
     }
   }
 #endif
-  const auto& guest_bob =
-      context_.bob->get(compat::format("bob/walk{}.bob", walker.guest_type));
-  const ViewPoint blit_pos{walker.position.x - walker.sprite_blit_offset_x,
-                           walker.position.y - walker.sprite_blit_offset_y};
-  view_.background_.blit_masked(
-      guest_bob.frame(walk_frame_for(walker.direction, walker.walk_cycle)),
-      blit_pos);
+  view_.background_.blit_masked(guest_bob.frame(frame), blit_pos);
 
   if (walker.kind == WalkingGuest::WalkerKind::WAITER_DELIVERING ||
       walker.kind == WalkingGuest::WalkerKind::WAITER_RETURNING_WITH_PIZZA) {
