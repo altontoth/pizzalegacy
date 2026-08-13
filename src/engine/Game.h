@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include <cstdint>
+#include <optional>
 #include <string>
 #include <vector>
 #include "engine/SDLSession.h"
@@ -39,6 +41,7 @@ public:
     // "console <...>", one entry per argv word
     std::optional<std::vector<std::string>> console_args;
     std::optional<std::string> exec_script; // --exec <file>, then exit
+    std::optional<uint32_t> rng_seed;       // --seed <n>
     std::optional<bool> crt_mode;           // --crt to force CRT mode
     std::optional<std::string> vga_viewer;  // --vga <path>
     std::optional<std::string> bob_viewer;  // --bob <path>
@@ -101,6 +104,7 @@ private:
   std::optional<std::string> game_path_override_;
   std::optional<std::vector<std::string>> startup_console_args_;
   std::optional<std::string> exec_script_;
+  std::optional<uint32_t> rng_seed_;
 
   // Returns process exit code.
   int run_exec_script(DebugConsole& console, GameState& state) const;

@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include <clocale>
+#include <cstdint>
 #include <cstdlib>
 #include <iostream>
 #include <memory>
@@ -39,6 +39,7 @@ namespace { // anonymous
       << "  --game-path <dir>                      # override game data dir\n"
       << "  --exec <file>                          # run console commands "
          "from a file, then exit\n"
+      << "  --seed <n>                             # specify the RNG seed\n"
       << "  --vga <path>                           # open VGA viewer with "
          "file\n"
       << "  --bob <path>                           # open BOB viewer with "
@@ -87,6 +88,13 @@ static Game::LaunchOptions parse_args(int argc, char* argv[]) {
         usage(argv[0], 2);
       }
       opts.exec_script = std::string(argv[++i]);
+    }
+    else if (arg == "--seed") {
+      if (i + 1 >= argc) {
+        usage(argv[0], 2);
+      }
+      opts.rng_seed =
+          static_cast<uint32_t>(std::strtoul(argv[++i], nullptr, 10));
     }
     else if (arg == "--crt") {
       opts.crt_mode = true;
@@ -138,8 +146,6 @@ static Game::LaunchOptions parse_args(int argc, char* argv[]) {
 }
 
 int main(int argc, char* argv[]) {
-
-  std::setlocale(LC_ALL, "en_US.UTF-8");
 
   Game::LaunchOptions opts = parse_args(argc, argv);
 

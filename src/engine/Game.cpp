@@ -120,7 +120,7 @@ Game::Game(LaunchOptions opts)
       config_path_(std::move(opts.config_path)),
       game_path_override_(std::move(opts.game_path)),
       startup_console_args_(std::move(opts.console_args)),
-      exec_script_(std::move(opts.exec_script)),
+      exec_script_(std::move(opts.exec_script)), rng_seed_(opts.rng_seed),
       vga_viewer_path_(std::move(opts.vga_viewer)),
       bob_viewer_path_(std::move(opts.bob_viewer)) {}
 
@@ -183,6 +183,13 @@ int Game::run() {
   // Override with command line --crt flag if provided
   if (crt_mode_override_) {
     loaded_options.crt_aspect_ratio = *crt_mode_override_;
+  }
+
+  if (exec_script_) {
+    // Don't mess with actual save games in test runs
+    loaded_options.autosave_frequency = AutosaveFrequency::Off;
+    // Make sure no clicks are required
+    loaded_options.automatic_report = true;
   }
 
   const int display_height =
@@ -700,7 +707,8 @@ bool Game::init(int display_height, ConfigManager& config_manager) {
          display_height_ == DisplayConstants::CRT_DISPLAY_HEIGHT);
 
   // Seed the LCG from wall-clock time so each run differs.
-  engine::random::seed(static_cast<uint32_t>(time(nullptr)));
+  engine::random::seed(
+      rng_seed_.value_or(static_cast<uint32_t>(time(nullptr))));
 
   // Set ConfigManager instance for global access (used by Platform and
   // TextEncoding)
