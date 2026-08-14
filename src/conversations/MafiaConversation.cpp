@@ -46,6 +46,17 @@ std::string format_datetime_before(const GameDate& date, int hour, int minute) {
                         date.day_with_suffix(), hour, minute);
 }
 
+// The base the protection timer is built from, in days. A safe district and an
+// easy game each give a bigger one.
+int protection_district_factor(int crime_statistics, int difficulty) {
+  int crime = std::clamp(crime_statistics, 0, 100);
+  int factor = (100 - crime) * 2;
+  if (difficulty > 1) {
+    factor /= difficulty - 1;
+  }
+  return std::min(factor, 100);
+}
+
 struct BuildingPick {
   int tile_index = -1;
   std::string description;
@@ -392,14 +403,16 @@ bool MafiaConversation::advance_proposal(bool agree) {
     if (!restaurant) {
       fatal("No restaurant to offer protection?!");
     }
-    int crime_stats = restaurant->property().district().crime_statistics();
+    int district_factor = protection_district_factor(
+        restaurant->property().district().crime_statistics(),
+        state_.difficulty_level());
 
     if (agree) {
       player->financials().spend_cash(
           date, Account::Protection,
           Money{static_cast<int64_t>(protection_price_) * 100});
       if (restaurant) {
-        restaurant->protection_timer(rand_between(3, 22) + crime_stats);
+        restaurant->protection_timer(rand_max_n(20) + district_factor);
       }
       current_line(MafiaLine::THANKS_YOULL_BE_HEARING_FROM_US);
     }
@@ -412,7 +425,7 @@ bool MafiaConversation::advance_proposal(bool agree) {
 
       if (lucky) {
         if (restaurant) {
-          restaurant->protection_timer(rand_between(3, 3 + crime_stats));
+          restaurant->protection_timer(rand_max_n(district_factor) + 3);
         }
         current_line(MafiaLine::OK_YOURE_IN_LUCK_THIS_TIME);
       }
@@ -444,7 +457,7 @@ bool MafiaConversation::advance_proposal(bool agree) {
           restaurant->update_demographics(player->recipes());
         }
         if (restaurant) {
-          restaurant->protection_timer(rand_between(14, 14 + crime_stats));
+          restaurant->protection_timer(rand_max_n(district_factor) + 14);
         }
         current_line(MafiaLine::PLAYING_BIG_HERO_HUH);
       }
