@@ -214,11 +214,11 @@ public:
 
   // Time management
   const GameTime& time() const;
-  void set_time(const GameTime& t) { time_ = t; } // For save/load
+  void set_time(const GameTime& t) { time_ = t; }
   void advance_game_time();
   void update(uint32_t elapsed_ms);
 
-  // Time advancement control (for pausing during furniture placement, etc.)
+  // Time advancement control
   void pause_time_advancement();
   void resume_time_advancement();
   [[nodiscard]] bool is_time_advancement_enabled() const {
@@ -229,9 +229,8 @@ public:
   void enter_realtime_play();
   void leave_realtime_play();
 
-  // Advance time by n blocks (10 min each) - used for explicit time costs
-  // (furniture placement, phone calls, etc.). Stops early if end-of-day
-  // is reached.
+  // Advance the clock by n ten-minute blocks, the time an action costs. Stops
+  // at the player's end of day.
   void advance_time_blocks(int n);
 
   // Editing a restaurant's floor pattern tile by tile is a bonus feature,
@@ -381,6 +380,7 @@ public:
 
 private:
   bool is_past_player_end_of_day() const;
+  void advance_time_block();
   // Status bar message posted when spend_cash fails.
   void post_insufficient_funds();
 

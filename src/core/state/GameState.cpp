@@ -314,7 +314,7 @@ std::optional<int> GameState::last_clicked_property_index() const {
   return last_clicked_property_index_;
 }
 
-void GameState::advance_game_time() {
+void GameState::advance_time_block() {
   time_.advance_10_minutes();
 
   const auto now = time_.time_of_day();
@@ -331,6 +331,10 @@ void GameState::advance_game_time() {
         .scope = StatusScope::Global,
     });
   }
+}
+
+void GameState::advance_game_time() {
+  advance_time_block();
 
   // Prevent interruptions while player is in area where that would be
   // inconvenient.
@@ -452,7 +456,7 @@ void GameState::advance_time_blocks(int n) {
     if (is_past_player_end_of_day()) {
       return;
     }
-    advance_game_time();
+    advance_time_block();
   }
 }
 
