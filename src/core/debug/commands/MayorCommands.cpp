@@ -96,7 +96,7 @@ static CommandDef make_mayor_award() {
   return CommandDef{
       .name = "award",
       .description = "Immediately trigger a mayor award ceremony",
-      .help_text = R"(Usage: actor mayor award <type> [winner_player_id]
+      .help_text = R"(Usage: mayor award <type> [winner_player_id]
 
 Triggers an award ceremony conversation with the mayor.
 winner_player_id defaults to the active player. Pass -1 for
@@ -105,10 +105,10 @@ announcement-only (no ceremony, e.g. pizza competition announcement).
 Types: beauty, pizza, investor, imitator, bowtie, trade
 
 Examples:
-  actor mayor award beauty         # Beauty award for active player
-  actor mayor award pizza          # Pizza-of-year for active player
-  actor mayor award pizza -1       # Pizza competition announcement (no winner)
-  actor mayor award investor 1     # Investor award for player 1
+  mayor award beauty         # Beauty award for active player
+  mayor award pizza          # Pizza-of-year for active player
+  mayor award pizza -1       # Pizza competition announcement (no winner)
+  mayor award investor 1     # Investor award for player 1
 )",
       .args =
           {
@@ -168,15 +168,15 @@ static CommandDef make_mayor_favor() {
   return CommandDef{
       .name = "favor",
       .description = "Set the mayor favor score for a player",
-      .help_text = R"(Usage: actor mayor favor <amount> [player_id]
+      .help_text = R"(Usage: mayor favor <amount> [player_id]
 
 Directly sets the mayor favor score (0-200) for the player.
 Defaults to the active player.
 
 Examples:
-  actor mayor favor 100       # Set active player's favor to 100
-  actor mayor favor 200 1     # Max favor for player 1
-  actor mayor favor 0         # Zero out active player's favor
+  mayor favor 100       # Set active player's favor to 100
+  mayor favor 200 1     # Max favor for player 1
+  mayor favor 0         # Zero out active player's favor
 )",
       .args =
           {
@@ -218,13 +218,14 @@ static CommandDef make_mayor_status() {
   return CommandDef{
       .name = "status",
       .description = "Show mayor office state",
-      .help_text = R"(Usage: actor mayor status
+      .help_text = R"(Usage: mayor status
 
-Shows favor scores for all players, appointment day, and
-quarterly award schedule for the active city.
+Shows the mayor's two bank account numbers, favor scores for all
+players, appointment day, and quarterly award schedule for the
+active city.
 
 Example:
-  actor mayor status
+  mayor status
 )",
       .handler = [](const CommandContext& ctx) -> CommandResult {
         auto* city = ctx.state.active_city();
@@ -234,6 +235,11 @@ Example:
 
         auto& mo = city->mayor_office();
         auto result = CommandResult::success();
+
+        result.add_message(compat::format("Private (donation) account: {}",
+                                          mo.private_bank_account()));
+        result.add_message(compat::format("Public (award fee) account: {}",
+                                          mo.public_bank_account()));
 
         auto players = ctx.state.players();
         for (int i = 0; i < static_cast<int>(players.size()); ++i) {
