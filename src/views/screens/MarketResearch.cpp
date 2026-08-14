@@ -530,7 +530,8 @@ void MarketResearch::render_economy(const RenderContext& ctx) {
   if (count > 1) {
     auto graph_point = [&](int index) -> ViewPoint {
       int x = graph_box.x + 50 + (index * 4);
-      int y = graph_box.y + 116 + (history[index] * 2 / 3);
+      // A third of the value, truncated, then doubled for our scale.
+      int y = graph_box.y + 116 + (2 * (history[index] / 3));
       return ViewPoint{x, y};
     };
 
