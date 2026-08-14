@@ -165,7 +165,7 @@ void PlayerProfile::render(const RenderContext& ctx) {
                   if (agree) {
                     context_.popup->origin(popup_origin);
                     context_.popup->create<NumberInputPopup>(
-                        "Go on holiday", "days", 7, 2, 30, 1,
+                        "Go on holiday", "days", 7, 2, 28, 1,
                         [this](int value) {
                           state_.player(id_)->holiday(value);
                           state_.ui().pop();
