@@ -218,7 +218,7 @@ private:
   bool is_human_{true};
   int score_{0};
   std::array<Money, 52> liquidity_snapshots_{};
-  Awards awards_;
+  Awards awards_{};
   std::optional<int> holiday_days_left_;
   uint8_t start_of_day_hour_{default_start_of_day_hour};
 

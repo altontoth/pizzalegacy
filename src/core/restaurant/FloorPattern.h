@@ -15,12 +15,12 @@
 
 class FloorPattern {
 public:
-  uint8_t vendor_id;
+  uint8_t vendor_id{0};
   // order: top-left, top-right, bottom-left, bottom-right
-  std::array<uint8_t, 4> tile_indices;
-  std::array<int, static_cast<std::size_t>(ConsumerType::Count)> popularity;
-  uint8_t popularity_factor;
-  uint8_t quality = 0;
+  std::array<uint8_t, 4> tile_indices{};
+  std::array<int, static_cast<std::size_t>(ConsumerType::Count)> popularity{};
+  uint8_t popularity_factor{0};
+  uint8_t quality{0};
   Money price_per_tile;
 
   int popularity_for(ConsumerType type) const {
