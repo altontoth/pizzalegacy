@@ -18,6 +18,17 @@
 
 constexpr int MAX_NUMBER_OF_LOANS = 4;
 
+// Every bank in every city offers the same investment, and unlike a loan it
+// does not track the city's interest rate.
+constexpr int investment_return_rate = 8;
+constexpr int investment_months = 2;
+// The offer is a share of the player's cash, until they are rich enough for
+// the flat one.
+constexpr double investment_offer_share = 0.5;
+constexpr Money investment_minimum_cash = 20'000_usd;
+constexpr Money investment_flat_offer_threshold = 3'000'000'000_usd;
+constexpr Money investment_flat_offer = 2'000'000'000_usd;
+
 BankConversation::BankConversation(GameState& state, const Actor* actor,
                                    const BankSettings& bank_settings)
     : BaseConversation(compute_start_line(state, actor), state, "t/bank.e",
@@ -94,7 +105,7 @@ bool BankConversation::advance_line_choice(BankLine choice) {
     break;
   case BankLine::I_WANT_TO_INVEST: {
     auto* player = state_.active_player();
-    if (player->cash_balance() < 20'000_usd ||
+    if (player->cash_balance() < investment_minimum_cash ||
         player->number_of_investments() >= Player::max_investment_count) {
       current_line(BankLine::SORRY_WE_DONT_HAVE_INVESTMENT_FOR_YOU);
     }
@@ -410,12 +421,13 @@ Loan BankConversation::propose_loan() const {
 Investment BankConversation::propose_investment() const {
   auto* player = state_.active_player();
   auto cash = player->cash_balance();
-  Money amount = math::round_up_to_next_power10<3>(cash * 0.5);
-  if (cash > 3'000'000'000_usd) {
-    amount = 2'000'000'000_usd;
+  Money amount =
+      math::round_up_to_next_power10<3>(cash * investment_offer_share);
+  if (cash > investment_flat_offer_threshold) {
+    amount = investment_flat_offer;
   }
-  // Investments are hardcoded to 8% interest and 2 months
-  return {core::BankId{actor_->id()}, state_.active_city_id(), amount, 8, 2};
+  return {core::BankId{actor_->id()}, state_.active_city_id(), amount,
+          investment_return_rate, investment_months};
 }
 
 int BankConversation::round_to_nearest(int value, int rounding_unit) const {
