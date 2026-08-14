@@ -1232,6 +1232,13 @@ void TurnOrchestrator::run_city_start_of_day(City& city) {
   }
   city_start_of_day_ran_[idx] = true;
 
+  // The weekly trend step. Arriving from the map runs this pass, so a city
+  // entered on the first day of a week ticks on arrival.
+  if (gs_->time().current_date().week_day_index() == 0) {
+    city.economy_trend().tick();
+    city.ingredient_trend_system().weekly_seed();
+  }
+
   // Update AI menus for pizza charts
   for (auto& player : gs_->players_) {
     if (!player || player->is_human_controlled()) {

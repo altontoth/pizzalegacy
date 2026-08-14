@@ -198,3 +198,12 @@ the missions because they are supposed to happen before the game even begins.
 
 With the fix enabled, mission dates are shifted one year forward to match the
 English release timeline.
+
+### City economy sometimes stuck on one trend for five years
+Each city's economy drifts towards a goal, and picks a new goal when a countdown
+of up to 39 weeks runs out. The countdown in the original is a byte and can be
+rolled as zero, in which case the very next decrement wraps it around to 255 and
+the city would keep the same trend for 256 weeks instead.
+
+With fixes enabled the countdown is always at least one week, so it never
+wraps.

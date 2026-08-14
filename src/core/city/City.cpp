@@ -304,15 +304,10 @@ const District& City::district(core::DistrictId district_id) const {
 }
 
 void City::end_of_day(int difficulty) {
-  for (auto& district : districts_) {
-    district->end_of_day();
-  }
-
   replenish_supplier_stock_levels();
 
   // Advance all active ingredient trend effects one day.
   ingredient_trend_system_.daily_tick();
-  economy_trend_.daily_tick();
 
   // The original doesn't actually seem to honor trade embargoes, but
   // we have an option to fix that 'bug', so update counters here

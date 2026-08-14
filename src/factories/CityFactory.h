@@ -82,6 +82,7 @@ private:
   void populate_properties(City& city);
 
   void build_city_object(City& city, int id);
+  static void seed_ingredient_trends(City& city);
   void populate_types();
   void load_color_definition();
   static uint32_t transform_phone_number(uint32_t);

@@ -410,10 +410,9 @@ void MarketResearch::render_property_info(const RenderContext& ctx) {
                                   FontFace::PIZ_NUMB, text_color,
                                   TextAnchor::Start);
 
-  int cur_tendency = district_.tendency_current();
-  int target_tendency = district_.tendency_target();
+  const auto& trend = state_.active_city()->economy_trend();
   std::string tendency_str =
-      cur_tendency < target_tendency ? "rising" : "falling";
+      trend.current() < trend.target() ? "rising" : "falling";
   context_.font->render_text_onto(
       *ctx.surface, tendency_str, ViewPoint{270, position.y},
       FontFace::PIZ_NUMB, text_color, TextAnchor::Start);

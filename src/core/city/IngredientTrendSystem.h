@@ -14,7 +14,7 @@
 enum class TrendDuration {
   None = 0,
   Linear = 1,      // +/- 4 per day toward target, then +/- 4 decay back to 0
-  Exponential = 2, // Halve distance each day, then +/1 4 decay back to 0
+  Exponential = 2, // Halve distance each day, then +/- 4 decay back to 0
   Countdown = 3,   // Decrement target each day, clear slot when it hits 0
   Count = 4,
 };
@@ -62,6 +62,16 @@ public:
 
   void daily_tick();
 
+  // The weekly re-seed: each valid slot has a small chance of getting a new
+  // linear trend, whether or not one is already running.
+  void weekly_seed();
+
+  // Set a slot's value with no mode behind it, so it never advances and never
+  // decays.
+  void static_value(core::food::IngredientType type, int value) {
+    current_[type] = value;
+  }
+
   [[nodiscard]] int get_trend(core::food::IngredientType type) const {
     return current_[type];
   }
@@ -99,12 +109,10 @@ private:
     approaching_[i] = false;
   }
 
-  // Flip-to-decay test: within |target|/10 of the target.
-  bool reached_target(int i) const;
-  // Moving toward target (Linear steps, Exponential halves, Countdown counts).
+  // One step of each of the three modes above.
   void tick_approaching(int i);
-  // Decaying back toward 0 (Linear/Exponential after reaching target).
   void tick_decaying(int i);
+  void tick_countdown(int i);
 
   IngredientTrends current_;
   IngredientTrends targets_;

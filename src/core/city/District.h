@@ -74,9 +74,6 @@ public:
   int average_square_meters() const;
   void premises_availability(int);
   int premises_availability() const;
-  void end_of_day();
-  int tendency_current() const;
-  int tendency_target() const;
   void control_screen_alternate_color(bool);
   bool control_screen_alternate_color() const;
   RangeDescriptor range_discriptor(int value, int min, int max) const;
@@ -122,9 +119,6 @@ private:
   int average_size_{-1};
   int average_size_modifier_{-1};
   int premises_availability_{-1};
-  int tendency_counter_{0};
-  int tendency_target_{0};
-  int tendency_current_{0};
   int rent_level_{0};
   int price_level_{0};
   City* city_{nullptr};

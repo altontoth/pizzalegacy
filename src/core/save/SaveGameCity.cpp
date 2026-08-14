@@ -11,6 +11,7 @@
 
 #include "core/city/CentralDepot.h"
 #include "core/city/City.h"
+#include "core/city/District.h"
 #include "core/city/JobMarket.h"
 #include "core/city/MayorOffice.h"
 #include "core/city/Property.h"
@@ -279,7 +280,7 @@ json economy_trend_to_json(const EconomyTrend& et) {
   json j;
   j["current"] = et.current();
   j["target"] = et.target();
-  j["days_remaining"] = et.days_remaining();
+  j["counter"] = et.counter();
   j["history_count"] = et.history_count();
   j["history"] = et.history();
   return j;
@@ -287,16 +288,16 @@ json economy_trend_to_json(const EconomyTrend& et) {
 
 void json_to_economy_trend(const json& j, EconomyTrend& et) {
   if (j.contains("current")) {
-    et.set_current(j["current"].get<int>());
+    et.current(j["current"].get<int>());
   }
   if (j.contains("target")) {
-    et.set_target(j["target"].get<int>());
+    et.target(j["target"].get<int>());
   }
-  if (j.contains("days_remaining")) {
-    et.set_days_remaining(j["days_remaining"].get<int>());
+  if (j.contains("counter")) {
+    et.counter(j["counter"].get<int>());
   }
   if (j.contains("history_count")) {
-    et.set_history_count(j["history_count"].get<int>());
+    et.history_count(j["history_count"].get<int>());
   }
   if (j.contains("history")) {
     std::array<int, 60> history{};
@@ -304,7 +305,7 @@ void json_to_economy_trend(const json& j, EconomyTrend& et) {
     for (int i = 0; i < 60 && i < static_cast<int>(arr.size()); ++i) {
       history[i] = arr[i].get<int>();
     }
-    et.set_history(history);
+    et.history(history);
   }
 }
 
@@ -515,15 +516,16 @@ json city_to_json(const City& city) {
   }
   j["suppliers"] = suppliers_array;
 
-  // Save ingredient trends (active slots only)
+  // A slot with no mode but a non-zero value counts as active; see
+  // IngredientTrendSystem::static_value.
   const auto& trend_sys = city.ingredient_trend_system();
   const auto& durations = trend_sys.durations();
   json trends_array = json::array();
   for (int i = 0; i < max_ingredient_count; ++i) {
-    if (durations[i] == TrendDuration::None) {
+    auto type = static_cast<core::food::IngredientType>(i);
+    if (durations[i] == TrendDuration::None && trend_sys.get_trend(type) == 0) {
       continue;
     }
-    auto type = static_cast<core::food::IngredientType>(i);
     json slot_j;
     slot_j["slot"] = i;
     slot_j["current"] = trend_sys.get_trend(type);

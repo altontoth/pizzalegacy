@@ -5,7 +5,6 @@
  */
 
 #include "core/city/District.h"
-#include "engine/Random.h"
 
 #include <cassert>
 
@@ -58,20 +57,6 @@ void District::premises_availability(int prem_av) {
 }
 
 int District::premises_availability() const { return premises_availability_; }
-
-void District::end_of_day() {
-  if (tendency_counter_ == 0) {
-    tendency_counter_ = engine::random::rand_max_n(5);
-    tendency_target_ = engine::random::rand_max_n(239) - 120;
-  }
-  int factor = tendency_current_ < tendency_target_ ? 1 : -1;
-
-  tendency_current_ += factor * engine::random::rand_max_n(4);
-}
-
-int District::tendency_current() const { return tendency_current_; }
-
-int District::tendency_target() const { return tendency_target_; }
 
 void District::population_percentages(
     std::array<uint8_t, static_cast<std::size_t>(PopulationType::count)>

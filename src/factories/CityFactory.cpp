@@ -571,7 +571,29 @@ void CityFactory::build_city_object(City& city, int id) {
 
   // Seed the economy graph with 10 initial data points
   for (int i = 0; i < 10; ++i) {
-    city.economy_trend().daily_tick();
+    city.economy_trend().tick();
+  }
+
+  seed_ingredient_trends(city);
+}
+
+// A new city starts with some ingredients already trending.
+void CityFactory::seed_ingredient_trends(City& city) {
+  auto& trends = city.ingredient_trend_system();
+  for (int i = 0; i < max_ingredient_count; ++i) {
+    if (!core::food::is_valid_ingredient_id(i)) {
+      continue;
+    }
+    auto type = static_cast<core::food::IngredientType>(i);
+    if (engine::random::rand_percentage_chance(5)) {
+      trends.static_value(type, engine::random::rand_max_n(40) - 20);
+    }
+    // Can overwrite the static value:
+    if (engine::random::rand_percentage_chance(8)) {
+      trends.apply_effect(type, {.initial_value = 0,
+                                 .control = engine::random::rand_max_n(60) - 30,
+                                 .duration = TrendDuration::Linear});
+    }
   }
 }
 

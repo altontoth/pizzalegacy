@@ -8,9 +8,18 @@
 
 #include "engine/Random.h"
 
-#include <algorithm>
 #include <cstdint>
 #include <cstdlib>
+
+namespace {
+
+// The original stores trends in a signed byte, so stepping past the target
+// can wrap around.
+int wrapped(int value) { return static_cast<int8_t>(value); }
+
+int signed_step(int target) { return target < 0 ? -4 : 4; }
+
+} // namespace
 
 void IngredientTrendSystem::daily_tick() {
   for (int i = 0; i < max_ingredient_count; ++i) {
@@ -22,7 +31,10 @@ void IngredientTrendSystem::daily_tick() {
       continue;
     }
 
-    if (approaching_[i]) {
+    if (duration_[i] == TrendDuration::Countdown) {
+      tick_countdown(i);
+    }
+    else if (approaching_[i]) {
       tick_approaching(i);
     }
     else {
@@ -31,64 +43,58 @@ void IngredientTrendSystem::daily_tick() {
   }
 }
 
-bool IngredientTrendSystem::reached_target(int i) const {
-  int8_t target = static_cast<int8_t>(targets_[i]);
-  return std::abs(current_[i] - target) < std::abs(target / 10) + 1;
-}
-
 void IngredientTrendSystem::tick_approaching(int i) {
-  switch (duration_[i]) {
-  case TrendDuration::Linear: {
-    int8_t target = static_cast<int8_t>(targets_[i]);
-    if (target < 0) {
-      current_[i] -= 4;
-    }
-    else if (target > 0) {
-      current_[i] += 4;
-    }
-    if (reached_target(i)) {
-      current_[i] = targets_[i];
-      approaching_[i] = false;
-    }
-    break;
+  const int target = targets_[i];
+  // A target of zero leaves the slot alone: it neither moves nor clears.
+  if (target == 0) {
+    return;
   }
-  case TrendDuration::Exponential: {
-    auto half = (targets_[i] - current_[i]) / 2;
-    current_[i] = current_[i] + half;
-    if (reached_target(i)) {
-      current_[i] = targets_[i];
-      approaching_[i] = false;
-    }
-    break;
+
+  if (duration_[i] == TrendDuration::Exponential) {
+    // Arithmetic shift, so it rounds towards negative infinity.
+    current_[i] = wrapped(current_[i] + ((target - current_[i]) >> 1));
   }
-  case TrendDuration::Countdown: {
-    if (targets_[i] > 0) {
-      targets_[i]--;
-    }
-    else {
-      targets_[i]++;
-    }
-    if (targets_[i] == 0) {
-      clear_slot(i);
-    }
-    break;
+  else {
+    current_[i] = wrapped(current_[i] + signed_step(target));
   }
-  default:
-    break;
+
+  // The tolerance is |target|/10 truncated, so a target under ten has none at
+  // all and the trend steps straight past.
+  if (std::abs(target - current_[i]) <= std::abs(target / 10)) {
+    approaching_[i] = false;
   }
 }
 
 void IngredientTrendSystem::tick_decaying(int i) {
-  auto val = current_[i];
-  if (val > 0) {
-    val = std::max(val - 4, 0);
+  const int target = targets_[i];
+  if (target == 0) {
+    return;
   }
-  else if (val < 0) {
-    val = std::min(val + 4, 0);
-  }
-  current_[i] = val;
 
-  if (val == 0) {
+  current_[i] = wrapped(current_[i] - signed_step(target));
+  if (std::abs(current_[i]) < 4) {
     clear_slot(i);
+  }
+}
+
+void IngredientTrendSystem::tick_countdown(int i) {
+  targets_[i]--;
+  if (targets_[i] == 0) {
+    clear_slot(i);
+  }
+}
+
+void IngredientTrendSystem::weekly_seed() {
+  for (int i = 0; i < max_ingredient_count; ++i) {
+    if (!core::food::is_valid_ingredient_id(i)) {
+      continue;
+    }
+    if (!engine::random::rand_percentage_chance(3)) {
+      continue;
+    }
+    apply_effect(static_cast<core::food::IngredientType>(i),
+                 {.initial_value = 0,
+                  .control = engine::random::rand_max_n(60) - 30,
+                  .duration = TrendDuration::Linear});
   }
 }
