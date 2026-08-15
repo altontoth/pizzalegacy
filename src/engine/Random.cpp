@@ -60,6 +60,12 @@ void set_state(uint32_t s) { simulation_state = s; }
 
 int rand_max_n(int max) { return max_n(simulation_state, max); }
 
+int rand_max_n_wrapping(int max) {
+  uint32_t product =
+      uint32_t{next15(simulation_state)} * static_cast<uint32_t>(max);
+  return static_cast<int>(product >> 15);
+}
+
 int rand_between(int min, int max) { return rand_max_n(max - min) + min; }
 
 int rand_triangular(int base, int spread) {
