@@ -17,7 +17,6 @@
 #include "core/save/SaveGameManager.h"
 #include "engine/Fatal.h"
 #include "engine/Logger.h"
-#include "engine/Random.h"
 #if PLEGACY_EMULATE_CASE_INSENSITIVE_FS
 #include <string.h>
 #endif
@@ -240,39 +239,6 @@ void game_data_path(const std::string& file_path) {
   game_data_path_ = file_path;
 }
 
-// int rand_max_n(int max) { return max > 0 ? std::rand() % max : 0; }
-int rand_max_n(int max) {
-  int r = engine::random::ansi_rand15(); // 0..32767
-                                         // same shift logic:
-  long long product = static_cast<long long>(r) * max;
-  // product is up to 32767 * param
-  // shr 15 is floor division by 32768:
-  return static_cast<int>(product >> 15);
-}
-
-int rand_between(int min, int max) {
-  auto rand = rand_max_n(max - min);
-  return rand + min;
-}
-
-int ansi_rand15() { return engine::random::ansi_rand15(); }
-
-bool rand_percentage_chance(int percentage) {
-  if (percentage <= 0) {
-    return 0;
-  }
-  if (percentage >= 100) {
-    return 1;
-  }
-  // param is between 1..99
-  int r = ansi_rand15();          // 0..32767
-  int r_scaled = (r * 100) >> 15; // uniform in [0..99]
-  if (r_scaled < percentage) {
-    return 1;
-  }
-  return 0;
-}
-
 bool fexist(const char* filename) {
   struct stat buffer;
   Logger::debug("Filename is {}", filename);
@@ -283,8 +249,6 @@ bool fexist(const char* filename) {
   Logger::debug(", but it does not exist... ");
   return false;
 }
-
-bool coin_flip() { return rand_percentage_chance(50); }
 
 uint32_t sum_bytes(std::span<const std::byte> data) {
   uint32_t s = 0;
