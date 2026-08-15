@@ -11,13 +11,9 @@
 #include <iterator>
 
 namespace engine::random {
+// The same bounded draw the original uses. The multiply runs in 32 bits and
+// wraps there, so max is read as unsigned and the result never reaches 131072.
 int rand_max_n(int max);
-
-// The original multiplies the draw by the bound in 32 bits before shifting
-// down by 15, so a bound of 131072 or more wraps and the result never exceeds
-// 131071. Below that this and rand_max_n agree exactly; the account number
-// draws are the only ones with a bound big enough to tell them apart.
-int rand_max_n_wrapping(int max);
 
 // Uniform over [min, max), so max is one past the largest value it returns.
 int rand_between(int min, int max);

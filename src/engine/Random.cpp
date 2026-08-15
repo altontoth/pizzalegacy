@@ -30,9 +30,7 @@ uint16_t next15(uint32_t& state) {
 }
 
 int max_n(uint32_t& state, int max) {
-  int r = next15(state); // 0..32767
-  long long product = static_cast<long long>(r) * max;
-  // Shifting by rand_bits is floor division by 32768.
+  uint32_t product = uint32_t{next15(state)} * static_cast<uint32_t>(max);
   return static_cast<int>(product >> rand_bits);
 }
 
@@ -59,12 +57,6 @@ uint32_t get_state() { return simulation_state; }
 void set_state(uint32_t s) { simulation_state = s; }
 
 int rand_max_n(int max) { return max_n(simulation_state, max); }
-
-int rand_max_n_wrapping(int max) {
-  uint32_t product =
-      uint32_t{next15(simulation_state)} * static_cast<uint32_t>(max);
-  return static_cast<int>(product >> 15);
-}
 
 int rand_between(int min, int max) { return rand_max_n(max - min) + min; }
 

@@ -31,7 +31,6 @@
 using engine::random::coin_flip;
 using engine::random::rand_between;
 using engine::random::rand_max_n;
-using engine::random::rand_max_n_wrapping;
 using engine::random::rand_percentage_chance;
 
 namespace {
@@ -988,7 +987,7 @@ std::optional<MafiaMission> MafiaConversation::generate_mission(int rank) {
         Money{static_cast<int64_t>(amount_10k) * 10'000 * 100};
 
     for (int i = 0; i < 4; i++) {
-      mission.bank_accounts[i] = rand_max_n_wrapping(900'000) + 100'000;
+      mission.bank_accounts[i] = rand_max_n(900'000) + 100'000;
     }
 
     // Deadline uses the generic delivery date
