@@ -50,10 +50,8 @@ struct DistrictDataRaw {
   uint8_t minimum_desired_user_pizza_count;
   uint8_t unknown_4c;
   uint8_t district_type;
-  uint8_t average_size;
-  uint8_t unknown_5;
-  uint8_t average_size_modifer;
-  uint8_t unknown_9;
+  uint16_t average_size;
+  uint16_t average_size_modifier;
   uint16_t price_level_raw;
   uint16_t rent_level_raw;
   uint8_t unknown_6[4];
@@ -333,7 +331,7 @@ void CityFactory::load_districts(std::ifstream& is, uint8_t district_count) {
         raw.minimum_desired_user_pizza_count >> 4);
     district->color(district_color_list_[i % district_color_list_.size()]);
     district->average_size(raw.average_size);
-    district->average_size_modifier(raw.average_size_modifer);
+    district->average_size_modifier(raw.average_size_modifier);
     district->price_level(raw.price_level_raw);
     district->rent_level(raw.rent_level_raw);
     district->premises_availability(raw.premises_availability);
