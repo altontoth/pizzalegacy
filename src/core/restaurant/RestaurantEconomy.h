@@ -7,7 +7,9 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
 #include "core/Demographics.h"
+#include "core/common/Ids.h"
 
 namespace core::food {
 struct PlayerRecipes;
@@ -70,11 +72,14 @@ public:
   int competitor_count() const { return competitor_count_; }
   void competitor_count(int count) { competitor_count_ = count; }
 
-  // Strongest competitor location
-  int strongest_competitor_x() const { return strongest_competitor_x_; }
-  void strongest_competitor_x(int x) { strongest_competitor_x_ = x; }
-  int strongest_competitor_y() const { return strongest_competitor_y_; }
-  void strongest_competitor_y(int y) { strongest_competitor_y_ = y; }
+  // The competitor taking the most business off this restaurant, which is the
+  // one an AI owner attacks.
+  std::optional<core::RestaurantId> strongest_competitor() const {
+    return strongest_competitor_;
+  }
+  void strongest_competitor(std::optional<core::RestaurantId> id) {
+    strongest_competitor_ = id;
+  }
 
   // Total competition score minus 600 baseline
   int competition_score() const { return competition_score_; }
@@ -147,8 +152,7 @@ private:
 
   // Competition data
   int demand_ratio_{0};
-  int strongest_competitor_x_{0};
-  int strongest_competitor_y_{0};
+  std::optional<core::RestaurantId> strongest_competitor_;
   int competitor_count_{0};
   int competition_score_{0};
 

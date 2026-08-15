@@ -68,9 +68,9 @@ bool Restaurant::ai_layout(int index, int furniture_count) {
 }
 
 void Restaurant::init_ai_economy(const Player& player) {
-  ai_tier_ = engine::random::rand_max_n(4) + 1;
+  ai_tier_ = engine::random::rand_max_n(3) + 1;
 
-  ai_capacity_target_ = ai_tier_ * 2 + 6;
+  ai_revenue_per_customer_ = ai_tier_ * 2 + 6;
 
   auto cooking = player.character().cooking();
   auto intelligence = player.character().intelligence();
@@ -1065,6 +1065,12 @@ void Restaurant::end_of_day(GameState& game_state) {
       return;
     }
 
+    // AI quality growth chance
+    if (economy_.quality_rating() < 100 &&
+        engine::random::rand_percentage_chance(player->character().courage())) {
+      economy_.quality_rating(economy_.quality_rating() + 1);
+    }
+
     economy_.update_restaurant_range();
 
     economy_.total_popularity(sync_reputation_and_total_popularity());
@@ -1074,7 +1080,6 @@ void Restaurant::end_of_day(GameState& game_state) {
     economy_.calculate_demand_with_competition(*this, game_state);
 
     ai::process_restaurant_revenue(*this, *player);
-    ai::invest_in_restaurant(*this, *player);
     return;
   }
 

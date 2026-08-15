@@ -180,7 +180,6 @@ public:
   void active_restaurant(core::RestaurantId r_id);
   Restaurant* active_restaurant() const;
   std::vector<Restaurant*> restaurants_for(core::PlayerId pid) const;
-  std::vector<const Restaurant*> all_restaurants() const;
   int restaurant_count_for_player_in_city(core::PlayerId pid,
                                           core::CityId city) const;
   Restaurant* restaurant(core::RestaurantId r_id) const;

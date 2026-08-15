@@ -399,17 +399,33 @@ public:
   static std::vector<std::pair<core::food::IngredientType, int>>
   get_recipe_requirements_grams(const core::food::Recipe& recipe);
 
-  // Sets AI tier/capacity from the player's character stats
+  // Sets up an AI restaurant's economy from its owner's character stats.
   void init_ai_economy(const class Player& player);
   int ai_tier() const { return ai_tier_; }
-  int ai_capacity_target() const { return ai_capacity_target_; }
+  int ai_revenue_per_customer() const { return ai_revenue_per_customer_; }
+
+  // How many guests an AI restaurant can serve in a day. The owner can invest
+  // money to increase this number.
+  int ai_customers_per_day() const { return ai_customers_per_day_; }
+  void ai_customers_per_day(int guests) { ai_customers_per_day_ = guests; }
   int ai_profit_days() const { return ai_profit_days_; }
   void ai_adjust_profit_days(int delta) { ai_profit_days_ += delta; }
   void ai_increment_profit_days() { ai_adjust_profit_days(1); }
 
+  // Days before this restaurant's owner will attack a competitor from it again.
+  int ai_attack_cooldown() const { return ai_attack_cooldown_; }
+  void ai_attack_cooldown(int days) { ai_attack_cooldown_ = days; }
+  void ai_decrement_attack_cooldown() {
+    if (ai_attack_cooldown_ > 0) {
+      ai_attack_cooldown_--;
+    }
+  }
+
   // For the save system; during play these come from init_ai_economy.
   void ai_tier(int tier) { ai_tier_ = tier; }
-  void ai_capacity_target(int seats) { ai_capacity_target_ = seats; }
+  void ai_revenue_per_customer(int dollars) {
+    ai_revenue_per_customer_ = dollars;
+  }
   void ai_profit_days(int days) { ai_profit_days_ = days; }
 
   int ai_layout_index() const { return ai_layout_index_; }
@@ -590,10 +606,12 @@ private:
 
   // 0 = human, 1-4 = AI tier level
   int ai_tier_{0};
-  int ai_capacity_target_{0};
+  int ai_revenue_per_customer_{0};
+  int ai_customers_per_day_{0};
   int ai_profit_days_{0};
   int ai_layout_index_{0};
   int ai_furniture_count_{0};
+  int ai_attack_cooldown_{0};
 
   Money last_weekly_profit_;
 };

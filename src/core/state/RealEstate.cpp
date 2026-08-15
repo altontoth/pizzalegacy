@@ -6,6 +6,7 @@
 
 #include "core/state/RealEstate.h"
 
+#include <cstddef>
 #include <memory>
 #include <string>
 #include <utility>
@@ -32,18 +33,75 @@ int depot_capacity_kg(const Property& property) {
   return property.size().w * property.size().h * depot_capacity_kg_per_tile;
 }
 
+// A premise bigger than this counts as large, and uses a different set of
+// layouts.
+constexpr int large_premise_area = 240;
+
+// A demographic pair has to draw more than this share of a premise's customers
+// before its owner picks a layout to suit them.
+constexpr int dominant_pair_percent = 40;
+
+// An owner needs more intelligence than this to think of it at all.
+constexpr int demographic_bias_intelligence = 40;
+
+// Which demographic pair an AI furnishes for: 0 children and young people,
+// 1 blue and white collar, 2 business people and seniors. The 18 AI restaurant
+// layouts are three styles by these three pairs by two sizes, so the bias
+// decides what the place looks like. Only the look: an AI's furniture appeal is
+// decided by its owner's intelligence at creation.
+int ai_demographic_bias(Property& property, int intelligence) {
+  int bias = engine::random::rand_max_n(3);
+
+  auto customer_pool = [&property] {
+    int total = 0;
+    for (int count : property.potential_customers().data()) {
+      total += count;
+    }
+    return total;
+  };
+
+  if (customer_pool() == 0) {
+    property.calculate_demographics();
+  }
+
+  const int total = customer_pool();
+  if (total == 0 || intelligence <= demographic_bias_intelligence) {
+    return bias;
+  }
+
+  // When more than one pair matches, last one wins.
+  const auto& counts = property.potential_customers().data();
+  for (std::size_t pair = 0; pair < 3; ++pair) {
+    const int share =
+        ((counts[pair * 2] + counts[(pair * 2) + 1]) * 100) / total;
+    if (share > dominant_pair_percent) {
+      bias = static_cast<int>(pair);
+    }
+  }
+  return bias;
+}
+
+// Which prebuilt AI restaurant a premise gets. This never comes to more than
+// 18, so the last few layout files never come up.
+int ai_layout_index(const Property& property, int bias) {
+  const bool large = property.size().w * property.size().h > large_premise_area;
+  return (engine::random::rand_max_n(3) * 6) + 1 + (bias * 2) + (large ? 1 : 0);
+}
+
 } // namespace
 
-bool RealEstate::buy_restaurant(Property& property, Player& buyer,
-                                Money price) {
+bool RealEstate::buy_restaurant(Property& property, Player& buyer, Money price,
+                                bool free) {
   GameDate today = gs_->time().current_date();
 
   // Property purchase is Capital, use transfer directly
-  if (buyer.cash_balance() < price) {
-    return false;
+  if (!free) {
+    if (buyer.cash_balance() < price) {
+      return false;
+    }
+    buyer.financials().transfer(today, Account::Cash, Account::Property, price,
+                                AccountingScope::Capital);
   }
-  buyer.financials().transfer(today, Account::Cash, Account::Property, price,
-                              AccountingScope::Capital);
 
   property.buy(buyer.id());
   // If the buyer was renting, a restaurant already exists
@@ -222,23 +280,18 @@ bool RealEstate::end_property_lease(Property& property, Player& player) {
 Restaurant* RealEstate::create_ai_starting_restaurant(Player& player,
                                                       City& city) {
   constexpr int max_attempts = 8;
-  const uint8_t courage = player.character().courage();
+  const uint8_t experience = player.character().experience();
 
   for (int i = 0; i < max_attempts; ++i) {
-    if (!engine::random::rand_percentage_chance(courage)) {
+    if (!engine::random::rand_percentage_chance(experience)) {
       continue;
     }
-    // The AI furnishes from its own prebuilt restaurants, which carry their
-    // own size.
-    const int layout_index =
-        engine::random::rand_max_n(RestaurantLayoutFactory::ai_layout_count) +
-        1;
-    auto* rest = create_restaurant_with_layout(
-        player, city, /*layout_id=*/0, /*is_big=*/false,
-        RestaurantLayoutFactory::create_ai_layout(layout_index,
-                                                  ai::opening_furniture_count));
+    Property* property = find_available_premise(city);
+    if (!property) {
+      return nullptr;
+    }
+    auto* rest = create_ai_restaurant(player, *property, Tenure::Rent);
     if (rest) {
-      rest->ai_layout(layout_index, ai::opening_furniture_count);
       rest->open_for_business(*gs_);
     }
     return rest;
@@ -246,48 +299,90 @@ Restaurant* RealEstate::create_ai_starting_restaurant(Player& player,
   return nullptr;
 }
 
-Restaurant* RealEstate::create_restaurant_with_layout(
-    Player& player, City& city, int layout_id, bool is_big,
-    std::unique_ptr<RestaurantLayout> layout) {
-  if (!layout) {
-    layout = RestaurantLayoutFactory::create_layout(
-        compat::format("q/f{}.pc", layout_id));
-  }
+Restaurant* RealEstate::create_ai_restaurant(Player& player, Property& property,
+                                             Tenure tenure) {
+  const int bias =
+      ai_demographic_bias(property, player.character().intelligence());
+  const int layout_index = ai_layout_index(property, bias);
 
+  auto* rest =
+      furnish_new_restaurant(player, property,
+                             RestaurantLayoutFactory::create_ai_layout(
+                                 layout_index, ai::opening_furniture_count),
+                             tenure);
+  if (rest) {
+    rest->ai_layout(layout_index, ai::opening_furniture_count);
+  }
+  return rest;
+}
+
+Restaurant* RealEstate::create_restaurant_with_layout(Player& player,
+                                                      City& city,
+                                                      int layout_id) {
+  auto layout = RestaurantLayoutFactory::create_layout(
+      compat::format("q/f{}.pc", layout_id));
   if (!layout) {
     return nullptr;
   }
 
-  // Get all business premises in the city
+  Property* property = find_available_premise(city);
+  if (!property) {
+    return nullptr;
+  }
+
+  return furnish_new_restaurant(player, *property, std::move(layout),
+                                Tenure::RentFirstMonthFree);
+}
+
+Property* RealEstate::find_available_premise(City& city) {
   auto properties = city.business_premises();
   if (properties.empty()) {
     return nullptr;
   }
 
   // Try to find an available property (not already a restaurant) up to 10 times
-  Property* available_property = nullptr;
   const int max_attempts = 10;
   for (int attempt = 0; attempt < max_attempts; ++attempt) {
-    auto try_index = engine::random::rand_max_n(properties.size());
+    auto try_index =
+        engine::random::rand_max_n(static_cast<int>(properties.size()));
     auto* candidate = properties.at(try_index);
 
     // Check if this property is available (no owner/tenant or no restaurant)
     if (!candidate->has_restaurant()) {
-      available_property = candidate;
-      break;
+      return candidate;
     }
   }
 
   // If we couldn't find an available property after 10 attempts, give up
-  if (!available_property) {
+  return nullptr;
+}
+
+Restaurant*
+RealEstate::furnish_new_restaurant(Player& player, Property& property,
+                                   std::unique_ptr<RestaurantLayout> layout,
+                                   Tenure tenure) {
+  if (!layout) {
     return nullptr;
   }
 
-  available_property->size(layout->restaurant_size());
+  property.size(layout->restaurant_size());
 
-  // Rent the property (first month free for quickstart)
-  auto* rest = rent_restaurant(*available_property, player,
-                               /*free=*/true);
+  // An AI takes the premise whether or not it can afford it, and just doesn't
+  // pay when it can't.
+  Restaurant* rest = nullptr;
+  if (tenure == Tenure::Buy) {
+    const Money price = property.get_purchase_price();
+    if (buy_restaurant(property, player, price,
+                       /*free=*/player.cash_balance() < price) &&
+        property.restaurant_id()) {
+      rest = gs_->restaurant(*property.restaurant_id());
+    }
+  }
+  else {
+    const bool free = tenure == Tenure::RentFirstMonthFree ||
+                      player.cash_balance() < property.get_monthly_rent();
+    rest = rent_restaurant(property, player, free);
+  }
 
   if (rest) {
     if (player.is_human_controlled()) {

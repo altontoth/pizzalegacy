@@ -77,6 +77,21 @@ public:
     restaurant_day_ran_ = flags;
   }
 
+  // The AI gets one closure or attempted heavy attack per city per day,
+  // whichever comes first, and every AI player competes for it.
+  [[nodiscard]] bool ai_action_taken(core::CityId city) const {
+    return city_ai_action_taken_[city.value];
+  }
+  void mark_ai_action(core::CityId city) {
+    city_ai_action_taken_[city.value] = true;
+  }
+  [[nodiscard]] const CityDayFlags& ai_action_flags() const {
+    return city_ai_action_taken_;
+  }
+  void ai_action_flags(const CityDayFlags& flags) {
+    city_ai_action_taken_ = flags;
+  }
+
   [[nodiscard]] bool is_player_day_over() const;
   void prevent_auto_end_of_turn(bool prevent);
   [[nodiscard]] bool is_auto_end_of_turn_prevented() const {
@@ -216,6 +231,9 @@ private:
 
   // Make sure we run begin_restaurant_day only once per day.
   RestaurantDayFlags restaurant_day_ran_{};
+
+  // See ai_action_taken. Cleared with the rest at the day boundary.
+  CityDayFlags city_ai_action_taken_{};
 
   // End-of-turn pipeline: built in end_of_turn() (restaurant steps) and
   // build_turn_pipeline() (day/turn boundary steps), drained by

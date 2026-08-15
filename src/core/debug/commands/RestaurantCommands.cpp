@@ -435,7 +435,7 @@ static CommandDef make_restaurant_create() {
       .name = "create",
       .description = "Create a new restaurant with layout",
       .help_text =
-          R"(Usage: restaurant create <city_id> <player_id> <size> <layout_id>
+          R"(Usage: restaurant create <city_id> <player_id> <layout_id>
 
 Creates a new restaurant for the specified player in the given city with a
 specific layout. The restaurant will be placed in a random available property.
@@ -443,13 +443,12 @@ specific layout. The restaurant will be placed in a random available property.
 Arguments:
   city_id    - City ID (@ for active city, 0-9)
   player_id  - Player ID (@ for active player, 0-7)
-  size       - Restaurant size: 'big' or 'small'
-  layout_id  - Layout number (1,3,5,7 for big; 2,4,6,8 for small)
+  layout_id  - Layout number (1,3,5,7 are big; 2,4,6,8 are small)
 
 Examples:
-  restaurant create @ @ big 1      # Active city/player, big restaurant, layout 1
-  restaurant create 0 0 small 2    # City 0, player 0, small restaurant, layout 2
-  restaurant create 6 1 big 5      # Madrid, player 1, big restaurant, layout 5
+  restaurant create @ @ 1      # Active city/player, layout 1
+  restaurant create 0 0 2      # City 0, player 0, layout 2
+  restaurant create 6 1 5      # Madrid, player 1, layout 5
 )",
       .args =
           {
@@ -472,13 +471,6 @@ Examples:
                   .max_value = NUMBER_OF_PLAYERS - 1,
               },
               ArgSpec{
-                  .name = "size",
-                  .type = ArgType::String,
-                  .optional = false,
-                  .description = "Restaurant size (big/small)",
-                  .allowed_values = std::vector<std::string>{"big", "small"},
-              },
-              ArgSpec{
                   .name = "layout_id",
                   .type = ArgType::Int,
                   .optional = false,
@@ -490,10 +482,7 @@ Examples:
       .handler = [](const CommandContext& ctx) -> CommandResult {
         auto city_id = ctx.city_id(0);
         auto player_id = ctx.player_id(1);
-        auto size_str = ctx.string_arg(2);
-        auto layout_id = ctx.int_arg(3);
-
-        bool is_big = (size_str == "big");
+        auto layout_id = ctx.int_arg(2);
 
         // Ensure city is loaded
         ctx.state.ensure_city_loaded(city_id);
@@ -513,7 +502,7 @@ Examples:
         // Create the restaurant (will find a random available property)
         auto* restaurant =
             ctx.state.real_estate().create_restaurant_with_layout(
-                *player, *city, static_cast<int>(layout_id), is_big);
+                *player, *city, static_cast<int>(layout_id));
 
         if (!restaurant) {
           return CommandResult::error(compat::format(
@@ -522,11 +511,10 @@ Examples:
               layout_id, city_id.value));
         }
 
-        return CommandResult::success().add_message(
-            compat::format("Created {} restaurant (ID {}) for player {} in "
-                           "city {} with layout {}",
-                           size_str, restaurant->id().value, player_id.value,
-                           city_id.value, layout_id));
+        return CommandResult::success().add_message(compat::format(
+            "Created restaurant (ID {}) for player {} in "
+            "city {} with layout {}",
+            restaurant->id().value, player_id.value, city_id.value, layout_id));
       },
   };
 }
@@ -606,8 +594,8 @@ Examples:
 
         // Create small restaurant with layout 1
         auto* restaurant =
-            ctx.state.real_estate().create_restaurant_with_layout(
-                *player, *city, 1, false);
+            ctx.state.real_estate().create_restaurant_with_layout(*player,
+                                                                  *city, 1);
 
         if (!restaurant) {
           return CommandResult::error(compat::format(

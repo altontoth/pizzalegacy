@@ -516,6 +516,7 @@ json SaveGameManager::state_to_json(const GameState& state,
   j["city_initialised"] = state.city_initialised_flags();
   j["city_start_of_day_ran"] = state.turn().city_start_of_day_flags();
   j["restaurant_day_ran"] = state.turn().restaurant_day_flags();
+  j["city_ai_action_taken"] = state.turn().ai_action_flags();
 
   if (state.active_restaurant()) {
     j["active_restaurant"] = state.active_restaurant()->id().value;
@@ -856,6 +857,10 @@ void SaveGameManager::json_to_state(const json& j, GameState& state,
   if (j.contains("restaurant_day_ran")) {
     state.turn().restaurant_day_flags(
         j["restaurant_day_ran"].get<TurnOrchestrator::RestaurantDayFlags>());
+  }
+  if (j.contains("city_ai_action_taken")) {
+    state.turn().ai_action_flags(
+        j["city_ai_action_taken"].get<TurnOrchestrator::CityDayFlags>());
   }
   if (j.contains("active_city")) {
     core::CityId cid{j["active_city"].get<int>()};

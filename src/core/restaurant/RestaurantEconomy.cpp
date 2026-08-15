@@ -217,8 +217,7 @@ void RestaurantEconomy::calculate_demand_with_competition(
 
   int competitor_count = 0;
   int strongest_competitor_penalty = 0;
-  int strongest_x = 0;
-  int strongest_y = 0;
+  std::optional<core::RestaurantId> strongest_competitor;
 
   // Competition is per-city. Every city reuses the same tile grid, so scanning
   // other cities would count a restaurant whose coordinates land in the search
@@ -262,8 +261,7 @@ void RestaurantEconomy::calculate_demand_with_competition(
 
       if (total_penalty > strongest_competitor_penalty) {
         strongest_competitor_penalty = total_penalty;
-        strongest_x = comp_x;
-        strongest_y = comp_y;
+        strongest_competitor = comp_restaurant->id();
       }
 
       competitor_count++;
@@ -272,8 +270,7 @@ void RestaurantEconomy::calculate_demand_with_competition(
 
   // Store competitor data
   competitor_count_ = competitor_count;
-  strongest_competitor_x_ = strongest_x;
-  strongest_competitor_y_ = strongest_y;
+  strongest_competitor_ = strongest_competitor;
 
   int total_competition = 0;
   for (int score : competition_scores) {
@@ -310,11 +307,19 @@ void RestaurantEconomy::calculate_demand_with_competition(
     total_customers += count;
   }
 
-  auto service_time = restaurant.calculate_service_time_data();
-  int seating_capacity = restaurant.calculate_seating_capacity(&service_time);
+  const auto owner = property.owner_or_tenant();
+  const Player* owner_player = owner ? game_state.player(*owner) : nullptr;
+  int daily_capacity = 0;
+  if (owner_player && !owner_player->is_human_controlled()) {
+    daily_capacity = restaurant.ai_customers_per_day();
+  }
+  else {
+    auto service_time = restaurant.calculate_service_time_data();
+    daily_capacity = restaurant.calculate_seating_capacity(&service_time);
+  }
 
-  if (total_customers > seating_capacity && seating_capacity > 0) {
-    int scale = (seating_capacity * 100) / total_customers;
+  if (total_customers > daily_capacity && daily_capacity > 0) {
+    int scale = (daily_capacity * 100) / total_customers;
     for (ConsumerType demo : ALL_CONSUMER_TYPES) {
       customer_counts_[demo] = (customer_counts_[demo] * scale) / 100;
     }

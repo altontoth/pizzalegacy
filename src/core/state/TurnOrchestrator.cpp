@@ -612,6 +612,9 @@ TurnOrchestrator::finish_end_of_turn(const turn::FinishTurn& step) {
   snapshot_weekly_profits(step.restaurant_ids);
 
   auto* current_player = gs_->active_player();
+  if (current_player && !current_player->is_human_controlled()) {
+    current_player->ai_end_of_day(*gs_);
+  }
   if (current_player && current_player->is_human_controlled()) {
     bool is_eow = gs_->time().current_date().is_end_of_week();
     gs_->milestones().check_milestone_events(*current_player, is_eow);
@@ -1188,6 +1191,7 @@ void TurnOrchestrator::process_depot_theft() {
 void TurnOrchestrator::end_of_day() {
 
   city_start_of_day_ran_.fill(false);
+  city_ai_action_taken_.fill(false);
   for (auto& per_player : restaurant_day_ran_) {
     per_player.fill(false);
   }

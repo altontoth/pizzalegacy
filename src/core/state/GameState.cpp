@@ -971,7 +971,7 @@ void GameState::finalize_initialization(GameContext& context) {
                                 : (idx4 * 2 + 2);     // 2,4,6,8
 
       auto* rest = real_estate_.create_restaurant_with_layout(
-          *players_[i], *active_city(), layout_id, big);
+          *players_[i], *active_city(), layout_id);
       if (!rest) {
         Logger::warn("Failed to create restaurant for player {}", i);
         continue;
@@ -1185,16 +1185,6 @@ int GameState::restaurant_count_for_player_in_city(core::PlayerId pid,
     }
   }
   return count;
-}
-
-std::vector<const Restaurant*> GameState::all_restaurants() const {
-  std::vector<const Restaurant*> result;
-  for (const auto& uptr : restaurants_) {
-    if (uptr) {
-      result.push_back(uptr.get());
-    }
-  }
-  return result;
 }
 
 void GameState::bootstrap_minimal_playable_world(GameContext& context) {

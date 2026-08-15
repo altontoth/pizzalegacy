@@ -300,8 +300,10 @@ json restaurant_to_json(const Restaurant& restaurant) {
   j["ai_layout_index"] = restaurant.ai_layout_index();
   j["ai_furniture_count"] = restaurant.ai_furniture_count();
   j["ai_tier"] = restaurant.ai_tier();
-  j["ai_capacity_target"] = restaurant.ai_capacity_target();
+  j["ai_revenue_per_customer"] = restaurant.ai_revenue_per_customer();
+  j["ai_customers_per_day"] = restaurant.ai_customers_per_day();
   j["ai_profit_days"] = restaurant.ai_profit_days();
+  j["ai_attack_cooldown"] = restaurant.ai_attack_cooldown();
 
   json suppliers = json::array();
   for (const auto& chosen : restaurant.preferred_suppliers()) {
@@ -399,8 +401,9 @@ json restaurant_to_json(const Restaurant& restaurant) {
   // Competition data
   j["demand_ratio"] = restaurant.economy().demand_ratio();
   j["competitor_count"] = restaurant.economy().competitor_count();
-  j["strongest_competitor_x"] = restaurant.economy().strongest_competitor_x();
-  j["strongest_competitor_y"] = restaurant.economy().strongest_competitor_y();
+  const auto strongest = restaurant.economy().strongest_competitor();
+  j["strongest_competitor"] =
+      strongest ? json(strongest->value) : json(nullptr);
   j["competition_score"] = restaurant.economy().competition_score();
 
   // Jukebox/TV settings (player choices)
@@ -457,8 +460,11 @@ std::unique_ptr<Restaurant> json_to_restaurant(const json& j,
 
   if (j.contains("ai_tier")) {
     restaurant->ai_tier(j["ai_tier"].get<int>());
-    restaurant->ai_capacity_target(j.value("ai_capacity_target", 0));
+    restaurant->ai_revenue_per_customer(
+        j.value("ai_revenue_per_customer", j.value("ai_capacity_target", 0)));
+    restaurant->ai_customers_per_day(j.value("ai_customers_per_day", 0));
     restaurant->ai_profit_days(j.value("ai_profit_days", 0));
+    restaurant->ai_attack_cooldown(j.value("ai_attack_cooldown", 0));
   }
 
   if (j.contains("preferred_suppliers")) {
@@ -624,13 +630,10 @@ std::unique_ptr<Restaurant> json_to_restaurant(const json& j,
   if (j.contains("competitor_count")) {
     restaurant->economy().competitor_count(j["competitor_count"].get<int>());
   }
-  if (j.contains("strongest_competitor_x")) {
-    restaurant->economy().strongest_competitor_x(
-        j["strongest_competitor_x"].get<int>());
-  }
-  if (j.contains("strongest_competitor_y")) {
-    restaurant->economy().strongest_competitor_y(
-        j["strongest_competitor_y"].get<int>());
+  if (j.contains("strongest_competitor") &&
+      !j["strongest_competitor"].is_null()) {
+    restaurant->economy().strongest_competitor(
+        core::RestaurantId{j["strongest_competitor"].get<int>()});
   }
   if (j.contains("competition_score")) {
     restaurant->economy().competition_score(

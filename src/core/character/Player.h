@@ -72,6 +72,9 @@ public:
   void eliminate() { status_ = PlayerStatus::Eliminated; }
   void restore_active() { status_ = PlayerStatus::Active; }
   void end_of_day(class GameState& game_state);
+
+  // Runs once the AI's restaurants have had their day.
+  void ai_end_of_day(class GameState& game_state);
   void end_of_week(class GameState& game_state);
   void on_food_shop_visit();
   void on_city_travel();
@@ -227,6 +230,7 @@ private:
   // Pizza slots with production history
   MenuSlots ai_menu_slots_{};
   void check_ai_expansion(class GameState& game_state);
+  void end_of_day_human(class GameState& game_state);
   void process_contracts(class GameState& game_state);
 
   std::map<core::CityId, CityCampaigns> campaigns_;

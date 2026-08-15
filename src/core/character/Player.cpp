@@ -8,6 +8,7 @@
 
 #include "core/character/Character.h"
 #include "core/city/City.h"
+#include "core/city/CityTypes.h"
 #include "core/city/District.h"
 #include "core/city/Property.h"
 #include "core/events/MilestoneId.h"
@@ -15,6 +16,7 @@
 #include "core/restaurant/AIEconomy.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/state/GameState.h"
+#include "core/state/RealEstate.h"
 #include "core/state/UIState.h"
 #include "core/supply/FoodSupplier.h"
 #include "core/time/TimeOfDay.h"
@@ -24,6 +26,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cstdlib>
 #include <iostream>
 #include <optional>
 #include <ranges>
@@ -31,6 +34,35 @@
 
 using namespace core;
 using namespace core::character;
+
+namespace {
+
+// How much room an AI leaves between a restaurant it is about to open and any
+// existing AI restaurants.
+constexpr int ai_restaurant_spacing_tiles = 6;
+
+bool crowds_an_ai_restaurant(GameState& game_state, const Property& premise) {
+  const int x = City::index_to_x(premise.index());
+  const int y = City::index_to_y(premise.index());
+
+  for (auto* player : game_state.players()) {
+    if (!player || player->is_human_controlled()) {
+      continue;
+    }
+    for (const auto* rest : game_state.restaurants_for(player->id())) {
+      const Property& standing = rest->property();
+      const int dx = std::abs(City::index_to_x(standing.index()) - x);
+      const int dy = std::abs(City::index_to_y(standing.index()) - y);
+      if (dx + dy < ai_restaurant_spacing_tiles) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+} // namespace
 
 std::ostream& operator<<(std::ostream& os, const Player& player) {
   os << "Player [id=" << player.id_ << ", name=" << player.name_
@@ -85,44 +117,19 @@ void Player::end_of_day(GameState& game_state) {
     city->run_staff_forgiveness(id_, character_.charisma());
   }
 
-  // AI daily evaluation
+  // The AI's own daily work waits until its restaurants have been processed.
   if (!is_human_controlled()) {
-    auto scope = game_state.simulated_cities_for(id_);
-    auto in_scope = [&scope](const Restaurant* rest) {
-      return rest && std::ranges::find(scope, rest->property().city().id()) !=
-                         scope.end();
-    };
-
-    // Closure check: evaluate each restaurant until one is closed.
-    auto restaurants = game_state.restaurants_for(id_);
-    bool closed_one = false;
-    for (auto* rest : restaurants) {
-      if (in_scope(rest) && rest->wants_open() && !rest->is_force_closed()) {
-        if (ai::check_bankruptcy(*rest, *this, game_state)) {
-          closed_one = true;
-          break;
-        }
-      }
-    }
-
-    // If a restaurant was closed the list now has a non existing restaurant in
-    // it, do a refresh:
-    if (closed_one) {
-      restaurants = game_state.restaurants_for(id_);
-    }
-
-    // AI quality growth chance
-    for (auto* rest : restaurants) {
-      if (in_scope(rest) && rest->wants_open() && !rest->is_force_closed() &&
-          rest->economy().quality_rating() < 100 &&
-          engine::random::rand_percentage_chance(character_.courage())) {
-        rest->economy().quality_rating(rest->economy().quality_rating() + 1);
-      }
-    }
-
-    check_ai_expansion(game_state);
     return;
   }
+  end_of_day_human(game_state);
+}
+
+void Player::ai_end_of_day(GameState& game_state) {
+  ai::run_daily_evaluation(*this, game_state);
+  check_ai_expansion(game_state);
+}
+
+void Player::end_of_day_human(GameState& game_state) {
 
   // From here on only human players
 
@@ -538,16 +545,14 @@ void Player::add_liquidity_snapshot(Money amount, int week_nr) {
 }
 
 void Player::check_ai_expansion(GameState& game_state) {
-  ai_expansion_cooldown_--;
-  if (ai_expansion_cooldown_ > 0) {
-    return;
+  if (ai_expansion_cooldown_ != 0) {
+    ai_expansion_cooldown_--;
   }
 
   auto restaurants = game_state.restaurants_for(id_);
   int count = static_cast<int>(restaurants.size());
 
-  if (count >= 20) {
-    ai_expansion_cooldown_ = 30;
+  if (count > 20) {
     return;
   }
 
@@ -560,57 +565,63 @@ void Player::check_ai_expansion(GameState& game_state) {
       if (other) {
         int other_count =
             static_cast<int>(game_state.restaurants_for(other->id()).size());
-        if (count - other_count >= 3) {
-          ai_expansion_cooldown_ = 10;
+        if (count > other_count + 3) {
           return;
         }
       }
     }
   }
 
-  uint8_t courage = character_.courage();
-
-  // Double courage/2 gate (aggressive AI = higher chance)
-  if (!engine::random::rand_percentage_chance(courage / 2)) {
-    ai_expansion_cooldown_ = (100 - courage) / 2;
-    return;
-  }
-  if (!engine::random::rand_percentage_chance(courage / 2)) {
-    ai_expansion_cooldown_ = (100 - courage) / 2;
-    return;
-  }
-
-  // Need enough cash: at least 2000 cents ($20)
-  if (cash_balance() < 20_usd) {
-    ai_expansion_cooldown_ = 5;
+  // An AI without restaurants expands immediately.
+  if (count != 0 && ai_expansion_cooldown_ != 0) {
     return;
   }
 
   auto* city = game_state.active_city();
   if (!city) {
-    ai_expansion_cooldown_ = 5;
     return;
   }
 
-  bool big = engine::random::rand_percentage_chance(30);
-  const int idx4 = engine::random::rand_max_n(4);
-  int layout_id = big ? ((idx4 * 2) + 1) : ((idx4 * 2) + 2);
-  auto* rest = game_state.real_estate().create_restaurant_with_layout(
-      *this, *city, layout_id, big);
-
-  if (rest) {
-    rest->open_for_business(game_state);
-    std::string district_name = "unknown";
-    district_name = rest->property().district().name();
-    Logger::info("[AI] {} opens a new restaurant in {}", name_, district_name);
-    game_state.status().post(StatusMsg{
-        .payload = compat::format("{} opens a new restaurant in {}!", name_,
-                                  district_name),
-        .scope = StatusScope::City,
-    });
+  Property* premise = game_state.real_estate().find_available_premise(*city);
+  if (!premise || crowds_an_ai_restaurant(game_state, *premise)) {
+    return;
   }
 
-  ai_expansion_cooldown_ = std::max(1, (100 - courage) / 2);
+  uint8_t courage = character_.courage();
+
+  if (!engine::random::rand_percentage_chance(courage)) {
+    return;
+  }
+
+  const bool buying = cash_balance() >= premise->get_purchase_price();
+
+  // Any premise on the market, even if only for rent, can be bought.
+  const bool available = buying
+                             ? premise->status() != PremiseStatus::NOT_AVAILABLE
+                             : premise->is_for_rent();
+  if (!available) {
+    return;
+  }
+
+  auto* rest = game_state.real_estate().create_ai_restaurant(
+      *this, *premise,
+      buying ? RealEstate::Tenure::Buy : RealEstate::Tenure::Rent);
+
+  if (!rest) {
+    return;
+  }
+
+  rest->open_for_business(game_state);
+  const std::string district_name = rest->property().district().name();
+  const char* verb = buying ? "buys" : "rents";
+  Logger::info("[AI] {} {} a new restaurant in {}", name_, verb, district_name);
+  game_state.status().post(StatusMsg{
+      .payload = compat::format("{} {} a new restaurant in {}!", name_, verb,
+                                district_name),
+      .scope = StatusScope::City,
+  });
+
+  ai_expansion_cooldown_ = (100 - courage) / 2;
 }
 
 const Awards& Player::awards() const { return awards_; }

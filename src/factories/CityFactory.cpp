@@ -19,6 +19,7 @@
 #include <map>
 #include <optional>
 
+#include "core/city/CityTypes.h"
 #include "core/city/District.h"
 #include "core/city/Property.h"
 #include "engine/Endian.h"
@@ -691,8 +692,8 @@ void CityFactory::populate_properties(City& city) {
       auto status = PremiseStatus::NOT_AVAILABLE;
       if (engine::random::rand_percentage_chance(
               district->premises_availability())) {
-        // Status 1=FOR_RENT, 2=FOR_SALE, 3=FOR_SALE_RENT
-        status = static_cast<PremiseStatus>(engine::random::rand_max_n(3) + 1);
+        status = premise_status_from_original(
+            static_cast<uint8_t>(engine::random::rand_max_n(3) + 1));
       }
       auto bp = std::make_unique<Property>(index, prop_type, Size{w, h}, r_id,
                                            status, city);
