@@ -659,6 +659,11 @@ void CityFactory::populate_types() {
   }
 }
 
+namespace {
+constexpr int min_premise_side = 10;
+constexpr int max_premise_side = 20;
+} // namespace
+
 void CityFactory::populate_properties(City& city) {
   // For every tile check if it's a business premise, and if it is
   // figure out which district it's in, then generate a Property
@@ -675,12 +680,14 @@ void CityFactory::populate_properties(City& city) {
       const auto& district = districts_[0x0F & district_bez_[district_index]];
       int average_size = district->average_size();
       int average_size_modifier = district->average_size_modifier();
-      int rand1 = engine::random::rand_max_n(average_size_modifier);
-      int rand2 = engine::random::rand_max_n(4);
-      int w = std::clamp(rand1 + rand2 + average_size - average_size_modifier,
-                         10, 20);
+      int width_draw =
+          engine::random::rand_triangular(average_size, average_size_modifier);
       int diff = engine::random::rand_max_n(average_size_modifier);
-      int h = std::clamp(w - diff, 10, 20);
+      // Both dimensions are uint8_t, so going below zero wraps to the max.
+      auto raw_w = static_cast<uint8_t>(width_draw);
+      auto raw_h = static_cast<uint8_t>(raw_w - diff);
+      int w = std::clamp<int>(raw_w, min_premise_side, max_premise_side);
+      int h = std::clamp<int>(raw_h, min_premise_side, max_premise_side);
       assert(number_of_realtors_ >= 0);
       int r_id = engine::random::rand_max_n(number_of_realtors_);
       auto status = PremiseStatus::NOT_AVAILABLE;

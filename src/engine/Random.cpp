@@ -62,6 +62,12 @@ int rand_max_n(int max) { return max_n(simulation_state, max); }
 
 int rand_between(int min, int max) { return rand_max_n(max - min) + min; }
 
+int rand_triangular(int base, int spread) {
+  const int first = rand_max_n(spread);
+  const int second = rand_max_n(spread);
+  return base + first + second - spread;
+}
+
 bool rand_percentage_chance(int percentage) {
   return percentage_chance(simulation_state, percentage);
 }
