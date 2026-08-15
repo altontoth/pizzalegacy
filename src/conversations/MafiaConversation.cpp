@@ -432,7 +432,7 @@ bool MafiaConversation::advance_proposal(bool agree) {
       else {
         // Destroy furniture and replace with ashes
         if (restaurant && restaurant->layout()) {
-          int pieces_to_destroy = rand_between(5, 14);
+          int pieces_to_destroy = rand_max_n(10) + 5;
           Money total_damage{0};
           auto& layout = *restaurant->layout();
 
