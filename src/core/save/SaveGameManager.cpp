@@ -356,6 +356,42 @@ std::optional<json> read_metadata_block(const std::string& full_path) {
   return json::parse(meta_str);
 }
 
+// Version 1 numbered a premise for rent before one for sale, so the two swap.
+void migrate_premise_status(json& j) {
+  if (!j.contains("cities")) {
+    return;
+  }
+  for (json& city : j["cities"]) {
+    if (!city.contains("properties")) {
+      continue;
+    }
+    for (json& property : city["properties"]) {
+      if (!property.contains("status")) {
+        continue;
+      }
+      const int status = property["status"].get<int>();
+      if (status == 1) {
+        property["status"] = 2;
+      }
+      else if (status == 2) {
+        property["status"] = 1;
+      }
+    }
+  }
+}
+
+// Bring an older save up to the current format.
+bool migrate_save(json& j, int version) {
+  if (version < OLDEST_LOADABLE_SAVE_VERSION || version > SAVE_FORMAT_VERSION) {
+    return false;
+  }
+  if (version < 2) {
+    migrate_premise_status(j);
+  }
+  j["version"] = SAVE_FORMAT_VERSION;
+  return true;
+}
+
 } // namespace
 
 std::optional<SaveMetadata>
@@ -413,12 +449,13 @@ bool SaveGameManager::load(GameState& state, GameContext& context,
       Logger::warn("Failed to read save file: {}", filename);
       return false;
     }
-    const json& j = *maybe_j;
+    json& j = *maybe_j;
 
-    int version = j.value("version", -1);
-    if (version != SAVE_FORMAT_VERSION) {
-      Logger::warn("Save file version mismatch: expected {}, got {}",
-                   SAVE_FORMAT_VERSION, version);
+    const int version = j.value("version", -1);
+    if (!migrate_save(j, version)) {
+      Logger::warn("Save file version {} cannot be read; this build takes {} "
+                   "back to {}",
+                   version, SAVE_FORMAT_VERSION, OLDEST_LOADABLE_SAVE_VERSION);
       return false;
     }
 

@@ -8,28 +8,19 @@
 
 #include <cstdint>
 
+// The first four match the original's two bit availability mask, bit 0 for sale
+// and bit 1 to rent.
 enum class PremiseStatus {
   NOT_AVAILABLE,
-  FOR_RENT,
   FOR_SALE,
+  FOR_RENT,
   FOR_SALE_RENT,
   OWNED,
   RENTED,
 };
 
-// The original stores availability as a two bit mask, bit 0 for sale and bit 1
-// to rent, which numbers the middle two the other way around from us.
 constexpr PremiseStatus premise_status_from_original(uint8_t value) {
-  switch (value & 3) {
-  case 1:
-    return PremiseStatus::FOR_SALE;
-  case 2:
-    return PremiseStatus::FOR_RENT;
-  case 3:
-    return PremiseStatus::FOR_SALE_RENT;
-  default:
-    return PremiseStatus::NOT_AVAILABLE;
-  }
+  return static_cast<PremiseStatus>(value & 3);
 }
 
 enum class PropertyType {

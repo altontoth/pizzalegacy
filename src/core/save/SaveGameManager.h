@@ -22,7 +22,10 @@ namespace save {
 using json = nlohmann::json;
 
 // Version of the save format
-constexpr int SAVE_FORMAT_VERSION = 1;
+constexpr int SAVE_FORMAT_VERSION = 2;
+
+// The oldest version a save can have and still be loaded.
+constexpr int OLDEST_LOADABLE_SAVE_VERSION = 1;
 
 struct SaveMetadata {
   std::string display_name;

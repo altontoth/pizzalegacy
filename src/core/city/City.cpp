@@ -350,8 +350,8 @@ void City::end_of_month() {
     }
     else if (status == PremiseStatus::NOT_AVAILABLE &&
              !property->owner_or_tenant()) {
-      auto new_status =
-          static_cast<PremiseStatus>(engine::random::rand_max_n(3) + 1);
+      auto new_status = premise_status_from_original(
+          static_cast<uint8_t>(engine::random::rand_max_n(3) + 1));
       property->status(new_status);
     }
   }
