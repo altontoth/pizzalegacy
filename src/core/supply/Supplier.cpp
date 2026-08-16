@@ -12,7 +12,8 @@ Supplier::Supplier(const SupplierData& d)
     : id_(d.id), type_(d.type), quality_(d.quality), name_(d.name),
       price_per_tile_(static_cast<int64_t>(d.price_per_tile * 100)),
       customer_ratings_(d.customer_ratings),
-      introduction_year_(d.introduction_year), u2_(d.u2), u3_(d.u3) {}
+      introduction_year_(d.introduction_year),
+      withdrawal_year_(d.withdrawal_year) {}
 
 uint8_t Supplier::quality() const { return quality_; }
 
@@ -27,6 +28,8 @@ SupplierID Supplier::id() const { return id_; }
 SupplierType Supplier::type() const { return type_; }
 
 uint16_t Supplier::introduction_year() const { return introduction_year_; }
+
+uint16_t Supplier::withdrawal_year() const { return withdrawal_year_; }
 
 std::array<int8_t, 6> Supplier::customer_ratings() const {
   return customer_ratings_;

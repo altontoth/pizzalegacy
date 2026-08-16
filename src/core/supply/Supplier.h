@@ -70,8 +70,8 @@ struct SupplierData {
   uint16_t price_per_tile;
   std::array<int8_t, 6> customer_ratings;
   uint16_t introduction_year;
-  uint8_t u2;
-  uint8_t u3;
+  // The last year the supplier trades. 2200 basically means never.
+  uint16_t withdrawal_year;
 };
 
 class Supplier {
@@ -84,6 +84,7 @@ public:
   void name(std::string);
   SupplierType type() const;
   uint16_t introduction_year() const;
+  uint16_t withdrawal_year() const;
   std::array<int8_t, 6> customer_ratings() const;
   Money price_per_tile() const;
 
@@ -95,6 +96,5 @@ private:
   Money price_per_tile_;
   std::array<int8_t, 6> customer_ratings_;
   uint16_t introduction_year_;
-  uint16_t u2_;
-  uint16_t u3_;
+  uint16_t withdrawal_year_;
 };
