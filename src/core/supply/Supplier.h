@@ -68,7 +68,7 @@ struct SupplierData {
   uint8_t quality;
   std::string_view name;
   uint16_t price_per_tile;
-  std::array<uint8_t, 6> customer_ratings;
+  std::array<int8_t, 6> customer_ratings;
   uint16_t introduction_year;
   uint8_t u2;
   uint8_t u3;
@@ -84,7 +84,7 @@ public:
   void name(std::string);
   SupplierType type() const;
   uint16_t introduction_year() const;
-  std::array<uint8_t, 6> customer_ratings() const;
+  std::array<int8_t, 6> customer_ratings() const;
   Money price_per_tile() const;
 
 private:
@@ -93,7 +93,7 @@ private:
   uint8_t quality_;
   std::string name_;
   Money price_per_tile_;
-  std::array<uint8_t, 6> customer_ratings_;
+  std::array<int8_t, 6> customer_ratings_;
   uint16_t introduction_year_;
   uint16_t u2_;
   uint16_t u3_;

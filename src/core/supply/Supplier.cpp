@@ -28,7 +28,7 @@ SupplierType Supplier::type() const { return type_; }
 
 uint16_t Supplier::introduction_year() const { return introduction_year_; }
 
-std::array<uint8_t, 6> Supplier::customer_ratings() const {
+std::array<int8_t, 6> Supplier::customer_ratings() const {
   return customer_ratings_;
 }
 
