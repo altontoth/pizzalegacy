@@ -7,3 +7,4 @@ tags
 CMakeUserPresets.json
 
 third_party/libadlmidi/
+src/engine/Version.h
