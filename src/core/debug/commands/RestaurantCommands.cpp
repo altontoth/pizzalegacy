@@ -10,9 +10,11 @@
 #include "core/city/Property.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/state/GameState.h"
+#include "core/state/RealEstate.h"
 #include "core/util/GameContext.h"
 #include "factories/CharacterFactory.h"
 #include "factories/PizzaFactory.h"
+#include "factories/RestaurantLayoutFactory.h"
 #include "resources/Bob.h"
 #include "resources/BobSizeFn.h"
 
@@ -129,6 +131,221 @@ Examples:
         // For now, clearing is not implemented as there's no clear() method
         // User can recreate the restaurant layout manually
         return CommandResult::success({"Restaurant furniture removed"});
+      },
+  };
+}
+
+static CommandDef make_restaurant_shutdown() {
+  return CommandDef{
+      .name = "shutdown",
+      .description = "Shut a restaurant down and give up its premise",
+      .help_text = R"(Usage: restaurant shutdown [player_id] [restaurant_id]
+
+Sells the premise, or ends the lease if it is rented, which takes the
+restaurant with it. The owner is paid nothing for a premise they own.
+To stop trading without losing the premise, use 'restaurant close'.
+
+Examples:
+  restaurant shutdown          # Shut down the active restaurant
+  restaurant shutdown 3 1      # Shut down player 3's restaurant 1
+)",
+      .args = restaurant_args(),
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        auto player_id = ctx.player_id(0);
+        auto restaurant_id = ctx.restaurant_id(1);
+
+        auto* restaurant = ctx.state.restaurant(restaurant_id);
+        if (!restaurant) {
+          return CommandResult::error(
+              compat::format("Restaurant {} not found", restaurant_id.value));
+        }
+
+        auto* player = ctx.state.player(player_id);
+        if (!player) {
+          return CommandResult::error(
+              compat::format("Player {} does not exist", player_id.value));
+        }
+
+        auto& property = restaurant->property();
+        auto owner = property.owner_or_tenant();
+        if (!owner || *owner != player_id) {
+          return CommandResult::error(
+              compat::format("Restaurant {} is not owned by player {}",
+                             restaurant_id.value, player_id.value));
+        }
+
+        const bool given_up =
+            property.is_rented()
+                ? ctx.state.real_estate().end_property_lease(property, *player)
+                : ctx.state.real_estate().sell_property(property, *player,
+                                                        Money{0});
+        if (!given_up) {
+          return CommandResult::error(compat::format(
+              "Restaurant {} could not be shut down", restaurant_id.value));
+        }
+
+        return CommandResult::success().add_message(
+            compat::format("Shut down restaurant {}", restaurant_id.value));
+      },
+  };
+}
+
+static CommandDef make_restaurant_open() {
+  return CommandDef{
+      .name = "open",
+      .description = "Open a restaurant for business",
+      .help_text = R"(Usage: restaurant open [player_id] [restaurant_id]
+
+Opens the restaurant, so it serves customers within its business hours.
+A restaurant an inspection has shut stays shut until its days run out.
+
+Examples:
+  restaurant open              # Open the active restaurant
+  restaurant open 3 1          # Open player 3's restaurant 1
+)",
+      .args = restaurant_args(),
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        auto player_id = ctx.player_id(0);
+        auto restaurant_id = ctx.restaurant_id(1);
+
+        auto* restaurant = ctx.state.restaurant(restaurant_id);
+        if (!restaurant) {
+          return CommandResult::error(
+              compat::format("Restaurant {} not found", restaurant_id.value));
+        }
+
+        auto owner = restaurant->property().owner_or_tenant();
+        if (!owner || *owner != player_id) {
+          return CommandResult::error(
+              compat::format("Restaurant {} is not owned by player {}",
+                             restaurant_id.value, player_id.value));
+        }
+
+        if (restaurant->is_force_closed()) {
+          return CommandResult::error(compat::format(
+              "Restaurant {} is force-closed", restaurant_id.value));
+        }
+
+        restaurant->open_for_business(ctx.state);
+        return CommandResult::success().add_message(compat::format(
+            "Restaurant {} is open for business", restaurant_id.value));
+      },
+  };
+}
+
+static CommandDef make_restaurant_close() {
+  return CommandDef{
+      .name = "close",
+      .description = "Close a restaurant for business (see shutdown to get rid "
+                     "of the restaurant)",
+      .help_text = R"(Usage: restaurant close [player_id] [restaurant_id]
+
+Closes the restaurant to customers and leaves everything else alone. To give
+up the premise as well, use 'restaurant shutdown'.
+
+Examples:
+  restaurant close             # Close the active restaurant
+  restaurant close 3 1         # Close player 3's restaurant 1
+)",
+      .args = restaurant_args(),
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        auto player_id = ctx.player_id(0);
+        auto restaurant_id = ctx.restaurant_id(1);
+
+        auto* restaurant = ctx.state.restaurant(restaurant_id);
+        if (!restaurant) {
+          return CommandResult::error(
+              compat::format("Restaurant {} not found", restaurant_id.value));
+        }
+
+        auto owner = restaurant->property().owner_or_tenant();
+        if (!owner || *owner != player_id) {
+          return CommandResult::error(
+              compat::format("Restaurant {} is not owned by player {}",
+                             restaurant_id.value, player_id.value));
+        }
+
+        restaurant->close_for_business();
+        return CommandResult::success().add_message(
+            compat::format("Restaurant {} is closed", restaurant_id.value));
+      },
+  };
+}
+
+static CommandDef make_restaurant_ai_layout() {
+  return CommandDef{
+      .name = "ai-layout",
+      .description = "Replace a restaurant's layout with a prebuilt AI one",
+      .help_text =
+          R"(Usage: restaurant ai-layout <index> [player_id] [restaurant_id]
+
+Loads f/f<index>.pc over the restaurant's own layout, furniture and all, so a
+prebuilt AI interior can be walked through. The room takes the layout's size,
+so leave the restaurant view before running this and go back in afterwards.
+
+Indices 1 to 18 are the ones an AI picks from; 19 to 24 exist as files but are
+never used.
+
+Examples:
+  restaurant ai-layout 1        # Active restaurant gets the first AI layout
+  restaurant ai-layout 19 @ 0   # Restaurant 0, one of the unreachable layouts
+)",
+      .args =
+          {
+              ArgSpec{
+                  .name = "index",
+                  .type = ArgType::Int,
+                  .optional = false,
+                  .description = "AI layout number",
+                  .min_value = 1,
+                  .max_value = RestaurantLayoutFactory::ai_layout_count,
+              },
+              ArgSpec{
+                  .name = "player_id",
+                  .type = ArgType::PlayerId,
+                  .optional = true,
+                  .default_provider = DefaultProvider::ActivePlayer,
+                  .description = "Player ID (@ for active player)",
+                  .min_value = 0,
+                  .max_value = NUMBER_OF_PLAYERS - 1,
+              },
+              ArgSpec{
+                  .name = "restaurant_id",
+                  .type = ArgType::RestaurantId,
+                  .optional = true,
+                  .default_provider = DefaultProvider::ActiveRestaurant,
+                  .description = "Restaurant ID (@ for active restaurant)",
+              },
+          },
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        const int index = static_cast<int>(ctx.int_arg(0));
+        auto player_id = ctx.player_id(1);
+        auto restaurant_id = ctx.restaurant_id(2);
+
+        auto* restaurant = ctx.state.restaurant(restaurant_id);
+        if (!restaurant) {
+          return CommandResult::error(
+              compat::format("Restaurant {} not found", restaurant_id.value));
+        }
+
+        auto owner = restaurant->property().owner_or_tenant();
+        if (!owner || *owner != player_id) {
+          return CommandResult::error(
+              compat::format("Restaurant {} is not owned by player {}",
+                             restaurant_id.value, player_id.value));
+        }
+
+        // More furniture than any layout file holds, so none of it is dropped.
+        constexpr int every_item = 255;
+        if (!restaurant->ai_layout(index, every_item)) {
+          return CommandResult::error(
+              compat::format("AI layout {} could not be loaded", index));
+        }
+
+        const auto size = restaurant->size();
+        return CommandResult::success().add_message(
+            compat::format("Restaurant {} now has AI layout {} ({}x{})",
+                           restaurant_id.value, index, size.w, size.h));
       },
   };
 }
@@ -767,11 +984,15 @@ CommandDef make_restaurant_commands() {
       .aliases = {"r", "rest"},
       .description = "Restaurant management commands",
       .help_text =
-          "Manage restaurants: info, clear, furniture, stock, create, qs, "
-          "inspection-timer",
+          "Manage restaurants: info, clear, open, close, shutdown, ai-layout, "
+          "furniture, stock, create, qs, inspection-timer",
   }
       .add_subcommand(make_restaurant_info())
       .add_subcommand(make_restaurant_clear())
+      .add_subcommand(make_restaurant_open())
+      .add_subcommand(make_restaurant_close())
+      .add_subcommand(make_restaurant_shutdown())
+      .add_subcommand(make_restaurant_ai_layout())
       .add_subcommand(make_restaurant_furniture())
       .add_subcommand(make_restaurant_stock())
       .add_subcommand(make_restaurant_create())
