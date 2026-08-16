@@ -87,7 +87,7 @@ RestaurantLayoutFactory::create_layout(std::span<const uint8_t> bytes) {
       kitchen_entrance_offset);
   uint8_t floor_vendor = is.get() - 1;
   std::array<uint8_t, 4> tile_pattern;
-  std::array<uint8_t, 6> popularity_raw;
+  std::array<int8_t, 6> popularity_raw;
   is.read(tile_pattern.data(), 4);
   is.read(popularity_raw.data(), 6);
   is.skip(19);
@@ -95,8 +95,8 @@ RestaurantLayoutFactory::create_layout(std::span<const uint8_t> bytes) {
   fp.vendor_id = floor_vendor;
   fp.tile_indices = tile_pattern;
 
-  for (size_t i = 0; i < 6; i++) {
-    fp.popularity[i] = static_cast<int>(popularity_raw[i]);
+  for (size_t i = 0; i < popularity_raw.size(); i++) {
+    fp.popularity[i] = popularity_raw[i];
   }
   const auto sid = static_cast<SupplierID>(floor_vendor);
   const auto& patterns = FloorPatternFactory::create(sid);
