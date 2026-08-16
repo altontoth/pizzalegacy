@@ -1065,9 +1065,10 @@ void Restaurant::end_of_day(GameState& game_state) {
       return;
     }
 
-    // AI quality growth chance
+    // Daily quality growth stops at 100; only the weekly settlement goes past.
     if (economy_.quality_rating() < 100 &&
-        engine::random::rand_percentage_chance(player->character().courage())) {
+        engine::random::rand_percentage_chance(
+            player->character().charisma())) {
       economy_.quality_rating(economy_.quality_rating() + 1);
     }
 

@@ -45,10 +45,10 @@ AttackSeverity attack_competitor(Restaurant& restaurant, Player& player,
 
 void run_daily_evaluation(Player& player, GameState& game_state);
 
-// Original aiEvaluateSingleRestaurant bankruptcy check:
-// If profit_days < -50 AND competitor_count > 3 AND two courage rolls pass,
-// close the restaurant. Returns true if restaurant was closed.
-bool check_bankruptcy(Restaurant& restaurant, Player& player,
+// Daily closure decision. Fewer than -50 days banked or more than three
+// competitors puts the restaurant up for closure, and two courage rolls settle
+// it. Returns true if the restaurant closed.
+bool consider_closing(Restaurant& restaurant, Player& player,
                       GameState& game_state);
 
 } // namespace ai

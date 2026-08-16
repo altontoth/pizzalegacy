@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <cstdint>
 #include <optional>
 #include "core/Demographics.h"
@@ -91,7 +92,10 @@ public:
   }
 
   int quality_rating() const { return quality_rating_; }
-  void quality_rating(int rating) { quality_rating_ = rating; }
+  // Daily growth stops at 100; the weekly settlement can carry it to 200.
+  void quality_rating(int rating) {
+    quality_rating_ = std::clamp(rating, 0, 200);
+  }
 
   int rejection_rate() const { return rejection_rate_; }
   void rejection_rate(int rate) { rejection_rate_ = rate; }

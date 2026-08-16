@@ -408,9 +408,10 @@ public:
   // money to increase this number.
   int ai_customers_per_day() const { return ai_customers_per_day_; }
   void ai_customers_per_day(int guests) { ai_customers_per_day_ = guests; }
-  int ai_profit_days() const { return ai_profit_days_; }
-  void ai_adjust_profit_days(int delta) { ai_profit_days_ += delta; }
-  void ai_increment_profit_days() { ai_adjust_profit_days(1); }
+  // Days the restaurant has traded, less what attacks have taken off it.
+  int ai_days_banked() const { return ai_days_banked_; }
+  void ai_adjust_days_banked(int delta) { ai_days_banked_ += delta; }
+  void ai_increment_days_banked() { ai_adjust_days_banked(1); }
 
   // Days before this restaurant's owner will attack a competitor from it again.
   int ai_attack_cooldown() const { return ai_attack_cooldown_; }
@@ -426,7 +427,7 @@ public:
   void ai_revenue_per_customer(int dollars) {
     ai_revenue_per_customer_ = dollars;
   }
-  void ai_profit_days(int days) { ai_profit_days_ = days; }
+  void ai_days_banked(int days) { ai_days_banked_ = days; }
 
   int ai_layout_index() const { return ai_layout_index_; }
   // Furniture pieces placed, and the daily percentage chance of placing no
@@ -608,7 +609,7 @@ private:
   int ai_tier_{0};
   int ai_revenue_per_customer_{0};
   int ai_customers_per_day_{0};
-  int ai_profit_days_{0};
+  int ai_days_banked_{0};
   int ai_layout_index_{0};
   int ai_furniture_count_{0};
   int ai_attack_cooldown_{0};

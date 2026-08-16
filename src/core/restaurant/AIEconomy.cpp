@@ -69,7 +69,7 @@ void process_restaurant_revenue(Restaurant& restaurant, Player& player) {
   // only thing that pushes it down. We might consider "fixing" this, but it
   // could have been a gameplay decision rather than a bug, so we'll have to
   // see what this would mean for how often restaurants get closed.
-  restaurant.ai_increment_profit_days();
+  restaurant.ai_increment_days_banked();
 
   const auto& counts = restaurant.economy().customer_counts();
   int total_customers = 0;
@@ -105,12 +105,12 @@ void process_restaurant_revenue(Restaurant& restaurant, Player& player) {
                Money{cost_cents}, total_customers);
 }
 
-bool check_bankruptcy(Restaurant& restaurant, Player& player,
+bool consider_closing(Restaurant& restaurant, Player& player,
                       GameState& game_state) {
-  // either bad profit OR crowded market triggers the closure check
-  bool bad_profit = restaurant.ai_profit_days() < -50;
+  // heavy sabotage or a crowded market puts the restaurant up for closure
+  bool heavily_sabotaged = restaurant.ai_days_banked() < -50;
   bool crowded = restaurant.economy().competitor_count() > 3;
-  if (!bad_profit && !crowded) {
+  if (!heavily_sabotaged && !crowded) {
     return false;
   }
 
@@ -224,7 +224,7 @@ bool evaluate_restaurant(Restaurant& restaurant, Player& player,
                          GameState& game_state) {
   restaurant.ai_decrement_attack_cooldown();
 
-  if (check_bankruptcy(restaurant, player, game_state)) {
+  if (consider_closing(restaurant, player, game_state)) {
     return true;
   }
   if (attack_competitor(restaurant, player, game_state) ==

@@ -302,7 +302,7 @@ json restaurant_to_json(const Restaurant& restaurant) {
   j["ai_tier"] = restaurant.ai_tier();
   j["ai_revenue_per_customer"] = restaurant.ai_revenue_per_customer();
   j["ai_customers_per_day"] = restaurant.ai_customers_per_day();
-  j["ai_profit_days"] = restaurant.ai_profit_days();
+  j["ai_days_banked"] = restaurant.ai_days_banked();
   j["ai_attack_cooldown"] = restaurant.ai_attack_cooldown();
 
   json suppliers = json::array();
@@ -463,7 +463,8 @@ std::unique_ptr<Restaurant> json_to_restaurant(const json& j,
     restaurant->ai_revenue_per_customer(
         j.value("ai_revenue_per_customer", j.value("ai_capacity_target", 0)));
     restaurant->ai_customers_per_day(j.value("ai_customers_per_day", 0));
-    restaurant->ai_profit_days(j.value("ai_profit_days", 0));
+    restaurant->ai_days_banked(
+        j.value("ai_days_banked", j.value("ai_profit_days", 0)));
     restaurant->ai_attack_cooldown(j.value("ai_attack_cooldown", 0));
   }
 

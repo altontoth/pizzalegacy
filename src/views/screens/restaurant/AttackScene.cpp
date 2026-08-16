@@ -652,7 +652,7 @@ void AttackScene::process_attack_aftermath(AttackEndReason reason) {
     }
 
     const int profit_penalty = static_cast<int>(5 + (dollars / 1000) + 1);
-    view_.restaurant_->ai_adjust_profit_days(-profit_penalty);
+    view_.restaurant_->ai_adjust_days_banked(-profit_penalty);
     // Only the owner investing raises this again, so the restaurant serves
     // nobody until then.
     view_.restaurant_->ai_customers_per_day(0);
