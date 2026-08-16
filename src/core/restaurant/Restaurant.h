@@ -259,6 +259,7 @@ public:
   void set_sabotage_contamination(int val) { sabotage_contamination_ = val; }
 
   int contamination() const { return contamination_; }
+  void reset_contamination() { contamination_ = 0; }
   void add_contamination(int amount) {
     contamination_ = std::clamp(contamination_ + amount, 0, 100);
   }

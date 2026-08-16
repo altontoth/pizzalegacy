@@ -189,6 +189,7 @@ void AttackScene::begin_attack(core::item::Item weapon) {
 
   attack_weapon_ = weapon;
   destroyed_furniture_value_ = Money{};
+  view_.restaurant_->reset_contamination();
   core::character::Character* attacker_char = nullptr;
   if (auto* player = state_.active_player()) {
     player->inventory().remove(weapon, 1);
@@ -753,8 +754,10 @@ void AttackScene::fire_weapon(AttackSprite& s, bool held) {
       return;
     }
     s.fire_dir = s.direction;
-    // Every fire tick raises contamination
-    view_.restaurant_->add_contamination(1);
+    // One fire tick in five raises contamination.
+    if (engine::random::rand_percentage_chance(20)) {
+      view_.restaurant_->add_contamination(1);
+    }
     break;
   }
   case Item::Bazooka: {
