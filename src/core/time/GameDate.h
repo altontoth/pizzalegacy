@@ -8,8 +8,10 @@
 
 #include <algorithm>
 #include <array>
-#include <chrono>
+#include <cstdint>
+#include <ostream>
 #include <string>
+#include <string_view>
 #include "engine/FormatCompat.h"
 
 inline constexpr std::array<std::string_view, 12> month_names{
@@ -22,6 +24,23 @@ inline constexpr std::array<std::string_view, 12> short_month_names = {
     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 };
 
+// No leap years, just simple 365 day years.
+inline constexpr std::array<int, 12> days_in_month{31, 28, 31, 30, 31, 30,
+                                                   31, 31, 30, 31, 30, 31};
+inline constexpr int days_per_year = 365;
+
+// Dates are stored as the number of days from the start of this year.
+inline constexpr int calendar_epoch_year = 1900;
+
+// Days from 1 January to the given date, counting the 1st as 0.
+constexpr int day_of_year(int month, int day) {
+  int total = day - 1;
+  for (int m = 0; m < month - 1; ++m) {
+    total += days_in_month[m];
+  }
+  return total;
+}
+
 class GameDate {
 public:
   friend std::ostream& operator<<(std::ostream& os, const GameDate& date) {
@@ -30,98 +49,77 @@ public:
   }
 
   constexpr GameDate(int y, int m, int d)
-      : ymd_(std::chrono::year{y},
-             std::chrono::month{static_cast<unsigned int>(m)},
-             std::chrono::day{static_cast<unsigned int>(d)}) {}
+      : days_(((y - calendar_epoch_year) * days_per_year) + day_of_year(m, d)) {
+  }
 
-  explicit constexpr GameDate(std::chrono::year_month_day d) : ymd_(d) {}
+  constexpr uint32_t day() const {
+    return static_cast<uint32_t>(month_day().day);
+  }
 
-  uint32_t day() const { return unsigned(ymd_.day()); }
+  constexpr uint32_t month() const {
+    return static_cast<uint32_t>(month_day().month);
+  }
 
-  uint32_t month() const { return unsigned(ymd_.month()); }
+  constexpr int year() const {
+    return calendar_epoch_year + (days_ / days_per_year);
+  }
 
-  int year() const { return int(ymd_.year()); }
-
-  int year_short() const { return int(ymd_.year()) - 1900; }
+  constexpr int year_short() const { return year() - 1900; }
 
   std::string to_string() const {
-    auto y = int(ymd_.year());
-    auto m = unsigned(ymd_.month());
-    auto d = unsigned(ymd_.day());
-    return compat::format("{}-{}-{}", d, short_month_names[m - 1], y);
+    return compat::format("{}-{}-{}", day(), short_month_names[month() - 1],
+                          year());
   }
 
   // Compact CV format: "d-m-yy" (e.g. "1-3-95")
   std::string cv_date_string() const {
-    return compat::format("{}-{}-{:02}", unsigned(ymd_.day()),
-                          unsigned(ymd_.month()), year_short());
+    return compat::format("{}-{}-{:02}", day(), month(), year_short());
   }
 
-  int days_since(const GameDate& other) const {
-    return (std::chrono::sys_days{ymd_} - std::chrono::sys_days{other.ymd_})
-        .count();
+  constexpr int days_since(const GameDate& other) const {
+    return days_ - other.days_;
   }
 
-  GameDate add_days(int days) const {
-    return GameDate{std::chrono::year_month_day{std::chrono::sys_days{ymd_} +
-                                                std::chrono::days{days}}};
+  constexpr GameDate add_days(int days) const {
+    return GameDate{from_day_count, days_ + days};
   }
 
   constexpr GameDate add_years(int years) const {
-    return GameDate{
-        std::chrono::year_month_day{ymd_ + std::chrono::years{years}}};
+    return add_days(years * days_per_year);
   }
 
   auto operator<=>(const GameDate&) const = default;
 
-  GameDate month_start() const {
-    return GameDate{std::chrono::year_month_day{ymd_.year(), ymd_.month(),
-                                                std::chrono::day{1}}};
+  constexpr GameDate month_start() const {
+    auto md = month_day();
+    return GameDate{year(), md.month, 1};
   }
-  GameDate month_end() const {
-    auto last_day = std::chrono::year_month_day_last{
-        ymd_.year(), std::chrono::month_day_last{ymd_.month()}};
-    return GameDate{std::chrono::year_month_day{last_day}};
+  constexpr GameDate month_end() const {
+    auto md = month_day();
+    return GameDate{year(), md.month, days_in_month[md.month - 1]};
   }
-  GameDate previous_month_start() const {
-    auto prev = std::chrono::year_month_day{ymd_.year(), ymd_.month(),
-                                            std::chrono::day{1}} -
-                std::chrono::months{1};
-    return GameDate{std::chrono::year_month_day{prev.year(), prev.month(),
-                                                std::chrono::day{1}}};
+  constexpr GameDate previous_month_start() const {
+    return previous_month_end().month_start();
   }
 
-  GameDate previous_month_end() const {
-    auto prev_month = ymd_ - std::chrono::months{1};
-    auto last_day = std::chrono::year_month_day_last{
-        prev_month.year(), std::chrono::month_day_last{prev_month.month()}};
-    return GameDate{std::chrono::year_month_day{last_day}};
+  constexpr GameDate previous_month_end() const {
+    return month_start().add_days(-1);
   }
 
-  std::string_view month_name() const {
-    unsigned m = static_cast<unsigned>(ymd_.month());
-    return (m >= 1 && m <= 12) ? month_names[m - 1] : "Invalid";
+  constexpr std::string_view month_name() const {
+    return month_names[month() - 1];
   }
 
-  std::string_view month_name_short() const {
-    unsigned m = static_cast<unsigned>(ymd_.month());
-    return (m >= 1 && m <= 12) ? short_month_names[m - 1] : "N/A";
+  constexpr std::string_view month_name_short() const {
+    return short_month_names[month() - 1];
   }
 
-  std::string_view previous_month_name() const {
-    auto prev_month = ymd_.month() - std::chrono::months{1};
-    return month_names[static_cast<unsigned>(prev_month) - 1];
-  }
-
-  // Day of week (1 = Monday, 7 = Sunday)
-  unsigned day_of_week() const {
-    auto dp = std::chrono::sys_days{ymd_};
-    auto wd = std::chrono::weekday{dp};
-    return wd.iso_encoding(); // 1=Monday, 7=Sunday
+  constexpr std::string_view previous_month_name() const {
+    return month_names[previous_month_end().month() - 1];
   }
 
   // English ordinal suffix for the day: "st", "nd", "rd", or "th"
-  std::string_view ordinal_suffix() const {
+  constexpr std::string_view ordinal_suffix() const {
     auto d = day();
     if (d >= 11 && d <= 13) {
       return "th";
@@ -143,19 +141,36 @@ public:
     return compat::format("{}{}", day(), ordinal_suffix());
   }
 
-  bool is_sunday() const { return day_of_week() == 7; }
-  bool is_saturday() const { return day_of_week() == 6; }
   // The original's week is just a running 7-day counter from game start, not
   // the calendar weekday: index 0 is the first day of the week, 6 is end of
   // week.
-  int week_day_index() const;
-  bool is_end_of_week() const { return week_day_index() == 6; }
-  bool is_end_of_month() const { return *this == month_end(); }
-  bool is_end_of_year() const { return month() == 12 && day() == 31; }
-  GameDate start_of_year() const;
+  constexpr int week_day_index() const;
+  constexpr bool is_end_of_week() const { return week_day_index() == 6; }
+  constexpr bool is_end_of_month() const { return *this == month_end(); }
+  constexpr bool is_end_of_year() const { return month() == 12 && day() == 31; }
+  constexpr GameDate start_of_year() const;
 
 private:
-  std::chrono::year_month_day ymd_;
+  struct FromDayCount {};
+  static constexpr FromDayCount from_day_count{};
+  constexpr GameDate(FromDayCount, int days) : days_(days) {}
+
+  // Month and day of this date, both 1-based.
+  struct MonthDay {
+    int month;
+    int day;
+  };
+  constexpr MonthDay month_day() const {
+    int remaining = days_ - ((year() - calendar_epoch_year) * days_per_year);
+    int m = 0;
+    while (m < 11 && remaining >= days_in_month[m]) {
+      remaining -= days_in_month[m];
+      ++m;
+    }
+    return {m + 1, remaining + 1};
+  }
+
+  int days_;
 };
 
 inline constexpr GameDate game_start_date{1995, 3, 1};
@@ -163,11 +178,11 @@ inline constexpr GameDate game_start_date{1995, 3, 1};
 inline constexpr GameDate floor_editing_bonus_date =
     game_start_date.add_years(1);
 
-inline int GameDate::week_day_index() const {
+constexpr int GameDate::week_day_index() const {
   return days_since(game_start_date) % 7;
 }
 
-inline GameDate GameDate::start_of_year() const {
+constexpr GameDate GameDate::start_of_year() const {
   return std::max(GameDate{year(), 1, 1}, game_start_date);
 }
 

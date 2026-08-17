@@ -9,7 +9,6 @@
 #include <algorithm>
 #include <array>
 #include <cctype>
-#include <chrono>
 #include <cstdint>
 #include <fstream>
 #include <system_error>
@@ -142,14 +141,7 @@ void shift_mission_to_game_start(MissionTarget& target) {
   Logger::info("Mission {} starts in {}; shifting all dates by {} year(s)",
                target.source_name, min_year, delta);
   for (auto& milestone : target.milestones) {
-    int year = milestone.date.year() + delta;
-    int month = static_cast<int>(milestone.date.month());
-    int day = static_cast<int>(milestone.date.day());
-    // A leap day can land in a non-leap year after shifting
-    if (month == 2 && day == 29 && !std::chrono::year{year}.is_leap()) {
-      day = 28;
-    }
-    milestone.date = GameDate{year, month, day};
+    milestone.date = milestone.date.add_years(delta);
   }
 }
 
