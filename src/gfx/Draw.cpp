@@ -66,6 +66,37 @@ void line(Surface& dst, ViewPoint from, ViewPoint to, ColorIndex color_idx,
   }
 }
 
+void line_2x(Surface& dst, ViewPoint from, ViewPoint to, ColorIndex color_idx) {
+  int x = from.x / 2;
+  int y = from.y / 2;
+  const int to_x = to.x / 2;
+  const int to_y = to.y / 2;
+
+  const int dx = std::abs(to_x - x);
+  const int sx = (x < to_x) ? 1 : -1;
+  const int dy = -std::abs(to_y - y);
+  const int sy = (y < to_y) ? 1 : -1;
+  int err = dx + dy;
+
+  while (true) {
+    dst.fill_rect({x * 2, y * 2, 2, 2}, color_idx);
+
+    if (x == to_x && y == to_y) {
+      break;
+    }
+
+    const int e2 = 2 * err;
+    if (e2 >= dy) {
+      err += dy;
+      x += sx;
+    }
+    if (e2 <= dx) {
+      err += dx;
+      y += sy;
+    }
+  }
+}
+
 // Hollow rectangle (box) using the line function
 void box(Surface& dst, ViewPoint from, ViewPoint to, ColorIndex color,
          int thickness) {

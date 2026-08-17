@@ -14,6 +14,9 @@ using gfx::Surface;
 namespace gfx::draw {
 void line(Surface& dst, ViewPoint from, ViewPoint to, ColorIndex color_idx,
           int thickness = 1);
+// A line at 2x resolution (so each pixel is a 2x2 block) to match the look of
+// the original graphs.
+void line_2x(Surface& dst, ViewPoint from, ViewPoint to, ColorIndex color_idx);
 void box(Surface& dst, ViewPoint from, ViewPoint to, ColorIndex color,
          int thickness = 1);
 void box(Surface& dst, ViewRect r, ColorIndex color, int thickness = 1);

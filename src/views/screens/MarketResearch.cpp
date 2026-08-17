@@ -507,7 +507,7 @@ void MarketResearch::render_economy(const RenderContext& ctx) {
   constexpr int grid_color = 27;
   constexpr int axis_color = 240;
   constexpr int graph_color = 23;
-  constexpr int tick_color = 20;
+  constexpr int baseline_y = 118;
 
   const ViewRect graph_box{10, 12, 360, 214};
 
@@ -519,8 +519,8 @@ void MarketResearch::render_economy(const RenderContext& ctx) {
   gfx::draw::line(*ctx.surface, graph_box.point() + PxOffset{48, 30},
                   graph_box.point() + PxOffset{48, 190}, axis_color, 2);
   // Horizontal axis (zero line)
-  gfx::draw::line(*ctx.surface, graph_box.point() + PxOffset{38, 116},
-                  graph_box.point() + PxOffset{320, 116}, axis_color, 2);
+  gfx::draw::line(*ctx.surface, graph_box.point() + PxOffset{38, baseline_y},
+                  graph_box.point() + PxOffset{320, baseline_y}, axis_color, 2);
 
   // Plot economy history as connected line segments.
   const auto& trend = state_.active_city()->economy_trend();
@@ -531,13 +531,13 @@ void MarketResearch::render_economy(const RenderContext& ctx) {
     auto graph_point = [&](int index) -> ViewPoint {
       int x = graph_box.x + 50 + (index * 4);
       // A third of the value, truncated, then doubled for our scale.
-      int y = graph_box.y + 116 + (2 * (history[index] / 3));
+      int y = graph_box.y + baseline_y + (2 * (history[index] / 3));
       return ViewPoint{x, y};
     };
 
     for (int i = 0; i < count - 1; ++i) {
-      gfx::draw::line(*ctx.surface, graph_point(i), graph_point(i + 1),
-                      graph_color, 2);
+      gfx::draw::line_2x(*ctx.surface, graph_point(i), graph_point(i + 1),
+                         graph_color);
     }
   }
 
