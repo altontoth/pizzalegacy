@@ -30,7 +30,7 @@ using namespace core::food;
 using pizza_design::find_row_by_key;
 
 void PizzaDesign::on_bake_pressed() {
-  auto* player = state_.active_player();
+  auto* player = competing_player();
   auto rows = build_recipe_list_rows(
       player->recipes(),
       state_.restaurants_in_city(player->id(), state_.active_city_id()));
@@ -155,7 +155,7 @@ void PizzaDesign::finish_new_user(std::string name) {
 }
 
 void PizzaDesign::finish_recreate_existing() {
-  auto& recipes = state_.active_player()->recipes();
+  auto& recipes = competing_player()->recipes();
   auto rid = *bake_->existing_id;
 
   // Check if this is a canonical or user recipe
@@ -299,7 +299,7 @@ void PizzaDesign::handle_post_judging() {
 
     // Commit recipe now that judging is done
     if (bake_->kind == BakeKind::InstantiateCanonical) {
-      state_.active_player()->recipes().create_from_canonical(
+      competing_player()->recipes().create_from_canonical(
           *bake_->canonical_id, std::move(bake_->working));
       change_active_key(*bake_->canonical_id);
     }

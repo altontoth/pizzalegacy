@@ -384,7 +384,7 @@ void PizzaDesign::create_input_panel() {
   // Selection cycling (skips <NEW>), and keeps page_ in sync with the new
   // selection, even though the original did not do that.
   auto cycle_selection = [this](int delta) {
-    auto* player = state_.active_player();
+    auto* player = competing_player();
     const auto& recipes = player->recipes();
 
     // Rebuild rows same as the list does (TODO maybe refactor this)
@@ -453,7 +453,7 @@ void PizzaDesign::create_input_panel() {
         "Turn page", [this, cycle_selection] {
           if (mode_ == PizzaDesignMode::Recipes) {
             int total =
-                state_.active_player()->recipes().size() + 1; // +1 for <NEW>
+                competing_player()->recipes().size() + 1; // +1 for <NEW>
             int max_page = (total - 1) / recipes_per_page_;
             if (page_ < max_page) {
               page_++;
@@ -511,7 +511,7 @@ void PizzaDesign::create_input_panel() {
                       auto* restaurant = state_.active_restaurant();
                       restaurant->menu().add_or_set(id, *price);
                       if (const auto* recipe =
-                              state_.active_player()->recipes().find(id)) {
+                              competing_player()->recipes().find(id)) {
                         restaurant->seed_menu_ingredient_demand(*recipe);
                       }
                       mark_dirty();
@@ -631,8 +631,8 @@ const Pizza* PizzaDesign::current_pizza() const {
   if (bake_) {
     return &bake_->working;
   }
-  auto* player = state_.active_player();
-  auto& recipes = state_.active_player()->recipes();
+  auto* player = competing_player();
+  auto& recipes = player->recipes();
 
   if (!active_key_) {
     return nullptr;
@@ -662,7 +662,7 @@ const Pizza* PizzaDesign::current_pizza() const {
 void PizzaDesign::change_active_key(RecipeKey active_key) {
   active_key_ = active_key;
   const auto& self = *this; // non-const function, but self is const-ref
-  const auto& recipes = state_.active_player()->recipes();
+  const auto& recipes = competing_player()->recipes();
   if (std::holds_alternative<core::RecipeId>(*active_key_)) {
     auto id = std::get<core::RecipeId>(*active_key_);
     const core::food::Recipe* r = recipes.find(id);

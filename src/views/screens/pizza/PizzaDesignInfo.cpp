@@ -173,7 +173,7 @@ void PizzaDesign::draw_pizza_info(const RenderContext& ctx) const {
   int restaurants_with_pizza = 0;
 
   if (recipe_id) {
-    auto* player = state_.active_player();
+    auto* player = competing_player();
 
     for (auto* rest : state_.restaurants_for(player->id())) {
       if (rest->property().city().id() != city->id()) {

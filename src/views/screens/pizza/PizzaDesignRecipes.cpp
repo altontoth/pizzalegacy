@@ -54,7 +54,7 @@ void PizzaDesign::draw_recipes(const RenderContext& ctx) {
   ViewRect name_entry_box{80, 70, 200, 18};
   ViewRect count_entry_box{290, 70, 26, 18};
 
-  auto* player = state_.active_player();
+  auto* player = competing_player();
   const auto& recipes = player->recipes();
   auto rows = build_recipe_list_rows(
       recipes,
@@ -145,7 +145,7 @@ void PizzaDesign::load_user_recipe(int number) {
     return;
   }
 
-  auto* player = state_.active_player();
+  auto* player = competing_player();
   auto& recipes = player->recipes();
 
   const std::string new_name = pizza->name();
@@ -198,7 +198,7 @@ void PizzaDesign::load_canonical_recipe(int number) {
     return;
   }
 
-  auto* player = state_.active_player();
+  auto* player = competing_player();
   auto& recipes = player->recipes();
 
   // If number is 0-13, treat as canonical pizza
