@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <chrono>
 #include <string>
@@ -21,9 +22,6 @@ inline constexpr std::array<std::string_view, 12> short_month_names = {
     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 };
 
-class GameDate;
-extern const GameDate game_start_date;
-
 class GameDate {
 public:
   friend std::ostream& operator<<(std::ostream& os, const GameDate& date) {
@@ -31,12 +29,12 @@ public:
     return os;
   }
 
-  GameDate(int y, int m, int d)
+  constexpr GameDate(int y, int m, int d)
       : ymd_(std::chrono::year{y},
              std::chrono::month{static_cast<unsigned int>(m)},
              std::chrono::day{static_cast<unsigned int>(d)}) {}
 
-  explicit GameDate(std::chrono::year_month_day d) : ymd_(d) {}
+  explicit constexpr GameDate(std::chrono::year_month_day d) : ymd_(d) {}
 
   uint32_t day() const { return unsigned(ymd_.day()); }
 
@@ -69,7 +67,7 @@ public:
                                                 std::chrono::days{days}}};
   }
 
-  GameDate add_years(int years) const {
+  constexpr GameDate add_years(int years) const {
     return GameDate{
         std::chrono::year_month_day{ymd_ + std::chrono::years{years}}};
   }
@@ -150,19 +148,28 @@ public:
   // The original's week is just a running 7-day counter from game start, not
   // the calendar weekday: index 0 is the first day of the week, 6 is end of
   // week.
-  int week_day_index() const { return days_since(game_start_date) % 7; }
+  int week_day_index() const;
   bool is_end_of_week() const { return week_day_index() == 6; }
   bool is_end_of_month() const { return *this == month_end(); }
   bool is_end_of_year() const { return month() == 12 && day() == 31; }
-  GameDate start_of_year() const {
-    return std::max(GameDate{year(), 1, 1}, game_start_date);
-  }
+  GameDate start_of_year() const;
 
 private:
   std::chrono::year_month_day ymd_;
 };
 
-inline const GameDate game_start_date{1995, 3, 1};
+inline constexpr GameDate game_start_date{1995, 3, 1};
+
+inline constexpr GameDate floor_editing_bonus_date =
+    game_start_date.add_years(1);
+
+inline int GameDate::week_day_index() const {
+  return days_since(game_start_date) % 7;
+}
+
+inline GameDate GameDate::start_of_year() const {
+  return std::max(GameDate{year(), 1, 1}, game_start_date);
+}
 
 // {} or {:d} -> "1-Mar-1995"  (standard, matches to_string())
 // {:c}       -> "1-3-95"      (compact cv format, matches cv_date_string())

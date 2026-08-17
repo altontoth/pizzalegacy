@@ -19,7 +19,6 @@
 #include "core/city/City.h"
 #include "core/city/Property.h"
 #include "core/events/MilestoneId.h"
-#include "core/food/IngredientCategory.h"
 #include "core/food/IngredientType.h"
 #include "core/restaurant/AIEconomy.h"
 #include "core/restaurant/Restaurant.h"
@@ -199,11 +198,6 @@ void TurnOrchestrator::end_of_turn() {
           turn::Delay{delay_frames_between_restaurants});
     }
   }
-  if (interactive && !floor_editing_bonus_shown_ &&
-      gs_->time().current_date() == game_start_date.add_years(1)) {
-    turn_pipeline_.emplace_back(turn::FloorEditingBonus{});
-  }
-
   turn_pipeline_.emplace_back(
       turn::FinishTurn{std::move(all_ids), interactive});
 
@@ -759,55 +753,65 @@ void TurnOrchestrator::build_turn_pipeline(
       wrapped && is_autosave_due(gs_->options().autosave_frequency,
                                  is_end_of_week, is_end_of_month);
 
+  // You get this even when you're in prison or on holiday
+  const bool one_year_played_reached =
+      wrapped && !floor_editing_bonus_shown_ &&
+      gs_->time().current_date().add_days(1) >= floor_editing_bonus_date;
+
   if (wrapped) {
-    turn_pipeline_.push_back(turn::TickCities{});
+    turn_pipeline_.emplace_back(turn::TickCities{});
     if (is_end_of_week) {
-      turn_pipeline_.push_back(turn::EndOfWeekProcessing{});
+      turn_pipeline_.emplace_back(turn::EndOfWeekProcessing{});
     }
     if (is_end_of_year) {
-      turn_pipeline_.push_back(turn::EndOfYearProcessing{});
+      turn_pipeline_.emplace_back(turn::EndOfYearProcessing{});
     }
     if (is_end_of_month) {
-      turn_pipeline_.push_back(turn::EndOfMonthProcessing{});
+      turn_pipeline_.emplace_back(turn::EndOfMonthProcessing{});
     }
     if (is_end_of_year) {
-      turn_pipeline_.push_back(turn::AnnualCompetition{});
+      turn_pipeline_.emplace_back(turn::AnnualCompetition{});
     }
     if (is_end_of_month) {
-      turn_pipeline_.push_back(turn::MonthlyCompetition{});
+      turn_pipeline_.emplace_back(turn::MonthlyCompetition{});
     }
     if (autosave_due) {
       // Captioned ahead of the fade so the label reaches a rendered frame
       // before the save stalls the loop.
-      turn_pipeline_.push_back(turn::SetActivity{autosave_activity});
+      turn_pipeline_.emplace_back(turn::SetActivity{autosave_activity});
     }
     // Steps from here up to PlayerTurnCard run in one drain at the fade
     // midpoint; a step that waits ends that drain early and the fade-in
     // reveals whatever view is still on top.
-    turn_pipeline_.push_back(turn::FadeTransition{});
-    turn_pipeline_.push_back(turn::AdvanceDate{start_time});
+    turn_pipeline_.emplace_back(turn::FadeTransition{});
+    turn_pipeline_.emplace_back(turn::AdvanceDate{start_time});
   }
   else if (new_player_is_human) {
-    turn_pipeline_.push_back(turn::SetTimeOfDay{start_time});
+    turn_pipeline_.emplace_back(turn::SetTimeOfDay{start_time});
   }
 
-  turn_pipeline_.push_back(turn::PreparePlayerTurn{});
-  turn_pipeline_.push_back(turn::ResumeTime{});
-  turn_pipeline_.push_back(turn::CityStartOfDay{});
+  turn_pipeline_.emplace_back(turn::PreparePlayerTurn{});
+  turn_pipeline_.emplace_back(turn::ResumeTime{});
+  turn_pipeline_.emplace_back(turn::CityStartOfDay{});
   // Delay autosave until we're in a stable state where we expect a game to be
   // saved.
   if (autosave_due) {
-    turn_pipeline_.push_back(turn::Autosave{});
+    turn_pipeline_.emplace_back(turn::Autosave{});
   }
-  turn_pipeline_.push_back(turn::PlayerTurnCard{});
+  turn_pipeline_.emplace_back(turn::PlayerTurnCard{});
+  if (one_year_played_reached) {
+    turn_pipeline_.emplace_back(turn::FloorEditingBonus{});
+  }
 
   if (prev_is_human) {
     if (is_end_of_week) {
-      turn_pipeline_.push_back(turn::WeeklyReports{
-          prev_player_id, std::move(prev_restaurant_ids), is_end_of_month});
+      turn_pipeline_.emplace_back(
+          turn::WeeklyReports{.previous_player = prev_player_id,
+                              .restaurant_ids = std::move(prev_restaurant_ids),
+                              .interleave_electricity = is_end_of_month});
     }
     if (is_end_of_month) {
-      turn_pipeline_.push_back(turn::MonthlyInvoice{prev_player_id});
+      turn_pipeline_.emplace_back(turn::MonthlyInvoice{prev_player_id});
     }
   }
 

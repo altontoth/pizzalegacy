@@ -183,7 +183,7 @@ public:
     deferred_manager_alerts_.push_back(alert);
   }
 
-  // Once per game, to the first human ending a turn on the anniversary.
+  // Once per game, on the day rollover into the anniversary.
   bool floor_editing_bonus_shown() const { return floor_editing_bonus_shown_; }
   void floor_editing_bonus_shown(bool shown) {
     floor_editing_bonus_shown_ = shown;

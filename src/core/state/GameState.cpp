@@ -463,7 +463,7 @@ void GameState::advance_time_blocks(int n) {
 const GameTime& GameState::time() const { return time_; }
 
 bool GameState::floor_editing_unlocked() const {
-  return time_.current_date() > game_start_date.add_years(1);
+  return time_.current_date() >= floor_editing_bonus_date;
 }
 
 void GameState::update(uint32_t elapsed_ms) {

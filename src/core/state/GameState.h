@@ -233,7 +233,7 @@ public:
   void advance_time_blocks(int n);
 
   // Editing a restaurant's floor pattern tile by tile is a bonus feature,
-  // available from the day after El Maestro announces it a year in.
+  // available from floor_editing_bonus_date().
   bool floor_editing_unlocked() const;
 
   // Debug fast-forward: how many simulation ticks run per unit of wall time
