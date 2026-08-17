@@ -132,7 +132,8 @@ bool NumberInputPopup::on_text(const input::TextEvent& ev) {
 
 bool NumberInputPopup::on_action(const input::ActionEvent& ev) {
   if (!is_editing_) {
-    return BasePopup::on_action(ev);
+    BasePopup::on_action(ev);
+    return true;
   }
   if (ev.state.pressed) {
     return true;

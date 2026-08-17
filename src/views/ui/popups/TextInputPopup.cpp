@@ -32,7 +32,9 @@ void TextInputPopup::render(Surface& surface, ViewPoint origin) {
   std::string display_text = input_text_;
   display_text.push_back('_');
 
-  const ViewPoint input_origin = text_origin + PxOffset{34, 44};
+  constexpr int text_box_padding = 4;
+  const ViewPoint input_origin{bg_box.x + text_box_padding,
+                               bg_box.y + text_box_padding};
   font_->render_text_onto(pop_surface, display_text, input_origin,
                           FontFace::ASTANDAR, text_color, TextAnchor::Start);
 
@@ -57,7 +59,7 @@ bool TextInputPopup::on_action(const input::ActionEvent& ev) {
     submit();
     return true;
   case input::Action::CancelInput:
-    cancel();
+    // Only a submitted answer closes this popup.
     return true;
   case input::Action::Backspace:
     backspace();
@@ -76,11 +78,6 @@ void TextInputPopup::submit() {
   if (callback_) {
     callback_(input_text_);
   }
-  finished();
-  mark_dirty();
-}
-
-void TextInputPopup::cancel() {
   finished();
   mark_dirty();
 }

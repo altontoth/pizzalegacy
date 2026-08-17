@@ -122,6 +122,9 @@ void PizzaDesign::on_design_finished() {
 }
 
 void PizzaDesign::finish_new_user(std::string name) {
+  if (name.empty()) {
+    name = "<NEW>";
+  }
   bake_->working.name(name);
   auto* cp = competing_player();
   auto id =

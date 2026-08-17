@@ -25,7 +25,6 @@ public:
 
 private:
   void submit();
-  void cancel();
   void backspace();
 
   std::string prompt_text_;
