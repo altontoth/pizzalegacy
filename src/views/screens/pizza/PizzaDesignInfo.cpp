@@ -111,10 +111,8 @@ void PizzaDesign::draw_pizza_info(const RenderContext& ctx) const {
     recipe_id = std::get<core::RecipeId>(*active_key_);
   }
 
-  // Get data from current restaurant
+  // Recipes belong to the player, so there need not be a restaurant in view.
   auto* restaurant = state_.active_restaurant();
-  const auto& menu = restaurant->menu();
-  const auto& stats = restaurant->stats();
   auto* city = state_.active_city();
 
   // Compute live ingredient cost for a pizza at a given restaurant.
@@ -138,7 +136,10 @@ void PizzaDesign::draw_pizza_info(const RenderContext& ctx) const {
     return cost;
   };
 
-  Money pizza_cost = compute_pizza_cost(restaurant);
+  Money pizza_cost{0};
+  if (restaurant) {
+    pizza_cost = compute_pizza_cost(restaurant);
+  }
 
   // Calculate values for "here" (this restaurant)
   Money here_price{0};
@@ -147,13 +148,14 @@ void PizzaDesign::draw_pizza_info(const RenderContext& ctx) const {
   Money here_profit{0};
   bool on_current_menu = false;
 
-  if (recipe_id) {
+  if (recipe_id && restaurant) {
     // Check if pizza is on this restaurant's menu
-    if (const auto* menu_entry = menu.find(*recipe_id)) {
+    if (const auto* menu_entry = restaurant->menu().find(*recipe_id)) {
       on_current_menu = true;
       here_price = menu_entry->price;
 
       // Get sales data from yesterday
+      const auto& stats = restaurant->stats();
       if (auto it = stats.yesterday.pizza_sales.find(*recipe_id);
           it != stats.yesterday.pizza_sales.end()) {
         here_sales = it->second.count_sold;
@@ -210,10 +212,12 @@ void PizzaDesign::draw_pizza_info(const RenderContext& ctx) const {
                                   FontFace::PIZ_NUMB, text_color);
 
   // Show calculated cost in "here" column
-  context_.font->render_text_onto(
-      *ctx.surface, compat::format("{:n}", pizza_cost),
-      ViewPoint{here_x, label_y}, FontFace::PIZ_NUMB, text_color,
-      TextAnchor::End);
+  if (restaurant) {
+    context_.font->render_text_onto(
+        *ctx.surface, compat::format("{:n}", pizza_cost),
+        ViewPoint{here_x, label_y}, FontFace::PIZ_NUMB, text_color,
+        TextAnchor::End);
+  }
 
   if (restaurants_with_pizza > 0) {
     context_.font->render_text_onto(

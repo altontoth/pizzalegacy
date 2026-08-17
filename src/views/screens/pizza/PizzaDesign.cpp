@@ -489,6 +489,9 @@ void PizzaDesign::create_input_panel() {
     input_panel_->add_button(
         Icon::SELL, ButtonType::Square, ButtonPosition::MiddleRight, "Transfer",
         [this] {
+          if (!state_.active_restaurant()) {
+            return;
+          }
           if (active_key_ &&
               std::holds_alternative<core::RecipeId>(*active_key_)) {
             auto& menu = state_.active_restaurant()->menu();
@@ -670,10 +673,9 @@ void PizzaDesign::change_active_key(RecipeKey active_key) {
                         .wip_pizza = (bake_ ? &bake_->working : nullptr),
                         .recipe = r});
   }
-  else {
-    status_.show_restaurant({.state = &state_,
-                             .rest = state_.active_restaurant(),
-                             .label = "RECIPES"});
+  else if (auto* rest = state_.active_restaurant()) {
+    status_.show_restaurant(
+        {.state = &state_, .rest = rest, .label = "RECIPES"});
   }
 }
 

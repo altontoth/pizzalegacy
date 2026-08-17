@@ -280,8 +280,10 @@ void PizzaDesign::handle_post_judging() {
       }
     }
 
-    // Show Info screen first, then ask for name
-    change_mode(PizzaDesignMode::Info);
+    // After a competition you get the list of recipes in the background when
+    // asking for the recipe name, otherwise you get the info screen.
+    change_mode(competition_ ? PizzaDesignMode::Recipes
+                             : PizzaDesignMode::Info);
 
     constexpr int max_len = 18;
     context_.popup->create<TextInputPopup>(
