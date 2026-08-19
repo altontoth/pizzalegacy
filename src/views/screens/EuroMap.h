@@ -33,6 +33,7 @@ public:
           std::optional<IngredientCategory> category = std::nullopt);
   void tick() override;
   void render(const RenderContext& ctx) override;
+  ClockRate clock_rate() const override { return ClockRate::Stopped; }
 
 private:
   ViewRect dest_box(ViewPoint p);

@@ -33,7 +33,6 @@ Menu::Menu(GameContext& context, GameState& state, ViewPoint origin,
       listener_(context.input->register_listener(*this)) {
 
   update_selection(nullptr);
-  state.pause_time_advancement();
 }
 
 std::optional<std::size_t> Menu::index_of_selected() const {

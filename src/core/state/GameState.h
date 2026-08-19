@@ -19,6 +19,7 @@
 #include "core/restaurant/FurnitureBatch.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/restaurant/StaffEventData.h"
+#include "core/state/ClockRate.h"
 #include "core/state/CompetitionCoordinator.h"
 #include "core/state/GameOptions.h"
 #include "core/state/MilestoneTracker.h"
@@ -45,6 +46,55 @@ class FadePresenter;
 
 constexpr int simulation_ticks_per_second = 30;
 constexpr uint32_t simulation_tick_ms = 1000 / simulation_ticks_per_second;
+
+// PIT is for Programmable Interval Timer, a chip the BIOS set to
+// interrupt 18.2065 times a second on the hardware of the day. The original
+// polls the timer, so one PIT tick is the finest time it can tell.
+constexpr uint32_t pit_tick_us = 54925;
+
+// The original calls its clock routine every 18 PIT ticks and treats that as
+// one second, making the displayed playtime run about 1.1% fast.
+constexpr int pit_ticks_per_second = 18;
+
+// A ten-minute block takes eleven of those seconds.
+constexpr int seconds_per_block = 11;
+
+// The original uses a byte for this counter. 256 is a multiple of the window
+// spacing, so the windows keep their spacing across the wrap.
+constexpr int second_counter_wrap = 256;
+
+// An interruption window (the time that interruptions are allowed to make it
+// through) opens at 0, 8, 16, etc. and lasts for one second. With an
+// eleven-second block, that means two windows per block, at 0 and 8.
+constexpr int seconds_between_interruption_windows = 8;
+
+// Each interruption pass runs the next phase of this round-robin. The fourth
+// phase does nothing, matching the original's empty fourth case.
+enum class InterruptionPhase {
+  QueuedEvents,
+  StaffEvents,
+  ProtectionRacket,
+  Unused,
+};
+
+constexpr InterruptionPhase next_phase(InterruptionPhase phase) {
+  switch (phase) {
+  case InterruptionPhase::QueuedEvents:
+    return InterruptionPhase::StaffEvents;
+  case InterruptionPhase::StaffEvents:
+    return InterruptionPhase::ProtectionRacket;
+  case InterruptionPhase::ProtectionRacket:
+    return InterruptionPhase::Unused;
+  case InterruptionPhase::Unused:
+    return InterruptionPhase::QueuedEvents;
+  }
+  return InterruptionPhase::QueuedEvents;
+}
+
+constexpr bool is_valid_interruption_phase(int phase) {
+  return phase >= static_cast<int>(InterruptionPhase::QueuedEvents) &&
+         phase <= static_cast<int>(InterruptionPhase::Unused);
+}
 
 constexpr bool is_valid_city_id(core::CityId city_id) {
   return city_id.value >= 0 && city_id.value < NUMBER_OF_CITIES;
@@ -217,19 +267,15 @@ public:
   void advance_game_time();
   void update(uint32_t elapsed_ms);
 
-  // Time advancement control
   void pause_time_advancement();
   void resume_time_advancement();
-  [[nodiscard]] bool is_time_advancement_enabled() const {
-    return time_advancement_enabled_;
-  }
+  void clock_rate(ClockRate rate) { clock_rate_ = rate; }
 
-  // In realtime play the clock runs and the day can end on its own.
+  // For headless play:
   void enter_realtime_play();
   void leave_realtime_play();
 
-  // Advance the clock by n ten-minute blocks, the time an action costs. Stops
-  // at the player's end of day.
+  // Advance the clock by n ten-minute blocks. Stops at the player's end of day.
   void advance_time_blocks(int n);
 
   // Editing a restaurant's floor pattern tile by tile is a bonus feature,
@@ -249,7 +295,8 @@ public:
   // Game Events
   void initiate_arrest(ArrestReason,
                        std::function<void()> on_complete = nullptr);
-  void check_police_events();
+  // Returns whether an arrest was started.
+  bool check_police_events();
   void bootstrap_minimal_playable_world(GameContext& context);
 
   StatusHub& status() { return status_hub_; }
@@ -310,7 +357,9 @@ public:
   }
 
   void on_city_entered(core::CityId city_id, const Player& player);
-  void check_mafia_events();
+  // Checks the mafia countdowns against today's date. Each one can open a
+  // conversation.
+  void check_mafia_deadlines();
 
   // Returns active city if possible, otherwise first loaded city, otherwise
   // city 0.
@@ -325,8 +374,14 @@ public:
     player_city_[pid.value] = city_id;
   }
 
-  int protection_roll_phase() const { return protection_roll_phase_; }
-  void protection_roll_phase(int phase) { protection_roll_phase_ = phase; }
+  InterruptionPhase interruption_phase() const { return interruption_phase_; }
+  void interruption_phase(InterruptionPhase phase) {
+    interruption_phase_ = phase;
+  }
+  int second_in_block() const { return second_in_block_; }
+  void second_in_block(int seconds) { second_in_block_ = seconds; }
+  int pit_tick_in_second() const { return pit_tick_in_second_; }
+  void pit_tick_in_second(int tick) { pit_tick_in_second_ = tick; }
 
   struct RacketOffer {
     core::RestaurantId restaurant_id;
@@ -380,6 +435,16 @@ public:
 private:
   bool is_past_player_end_of_day() const;
   void advance_time_block();
+  void advance_second();
+  // One turn of the interruption round-robin. Returns whether the player was
+  // interrupted.
+  bool run_interruption_pass();
+  // Applies the guards an interruption must clear, then runs a pass. Returns
+  // whether the player was interrupted.
+  bool dispatch_interruption();
+  // Dispatches on this PIT tick if the screen's rate allows it. Returns
+  // whether the player was interrupted.
+  bool offer_interruption_tick();
   // Status bar message posted when spend_cash fails.
   void post_insufficient_funds();
 
@@ -409,9 +474,14 @@ private:
   int window_width_{0};
   int window_height_{0};
   std::optional<int> last_clicked_property_index_;
-  bool time_advancement_enabled_{false};
-  uint32_t time_accumulator_{0};
-  int protection_roll_phase_{0};
+  ClockRate clock_rate_{ClockRate::Stopped};
+  bool clock_suspended_{false};
+  uint32_t pit_accumulator_us_{0};
+  // PIT ticks since the last second, wrapping at pit_ticks_per_second.
+  int pit_tick_in_second_{0};
+  // Seconds into the current ten-minute block.
+  int second_in_block_{0};
+  InterruptionPhase interruption_phase_{InterruptionPhase::QueuedEvents};
   std::optional<core::RestaurantId> active_restaurant_;
   GameMode game_mode_;
   std::optional<core::mission::MissionTarget> mission_target_;

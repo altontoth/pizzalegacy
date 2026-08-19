@@ -335,16 +335,96 @@ void GameState::advance_time_block() {
 
 void GameState::advance_game_time() {
   advance_time_block();
-
-  // Prevent interruptions while player is in area where that would be
-  // inconvenient.
-  if (!turn_.is_auto_end_of_turn_prevented()) {
-    check_mafia_events();
+  if (turn_.interruptions_allowed()) {
+    check_mafia_deadlines();
   }
-  check_police_events();
   process_pending_milestones();
+}
 
-  turn_.fire_due_events();
+void GameState::advance_second() {
+  // A stopped clock doesn't count seconds, so the block resumes where it left
+  // off.
+  if (clock_rate_ == ClockRate::Stopped) {
+    return;
+  }
+
+  ++second_in_block_;
+  if (second_in_block_ >= second_counter_wrap) {
+    second_in_block_ = 0;
+  }
+
+  if (clock_rate_ != ClockRate::Running || clock_suspended_) {
+    return;
+  }
+  if (second_in_block_ < seconds_per_block) {
+    return;
+  }
+
+  second_in_block_ = 0;
+  // The clock stops at the player's end of day; the dispatcher ends the turn.
+  if (!is_past_player_end_of_day()) {
+    advance_game_time();
+  }
+}
+
+// TODO: the original charges the player a block on the way into an
+// interruption and five more on the way out.
+bool GameState::run_interruption_pass() {
+  interruption_phase_ = next_phase(interruption_phase_);
+
+  switch (interruption_phase_) {
+  case InterruptionPhase::QueuedEvents:
+    if (turn_.fire_queued_events()) {
+      return true;
+    }
+    return check_police_events();
+  case InterruptionPhase::StaffEvents:
+    return turn_.fire_staff_events();
+  case InterruptionPhase::ProtectionRacket:
+    if (auto offer = roll_protection_racket()) {
+      push_protection_racket_offer(*offer);
+      return true;
+    }
+    return false;
+  case InterruptionPhase::Unused:
+    return false;
+  }
+  return false;
+}
+
+bool GameState::dispatch_interruption() {
+  if (turn_.is_processing_end_of_turn() || !active_player() ||
+      !active_player()->is_human_controlled()) {
+    return false;
+  }
+
+  // The player's end of day is checked ahead of the window, so it lands
+  // whatever the second counter is doing.
+  if (is_past_player_end_of_day()) {
+    turn_.request_end_of_turn();
+    return false;
+  }
+
+  if (second_in_block_ % seconds_between_interruption_windows != 0) {
+    return false;
+  }
+  return run_interruption_pass();
+}
+
+bool GameState::offer_interruption_tick() {
+  switch (turn_.interruption_rate()) {
+  case InterruptionRate::Full:
+    break;
+  // Every other tick.
+  case InterruptionRate::Half:
+    if (pit_tick_in_second_ % 2 != 0) {
+      return false;
+    }
+    break;
+  case InterruptionRate::None:
+    return false;
+  }
+  return dispatch_interruption();
 }
 
 void GameState::record_milestone(core::events::MilestoneId msg_id,
@@ -424,26 +504,25 @@ void GameState::process_pending_milestones() {
   }
 }
 
-void GameState::pause_time_advancement() { time_advancement_enabled_ = false; }
+void GameState::pause_time_advancement() { clock_suspended_ = true; }
 
 void GameState::resume_time_advancement() {
-  time_advancement_enabled_ = true;
+  clock_suspended_ = false;
 
-  // Immediately check if we should already end the turn, like when time has
-  // advanced past the end of day already when it's resumed.
-  if (turn_.is_player_day_over()) {
+  if (turn_.may_auto_end_turn()) {
     turn_.request_end_of_turn();
   }
 }
 
 void GameState::enter_realtime_play() {
+  clock_rate_ = ClockRate::Running;
   resume_time_advancement();
-  turn_.prevent_auto_end_of_turn(false);
+  turn_.interruption_rate(InterruptionRate::Full);
 }
 
 void GameState::leave_realtime_play() {
-  turn_.prevent_auto_end_of_turn(true);
-  pause_time_advancement();
+  turn_.interruption_rate(InterruptionRate::None);
+  clock_rate_ = ClockRate::Stopped;
 }
 
 bool GameState::is_past_player_end_of_day() const {
@@ -452,6 +531,7 @@ bool GameState::is_past_player_end_of_day() const {
 }
 
 void GameState::advance_time_blocks(int n) {
+  second_in_block_ = 0;
   for (int i = 0; i < n; ++i) {
     if (is_past_player_end_of_day()) {
       return;
@@ -485,24 +565,26 @@ void GameState::update(uint32_t elapsed_ms) {
     return; // Don't advance game time while processing end of turn
   }
 
-  // Only accumulate time when advancement is enabled. Only humans have time.
-  if (time_advancement_enabled_ && active_player()->is_human_controlled()) {
-    time_accumulator_ += elapsed_ms;
+  // Time is only relevant to human players.
+  if (active_player()->is_human_controlled()) {
+    pit_accumulator_us_ += elapsed_ms * 1000;
 
-    // 10 minutes game time takes about 11 seconds real time
-    constexpr uint32_t PASS_TEN_MINUTES_MS = 11 * 1000;
-    while (time_accumulator_ >= PASS_TEN_MINUTES_MS) {
-      time_accumulator_ -= PASS_TEN_MINUTES_MS;
+    // At most one interruption per update; once a dialog is up the rest of
+    // the ticks pass without one.
+    bool interrupted = false;
 
-      if (is_past_player_end_of_day()) {
-        time_accumulator_ = 0;
-        if (!turn_.is_auto_end_of_turn_prevented()) {
-          turn_.request_end_of_turn();
-        }
-        break;
+    while (pit_accumulator_us_ >= pit_tick_us) {
+      pit_accumulator_us_ -= pit_tick_us;
+
+      ++pit_tick_in_second_;
+      if (pit_tick_in_second_ >= pit_ticks_per_second) {
+        pit_tick_in_second_ = 0;
+        advance_second();
       }
 
-      advance_game_time();
+      if (!interrupted) {
+        interrupted = offer_interruption_tick();
+      }
     }
   }
 
@@ -736,8 +818,8 @@ void GameState::on_city_entered(core::CityId city_id, const Player& player) {
   process_pending_milestones();
 }
 
-void GameState::check_mafia_events() {
-  // Caller (advance_game_time) guarantees a human active player.
+void GameState::check_mafia_deadlines() {
+  // Only reached on a human player's turn.
   auto* player = active_player();
   auto* city = active_city();
 
@@ -809,14 +891,6 @@ void GameState::check_mafia_events() {
                                       .mode = MafiaMode::MissionDeadlineReached,
                                       .restaurant_id = std::nullopt});
       return;
-    }
-  }
-
-  // Protection racket check, spaced out via protection_roll_phase_.
-  protection_roll_phase_ = (protection_roll_phase_ + 1) % 4;
-  if (protection_roll_phase_ == 0) {
-    if (auto offer = roll_protection_racket()) {
-      push_protection_racket_offer(*offer);
     }
   }
 }
@@ -1059,6 +1133,11 @@ void GameState::reset_for_load() {
   auto fade_presenter = std::move(fade_presenter_);
   auto hub = std::move(status_hub_);
 
+  // We don't save these fields, so keep the ones we have.
+  const ClockRate clock_rate = clock_rate_;
+  const uint32_t accumulator = pit_accumulator_us_;
+  const InterruptionRate rate = turn_.interruption_rate();
+
   *this = GameState{};
   // Re-seat self-referencing members; move assignment left them pointing at
   // the moved-from temporary.
@@ -1068,6 +1147,10 @@ void GameState::reset_for_load() {
   competitions_ = CompetitionCoordinator{*this};
   milestones_ = MilestoneTracker{*this};
   real_estate_ = RealEstate{*this};
+
+  clock_rate_ = clock_rate;
+  pit_accumulator_us_ = accumulator;
+  turn_.interruption_rate(rate);
 
   staff_event_presenter_ = std::move(staff_presenter);
   monthly_entry_presenter_ = std::move(entry_presenter);
@@ -1129,8 +1212,8 @@ void GameState::initiate_arrest(ArrestReason reason,
                                     .on_complete = std::move(on_complete)});
 }
 
-void GameState::check_police_events() {
-  // Caller (advance_game_time) guarantees a human active player.
+bool GameState::check_police_events() {
+  // Only reached on a human player's turn.
   auto* player = active_player();
 
   using core::item::Item;
@@ -1141,19 +1224,20 @@ void GameState::check_police_events() {
     contraband += inv[item];
   }
   if (contraband == 0) {
-    return;
+    return false;
   }
 
   if (!engine::random::rand_percentage_chance(2)) {
-    return;
+    return false;
   }
 
   int evasion = player->character().dexterity();
   if (engine::random::rand_percentage_chance(evasion)) {
-    return;
+    return false;
   }
 
   initiate_arrest(ArrestReason::PosessingWeapons);
+  return true;
 }
 
 Restaurant* GameState::restaurant(core::RestaurantId r_id) const {

@@ -83,8 +83,8 @@ bool TurnOrchestrator::tick_pipeline_delay() {
   return true;
 }
 
-bool TurnOrchestrator::is_player_day_over() const {
-  if (prevent_auto_end_of_turn_) {
+bool TurnOrchestrator::may_auto_end_turn() const {
+  if (!interruptions_allowed()) {
     return false;
   }
   // AI turns end when their turn card auto-dismisses, never by the clock.
@@ -93,22 +93,6 @@ bool TurnOrchestrator::is_player_day_over() const {
     return false;
   }
   return gs_->is_past_player_end_of_day();
-}
-
-void TurnOrchestrator::prevent_auto_end_of_turn(bool prevent) {
-  prevent_auto_end_of_turn_ = prevent;
-  if (!prevent_auto_end_of_turn_) {
-    // Show any staff event dialogs for today
-    if (!showing_deferred_staff_event_ && !deferred_staff_events_.empty() &&
-        gs_->time().is_past_time(10, 0)) {
-      show_next_deferred_staff_event();
-      // end of turn will be checked after the dialog chain finishes
-      return;
-    }
-    if (is_player_day_over()) {
-      request_end_of_turn();
-    }
-  }
 }
 
 void TurnOrchestrator::end_of_turn() {
@@ -306,10 +290,7 @@ void TurnOrchestrator::show_next_deferred_staff_event() {
       end_of_turn();
       return;
     }
-    // The dialog chain may have been started from the
-    // prevent_auto_end_of_turn setter, which deferred the end-of-turn
-    // check. Now that all dialogs are done, check if we should end the turn.
-    if (is_player_day_over()) {
+    if (may_auto_end_turn()) {
       request_end_of_turn();
     }
     return;
@@ -371,14 +352,14 @@ void TurnOrchestrator::queue_mayor_award(const MayorAwardEvent& ev) {
   deferred_mayor_awards_.push_back(ev);
 }
 
-void TurnOrchestrator::show_next_deferred_manager_alert() {
+bool TurnOrchestrator::show_next_deferred_manager_alert() {
   int block = gs_->time().current_block_of_day();
   auto due = std::ranges::find_if(deferred_manager_alerts_,
                                   [block](const DeferredManagerAlert& a) {
                                     return a.display_block <= block;
                                   });
   if (due == deferred_manager_alerts_.end()) {
-    return;
+    return false;
   }
 
   auto alert = *due;
@@ -397,6 +378,7 @@ void TurnOrchestrator::show_next_deferred_manager_alert() {
   gs_->turn_presenter().show_manager_alert(
       std::move(alert.message), manager_pic,
       [this]() { showing_manager_alert_ = false; });
+  return true;
 }
 
 void TurnOrchestrator::trigger_mayor_inspection(core::RestaurantId rid,
@@ -418,7 +400,7 @@ void TurnOrchestrator::show_next_deferred_inspection() {
       });
   if (next == deferred_mayor_inspections_.end()) {
     showing_deferred_inspection_ = false;
-    if (is_player_day_over()) {
+    if (may_auto_end_turn()) {
       request_end_of_turn();
     }
     return;
@@ -481,28 +463,34 @@ void TurnOrchestrator::show_next_deferred_inspection() {
     restaurant->force_close(7);
   }
 
-  std::function<void()> on_complete;
+  std::optional<core::events::MilestoneId> milestone;
   if (outcome.star_gained) {
     using core::events::MilestoneId;
-    MilestoneId msg_id = MilestoneId::AwardedFirstStar;
+    milestone = MilestoneId::AwardedFirstStar;
     switch (restaurant->star_rating()) {
     case 2:
-      msg_id = MilestoneId::FirstTwoStarRestaurant;
+      milestone = MilestoneId::FirstTwoStarRestaurant;
       break;
     case 3:
-      msg_id = MilestoneId::FirstThreeStarRestaurant;
+      milestone = MilestoneId::FirstThreeStarRestaurant;
       break;
     case 4:
-      msg_id = MilestoneId::FirstFourStarRestaurant;
+      milestone = MilestoneId::FirstFourStarRestaurant;
       break;
     case 5:
-      msg_id = MilestoneId::FirstFiveStarRestaurant;
+      milestone = MilestoneId::FirstFiveStarRestaurant;
       break;
     default:
       break;
     }
-    on_complete = [this, msg_id]() { gs_->deliver_milestone(msg_id); };
   }
+
+  auto on_complete = [this, milestone]() {
+    showing_deferred_inspection_ = false;
+    if (milestone) {
+      gs_->deliver_milestone(*milestone);
+    }
+  };
 
   MayorConversationType conv_type =
       deferred.is_first ? MayorConversationType::FirstQualityInspection
@@ -518,22 +506,22 @@ void TurnOrchestrator::show_next_deferred_inspection() {
                  .on_complete = std::move(on_complete)});
 }
 
-void TurnOrchestrator::fire_due_events() {
-  // Only called on a human player's turn: time never advances during AI
-  // turns (gated in GameState::update()).
+bool TurnOrchestrator::fire_queued_events() {
+  // Only reached on a human player's turn.
   const auto& time = gs_->time();
 
-  // Fire manager call-me alerts, one per time block from each alert's own
-  // due block onwards.
-  if (!processing_end_of_turn_ && !prevent_auto_end_of_turn_ &&
-      !showing_manager_alert_ && !deferred_manager_alerts_.empty()) {
-    show_next_deferred_manager_alert();
+  if (processing_end_of_turn_) {
+    return false;
+  }
+
+  // A manager reaches the player from the time their report is scheduled for.
+  if (!showing_manager_alert_ && show_next_deferred_manager_alert()) {
+    return true;
   }
 
   // Deliver protection racket offers rolled during this player's day-end
   // flush.
-  if (!processing_end_of_turn_ && !prevent_auto_end_of_turn_ &&
-      !deferred_racket_offers_.empty()) {
+  if (!deferred_racket_offers_.empty()) {
     auto it = std::ranges::find_if(
         deferred_racket_offers_, [&](const DeferredRacketOffer& d) {
           return d.player_id == gs_->active_player()->id();
@@ -543,37 +531,43 @@ void TurnOrchestrator::fire_due_events() {
                                    .first_contact = it->first_contact};
       deferred_racket_offers_.erase(it);
       gs_->push_protection_racket_offer(offer);
+      return true;
     }
   }
 
-  // Fire deferred staff event dialogs at 10:00 the next day.
-  if (!processing_end_of_turn_ && !showing_deferred_staff_event_ &&
-      !showing_deferred_inspection_ && !prevent_auto_end_of_turn_ &&
-      has_deliverable_staff_event() && time.is_past_time(10, 0)) {
-    show_next_deferred_staff_event();
-  }
-
-  // Reset inspection gate when the MayorState conversation has ended.
-  if (showing_deferred_inspection_ && !gs_->ui().is_top<MayorState>()) {
-    showing_deferred_inspection_ = false;
-  }
-
   // Fire deferred mayor inspections, each from its own rolled block.
-  if (!processing_end_of_turn_ && !showing_deferred_staff_event_ &&
-      !showing_deferred_inspection_ && !prevent_auto_end_of_turn_ &&
+  if (!showing_deferred_staff_event_ && !showing_deferred_inspection_ &&
       has_deliverable_inspection()) {
     show_next_deferred_inspection();
+    return true;
   }
 
   // Fire deferred mayor award events at 10:00 (after inspections).
-  if (!processing_end_of_turn_ && !showing_deferred_staff_event_ &&
-      !showing_deferred_inspection_ && !gs_->ui().is_top<MayorState>() &&
-      !prevent_auto_end_of_turn_ && !deferred_mayor_awards_.empty() &&
+  if (!showing_deferred_staff_event_ && !showing_deferred_inspection_ &&
+      !gs_->ui().is_top<MayorState>() && !deferred_mayor_awards_.empty() &&
       time.is_past_time(10, 0)) {
     auto ev = deferred_mayor_awards_.front();
     deferred_mayor_awards_.erase(deferred_mayor_awards_.begin());
     gs_->process_mayor_award_event(ev);
+    return true;
   }
+
+  return false;
+}
+
+bool TurnOrchestrator::fire_staff_events() {
+  if (processing_end_of_turn_ || showing_deferred_staff_event_ ||
+      showing_deferred_inspection_) {
+    return false;
+  }
+
+  // Fire deferred staff event dialogs at 10:00 the next day.
+  if (has_deliverable_staff_event() && gs_->time().is_past_time(10, 0)) {
+    show_next_deferred_staff_event();
+    return true;
+  }
+
+  return false;
 }
 
 bool TurnOrchestrator::is_restaurant_in_processing_scope(
@@ -954,11 +948,6 @@ TurnOrchestrator::execute_pipeline_step(const turn::Step& step) {
           },
 
           [&](const turn::ResumeTime&) {
-            // Only run the clock on a human turn. AI turns are ended by the
-            // turn card auto-dismissing (pending_ai_auto_end_turn_), not by
-            // reaching a closing time, so advancing time during them would
-            // only jog the clock forward and risk firing per-block events
-            // against a non-human player.
             if (gs_->players_[gs_->active_player_.value]
                     ->is_human_controlled()) {
               gs_->resume_time_advancement();

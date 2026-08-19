@@ -27,6 +27,7 @@
 #include "core/city/Property.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/restaurant/RestaurantTypes.h"
+#include "core/state/TurnOrchestrator.h"
 #include "core/time/GameTime.h"
 #include "core/util/Constants.h"
 #include "engine/Random.h"
@@ -103,11 +104,6 @@ CityView::CityView(GameContext& context, GameState& state, core::CityId id)
 
   if (auto* player = state_.active_player()) {
     state_.on_city_entered(id, *player);
-  }
-
-  // Keep time paused and events deferred while the end-of-turn pipeline runs.
-  if (!state_.turn().is_processing_end_of_turn()) {
-    state_.enter_realtime_play();
   }
 
   for (int i = 0; i < city_->data_length(); ++i) {
@@ -187,7 +183,6 @@ CityView::~CityView() {
     store_state_in_city(CityViewReentryMode::RESTORE_ALL);
   }
   state_.clear_active_district();
-  state_.turn().prevent_auto_end_of_turn(true);
   stop_city_sound();
 }
 

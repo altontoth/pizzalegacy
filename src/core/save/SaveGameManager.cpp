@@ -709,7 +709,9 @@ json SaveGameManager::state_to_json(const GameState& state,
   j["floor_editing_bonus_shown"] = state.turn().floor_editing_bonus_shown();
   j["competition_count"] = state.competitions().competition_count();
   j["global_interest_rate"] = state.global_interest_rate();
-  j["protection_roll_phase"] = state.protection_roll_phase();
+  j["interruption_phase"] = static_cast<int>(state.interruption_phase());
+  j["second_in_block"] = state.second_in_block();
+  j["pit_tick_in_second"] = state.pit_tick_in_second();
   j["refused_call_actors"] = state.refused_call_actors();
 
   json player_cities = json::array();
@@ -998,7 +1000,16 @@ void SaveGameManager::json_to_state(const json& j, GameState& state,
       j.value("floor_editing_bonus_shown", false));
   state.competitions().competition_count(j.value("competition_count", 0));
   state.global_interest_rate(j.value("global_interest_rate", 8));
-  state.protection_roll_phase(j.value("protection_roll_phase", 0));
+  int phase = j.value("interruption_phase", 0);
+  if (!is_valid_interruption_phase(phase)) {
+    Logger::warn("Save has interruption phase {}; starting the round-robin "
+                 "again",
+                 phase);
+    phase = 0;
+  }
+  state.interruption_phase(static_cast<InterruptionPhase>(phase));
+  state.second_in_block(j.value("second_in_block", 0));
+  state.pit_tick_in_second(j.value("pit_tick_in_second", 0));
 
   if (j.contains("refused_call_actors")) {
     for (const auto& actor_id : j["refused_call_actors"]) {

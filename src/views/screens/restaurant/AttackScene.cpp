@@ -241,7 +241,6 @@ void AttackScene::begin_attack(core::item::Item weapon) {
 
   attack_active_ = true;
   break_in_music_stopped_ = false;
-  state_.pause_time_advancement();
   context_.audio->play_music(audio::MusicId::BREAK_IN_MUSIC_1,
                              audio::LoopMode::Loop);
   view_.view_mode_ = RestaurantViewMode::OPPONENT_ATTACK;
@@ -617,7 +616,6 @@ void AttackScene::finish_scene() {
   attack_active_ = false;
   context_.audio->stop_current_indexed_sound();
   context_.audio->stop_music();
-  state_.resume_time_advancement();
   if (auto* sd = context_.status_panel) {
     sd->clear_attack_status();
   }

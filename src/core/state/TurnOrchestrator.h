@@ -9,6 +9,7 @@
 #include "core/city/MayorOffice.h"
 #include "core/common/Ids.h"
 #include "core/restaurant/StaffEventData.h"
+#include "core/state/InterruptionRate.h"
 #include "core/state/TurnPipeline.h"
 #include "core/util/Constants.h"
 
@@ -46,8 +47,11 @@ public:
   // GameState::update() hook: runs a requested end_of_turn.
   void run_pending_end_of_turn();
 
-  // Deliver due deferred events; called once per 10-minute block.
-  void fire_due_events();
+  // Deliver at most one event that came due while the player was somewhere
+  // it could not be shown. Returns whether one was delivered.
+  bool fire_queued_events();
+  // Deliver one due staff event. Returns whether one was delivered.
+  bool fire_staff_events();
 
   // Run a city's start-of-day work (newspaper, mayor scheduling) once per
   // calendar day; also called by GameState when a city becomes active.
@@ -92,10 +96,15 @@ public:
     city_ai_action_taken_ = flags;
   }
 
-  [[nodiscard]] bool is_player_day_over() const;
-  void prevent_auto_end_of_turn(bool prevent);
-  [[nodiscard]] bool is_auto_end_of_turn_prevented() const {
-    return prevent_auto_end_of_turn_;
+  // A screen that doesn't allow interruptions also prevents the automatic end
+  // of the turn.
+  [[nodiscard]] bool may_auto_end_turn() const;
+  void interruption_rate(InterruptionRate rate) { interruption_rate_ = rate; }
+  [[nodiscard]] InterruptionRate interruption_rate() const {
+    return interruption_rate_;
+  }
+  [[nodiscard]] bool interruptions_allowed() const {
+    return interruption_rate_ != InterruptionRate::None;
   }
   [[nodiscard]] bool is_processing_end_of_turn() const {
     return processing_end_of_turn_;
@@ -127,8 +136,8 @@ public:
     core::RestaurantId restaurant_id;
   };
 
-  // Manager call-me alerts. Each carries the time block it is due, and at most
-  // one is delivered per block.
+  // A manager's report to the player, held back until the time it is
+  // scheduled for.
   struct DeferredManagerAlert {
     core::RestaurantId restaurant_id;
     std::string message;
@@ -210,7 +219,8 @@ private:
   bool has_deliverable_inspection() const;
 
   void show_next_deferred_staff_event();
-  void show_next_deferred_manager_alert();
+  // Returns whether an alert was shown.
+  bool show_next_deferred_manager_alert();
   void show_next_deferred_inspection();
 
   // Day boundary processing, run as pipeline steps after all players have
@@ -243,7 +253,7 @@ private:
   // pipeline at 0.
   int pipeline_delay_frames_{0};
   // True from end_of_turn() until FinishTurn runs; gates deferred event
-  // delivery in fire_due_events().
+  // delivery.
   bool processing_end_of_turn_{false};
   // True while the pipeline is parked on a step that waits for player input
   // (report screens, competitions, invoices); timer waits (Delay,
@@ -257,7 +267,7 @@ private:
 
   bool should_end_of_turn_{false};
   bool suppress_end_of_turn_reports_{false};
-  bool prevent_auto_end_of_turn_{false};
+  InterruptionRate interruption_rate_{InterruptionRate::None};
   // Track whether the current player turn card is for an AI that should
   // auto-end
   bool pending_ai_auto_end_turn_{false};

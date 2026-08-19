@@ -16,6 +16,8 @@
 
 #include "core/item/Item.h"
 #include "core/restaurant/Restaurant.h"
+#include "core/state/ClockRate.h"
+#include "core/state/InterruptionRate.h"
 #include "core/state/UIState.h"
 #include "engine/audio/AudioManager.h"
 #include "engine/geom/Camera.h"
@@ -63,6 +65,8 @@ public:
   void tick() override;
   void render(const RenderContext& ctx) override;
   bool on_action(const input::ActionEvent& ev) override;
+  InterruptionRate interruption_rate() const override;
+  ClockRate clock_rate() const override;
 
 private:
   void handle_mouse_click(WorldPoint map_point);

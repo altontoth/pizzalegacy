@@ -7,6 +7,8 @@
 #pragma once
 
 #include <map>
+#include "core/state/ClockRate.h"
+#include "core/state/InterruptionRate.h"
 #include "core/util/GameContext.h"
 #include "engine/LayerInfo.h"
 #include "engine/RenderContext.h"
@@ -29,6 +31,16 @@ public:
   bool needs_force_recompose() const override;
   std::vector<LayerInfo> get_layers() override;
   void interaction_origin(ViewPoint p);
+
+  // How often interruptions reach the player while this screen is up.
+  // TODO: a screen with no rate of its own dispatches once per key press or
+  // mouse click in the original, which None does not do.
+  virtual InterruptionRate interruption_rate() const {
+    return InterruptionRate::None;
+  }
+
+  // How the clock runs while this screen is up.
+  virtual ClockRate clock_rate() const { return ClockRate::Running; }
 
   // Background preservation control for overlay views
   void set_preserve_background(bool preserve) {

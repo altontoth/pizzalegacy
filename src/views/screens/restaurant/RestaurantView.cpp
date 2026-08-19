@@ -21,8 +21,10 @@
 #include "core/item/ActionText.h"
 #include "core/restaurant/Furniture.h"
 #include "core/restaurant/RestaurantTypes.h"
+#include "core/state/ClockRate.h"
 #include "core/state/CompetitionSession.h"
 #include "core/state/GameState.h"
+#include "core/state/InterruptionRate.h"
 #include "core/status/StatusHub.h"
 #include "core/util/LegacyConstants.h"
 #include "engine/Fatal.h"
@@ -75,15 +77,6 @@ RestaurantView::RestaurantView(GameContext& context, GameState& state,
   // Set this restaurant as the active one so other views know which restaurant
   // we're working with
   state_.active_restaurant(r_state.id);
-  if (state_.restaurant_placement().empty()) {
-    state_.turn().prevent_auto_end_of_turn(false);
-    state_.resume_time_advancement();
-  }
-  else {
-    state_.turn().prevent_auto_end_of_turn(true);
-    // only advance explicitly per item placed
-    state_.pause_time_advancement();
-  }
 
   kitchen_view_ = r_state.kitchen_view;
 
@@ -172,8 +165,20 @@ RestaurantView::RestaurantView(GameContext& context, GameState& state,
   update_restaurant_noise();
 }
 
+InterruptionRate RestaurantView::interruption_rate() const {
+  // In the original, an attack and furniture placement never reach the
+  // dispatcher.
+  if (attack_.active() || !state_.restaurant_placement().empty()) {
+    return InterruptionRate::None;
+  }
+  return InterruptionRate::Half;
+}
+
+ClockRate RestaurantView::clock_rate() const {
+  return attack_.active() ? ClockRate::SecondsOnly : ClockRate::Running;
+}
+
 RestaurantView::~RestaurantView() {
-  state_.turn().prevent_auto_end_of_turn(true);
   attack_.finish_scene();
   context_.audio->stop_music();
   if (current_restaurant_noise_) {

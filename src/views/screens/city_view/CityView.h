@@ -13,6 +13,7 @@
 #include "core/city/CityTypes.h"
 #include "core/city/CityViewCommon.h"
 #include "core/city/CityViewMapState.h"
+#include "core/state/InterruptionRate.h"
 #include "engine/audio/AudioManager.h"
 #include "engine/geom/Camera.h"
 #include "engine/geom/Spaces.h"
@@ -33,6 +34,9 @@ public:
   ~CityView();
   void tick() override;
   void render(const RenderContext& ctx) override;
+  InterruptionRate interruption_rate() const override {
+    return InterruptionRate::Full;
+  }
 
 private:
   enum class Dropdown { PLAYER, RANGE, LOCATIONS, PROPERTIES };

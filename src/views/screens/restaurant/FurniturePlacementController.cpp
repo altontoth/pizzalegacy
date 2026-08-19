@@ -357,7 +357,6 @@ void FurniturePlacementController::place_cursor_item(WorldPoint p) {
   }
 
   state_.advance_time_blocks(1);
-  state_.resume_time_advancement();
 
   ghost_furniture_topleft_.reset();
   show_furniture_cursor_ = false;
@@ -527,7 +526,6 @@ void FurniturePlacementController::update_ghost(WorldPoint mouse_world) {
       context_.cursor->custom_cursor(
           view_.bob_renderer_for(*on_cursor_).image(*on_cursor_), false);
       show_furniture_cursor_ = true;
-      state_.pause_time_advancement();
     }
   }
   view_.mark_dirty();

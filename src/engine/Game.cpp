@@ -19,6 +19,7 @@
 #include "core/mission/MissionFile.h"
 #include "core/restaurant/StaffEventData.h"
 #include "core/save/SaveGameManager.h"
+#include "core/state/TurnOrchestrator.h"
 #include "core/state/UIState.h"
 #include "core/state/ViewerType.h"
 #include "core/util/ConfigManager.h"
@@ -415,6 +416,8 @@ int Game::run() {
       overlays.tick_all();
 
       if (!overlays.simulation_frozen()) {
+        state.turn().interruption_rate(current_view_->interruption_rate());
+        state.clock_rate(current_view_->clock_rate());
         state.update(simulation_tick_ms);
       }
 

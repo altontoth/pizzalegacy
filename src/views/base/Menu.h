@@ -23,6 +23,7 @@ public:
        int line_spacing);
   void tick() override;
   void render(const RenderContext& ctx) override;
+  ClockRate clock_rate() const override { return ClockRate::Stopped; }
   bool on_action(const input::ActionEvent& ev) override;
 
 protected:

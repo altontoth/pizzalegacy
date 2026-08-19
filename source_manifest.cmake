@@ -439,11 +439,13 @@ set(PLEGACY_HEADERS
     src/core/settings/RealtorSettings.h
     src/core/state/AnimatedStatsScreen.h
     src/core/state/AnnualCompetitionFlow.h
+    src/core/state/ClockRate.h
     src/core/state/CompetitionCoordinator.h
     src/core/state/CompetitionSession.h
     src/core/state/FadePresenter.h
     src/core/state/GameOptions.h
     src/core/state/GameState.h
+    src/core/state/InterruptionRate.h
     src/core/state/MilestoneTracker.h
     src/core/state/Overloaded.h
     src/core/state/RealEstate.h

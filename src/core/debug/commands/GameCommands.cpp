@@ -630,7 +630,7 @@ static CommandDef make_game_tick() {
 
 Runs n simulation steps, the same step the game loop runs 30 times a second.
 This is what lets a script get anywhere that needs time to pass: the turn
-boundary, a day rollover, the clock reaching closing time.
+boundary, a day rollover, the clock reaching the player's end of day.
 
 Example:
   game tick 100
