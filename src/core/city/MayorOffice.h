@@ -14,9 +14,6 @@
 #include "core/finance/Money.h"
 #include "core/time/GameDate.h"
 #include "core/util/Constants.h"
-#include "engine/Random.h"
-
-class BankAccountRegistry;
 
 // Award types produced by MayorOffice scheduling. GameState maps these to
 // MayorConversationType for the conversation/UI layer.
@@ -41,20 +38,14 @@ struct MayorAwardEvent {
 
 class MayorOffice {
 public:
-  void register_accounts(BankAccountRegistry& registry);
-  void start_of_day(const GameDate& date, BankAccountRegistry& registry);
+  void init_private_account();
+  void start_of_day(const GameDate& date);
 
+  bool has_public_account() const { return public_bank_account_ != 0; }
   int public_bank_account() const { return public_bank_account_; }
   void public_bank_account(int account) { public_bank_account_ = account; }
   int private_bank_account() const { return private_bank_account_; }
   void private_bank_account(int account) { private_bank_account_ = account; }
-
-  const std::optional<GameDate>& last_rotation_date() const {
-    return last_rotation_date_;
-  }
-  void last_rotation_date(const std::optional<GameDate>& date) {
-    last_rotation_date_ = date;
-  }
 
   // Mayor favor score for a player (0-200). Increased by donations to the
   // private account; decays 1/day. Used as a % chance to pass inspections.
@@ -115,23 +106,19 @@ public:
   int award_ceremony_day() const { return ceremony_day_; }
   void award_ceremony_day(int d) { ceremony_day_ = d; }
 
-  // Called from GameState::run_city_start_of_day().
-  // Returns any award events that should fire today.
-  // Also decays favor scores and advances the appointment system.
-  std::vector<MayorAwardEvent>
-  process_daily_scheduling(const GameDate& date, int player_count,
-                           BankAccountRegistry& registry);
+  // Returns any award events that should fire today. Also decays favor scores
+  // and advances the appointment system.
+  std::vector<MayorAwardEvent> process_daily_scheduling(const GameDate& date,
+                                                        int player_count);
 
 private:
-  void schedule_quarterly_award(const GameDate& date,
-                                BankAccountRegistry& registry);
+  void schedule_quarterly_award(const GameDate& date);
   // Compute the winner for the currently scheduled quarterly award.
-  // Returns -1 if nobody is eligible.
   std::optional<int> compute_award_winner(MayorAwardType type,
                                           int player_count) const;
 
-  int public_bank_account_{engine::random::rand_max_n(999'999)};
-  int private_bank_account_{engine::random::rand_max_n(99'999'999)};
+  int public_bank_account_{0};
+  int private_bank_account_{0};
 
   // Mayor favor per player: incremented by donations / 1000, cap 200.
   std::array<int, NUMBER_OF_PLAYERS> favor_score_{};
@@ -151,9 +138,4 @@ private:
 
   // Day-of-month when the player can meet the mayor for a donation.
   int appointment_day_{0};
-
-  // Month-start date of the last private account rotation. nullopt = never
-  // rotated. Rotation happens lazily on first city visit each month, even if
-  // the city was unvisited on the 1st.
-  std::optional<GameDate> last_rotation_date_;
 };

@@ -153,7 +153,6 @@ public:
   [[nodiscard]] bool spend_cash(Account to, Money amount,
                                 core::RestaurantId restaurant_id);
 
-  // Bank account registry (player accounts, mayor bribes, mafia laundering)
   BankAccountRegistry& bank_accounts() { return bank_accounts_; }
   const BankAccountRegistry& bank_accounts() const { return bank_accounts_; }
 
@@ -171,9 +170,8 @@ public:
   // Call after mutating customer_taste_profiles.
   void recalculate_all_pizza_demographics();
 
-  // Transfer money from sender to a registered bank account.
-  // Debits sender's cash, credits target (player cash or dynamic account).
-  // Returns false if account doesn't exist or sender can't afford it.
+  // Transfer money from sender to a bank account. Returns false if the
+  // account doesn't exist, or the player can't afford it.
   bool bank_transfer(int account_number, Money amount, Player& sender);
 
   // Daily ingredient demand of the player's open restaurants in one city

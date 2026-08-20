@@ -21,6 +21,7 @@
 #include "core/city/City.h"
 #include "core/city/CityTypes.h"
 #include "core/city/District.h"
+#include "core/city/MayorOffice.h"
 #include "core/city/Property.h"
 #include "core/events/MilestoneId.h"
 #include "core/finance/TurnInvoices.h"
@@ -1000,12 +1001,6 @@ void GameState::register_bank_accounts() {
       bank_accounts_.register_player_account(core::PlayerId{i});
     }
   }
-
-  for (auto& city : cities_) {
-    if (city) {
-      city->mayor_office().register_accounts(bank_accounts_);
-    }
-  }
 }
 
 void GameState::finalize_initialization(GameContext& context) {
@@ -1533,8 +1528,23 @@ GameState::simulated_cities_for(core::PlayerId pid) const {
 
 bool GameState::bank_transfer(int account_number, Money amount,
                               Player& sender) {
-  auto* account = bank_accounts_.find(account_number);
-  if (!account) {
+  // A mayor's account number only works in their own city.
+  MayorOffice* mayor = nullptr;
+  bool donation = false;
+  if (auto* here = active_city()) {
+    auto& office = here->mayor_office();
+    if (account_number == office.private_bank_account()) {
+      mayor = &office;
+      donation = true;
+    }
+    else if (office.has_public_account() &&
+             account_number == office.public_bank_account()) {
+      mayor = &office;
+    }
+  }
+
+  auto* account = mayor ? nullptr : bank_accounts_.find(account_number);
+  if (!mayor && !account) {
     return false;
   }
 
@@ -1543,6 +1553,18 @@ bool GameState::bank_transfer(int account_number, Money amount,
   // Debit the sender
   if (!sender.spend_cash(date, Account::Others, amount)) {
     return false;
+  }
+
+  // Donations to the private account buy favor; a transfer to the public
+  // account is how the award participation fee is paid.
+  if (mayor) {
+    if (donation) {
+      mayor->add_favor(sender.id().value, amount);
+    }
+    else {
+      mayor->fee_paid(sender.id().value);
+    }
+    return true;
   }
 
   // Credit the target
@@ -1554,25 +1576,8 @@ bool GameState::bank_transfer(int account_number, Money amount,
     }
   }
 
-  // Track the deposit (for mafia/mayor to query)
+  // Track the deposit (for the mafia to query)
   bank_accounts_.deposit(account_number, amount);
-
-  // Mayor side-effects: donations to the private account increase favor;
-  // transfers to the public account register payment of the award fee.
-  for (auto& city : cities_) {
-    if (!city) {
-      continue;
-    }
-    auto& mayor = city->mayor_office();
-    if (account_number == mayor.private_bank_account()) {
-      mayor.add_favor(sender.id().value, amount);
-      break;
-    }
-    if (account_number == mayor.public_bank_account()) {
-      mayor.fee_paid(sender.id().value);
-      break;
-    }
-  }
 
   return true;
 }

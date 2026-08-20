@@ -1254,11 +1254,9 @@ void TurnOrchestrator::run_city_start_of_day(City& city) {
   gs_->milestones().check_market_share_milestones(city);
 
   city.newspaper_event_system().daily_update(*gs_, city);
-  city.mayor_office().start_of_day(gs_->time_.current_date(),
-                                   gs_->bank_accounts_);
+  city.mayor_office().start_of_day(gs_->time_.current_date());
   auto awards = city.mayor_office().process_daily_scheduling(
-      gs_->time_.current_date(), gs_->human_player_count(),
-      gs_->bank_accounts_);
+      gs_->time_.current_date(), gs_->human_player_count());
   for (auto& ev : awards) {
     queue_mayor_award(ev);
   }

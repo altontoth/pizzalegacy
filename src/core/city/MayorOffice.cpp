@@ -5,23 +5,30 @@
  */
 
 #include "core/city/MayorOffice.h"
-#include "core/finance/BankAccountRegistry.h"
 #include "engine/Random.h"
 
-void MayorOffice::register_accounts(BankAccountRegistry& registry) {
-  registry.register_account(public_bank_account_);
-  registry.register_account(private_bank_account_);
+namespace {
+constexpr int private_account_bound = 99'999'998;
+constexpr int public_account_bound = 999'999;
+
+int roll_private_account() {
+  return engine::random::rand_max_n(private_account_bound) + 1;
 }
 
-void MayorOffice::start_of_day(const GameDate& date,
-                               BankAccountRegistry& registry) {
-  // Rotate the private account once per month, lazily on first city visit.
-  GameDate this_month = date.month_start();
-  if (last_rotation_date_ != this_month) {
-    last_rotation_date_ = this_month;
-    registry.close_account(private_bank_account_);
-    private_bank_account_ = engine::random::rand_max_n(99'999'999);
-    registry.register_account(private_bank_account_);
+int roll_public_account() {
+  return engine::random::rand_max_n(public_account_bound);
+}
+} // namespace
+
+void MayorOffice::init_private_account() {
+  private_bank_account_ = roll_private_account();
+}
+
+void MayorOffice::start_of_day(const GameDate& date) {
+  // We only rotate the account if the player is in that city on the first of
+  // the month.
+  if (date.day() == 1) {
+    private_bank_account_ = roll_private_account();
   }
 }
 
@@ -60,8 +67,7 @@ void MayorOffice::advance_appointment(const GameDate& date) {
 }
 
 std::vector<MayorAwardEvent>
-MayorOffice::process_daily_scheduling(const GameDate& date, int player_count,
-                                      BankAccountRegistry& registry) {
+MayorOffice::process_daily_scheduling(const GameDate& date, int player_count) {
   std::vector<MayorAwardEvent> events;
 
   // Decay favor scores by 1 per day for all active players
@@ -97,7 +103,7 @@ MayorOffice::process_daily_scheduling(const GameDate& date, int player_count,
 
   // Last day of every 3rd month: schedule a quarterly award for next month
   if (date.is_end_of_month() && month % 3 == 0) {
-    schedule_quarterly_award(date, registry);
+    schedule_quarterly_award(date);
   }
 
   // Quarterly award announcement: no winner yet, fee text shown to players
@@ -124,8 +130,7 @@ MayorOffice::process_daily_scheduling(const GameDate& date, int player_count,
   return events;
 }
 
-void MayorOffice::schedule_quarterly_award(const GameDate& /*date*/,
-                                           BankAccountRegistry& registry) {
+void MayorOffice::schedule_quarterly_award(const GameDate& /*date*/) {
   // Original probabilities (with override chain):
   // 30% Best Investor, 20% Golden Bow Tie, 20% Trans-Atlantic Trade, ~45% none
   MayorAwardType award = MayorAwardType::None;
@@ -145,9 +150,7 @@ void MayorOffice::schedule_quarterly_award(const GameDate& /*date*/,
   if (award != MayorAwardType::None) {
     announcement_day_ = engine::random::rand_max_n(5) + 1;
     ceremony_day_ = engine::random::rand_max_n(10) + 10;
-    registry.close_account(public_bank_account_);
-    public_bank_account_ = engine::random::rand_max_n(999'999);
-    registry.register_account(public_bank_account_);
+    public_bank_account_ = roll_public_account();
   }
 }
 

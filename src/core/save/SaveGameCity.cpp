@@ -19,7 +19,6 @@
 #include "core/marketing/AdvertisingCampaign.h"
 #include "core/newspaper/NewspaperEventSystem.h"
 #include "core/newspaper/NewspaperState.h"
-#include "core/save/SaveGameDate.h"
 #include "core/supply/FoodSupplier.h"
 #include "engine/Logger.h"
 
@@ -335,9 +334,6 @@ json mayor_office_to_json(const MayorOffice& mo) {
 
   j["public_bank_account"] = mo.public_bank_account();
   j["private_bank_account"] = mo.private_bank_account();
-  if (mo.last_rotation_date()) {
-    j["last_rotation_date"] = date_to_json(*mo.last_rotation_date());
-  }
 
   j["appointment_day"] = mo.appointment_day();
   j["current_quarterly_award"] = static_cast<int>(mo.current_quarterly_award());
@@ -391,9 +387,6 @@ void json_to_mayor_office(const json& j, MayorOffice& mo) {
   }
   if (j.contains("private_bank_account")) {
     mo.private_bank_account(j["private_bank_account"].get<int>());
-  }
-  if (j.contains("last_rotation_date")) {
-    mo.last_rotation_date(json_to_date(j["last_rotation_date"]));
   }
   if (j.contains("appointment_day")) {
     mo.appointment_day(j["appointment_day"].get<int>());

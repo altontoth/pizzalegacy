@@ -78,6 +78,7 @@ std::unique_ptr<City> CityFactory::create_city(
   factory.populate_types();
 
   auto city = std::make_unique<City>(core::CityId{id});
+  city->mayor_office().init_private_account();
   factory.populate_properties(*city);
   factory.build_city_object(*city, id);
   city->job_market().init(player_chars);
