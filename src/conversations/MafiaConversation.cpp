@@ -894,6 +894,10 @@ std::optional<MafiaMission> MafiaConversation::generate_mission(int rank) {
     type = 3; // skip sabotage type (dead code in original)
   }
 
+  // The risk every job starts on. Package and investment jobs replace it with
+  // one derived from the item they draw.
+  mission.risk_pct = rand_max_n((difficulty * 10) + 10) + 5;
+
   // The first 72 time blocks are available for missions (0:00 to 11:50).
   // Pickup: 1-4 days from today
   int pickup_days = 1 + rand_max_n(4);
@@ -918,9 +922,13 @@ std::optional<MafiaMission> MafiaConversation::generate_mission(int rank) {
   case 1: {
     // Package delivery: pick up item at one building, deliver to another
     mission.mission_type = MafiaMissionType::Package;
-    mission.item_index =
-        rand_between(static_cast<int>(MafiaLine::A_BUCKET_OF_WATER),
-                     static_cast<int>(MafiaLine::A_TIME_MACHINE) + 1);
+    constexpr int package_item_count =
+        static_cast<int>(MafiaLine::A_TIME_MACHINE) -
+        static_cast<int>(MafiaLine::A_BUCKET_OF_WATER) + 1;
+    int item = rand_max_n(package_item_count);
+    mission.item_index = static_cast<int>(MafiaLine::A_BUCKET_OF_WATER) + item;
+    // The rarer the item, the riskier the job.
+    mission.risk_pct = item + rand_max_n(3 * difficulty) + difficulty;
 
     auto source = pick_random_building(city);
     auto dest = pick_random_building(city, source.tile_index);
@@ -937,10 +945,7 @@ std::optional<MafiaMission> MafiaConversation::generate_mission(int rank) {
     mission.dropoff.hour = delivery_hour;
     mission.dropoff.minute = delivery_minute;
 
-    mission.risk_pct =
-        (difficulty * 3) + clan_danger_ + rand_max_n(difficulty * 3);
-
-    int reward_raw = (rand_max_n(60) + 60) * (clan_danger_ + 5);
+    int reward_raw = (rand_max_n(60) + 60) * (mission.risk_pct + 5);
     mission.reward = Money{static_cast<int64_t>(reward_raw) * 100};
 
     mission.active = true;
@@ -961,9 +966,6 @@ std::optional<MafiaMission> MafiaConversation::generate_mission(int rank) {
     mission.dropoff.date = delivery_date;
     mission.dropoff.hour = delivery_hour;
     mission.dropoff.minute = delivery_minute;
-
-    mission.risk_pct = (difficulty * 3) + clan_danger_ +
-                       rand_max_n(std::max(difficulty * 3, 1));
 
     // Paid at the going rate for the weapon asked for, in the city the job was
     // offered in. The per-unit price is truncated before the quantity applies.
@@ -995,8 +997,6 @@ std::optional<MafiaMission> MafiaConversation::generate_mission(int rank) {
     mission.deadline_hour = delivery_hour;
     mission.deadline_minute = delivery_minute;
 
-    mission.risk_pct = rand_between(20, 60);
-
     int reward_raw =
         static_cast<int>((static_cast<int64_t>(amount_10k) * 10'000 *
                           (mission.risk_pct + rand_max_n(10))) /
@@ -1009,11 +1009,14 @@ std::optional<MafiaMission> MafiaConversation::generate_mission(int rank) {
   case 5: {
     // Investment deal: pay upfront, receive profit later (or not).
     // Result pre-decided at generation: risk_pct chance of failure.
-    mission.risk_pct = rand_between(15, 45);
     mission.mission_type = MafiaMissionType::Investment;
+    constexpr int deal_count =
+        static_cast<int>(MafiaLine::A_DAM_BUSTING_RAID) -
+        static_cast<int>(MafiaLine::A_COLUMN_COFFEE_PLANTATION) + 1;
+    int deal = rand_max_n(deal_count);
     mission.item_index =
-        rand_between(static_cast<int>(MafiaLine::A_COLUMN_COFFEE_PLANTATION),
-                     static_cast<int>(MafiaLine::A_DAM_BUSTING_RAID) + 1);
+        static_cast<int>(MafiaLine::A_COLUMN_COFFEE_PLANTATION) + deal;
+    mission.risk_pct = deal + rand_max_n(3 * difficulty) + difficulty;
 
     int profit = (rand_max_n(15'000) + 8'000) * (mission.risk_pct + 5);
     mission.profit = Money{
