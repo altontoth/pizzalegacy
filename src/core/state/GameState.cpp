@@ -427,10 +427,10 @@ bool GameState::offer_interruption_tick() {
   return dispatch_interruption();
 }
 
-void GameState::record_milestone(core::events::MilestoneId msg_id,
+bool GameState::record_milestone(core::events::MilestoneId msg_id,
                                  core::PlayerId player_id) {
   if (!career_log_.schedule_message(msg_id, player_id, time_.current_date())) {
-    return;
+    return false;
   }
 
   const int score = career_log_.get_data(msg_id).score;
@@ -438,6 +438,7 @@ void GameState::record_milestone(core::events::MilestoneId msg_id,
   if (p && score > 0) {
     p->add_score(score);
   }
+  return true;
 }
 
 void GameState::deliver_milestone(core::events::MilestoneId msg_id,
@@ -785,9 +786,13 @@ void GameState::show_staff_event_dialog(
   staff_event_presenter_(event, restaurant, std::move(on_done));
 }
 
-void GameState::trigger_win_sequence(core::PlayerId pid) {
+bool GameState::trigger_win_sequence(core::PlayerId pid) {
+  if (!record_milestone(core::events::MilestoneId::ControlsWorld, pid)) {
+    return false;
+  }
   ui_.push<WinSequenceState>(
       WinSequenceState{.line_index = 0, .player_id = pid});
+  return true;
 }
 
 void GameState::on_city_entered(core::CityId city_id, const Player& player) {

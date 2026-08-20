@@ -312,7 +312,8 @@ public:
 
   // Add the milestone to the player's CV and award its score, once per player.
   // For human players it also schedules the fullscreen message
-  void record_milestone(core::events::MilestoneId msg_id,
+  // Returns false if this player already reached this milestone
+  bool record_milestone(core::events::MilestoneId msg_id,
                         core::PlayerId player_id);
 
   // Record the milestone and show its fullscreen right away, running on_dismiss
@@ -332,7 +333,8 @@ public:
   void clear_all_refused_calls();
   std::vector<int> refused_call_actors() const;
   void eliminate_player(core::PlayerId id, GameOverCause cause);
-  void trigger_win_sequence(core::PlayerId pid);
+  // Returns false if this player has already won this game.
+  bool trigger_win_sequence(core::PlayerId pid);
 
   GameMode game_mode() const;
   void game_mode(GameMode);

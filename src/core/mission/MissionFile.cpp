@@ -35,7 +35,7 @@ constexpr int MIS_YEAR_OFFSET = 3 * MIS_SLOT_COUNT;
 // Event ids that exist as byte values but are not real milestones:
 // 28/29 are UI header lines, 93 is an empty line, 98/99 are unused slots.
 bool is_valid_milestone_event(int event_id) {
-  if (event_id < 1 || event_id > 139) {
+  if (event_id < 1 || event_id > core::events::max_milestone_id) {
     return false;
   }
   return event_id != 28 && event_id != 29 && event_id != 93 && event_id != 98 &&

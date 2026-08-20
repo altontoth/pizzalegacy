@@ -15,9 +15,10 @@ namespace core::events {
  * a fullscreen shown when they reach it.
  *
  * The id is the line number in both original text files. LEBEN.E holds the
- * short CV label for all 139. LEVENT.E holds the fullscreen prose and runs out
- * at 97, so 100 and up only ever reach the CV. Slots 86, 93, 98 and 99 are
- * dead in the original data.
+ * short CV label for lines 1 to 139. LEVENT.E holds the fullscreen text and
+ * runs out at 97, so 100 and up only ever reach the CV. Slots 86, 93, 98 and
+ * 99 are unused in the original data, and a few labels come from the
+ * executable rather than the file (see cv_label_overrides).
  */
 enum class MilestoneId {
   LaughingStock = 1,
@@ -164,7 +165,10 @@ enum class MilestoneId {
   CentralWarehouseIn10Cities = 137,
   TakesASwimInConcreteTrunks = 138,
   Has500KWeeksProfitsInOneCity = 139,
+  ControlsWorld = 140,
 };
+
+constexpr int max_milestone_id = static_cast<int>(MilestoneId::ControlsWorld);
 
 enum class ZwBackground {
   NONE = 0,

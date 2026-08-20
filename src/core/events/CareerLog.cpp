@@ -18,7 +18,7 @@
 namespace core::events {
 
 using ZW = ZwBackground;
-constexpr std::array<EventData, 140> milestone_data = {{
+constexpr std::array<EventData, max_milestone_id + 1> milestone_data = {{
     // unused
     {ZwBackground::NONE, 0},
 
@@ -167,21 +167,25 @@ constexpr std::array<EventData, 140> milestone_data = {{
     {ZW::NONE, 5000000}, // [137] Central warehouse in 10 cities
     {ZW::NONE, 10},      // [138] Takes a swim in concrete trunks
     {ZW::NONE, 1000000}, // [139] $500k week's profits in one city
+    {ZW::NONE, 0},       // [140] Controls the world
 }};
 
 // The original renders these four CV labels from strings in the executable
 // instead of leben.e; there are lines for them but those talk about per week
 // milestones instead of per day, so presumably some last minute change of mind
-// in the original.
-constexpr std::array<std::pair<MilestoneId, std::string_view>, 4>
-    cv_label_overrides = {{
-        {MilestoneId::Sold1KPizzasPerDay, "1000 pizzas sold|in a single day"},
-        {MilestoneId::Sold10KPizzasPerDay, "10000 pizzas sold|in one week"},
-        {MilestoneId::Has25KWeeksProfitInOneRestaurant,
-         "$25000 week's profit|in one restaurant"},
-        {MilestoneId::Has50KWeeksProfitInOneRestaurant,
-         "$50000 week's profit|in one restaurant"},
-    }};
+// in the original. The last string doesn't have a line in leben.e at all.
+using CvLabelOverride = std::pair<MilestoneId, std::string_view>;
+constexpr std::array cv_label_overrides = {
+    CvLabelOverride{MilestoneId::Sold1KPizzasPerDay,
+                    "1000 pizzas sold|in a single day"},
+    CvLabelOverride{MilestoneId::Sold10KPizzasPerDay,
+                    "10000 pizzas sold|in one week"},
+    CvLabelOverride{MilestoneId::Has25KWeeksProfitInOneRestaurant,
+                    "$25000 week's profit|in one restaurant"},
+    CvLabelOverride{MilestoneId::Has50KWeeksProfitInOneRestaurant,
+                    "$50000 week's profit|in one restaurant"},
+    CvLabelOverride{MilestoneId::ControlsWorld, "CONTROLS WORLD!!!"},
+};
 
 CareerLog::CareerLog()
     : fullscreen_texts_loaded_(false), cv_labels_loaded_(false) {}

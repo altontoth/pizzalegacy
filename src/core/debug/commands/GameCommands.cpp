@@ -15,6 +15,7 @@
 #include "core/state/UIState.h"
 #include "core/time/GameDate.h"
 #include "core/time/GameTime.h"
+#include "engine/FormatCompat.h"
 
 #include <cstdio>
 
@@ -346,7 +347,9 @@ Valid causes: debts, suppliers, killed, tycoon
               core::events::MilestoneId::CoolVinnieAndBigLuigiTakeYouForABath;
         }
         else if (cause_str == "tycoon") {
-          ctx.state.trigger_win_sequence(player->id());
+          if (!ctx.state.trigger_win_sequence(player->id())) {
+            return CommandResult::error("This player has already won");
+          }
           return CommandResult::success().add_message(
               "Game over triggered: tycoon");
         }
@@ -373,18 +376,19 @@ static CommandDef make_game_levent() {
   return CommandDef{
       .name = "levent",
       .description = "Fire a life event (CV milestone) for the active player",
-      .help_text = R"(Usage: game levent <id>
+      .help_text = compat::format(R"(Usage: game levent <id>
 
 Delivers the given MilestoneId to the active player as if the milestone had
 just been achieved: records the CV entry, awards score, and shows the
 fullscreen message if the event has one. In mission mode this can trigger
 the end-of-mission check.
 
-Valid ids: 1-139 (see MilestoneId.h). 100+ are CV-only (no fullscreen).
+Valid ids: 1-{} (see MilestoneId.h). 100+ are CV-only (no fullscreen).
 
 Example:
   game levent 30    # "Opens 1st restaurant"
 )",
+                                  core::events::max_milestone_id),
       .args =
           {
               ArgSpec{
@@ -392,7 +396,8 @@ Example:
                   .type = ArgType::Int,
                   .optional = false,
                   .default_provider = DefaultProvider::None,
-                  .description = "MilestoneId to fire (1-139)",
+                  .description = compat::format("MilestoneId to fire (1-{})",
+                                                core::events::max_milestone_id),
               },
           },
       .handler = [](const CommandContext& ctx) -> CommandResult {
@@ -401,8 +406,9 @@ Example:
           return CommandResult::error("No active player");
         }
         const int id = static_cast<int>(ctx.int_arg(0));
-        if (id < 1 || id > 139) {
-          return CommandResult::error("MilestoneId must be in 1-139");
+        if (id < 1 || id > core::events::max_milestone_id) {
+          return CommandResult::error(compat::format(
+              "MilestoneId must be in 1-{}", core::events::max_milestone_id));
         }
         const auto msg_id = static_cast<core::events::MilestoneId>(id);
         const bool already_shown =
