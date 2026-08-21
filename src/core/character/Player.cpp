@@ -536,14 +536,6 @@ void Player::add_score(int points) {
                score_);
 }
 
-const std::array<Money, 52>& Player::liquidity_snapshots() {
-  return liquidity_snapshots_;
-}
-void Player::add_liquidity_snapshot(Money amount, int week_nr) {
-  assert(week_nr > 0 && week_nr < 52);
-  liquidity_snapshots_[week_nr] = amount;
-}
-
 void Player::check_ai_expansion(GameState& game_state) {
   if (ai_expansion_cooldown_ != 0) {
     ai_expansion_cooldown_--;

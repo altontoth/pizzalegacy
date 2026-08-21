@@ -106,8 +106,6 @@ public:
   const core::inventory::Inventory& inventory() const;
   core::food::PlayerRecipes& recipes() { return recipes_; };
   const core::food::PlayerRecipes& recipes() const { return recipes_; };
-  const std::array<Money, 52>& liquidity_snapshots();
-  void add_liquidity_snapshot(Money amount, int week_nr);
 
   // Advertising campaigns
   using CityCampaigns = std::array<std::optional<AdvertisingCampaign>, 4>;
@@ -225,7 +223,6 @@ private:
   core::food::PlayerRecipes recipes_;
   bool is_human_{true};
   int score_{0};
-  std::array<Money, 52> liquidity_snapshots_{};
   Awards awards_{};
   std::optional<int> holiday_days_left_;
   uint8_t start_of_day_hour_{default_start_of_day_hour};
