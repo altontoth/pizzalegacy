@@ -825,6 +825,9 @@ Examples:
             "Created small restaurant (ID {}) for player {} in city {}",
             restaurant->id().value, player_id.value, city_id.value));
 
+        // So a following command can reach it as '@'.
+        ctx.state.active_restaurant(restaurant->id());
+
         // Load canonical recipes for the player
         auto& recipes = player->recipes();
         int loaded = 0;
