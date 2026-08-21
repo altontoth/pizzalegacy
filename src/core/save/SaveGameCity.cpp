@@ -19,6 +19,7 @@
 #include "core/marketing/AdvertisingCampaign.h"
 #include "core/newspaper/NewspaperEventSystem.h"
 #include "core/newspaper/NewspaperState.h"
+#include "core/save/SaveGameCharacter.h"
 #include "core/supply/FoodSupplier.h"
 #include "engine/Logger.h"
 
@@ -50,6 +51,10 @@ json property_to_json(const Property& property) {
 
   // Save potential customers per demographic (needed for demand calculation)
   j["potential_customers"] = property.potential_customers().data();
+
+  if (const auto* weapons = property.weapons()) {
+    j["weapons"] = inventory_to_json(*weapons);
+  }
 
   return j;
 }
@@ -97,6 +102,13 @@ void json_to_property(const json& j, Property& property) {
     else {
       // Clear restaurant link if the save has null
       property.clear_restaurant();
+    }
+  }
+
+  // Make sure to restore the owner before this
+  if (j.contains("weapons")) {
+    if (auto* weapons = property.weapons()) {
+      load_inventory(j["weapons"], *weapons);
     }
   }
 }

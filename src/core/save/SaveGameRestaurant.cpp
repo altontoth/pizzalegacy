@@ -9,6 +9,7 @@
 #include <ctime>
 
 #include "core/character/Staff.h"
+#include "core/character/Training.h"
 #include "core/city/City.h"
 #include "core/city/Property.h"
 #include "core/finance/Money.h"
@@ -23,6 +24,7 @@
 #include "engine/Logger.h"
 #include "engine/geom/Spaces.h"
 #include "factories/FurnitureFactory.h"
+#include "factories/TrainingFactory.h"
 
 namespace save {
 
@@ -31,7 +33,17 @@ json staff_to_json(const Staff& staff) {
   j["job_role"] = static_cast<int>(staff.job_role());
   j["character"] = character_to_json(staff.character());
   j["payment_cents"] = staff.payment().cents;
-  // TODO: current_training serialization
+  if (const auto& course = staff.current_course()) {
+    j["course"] = static_cast<int>(course->course());
+  }
+  j["days_away_remaining"] = staff.days_away_remaining();
+  j["is_late"] = staff.is_late();
+  j["is_sick"] = staff.is_sick();
+  j["is_pregnant"] = staff.is_pregnant();
+  j["stole_money"] = staff.stole_money();
+  j["wants_to_quit"] = staff.wants_to_quit();
+  j["demands_raise"] = staff.demands_raise();
+  j["recently_demanded_raise"] = staff.recently_demanded_raise();
   return j;
 }
 
@@ -51,7 +63,19 @@ Staff json_to_staff(const json& j) {
     staff.payment(Money{dollars * 100});
   }
 
-  // TODO: current_training deserialization if needed
+  if (j.contains("course")) {
+    auto course = static_cast<TrainingType>(j["course"].get<int>());
+    staff.send_on_training(TrainingFactory::create_training(course));
+  }
+  staff.days_away(j.value("days_away_remaining", 0));
+
+  staff.late(j.value("is_late", false));
+  staff.sick(j.value("is_sick", false));
+  staff.pregnant(j.value("is_pregnant", false));
+  staff.stole_money(j.value("stole_money", false));
+  staff.wants_to_quit(j.value("wants_to_quit", false));
+  staff.demands_raise(j.value("demands_raise", false));
+  staff.recently_demanded_raise(j.value("recently_demanded_raise", false));
   return staff;
 }
 

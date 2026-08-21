@@ -432,8 +432,8 @@ int Player::advertising_effectiveness_sum(core::CityId city) const {
   return total;
 }
 
-void Player::set_ad_effectiveness(core::CityId city,
-                                  const std::array<uint8_t, 4>& eff) {
+void Player::ad_effectiveness(core::CityId city,
+                              const std::array<uint8_t, 4>& eff) {
   ad_effectiveness_[city] = eff;
 }
 

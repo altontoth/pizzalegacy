@@ -62,7 +62,11 @@ public:
   void clear_restaurant();
   bool has_restaurant() const { return restaurant_id_.has_value(); };
 
+  // Only a depot can have weapons
   core::inventory::Inventory* weapons() {
+    return weapons_ ? &*weapons_ : nullptr;
+  }
+  const core::inventory::Inventory* weapons() const {
     return weapons_ ? &*weapons_ : nullptr;
   }
   const District& district() const;

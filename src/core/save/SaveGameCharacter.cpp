@@ -234,6 +234,16 @@ json player_to_json(const Player& player) {
 
   j["social_score"] = player.social_status().social_score();
   j["underworld_score"] = player.social_status().underworld_score();
+  j["weapon_dealing_profit"] = player.weapon_dealing_profit().cents;
+  j["competition_willingness"] = player.competition_willingness();
+  j["competition_win_count"] = player.competition_win_count();
+
+  json ad_effectiveness_array = json::array();
+  for (const auto& [city_id, channels] : player.ad_effectiveness()) {
+    ad_effectiveness_array.push_back(
+        json{{"city_id", city_id.value}, {"channels", channels}});
+  }
+  j["ad_effectiveness"] = ad_effectiveness_array;
 
   j["score"] = player.score();
   json awards_array = json::array();
@@ -422,6 +432,22 @@ json_to_player(const json& j, GameContext& context,
   if (j.contains("underworld_score")) {
     player->social_status().underworld_score(j["underworld_score"]);
   }
+  player->weapon_dealing_profit(
+      Money{j.value("weapon_dealing_profit", int64_t{0})});
+  player->set_competition_willingness(
+      j.value("competition_willingness", uint8_t{0}));
+  player->competition_win_count(j.value("competition_win_count", uint8_t{0}));
+
+  if (j.contains("ad_effectiveness")) {
+    for (const auto& entry : j["ad_effectiveness"]) {
+      if (!entry.contains("city_id") || !entry.contains("channels")) {
+        continue;
+      }
+      player->ad_effectiveness(core::CityId{entry["city_id"].get<int>()},
+                               entry["channels"].get<std::array<uint8_t, 4>>());
+    }
+  }
+
   if (j.contains("score")) {
     player->add_score(j["score"].get<int>());
   }

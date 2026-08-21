@@ -117,9 +117,12 @@ public:
   bool has_active_campaign(core::CityId city, AdvertisingChannel channel) const;
   void update_campaigns(core::CityId city);
   int advertising_effectiveness_sum(core::CityId city) const;
-  // Overwrite a city's live per-channel effectiveness (legacy save import).
-  void set_ad_effectiveness(core::CityId city,
-                            const std::array<uint8_t, 4>& eff);
+  // A channel slowly decays after its campaign ends.
+  const std::map<core::CityId, std::array<uint8_t, 4>>&
+  ad_effectiveness() const {
+    return ad_effectiveness_;
+  }
+  void ad_effectiveness(core::CityId city, const std::array<uint8_t, 4>& eff);
 
   // Cumulative gross turnover (sales revenue) per city, shown on the competitor
   // "turnover in $" chart. Accumulated for both human and AI restaurants,
@@ -162,6 +165,7 @@ public:
   SocialStatus& social_status() { return social_status_; }
   const SocialStatus& social_status() const { return social_status_; }
   Money weapon_dealing_profit() const { return weapon_dealing_profit_; }
+  void weapon_dealing_profit(Money amount) { weapon_dealing_profit_ = amount; }
   void add_weapon_dealing_profit(Money amount) {
     weapon_dealing_profit_ += amount;
   }
@@ -190,6 +194,7 @@ public:
       competition_willingness_--;
   }
   uint8_t competition_win_count() const { return competition_win_count_; }
+  void competition_win_count(uint8_t count) { competition_win_count_ = count; }
   void increment_competition_win_count() { competition_win_count_++; }
   void holiday(int days) { holiday_days_left_ = days; }
   bool is_on_holiday() const {
