@@ -106,6 +106,12 @@ CityView::CityView(GameContext& context, GameState& state, core::CityId id)
     state_.on_city_entered(id, *player);
   }
 
+  if (state_.side_menu_charge_pending() &&
+      !state_.turn().is_processing_end_of_turn()) {
+    state_.side_menu_charge_pending(false);
+    state_.advance_time_blocks(1);
+  }
+
   for (int i = 0; i < city_->data_length(); ++i) {
     highlighted_cells_.push_back(HighlightType::NONE);
   }
@@ -1164,48 +1170,62 @@ void CityView::draw_cell_with_pattern(Surface& map, ViewRect cell,
 }
 
 void CityView::create_buttons() {
-  input_panel_->add_button(Icon::AIRPLANE, ButtonType::Square,
-                           ButtonPosition::TopLeft, "Map", [this] {
-                             ui_push_store_position<EuroMapState>(
-                                 CityViewReentryMode::RESTORE_PARTIAL,
-                                 MapMode::TRAVEL);
-                           });
+  // Most buttons cost time to click:
+  auto side_menu_entry = [this](auto open) {
+    return [this, open] {
+      state_.side_menu_charge_pending(true);
+      open();
+    };
+  };
 
-  input_panel_->add_button(Icon::CHARACTER, ButtonType::Square,
-                           ButtonPosition::TopCenter, "Character", [this] {
-                             state_.ui().push<PlayerProfileState>(
-                                 state_.active_player()->id());
-                           });
+  input_panel_->add_button(
+      Icon::AIRPLANE, ButtonType::Square, ButtonPosition::TopLeft, "Map",
+      side_menu_entry([this] {
+        ui_push_store_position<EuroMapState>(
+            CityViewReentryMode::RESTORE_PARTIAL, MapMode::TRAVEL);
+      }));
+
+  input_panel_->add_button(
+      Icon::CHARACTER, ButtonType::Square, ButtonPosition::TopCenter,
+      "Character", side_menu_entry([this] {
+        state_.ui().push<PlayerProfileState>(state_.active_player()->id());
+      }));
 
   input_panel_->add_button(
       Icon::DISK, ButtonType::Square, ButtonPosition::TopRight, "Disk options",
-      [this] { state_.ui().push<ScreenTag>(ScreenTag::Kind::DiskMenu); });
+      side_menu_entry(
+          [this] { state_.ui().push<ScreenTag>(ScreenTag::Kind::DiskMenu); }));
 
   input_panel_->add_button(
       Icon::MEGAPHONE, ButtonType::Square, ButtonPosition::MiddleLeft,
-      "Advertising",
-      [this] { state_.ui().push<ScreenTag>(ScreenTag::Kind::Advertising); });
+      "Advertising", side_menu_entry([this] {
+        state_.ui().push<ScreenTag>(ScreenTag::Kind::Advertising);
+      }));
 
   input_panel_->add_button(
       Icon::QUESTION_MARK, ButtonType::Square, ButtonPosition::MiddleCenter,
-      "Market research", [this] {
+      "Market research", side_menu_entry([this] {
         state_.ui().push<MarketResearchState>(
             state_.active_district_id().value_or(core::DistrictId{0}));
-      });
+      }));
 
   input_panel_->add_button(
       Icon::NEWSPAPER, ButtonType::Square, ButtonPosition::MiddleRight,
-      "Newspaper",
-      [this] { state_.ui().push<ScreenTag>(ScreenTag::Kind::Newspaper); });
+      "Newspaper", side_menu_entry([this] {
+        state_.ui().push<ScreenTag>(ScreenTag::Kind::Newspaper);
+      }));
 
   input_panel_->add_button(
       Icon::GRAPH, ButtonType::Square, ButtonPosition::BottomLeft,
-      "Global stats",
-      [this] { state_.ui().push<ScreenTag>(ScreenTag::Kind::GlobalStats); });
+      "Global stats", side_menu_entry([this] {
+        state_.ui().push<ScreenTag>(ScreenTag::Kind::GlobalStats);
+      }));
 
-  input_panel_->add_button(
-      Icon::COMPUTER, ButtonType::Square, ButtonPosition::BottomCenter,
-      "Terminal", [this] { state_.ui().push<TerminalState>(std::nullopt); });
+  input_panel_->add_button(Icon::COMPUTER, ButtonType::Square,
+                           ButtonPosition::BottomCenter, "Terminal",
+                           side_menu_entry([this] {
+                             state_.ui().push<TerminalState>(std::nullopt);
+                           }));
 
   input_panel_->add_button(Icon::SUNSET, ButtonType::Square,
                            ButtonPosition::BottomRight, "End turn",

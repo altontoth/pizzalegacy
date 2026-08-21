@@ -382,6 +382,12 @@ public:
   void second_in_block(int seconds) { second_in_block_ = seconds; }
   int pit_tick_in_second() const { return pit_tick_in_second_; }
   void pit_tick_in_second(int tick) { pit_tick_in_second_ = tick; }
+  // A side menu screen costs ten minutes, charged once the player is back on
+  // the city map.
+  bool side_menu_charge_pending() const { return side_menu_charge_pending_; }
+  void side_menu_charge_pending(bool pending) {
+    side_menu_charge_pending_ = pending;
+  }
 
   struct RacketOffer {
     core::RestaurantId restaurant_id;
@@ -482,6 +488,7 @@ private:
   // Seconds into the current ten-minute block.
   int second_in_block_{0};
   InterruptionPhase interruption_phase_{InterruptionPhase::QueuedEvents};
+  bool side_menu_charge_pending_{false};
   std::optional<core::RestaurantId> active_restaurant_;
   GameMode game_mode_;
   std::optional<core::mission::MissionTarget> mission_target_;

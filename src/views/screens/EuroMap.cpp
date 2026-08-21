@@ -350,6 +350,8 @@ void EuroMap::attempt_flight() {
     player->on_city_travel();
   }
 
+  // Flying to another city costs money instead of time:
+  state_.side_menu_charge_pending(false);
   state_.ui().push<CityViewState>(target);
 }
 

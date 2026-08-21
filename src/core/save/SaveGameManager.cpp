@@ -712,6 +712,7 @@ json SaveGameManager::state_to_json(const GameState& state,
   j["interruption_phase"] = static_cast<int>(state.interruption_phase());
   j["second_in_block"] = state.second_in_block();
   j["pit_tick_in_second"] = state.pit_tick_in_second();
+  j["side_menu_charge_pending"] = state.side_menu_charge_pending();
   j["refused_call_actors"] = state.refused_call_actors();
 
   json player_cities = json::array();
@@ -1010,6 +1011,7 @@ void SaveGameManager::json_to_state(const json& j, GameState& state,
   state.interruption_phase(static_cast<InterruptionPhase>(phase));
   state.second_in_block(j.value("second_in_block", 0));
   state.pit_tick_in_second(j.value("pit_tick_in_second", 0));
+  state.side_menu_charge_pending(j.value("side_menu_charge_pending", false));
 
   if (j.contains("refused_call_actors")) {
     for (const auto& actor_id : j["refused_call_actors"]) {
