@@ -126,6 +126,7 @@ json menu_to_json(const core::restaurant::Menu& menu) {
     json entry_json;
     entry_json["recipe_id"] = entry.recipe_id.value;
     entry_json["price"] = entry.price.cents;
+    entry_json["quality_base"] = entry.quality_base;
 
     // Save popularity multipliers
     json multipliers = json::array();
@@ -146,6 +147,10 @@ core::restaurant::Menu json_to_menu(const json& j) {
     Money price{entry_json["price"].get<int64_t>()};
 
     int idx = menu.add_or_set(recipe_id, price);
+
+    if (entry_json.contains("quality_base")) {
+      menu.entries()[idx].quality_base = entry_json["quality_base"].get<int>();
+    }
 
     // Restore popularity multipliers
     if (entry_json.contains("popularity_multiplier")) {
