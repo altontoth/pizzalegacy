@@ -27,6 +27,7 @@ public:
   TVPlaybackEngine(FontManager* font, VgaManager* vga);
 
   bool tick();
+  bool is_playing() const { return playback_state_ != PlaybackState::INACTIVE; }
   void start_playback();
   void play_commercial(int id);
   void next_commercial();

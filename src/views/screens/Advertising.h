@@ -8,6 +8,7 @@
 
 #include "core/marketing/AdvertisingCampaign.h"
 #include "core/marketing/NewspaperAdGame.h"
+#include "core/state/ClockRate.h"
 #include "views/base/MainPanelView.h"
 #include "views/helpers/TVPlaybackEngine.h"
 
@@ -23,6 +24,7 @@ public:
   Advertising(GameContext& context, GameState& state);
   void tick() override;
   void render(const RenderContext& ctx) override;
+  ClockRate clock_rate() const override;
 
 private:
   [[nodiscard]] bool is_overview() const;

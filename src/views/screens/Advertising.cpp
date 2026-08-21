@@ -130,6 +130,10 @@ void Advertising::tick() {
   }
 }
 
+ClockRate Advertising::clock_rate() const {
+  return tv_ads_.is_playing() ? ClockRate::Stopped : ClockRate::Running;
+}
+
 void Advertising::render(const RenderContext& ctx) {
   interactions_.begin_frame();
   ctx.surface->fill(240);
