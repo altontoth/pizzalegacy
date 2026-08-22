@@ -117,11 +117,6 @@ void CursorManager::display_height(int display_height) {
 
 void CursorManager::update_scaled_cursor(int new_window_width,
                                          int new_window_height) {
-  // Cursor scaling only matters for the SDL cursor; in software mode the
-  // renderer scales the sprite to the current window itself.
-  if (software_mode_) {
-    return;
-  }
   // SDL gives us the window width and height, including any black bars SDL
   // might have added to preserve the aspect ratio. The cursor must match the
   // scale of the actual game inside the black bars, so we need to compensate
