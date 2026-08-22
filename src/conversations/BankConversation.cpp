@@ -14,15 +14,12 @@
 #include "core/character/Player.h"
 #include "core/city/City.h"
 #include "core/events/MilestoneId.h"
+#include "core/finance/Investment.h"
 #include "core/finance/Ledger.h"
 #include "engine/Math.h"
 
 constexpr int MAX_NUMBER_OF_LOANS = 4;
 
-// Every bank in every city offers the same investment, and unlike a loan it
-// does not track the city's interest rate.
-constexpr int investment_return_rate = 8;
-constexpr int investment_months = 2;
 // The offer is a share of the player's cash, until they are rich enough for
 // the flat one.
 constexpr double investment_offer_share = 0.5;

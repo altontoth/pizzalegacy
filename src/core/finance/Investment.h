@@ -24,6 +24,14 @@
 // With fix_legacy_bugs: final interest + principal are paid together in step 3
 // when months_left hits 0, and the slot is cleared immediately. No extra month
 // of waiting for the principal.
+
+// Every bank in every city offers the same investment, and unlike a loan it
+// does not track the city's interest rate.
+constexpr int investment_return_rate = 8;
+constexpr int investment_months = 2;
+// Convert an annual percentage rate to a monthly rate.
+constexpr int monthly_rate_divisor = 1200;
+
 class Investment {
 public:
   Investment() = default;
@@ -31,8 +39,13 @@ public:
              uint8_t return_rate, int months)
       : bank_id_(bank_id), city_id_(city_id), amount_(amount),
         return_rate_(return_rate), months_(months), months_left_(months) {
-    Money total_return = amount * return_rate / 100;
-    monthly_return_ = (total_return / months).truncated_to_dollars();
+    monthly_return_ = monthly_return_for(amount, return_rate);
+  }
+
+  // The term does not divide the interest; a longer one pays the same amount
+  // for more months.
+  static Money monthly_return_for(Money amount, int return_rate) {
+    return (amount * return_rate / monthly_rate_divisor).truncated_to_dollars();
   }
 
   static Investment from_save(core::BankId bank_id, core::CityId city_id,
