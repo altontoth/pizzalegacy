@@ -44,7 +44,7 @@ void NewspaperEventSystem::daily_update(GameState& state, City& city) {
 
   // 5% chance of a scheduled event
   if (engine::random::rand_percentage_chance(5)) {
-    auto id = static_cast<NewspaperEvent>(engine::random::rand_between(1, 50));
+    auto id = static_cast<NewspaperEvent>(engine::random::rand_max_n(50) + 1);
     if (execute_named_event(id, state, city)) {
       return;
     }
@@ -68,9 +68,11 @@ void NewspaperEventSystem::daily_update(GameState& state, City& city) {
 }
 
 void NewspaperEventSystem::seed_flavor_article(NewspaperState& ns) {
-  ns.article_id = static_cast<uint8_t>(
-      engine::random::rand_between(NewspaperState::FLAVOR_ARTICLE_FIRST,
-                                   NewspaperState::FLAVOR_ARTICLE_LAST));
+  constexpr int flavor_article_count = NewspaperState::FLAVOR_ARTICLE_LAST -
+                                       NewspaperState::FLAVOR_ARTICLE_FIRST + 1;
+  ns.article_id =
+      static_cast<uint8_t>(engine::random::rand_max_n(flavor_article_count) +
+                           NewspaperState::FLAVOR_ARTICLE_FIRST);
   ns.cooldown = NewspaperState::FALLBACK_COOLDOWN;
 }
 
@@ -100,7 +102,7 @@ bool NewspaperEventSystem::execute_named_event(NewspaperEvent event,
         {.initial_value = 0, .control = -50, .duration = Exponential});
     // Schedule follow-up: decontamination in 10-19 days
     schedule_event(0, TomatoesDecontaminated,
-                   engine::random::rand_between(10, 19));
+                   engine::random::rand_max_n(10) + 10);
     break;
   case CucumbersPoisoned:
     trends.apply_effect(
@@ -181,7 +183,6 @@ bool NewspaperEventSystem::execute_named_event(NewspaperEvent event,
   case SickMenOfEurope:
   case GarlicBlacklisted:
   case EuropeSickAgain:
-  case ChangeOfMind:
   case PizzeriaContaminated:
   case NewNutritionTrend:
   case HealthConsciousness:
@@ -334,30 +335,30 @@ bool NewspaperEventSystem::try_generate_ingredient_event(NewspaperState& ns,
   case 0:
     trends.apply_effect(type,
                         {.initial_value = static_cast<int8_t>(
-                             polarity * engine::random::rand_between(20, 59)),
+                             polarity * (engine::random::rand_max_n(40) + 20)),
                          .control = 0,
                          .duration = Exponential});
     break;
   case 1:
     trends.apply_effect(type,
                         {.initial_value = static_cast<int8_t>(
-                             polarity * engine::random::rand_between(20, 59)),
+                             polarity * (engine::random::rand_max_n(40) + 20)),
                          .control = static_cast<int8_t>(
-                             polarity * engine::random::rand_between(20, 39)),
+                             polarity * (engine::random::rand_max_n(20) + 20)),
                          .duration = Linear});
     break;
   case 2:
     trends.apply_effect(
         type, {.initial_value =
-                   static_cast<int8_t>(engine::random::rand_between(10, 29)),
+                   static_cast<int8_t>(engine::random::rand_max_n(20) + 10),
                .control = static_cast<int8_t>(
-                   polarity * engine::random::rand_between(20, 39)),
+                   polarity * (engine::random::rand_max_n(20) + 20)),
                .duration = Countdown});
     break;
   case 3:
     trends.apply_effect(type,
                         {.initial_value = static_cast<int8_t>(
-                             polarity * engine::random::rand_between(30, 59)),
+                             polarity * (engine::random::rand_max_n(30) + 30)),
                          .control = 0,
                          .duration = Exponential});
     break;

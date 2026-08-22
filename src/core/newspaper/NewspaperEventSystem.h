@@ -66,9 +66,8 @@ enum class NewspaperEvent {
   NoDemandForEggs = 46,
   GingerInDemand = 47,
   GorgonzolaFantastic = 48,
-  ChangeOfMind = 49,
-  ChildrenPreferSpicy = 50,
-  ElderlyPreferSweet = 51,
+  ChildrenPreferSpicy = 49,
+  ElderlyPreferSweet = 50,
 };
 
 constexpr std::string_view to_string(NewspaperEvent event) {
@@ -173,9 +172,6 @@ constexpr std::string_view to_string(NewspaperEvent event) {
     return "EuropeSickAgain";
   case NewspaperEvent::SpansishSaladContaminated:
     return "SpansishSaladContaminated";
-  case NewspaperEvent::ChangeOfMind:
-    return "ChangeOfMind";
-    break;
   }
   return "None";
 }
