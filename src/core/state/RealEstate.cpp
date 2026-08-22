@@ -193,9 +193,6 @@ std::vector<Property*> RealEstate::depots_for(core::PlayerId pid) const {
 }
 
 Restaurant* RealEstate::create_restaurant(Player& player, Property& property) {
-  // For now let's assume a random size between 12 and 20:
-  int kitchen_w = engine::random::rand_max_n(8) + 12;
-  int kitchen_h = engine::random::rand_max_n(8) + 12;
   auto restaurant_id = gs_->next_restaurant_id_++;
   core::CityId city_id = property.city().id();
   int in_city = gs_->restaurant_count_for_player_in_city(player.id(), city_id);
@@ -203,7 +200,7 @@ Restaurant* RealEstate::create_restaurant(Player& player, Property& property) {
   property.restaurant_id(restaurant_id);
 
   auto restaurant = std::make_unique<Restaurant>(
-      property, Size{kitchen_w, kitchen_h}, restaurant_id, restaurant_name);
+      property, property.kitchen_size(), restaurant_id, restaurant_name);
   gs_->restaurants_.push_back(std::move(restaurant));
   auto* created = gs_->restaurants_.back().get();
   property.calculate_demographics(created);

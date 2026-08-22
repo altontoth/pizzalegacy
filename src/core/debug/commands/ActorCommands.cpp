@@ -58,7 +58,7 @@ static CommandDef make_mafia_shakedown() {
       .help_text = R"(Usage: mafia shakedown [restaurant_id] [when]
 
 Forces a mafia protection racket visit for the given restaurant.
-Defaults to restaurant 0 (first restaurant).
+Defaults to the active restaurant.
 
 when is "now" to put the offer on screen, or "queue" to leave it waiting the
 way the end of a turn does, for delivery on the player's next turn.
@@ -72,10 +72,10 @@ Examples:
           {
               ArgSpec{
                   .name = "restaurant_id",
-                  .type = ArgType::Int,
+                  .type = ArgType::RestaurantId,
                   .optional = true,
-                  .default_provider = DefaultProvider::None,
-                  .description = "Restaurant ID (default: 0)",
+                  .default_provider = DefaultProvider::ActiveRestaurant,
+                  .description = "Restaurant ID (@ for active)",
               },
               ArgSpec{
                   .name = "when",
@@ -96,28 +96,12 @@ Examples:
         }
         int mafia_id = mafia_actors[0]->id();
 
-        Restaurant* restaurant = nullptr;
-        if (!ctx.args.empty()) {
-          auto rid = core::RestaurantId{static_cast<int>(ctx.int_arg(0))};
-          restaurant = ctx.state.restaurant(rid);
-          if (!restaurant) {
-            return CommandResult::error(
-                compat::format("Restaurant {} not found", rid.value));
-          }
-        }
-        else {
-          auto* player = ctx.state.active_player();
-          auto owned = ctx.state.restaurants_for(player->id());
-          if (owned.empty()) {
-            return CommandResult::error("Active player has no restaurants");
-          }
-          restaurant = owned[0];
-        }
+        auto rid = ctx.restaurant_id(0);
+        Restaurant* restaurant = ctx.state.restaurant(rid);
         if (!restaurant) {
-          return CommandResult::error("No restaurant found");
+          return CommandResult::error(
+              compat::format("Restaurant {} not found", rid.value));
         }
-
-        auto rid = restaurant->id();
         bool first = !restaurant->protection_contacted();
         restaurant->protection_timer(30);
         restaurant->protection_contacted(true);

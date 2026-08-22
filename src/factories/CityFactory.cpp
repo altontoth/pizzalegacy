@@ -663,6 +663,7 @@ void CityFactory::populate_types() {
 namespace {
 constexpr int min_premise_side = 10;
 constexpr int max_premise_side = 20;
+constexpr int min_kitchen_width = 12;
 } // namespace
 
 void CityFactory::populate_properties(City& city) {
@@ -689,6 +690,15 @@ void CityFactory::populate_properties(City& city) {
       auto raw_h = static_cast<uint8_t>(raw_w - diff);
       int w = std::clamp<int>(raw_w, min_premise_side, max_premise_side);
       int h = std::clamp<int>(raw_h, min_premise_side, max_premise_side);
+
+      auto raw_kitchen_w = static_cast<uint8_t>(engine::random::rand_triangular(
+          average_size - 3, average_size_modifier));
+      int kitchen_w =
+          std::clamp<int>(raw_kitchen_w, min_kitchen_width, max_premise_side);
+      int kitchen_h = w - engine::random::rand_max_n(4);
+      // Where each door sits along its wall.
+      int entrance_offset = engine::random::rand_max_n(h - 4) + 1;
+      int kitchen_entry_offset = engine::random::rand_max_n(kitchen_h - 6);
       assert(number_of_realtors_ >= 0);
       int r_id = engine::random::rand_max_n(number_of_realtors_);
       auto status = PremiseStatus::NOT_AVAILABLE;
@@ -699,6 +709,9 @@ void CityFactory::populate_properties(City& city) {
       }
       auto bp = std::make_unique<Property>(index, prop_type, Size{w, h}, r_id,
                                            status, city);
+      bp->kitchen_size(Size{kitchen_w, kitchen_h});
+      bp->entrance_offset(entrance_offset);
+      bp->kitchen_entry_offset(kitchen_entry_offset);
       properties_[index] = std::move(bp);
     }
   }

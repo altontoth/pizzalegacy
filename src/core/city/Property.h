@@ -30,6 +30,13 @@ public:
            PremiseStatus, City& city);
   Size size() const;
   void size(Size size);
+  // The kitchen and its doors are fixed when the city is built.
+  Size kitchen_size() const;
+  void kitchen_size(Size size);
+  int entrance_offset() const;
+  void entrance_offset(int offset);
+  int kitchen_entry_offset() const;
+  void kitchen_entry_offset(int offset);
   int realtor_id() const;
   void realtor_id(int realtor_id);
   PremiseStatus status() const;
@@ -78,6 +85,9 @@ private:
   const int index_;
   PropertyType type_;
   Size size_;
+  Size kitchen_size_{};
+  int entrance_offset_{1};
+  int kitchen_entry_offset_{1};
   int realtor_id_;
   PremiseStatus status_;
   City& city_;

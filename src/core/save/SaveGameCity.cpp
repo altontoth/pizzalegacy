@@ -30,6 +30,10 @@ json property_to_json(const Property& property) {
   j["index"] = property.index();
   j["type"] = static_cast<int>(property.type());
   j["size"] = {{"w", property.size().w}, {"h", property.size().h}};
+  j["kitchen_size"] = {{"w", property.kitchen_size().w},
+                       {"h", property.kitchen_size().h}};
+  j["entrance_offset"] = property.entrance_offset();
+  j["kitchen_entry_offset"] = property.kitchen_entry_offset();
   j["realtor_id"] = property.realtor_id();
   j["status"] = static_cast<int>(property.status());
 
@@ -63,6 +67,17 @@ void json_to_property(const json& j, Property& property) {
   // Restore size
   if (j.contains("size")) {
     property.size(Size{j["size"]["w"].get<int>(), j["size"]["h"].get<int>()});
+  }
+
+  if (j.contains("kitchen_size")) {
+    property.kitchen_size(Size{j["kitchen_size"]["w"].get<int>(),
+                               j["kitchen_size"]["h"].get<int>()});
+  }
+  if (j.contains("entrance_offset")) {
+    property.entrance_offset(j["entrance_offset"].get<int>());
+  }
+  if (j.contains("kitchen_entry_offset")) {
+    property.kitchen_entry_offset(j["kitchen_entry_offset"].get<int>());
   }
 
   // Restore realtor_id (important to preserve randomly assigned realtors)

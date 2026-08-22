@@ -44,8 +44,10 @@
 Restaurant::Restaurant(Property& property, Size kitchen_size,
                        core::RestaurantId id, std::string name)
     : property_(property), kitchen_size_(kitchen_size), restaurant_id_(id),
-      name_(std::move(name)), layout_(std::make_unique<RestaurantLayout>(
-                                  property.size(), kitchen_size)) {
+      name_(std::move(name)),
+      layout_(std::make_unique<RestaurantLayout>(
+          property.size(), kitchen_size, property.entrance_offset(),
+          property.kitchen_entry_offset())) {
   // The mayor's first inspection:
   inspection_days_remaining_ = engine::random::rand_max_n(20) + 12;
 

@@ -55,6 +55,14 @@ Property::Property(int index, PropertyType type, Size size, int realtor_id,
 
 Size Property::size() const { return size_; }
 void Property::size(Size size) { size_ = size; }
+Size Property::kitchen_size() const { return kitchen_size_; }
+void Property::kitchen_size(Size size) { kitchen_size_ = size; }
+int Property::entrance_offset() const { return entrance_offset_; }
+void Property::entrance_offset(int offset) { entrance_offset_ = offset; }
+int Property::kitchen_entry_offset() const { return kitchen_entry_offset_; }
+void Property::kitchen_entry_offset(int offset) {
+  kitchen_entry_offset_ = offset;
+}
 int Property::realtor_id() const { return realtor_id_; }
 void Property::realtor_id(int realtor_id) { realtor_id_ = realtor_id; }
 PremiseStatus Property::status() const { return status_; }
