@@ -198,7 +198,8 @@ std::unique_ptr<core::food::Pizza> PizzaFactory::create_pizza(
 
   pizza->finalize(taste_profiles, pizza_name_str);
   pizza->set_disk_stats(disk_flavors, appearance_raw, refinement_raw,
-                        normality_raw, taste_profiles);
+                        normality_raw, core::food::Pizza::full_imitation,
+                        taste_profiles);
 
   return pizza;
 }

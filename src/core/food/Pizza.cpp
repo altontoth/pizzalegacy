@@ -603,7 +603,7 @@ void Pizza::calculate_judge_scores() {
 }
 
 void Pizza::set_disk_stats(const Flavors& flavors, int appearance,
-                           int refinement, int normality,
+                           int refinement, int normality, int imitation,
                            const CustomerTasteProfiles& taste_profiles) {
   // Logger::debug("=== SETTING DISK STATS ===");
   // Logger::debug("  Flavors: fat={}, sweet={}, salty={}, hot={}", flavors.fat,
@@ -616,6 +616,7 @@ void Pizza::set_disk_stats(const Flavors& flavors, int appearance,
   appearance_ = appearance;
   refinement_ = refinement;
   normality_ = normality;
+  imitation_ = imitation;
 
   // Still need to calculate calories from toppings
   float calories_sum = 0;

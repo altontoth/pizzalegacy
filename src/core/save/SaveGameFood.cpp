@@ -104,8 +104,9 @@ json_to_pizza(const json& j,
     int appearance = j["appearance"].get<int>();
     int refinement = j["refinement"].get<int>();
     int normality = j["normality"].get<int>();
+    int imitation = j.value("imitation", Pizza::full_imitation);
 
-    pizza.set_disk_stats(flavors, appearance, refinement, normality,
+    pizza.set_disk_stats(flavors, appearance, refinement, normality, imitation,
                          taste_profiles);
   }
 

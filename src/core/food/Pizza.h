@@ -72,9 +72,12 @@ public:
   void set_origin(Origin origin) { origin_ = origin; }
   Origin origin() const { return origin_; }
 
+  // A perfect match of the reference recipe.
+  static constexpr int full_imitation = 100;
+
   // Set stats directly from disk values (bypasses calculation)
   void set_disk_stats(const Flavors& flavors, int appearance, int refinement,
-                      int normality,
+                      int normality, int imitation,
                       const CustomerTasteProfiles& taste_profiles);
 
   // Set the stats an original save's recipe node persists. Flavors and
@@ -118,8 +121,8 @@ private:
   int appearance_{0};
   int refinement_{0};
   int normality_{0};
-  int imitation_{100}; // Default 100 for canonical pizzas
-  int herb_score_{0};  // 0-10, herb weight / 3
+  int imitation_{full_imitation};
+  int herb_score_{0}; // 0-10, herb weight / 3
 };
 
 } // namespace core::food
