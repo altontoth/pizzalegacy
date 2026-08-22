@@ -329,39 +329,36 @@ bool NewspaperEventSystem::try_generate_ingredient_event(NewspaperState& ns,
   }
 
   int category = engine::random::rand_max_n(4);
-  int8_t polarity = engine::random::rand_max_n(2) == 0 ? 1 : -1;
+  int8_t polarity = engine::random::coin_flip() ? 1 : -1;
 
+  // Draw order from the original.
   switch (category) {
-  case 0:
-    trends.apply_effect(type,
-                        {.initial_value = static_cast<int8_t>(
-                             polarity * (engine::random::rand_max_n(40) + 20)),
-                         .control = 0,
-                         .duration = Exponential});
-    break;
-  case 1:
-    trends.apply_effect(type,
-                        {.initial_value = static_cast<int8_t>(
-                             polarity * (engine::random::rand_max_n(40) + 20)),
-                         .control = static_cast<int8_t>(
-                             polarity * (engine::random::rand_max_n(20) + 20)),
-                         .duration = Linear});
-    break;
-  case 2:
+  case 0: {
+    const int target = polarity * (engine::random::rand_max_n(40) + 20);
     trends.apply_effect(
-        type, {.initial_value =
-                   static_cast<int8_t>(engine::random::rand_max_n(20) + 10),
-               .control = static_cast<int8_t>(
-                   polarity * (engine::random::rand_max_n(20) + 20)),
-               .duration = Countdown});
+        type, {.initial_value = 0, .control = target, .duration = Exponential});
     break;
-  case 3:
-    trends.apply_effect(type,
-                        {.initial_value = static_cast<int8_t>(
-                             polarity * (engine::random::rand_max_n(30) + 30)),
-                         .control = 0,
-                         .duration = Exponential});
+  }
+  case 1: {
+    const int target = polarity * (engine::random::rand_max_n(40) + 20);
+    const int value = polarity * engine::random::rand_max_n(20);
+    trends.apply_effect(
+        type, {.initial_value = value, .control = target, .duration = Linear});
     break;
+  }
+  case 2: {
+    const int days = engine::random::rand_max_n(20) + 10;
+    const int value = polarity * (engine::random::rand_max_n(20) + 20);
+    trends.apply_effect(
+        type, {.initial_value = value, .control = days, .duration = Countdown});
+    break;
+  }
+  case 3: {
+    const int target = polarity * (engine::random::rand_max_n(30) + 30);
+    trends.apply_effect(
+        type, {.initial_value = 0, .control = target, .duration = Exponential});
+    break;
+  }
   default:
     return false;
   }
