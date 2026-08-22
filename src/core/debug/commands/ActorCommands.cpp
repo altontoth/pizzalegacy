@@ -55,14 +55,18 @@ static CommandDef make_mafia_shakedown() {
   return CommandDef{
       .name = "shakedown",
       .description = "Trigger a mafia protection racket visit",
-      .help_text = R"(Usage: actor mafia shakedown [restaurant_id]
+      .help_text = R"(Usage: mafia shakedown [restaurant_id] [when]
 
 Forces a mafia protection racket visit for the given restaurant.
 Defaults to restaurant 0 (first restaurant).
 
+when is "now" to put the offer on screen, or "queue" to leave it waiting the
+way the end of a turn does, for delivery on the player's next turn.
+
 Examples:
-  actor mafia shakedown        # Shakedown restaurant 0
-  actor mafia shakedown 1      # Shakedown restaurant 1
+  mafia shakedown              # Shakedown restaurant 0
+  mafia shakedown 1            # Shakedown restaurant 1
+  mafia shakedown 1 queue      # Leave it for the next turn
 )",
       .args =
           {
@@ -72,6 +76,13 @@ Examples:
                   .optional = true,
                   .default_provider = DefaultProvider::None,
                   .description = "Restaurant ID (default: 0)",
+              },
+              ArgSpec{
+                  .name = "when",
+                  .type = ArgType::String,
+                  .optional = true,
+                  .description = "now or queue (default: now)",
+                  .allowed_values = std::vector<std::string>{"now", "queue"},
               },
           },
       .handler = [](const CommandContext& ctx) -> CommandResult {
@@ -110,6 +121,17 @@ Examples:
         bool first = !restaurant->protection_contacted();
         restaurant->protection_timer(30);
         restaurant->protection_contacted(true);
+
+        if (ctx.args.size() > 1 && ctx.string_arg(1) == "queue") {
+          auto* player = ctx.state.active_player();
+          ctx.state.turn().restore_deferred_racket_offer(
+              {.player_id = player->id(),
+               .restaurant_id = rid,
+               .first_contact = first});
+          return CommandResult::success().add_message(compat::format(
+              "Queued a mafia shakedown for restaurant {}", rid.value));
+        }
+
         ctx.state.ui().push<MafiaState>(
             MafiaState{.id = mafia_id,
                        .mode = MafiaMode::ProtectionRacketOffer,

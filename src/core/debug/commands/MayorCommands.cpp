@@ -95,20 +95,26 @@ Examples:
 static CommandDef make_mayor_award() {
   return CommandDef{
       .name = "award",
-      .description = "Immediately trigger a mayor award ceremony",
-      .help_text = R"(Usage: mayor award <type> [winner_player_id]
+      .description = "Trigger or queue a mayor award",
+      .help_text = R"(Usage: mayor award <type> [winner_player_id] [when]
 
-Triggers an award ceremony conversation with the mayor.
-winner_player_id defaults to the active player. Pass -1 for
-announcement-only (no ceremony, e.g. pizza competition announcement).
+Has the mayor call to announce an award.
+winner_player_id defaults to the active player. Pass -1 to name no winner, the
+way the pizza competition announcement does. beauty and bowtie score their own
+winner, so -1 will not stop them.
 
 Types: beauty, pizza, investor, imitator, bowtie, trade
+
+when is "now" for the mayor to call straight away, or "queue" to leave it
+waiting the way the mayor's own scheduling does, for delivery on the player's
+next turn.
 
 Examples:
   mayor award beauty         # Beauty award for active player
   mayor award pizza          # Pizza-of-year for active player
   mayor award pizza -1       # Pizza competition announcement (no winner)
   mayor award investor 1     # Investor award for player 1
+  mayor award beauty 0 queue # Leave it for the next turn
 )",
       .args =
           {
@@ -129,6 +135,13 @@ Examples:
                   .description = "Winner player ID (-1 for announcement only)",
                   .min_value = -1,
                   .max_value = NUMBER_OF_PLAYERS - 1,
+              },
+              ArgSpec{
+                  .name = "when",
+                  .type = ArgType::String,
+                  .optional = true,
+                  .description = "now or queue (default: now)",
+                  .allowed_values = std::vector<std::string>{"now", "queue"},
               },
           },
       .handler = [](const CommandContext& ctx) -> CommandResult {
@@ -153,13 +166,21 @@ Examples:
           }
         }
 
-        ctx.state.process_mayor_award_event(
-            MayorAwardEvent{.type = *award_type,
-                            .winner_player_id = winner_id,
-                            .is_ceremony = true});
-        return CommandResult::success().add_message(compat::format(
-            "Triggered {} award (winner={})", type_str,
-            winner_id.has_value() ? std::to_string(*winner_id) : "none"));
+        MayorAwardEvent event{.type = *award_type,
+                              .winner_player_id = winner_id,
+                              .is_ceremony = true};
+
+        const std::string winner =
+            winner_id.has_value() ? std::to_string(*winner_id) : "none";
+        if (ctx.args.size() > 2 && ctx.string_arg(2) == "queue") {
+          ctx.state.turn().queue_mayor_award(event);
+          return CommandResult::success().add_message(
+              compat::format("Queued {} award (winner={})", type_str, winner));
+        }
+
+        ctx.state.process_mayor_award_event(event);
+        return CommandResult::success().add_message(
+            compat::format("Triggered {} award (winner={})", type_str, winner));
       },
   };
 }
