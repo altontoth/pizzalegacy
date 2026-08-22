@@ -6,7 +6,8 @@
 
 #pragma once
 
-#include "core/finance/MoneyFormatter.h"
+#include <concepts>
+#include <cstdint>
 #include "engine/FormatCompat.h"
 
 struct Money {
@@ -55,9 +56,20 @@ struct Money {
     return Money{(cents / 100) * 100};
   }
 
+  [[nodiscard]] constexpr int64_t abs_cents() const noexcept {
+    return cents < 0 ? -cents : cents;
+  }
+
   [[nodiscard]] constexpr int64_t fractional() const noexcept {
-    auto r = cents % 100;
-    return r < 0 ? -r : r;
+    return abs_cents() % 100;
+  }
+
+  // Nearest dollar, with a half rounding away from zero.
+  [[nodiscard]] constexpr int64_t rounded_dollars() const noexcept {
+    if (cents < 0) {
+      return (cents - 50) / 100;
+    }
+    return (cents + 50) / 100;
   }
 };
 
@@ -67,12 +79,6 @@ constexpr Money operator""_usd(unsigned long long dollars) {
 
 constexpr Money operator""_c(unsigned long long cents) {
   return Money{static_cast<int64_t>(cents)};
-}
-
-inline const MoneyFormatter& get_money_formatter() {
-  // We can later make this return a per-locale or per-setting value.
-  static const MoneyFormatter formatter{"$", false}; // e.g., "$ 123.45"
-  return formatter;
 }
 
 template <std::integral I> constexpr Money operator*(Money m, I n) {
@@ -89,7 +95,7 @@ template <std::integral I> constexpr Money operator/(Money m, I n) {
   return m;
 }
 
-// {:s} - with currency symbol (default) "$123"
+// {:s} - with currency symbol, cents only when non-zero "$123.45", "$123"
 // {:n} - number only "123.45"
 // {:c} - raw minor units (cents) "12345"
 // {:w} - whole dollars with symbol "$123" (no cents)
@@ -134,20 +140,26 @@ template <> struct FORMAT_NAMESPACE::formatter<Money> {
   template <typename Ctx> auto format(const Money& m, Ctx& ctx) const {
     switch (how) {
     case style::integer:
-      return FORMAT_NAMESPACE::format_to(ctx.out(), "{:.0f}", m.cents / 100.0);
-    case style::symbol:
-      return FORMAT_NAMESPACE::format_to(ctx.out(), "{}",
-                                         get_money_formatter().format(m.cents));
+      return FORMAT_NAMESPACE::format_to(ctx.out(), "{}", m.rounded_dollars());
+    case style::symbol: {
+      const char* sign = m.cents < 0 ? "-" : "";
+      if (m.fractional() != 0) {
+        return FORMAT_NAMESPACE::format_to(ctx.out(), "${}{}.{:02}", sign,
+                                           m.abs_cents() / 100, m.fractional());
+      }
+      return FORMAT_NAMESPACE::format_to(ctx.out(), "${}{}", sign,
+                                         m.abs_cents() / 100);
+    }
     case style::cents:
       return FORMAT_NAMESPACE::format_to(ctx.out(), "{}", m.cents);
     case style::whole:
-      // Round half away from zero (works for both positive and negative)
-      return FORMAT_NAMESPACE::format_to(ctx.out(), "${}",
-                                         m.cents >= 0 ? (m.cents + 50) / 100
-                                                      : (m.cents - 50) / 100);
+      return FORMAT_NAMESPACE::format_to(ctx.out(), "${}", m.rounded_dollars());
     case style::number:
-    default:
-      return FORMAT_NAMESPACE::format_to(ctx.out(), "{:.2f}", m.cents / 100.0);
+    default: {
+      const char* sign = m.cents < 0 ? "-" : "";
+      return FORMAT_NAMESPACE::format_to(ctx.out(), "{}{}.{:02}", sign,
+                                         m.abs_cents() / 100, m.fractional());
+    }
     }
   }
 };

@@ -9,13 +9,13 @@
 #include <algorithm>
 #include <cassert>
 #include <cmath>
-#include <cstdlib>
 
 #include "core/city/Property.h"
 #include "core/finance/Money.h"
 #include "core/restaurant/Menu.h"
 #include "core/restaurant/PizzaSalesAggregator.h"
 #include "core/state/GameState.h"
+#include "engine/FormatCompat.h"
 #include "engine/input/InputManager.h"
 #include "engine/ui/InteractionEvent.h"
 #include "engine/ui/TextAnchor.h"
@@ -222,11 +222,7 @@ void RestaurantMenu::render_menu_view(const RenderContext& ctx) {
 
     // Price (whole . cents)
     const auto price = row.price;
-    // cents (always two digits)
-    auto cents = std::to_string(std::abs(price.fractional()));
-    if (cents.size() == 1) {
-      cents.insert(cents.begin(), '0');
-    }
+    const std::string cents = compat::format("{:02}", price.fractional());
 
     const ViewRect price_box{list_box.x + sel_row_width, y - pad_y,
                              price_box_width, sel_row_height};

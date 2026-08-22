@@ -373,7 +373,6 @@ set(PLEGACY_HEADERS
     src/core/finance/Ledger.h
     src/core/finance/Loan.h
     src/core/finance/Money.h
-    src/core/finance/MoneyFormatter.h
     src/core/finance/MoneyParse.h
     src/core/finance/PlayerFinancials.h
     src/core/finance/Scale.h
