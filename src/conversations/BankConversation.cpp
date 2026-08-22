@@ -12,6 +12,7 @@
 #include "conversations/BankLine.h"
 #include "core/character/Actor.h"
 #include "core/character/Player.h"
+#include "core/city/City.h"
 #include "core/events/MilestoneId.h"
 #include "core/finance/Ledger.h"
 #include "engine/Math.h"
@@ -410,8 +411,8 @@ Loan BankConversation::propose_loan() const {
   loan_dollars >>= state_.difficulty_level();
   loan_dollars = math::round_up_to_next_power10<3>(loan_dollars);
 
-  int interest_rate =
-      state_.global_interest_rate() + bank_settings_.interest_rate_modifier;
+  int interest_rate = state_.active_city()->interest_rate() +
+                      bank_settings_.interest_rate_modifier;
   const int months = 12;
 
   return Loan(core::BankId{actor_->id()}, Money{loan_dollars * 100},

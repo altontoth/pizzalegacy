@@ -45,6 +45,9 @@ using IngredientPrices = core::food::IngredientArray<Money>;
 #define NUMBER_OF_TYPES 256
 #define NUMBER_OF_ACTOR_TYPES 5
 
+// Every city opens on this rate and drifts from there.
+constexpr int starting_interest_rate = 8;
+
 enum class MapTileType {
   TILE_TYPE_SPECIAL = 0,
   TILE_TYPE_NATURE,
@@ -319,6 +322,11 @@ public:
   EconomyTrend& economy_trend() { return economy_trend_; }
   const EconomyTrend& economy_trend() const { return economy_trend_; }
 
+  // The base every bank in this city prices its loans off, before each bank's
+  // own modifier.
+  int interest_rate() const { return interest_rate_; }
+  void interest_rate(int rate) { interest_rate_ = rate; }
+
   core::newspaper::NewspaperState& newspaper_state() {
     return newspaper_state_;
   }
@@ -397,6 +405,7 @@ private:
   PizzaCharts pizza_charts_;
   ControlMap control_map_;
   EconomyTrend economy_trend_;
+  int interest_rate_{starting_interest_rate};
 
   core::newspaper::NewspaperState newspaper_state_;
   core::newspaper::NewspaperEventSystem newspaper_event_system_;

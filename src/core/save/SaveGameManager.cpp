@@ -708,7 +708,6 @@ json SaveGameManager::state_to_json(const GameState& state,
 
   j["floor_editing_bonus_shown"] = state.turn().floor_editing_bonus_shown();
   j["competition_count"] = state.competitions().competition_count();
-  j["global_interest_rate"] = state.global_interest_rate();
   j["interruption_phase"] = static_cast<int>(state.interruption_phase());
   j["second_in_block"] = state.second_in_block();
   j["pit_tick_in_second"] = state.pit_tick_in_second();
@@ -1000,7 +999,13 @@ void SaveGameManager::json_to_state(const json& j, GameState& state,
   state.turn().floor_editing_bonus_shown(
       j.value("floor_editing_bonus_shown", false));
   state.competitions().competition_count(j.value("competition_count", 0));
-  state.global_interest_rate(j.value("global_interest_rate", 8));
+  // Saves from before the rate moved onto City hold one rate for every city.
+  if (j.contains("global_interest_rate")) {
+    int rate = j["global_interest_rate"].get<int>();
+    for (auto* city : state.initialized_cities()) {
+      city->interest_rate(rate);
+    }
+  }
   int phase = j.value("interruption_phase", 0);
   if (!is_valid_interruption_phase(phase)) {
     Logger::warn("Save has interruption phase {}; starting the round-robin "

@@ -194,9 +194,6 @@ public:
   // Achievement milestone checks.
   MilestoneTracker& milestones() { return milestones_; }
 
-  int global_interest_rate() const { return global_interest_rate_; }
-  void global_interest_rate(int rate) { global_interest_rate_ = rate; }
-
   // City  management
   core::CityId active_city_id() const;
   ViewPoint city_position() const;
@@ -520,7 +517,4 @@ private:
   MonthlyEntryPresenter monthly_entry_presenter_;
   std::unique_ptr<TurnPresenter> turn_presenter_;
   std::unique_ptr<FadePresenter> fade_presenter_;
-
-  // Global interest rate to influence loans and investments
-  int global_interest_rate_{8};
 };
