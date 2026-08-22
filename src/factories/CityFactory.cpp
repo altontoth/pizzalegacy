@@ -505,7 +505,8 @@ void CityFactory::build_city_object(City& city, int id) {
       if (actor_type == ActorType::MAYOR && j > 0) {
         actor_type = ActorType::POLICE;
       }
-      // Todo, not sure if there can be more than two mafiosos?
+      // The first two of this category are indeed mafia, everything after
+      // that is an arms dealer.
       else if (actor_type == ActorType::MAFIA && j > 1) {
         actor_type = ActorType::ARMS_DEALER;
       }

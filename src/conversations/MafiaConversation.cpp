@@ -317,9 +317,10 @@ bool MafiaConversation::advance_line_choice(MafiaLine choice) {
       current_line(MafiaLine::AT_THE_MOMENT_WE_DONT_HAVE_INFO_FOR_SALE);
       break;
     }
-    tip_price_ = rand_between(2, 7) * 250;
     tip_opener_text_.clear();
     tip_result_text_.clear();
+
+    // One random value selects the tip and its corresponding price formula.
     enum class MafiaTips {
       SupportPhoneNumber,
       WeaponsPrices,
@@ -328,15 +329,18 @@ bool MafiaConversation::advance_line_choice(MafiaLine choice) {
     };
     auto tip_type =
         static_cast<MafiaTips>(rand_max_n(static_cast<int>(MafiaTips::Count)));
+    const int variant = rand_max_n(4);
     switch (tip_type) {
     case MafiaTips::SupportPhoneNumber: {
+      tip_price_ = (rand_max_n(500) + 50) * (variant + 5);
       int base = static_cast<int>(MafiaLine::I_KNOW_A_REALLY_HOT_PHONE_NUMBER);
-      auto opener = static_cast<MafiaLine>(base + (rand_max_n(4) * 2));
+      auto opener = static_cast<MafiaLine>(base + (variant * 2));
       tip_reveal_ = static_cast<MafiaLine>(static_cast<int>(opener) + 1);
       current_line(opener);
       break;
     }
     case MafiaTips::WeaponsPrices: {
+      tip_price_ = (rand_max_n(5) + 2) * 250;
       using core::item::Item;
       constexpr Item weapons[] = {Item::FlameThrower, Item::Chemicals,
                                   Item::Bazooka, Item::Bomb};
@@ -357,12 +361,13 @@ bool MafiaConversation::advance_line_choice(MafiaLine choice) {
       break;
     }
     case MafiaTips::ArmsDealerPhoneNumber: {
-      // Arms dealer phone number tip
+      tip_price_ = (rand_max_n(10) + 2) * 250;
       auto* city = state_.active_city();
       auto dealers = city->all_arms_dealers();
-      if (dealers.size() > 1) {
-        // Skip the first dealer (always known), pick from the rest
-        int idx = 1 + rand_max_n(static_cast<int>(dealers.size()) - 1);
+      if (!dealers.empty()) {
+        // There are four possible numbers; missing entries fall back to
+        // the first.
+        int idx = variant < static_cast<int>(dealers.size()) ? variant : 0;
         const auto* dealer = dealers[idx];
         tip_result_text_ = compat::format(" {}!!!", dealer->phone_number());
         tip_reveal_ = MafiaLine::TRY;
