@@ -14,9 +14,12 @@
 #include "core/restaurant/StaffEventData.h"
 #include "core/state/GameState.h"
 #include "engine/FormatCompat.h"
+#include "factories/CharacterFactory.h"
 #include "factories/TrainingFactory.h"
 
 #include <algorithm>
+#include <array>
+#include <cstddef>
 
 using namespace debug::command;
 using core::character::JobRole;
@@ -382,6 +385,217 @@ Examples:
   };
 }
 
+static CommandDef make_staff_hire() {
+  return CommandDef{
+      .name = "hire",
+      .description = "Hire character into a restaurant's staff slot",
+      .help_text =
+          R"(Usage: staff hire <role> [player_id] [restaurant_id] [character_id]
+
+Roles are 0 for a cook, 1 for a waiter and 2 for a manager. The wage is the
+character's starting rate for the role, and the job market is left alone, so
+the same person is still offered on the screen.
+
+Examples:
+  staff hire 2                  # character 0 as a manager
+  staff hire 0 @ @ 7            # character 7 as a cook
+)",
+      .args =
+          {
+              ArgSpec{
+                  .name = "role",
+                  .type = ArgType::Int,
+                  .optional = false,
+                  .description = "0 cook, 1 waiter, 2 manager",
+                  .min_value = 0,
+                  .max_value = 2,
+              },
+              ArgSpec{
+                  .name = "player_id",
+                  .type = ArgType::PlayerId,
+                  .optional = true,
+                  .default_provider = DefaultProvider::ActivePlayer,
+                  .description = "Player ID (@ for active player)",
+                  .min_value = 0,
+                  .max_value = NUMBER_OF_PLAYERS - 1,
+              },
+              ArgSpec{
+                  .name = "restaurant_id",
+                  .type = ArgType::RestaurantId,
+                  .optional = true,
+                  .default_provider = DefaultProvider::ActiveRestaurant,
+                  .description = "Restaurant ID (@ for active restaurant)",
+              },
+              ArgSpec{
+                  .name = "character_id",
+                  .type = ArgType::Int,
+                  .optional = true,
+                  .description = "Character to take on (0-199)",
+                  .min_value = 0,
+                  .max_value = 199,
+              },
+          },
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        constexpr std::array roles = {JobRole::CHEF, JobRole::WAITER,
+                                      JobRole::MANAGER};
+        JobRole role = roles[static_cast<std::size_t>(ctx.int_arg(0))];
+        auto player_id = ctx.player_id(1);
+        auto restaurant_id = ctx.restaurant_id(2);
+        auto character_id =
+            ctx.args.size() > 3 ? static_cast<int>(ctx.int_arg(3)) : 0;
+
+        Restaurant* restaurant = nullptr;
+        if (auto err =
+                check_restaurant(ctx, player_id, restaurant_id, restaurant)) {
+          return *err;
+        }
+
+        auto* data = CharacterFactory::create_character(character_id, role);
+        if (!data) {
+          return CommandResult::error(
+              compat::format("No character {}", character_id));
+        }
+
+        Staff staff(role, core::character::Character(data));
+        staff.payment(
+            Money{static_cast<int64_t>(data->starting_payment(role)) * 100});
+
+        switch (restaurant->add_staff(staff)) {
+        case HiringResult::NoSlotsAvailable:
+          return CommandResult::error(
+              compat::format("Restaurant {} has no free {} slot",
+                             restaurant_id.value, role_name(role)));
+        case HiringResult::AlreadyHasManager:
+          return CommandResult::error(compat::format(
+              "Restaurant {} already has a manager", restaurant_id.value));
+        case HiringResult::Success:
+          break;
+        }
+
+        return CommandResult::success(
+            {compat::format("Hired {} {} {} into restaurant {} on ${}",
+                            role_name(role), data->first_name, data->last_name,
+                            restaurant_id.value, staff.payment().whole())});
+      },
+  };
+}
+
+static CommandDef make_staff_manager() {
+  return CommandDef{
+      .name = "manager",
+      .description = "Set one of the manager settings",
+      .help_text =
+          R"(Usage: staff manager <setting> <value> [player_id] [restaurant_id]
+
+The settings the manager screen offers. They all start at 0.
+
+shopping, prices, overdraw     0 or 1
+turnover_down, turnover_up, supply, staff
+                               0 do nothing, 1 call me, 2 act yourself
+behaviour                      0 merciless to 6 warmly
+
+Examples:
+  staff manager supply 1        # they call about a shortage
+  staff manager shopping 1      # they restock without asking
+)",
+      .args =
+          {
+              ArgSpec{
+                  .name = "setting",
+                  .type = ArgType::String,
+                  .optional = false,
+                  .description = "Which setting",
+                  .allowed_values =
+                      std::vector<std::string>{"shopping", "prices", "overdraw",
+                                               "turnover_down", "turnover_up",
+                                               "supply", "staff", "behaviour"},
+              },
+              ArgSpec{
+                  .name = "value",
+                  .type = ArgType::Int,
+                  .optional = false,
+                  .description = "The setting's value",
+                  .min_value = 0,
+                  .max_value = 6,
+              },
+              ArgSpec{
+                  .name = "player_id",
+                  .type = ArgType::PlayerId,
+                  .optional = true,
+                  .default_provider = DefaultProvider::ActivePlayer,
+                  .description = "Player ID (@ for active player)",
+                  .min_value = 0,
+                  .max_value = NUMBER_OF_PLAYERS - 1,
+              },
+              ArgSpec{
+                  .name = "restaurant_id",
+                  .type = ArgType::RestaurantId,
+                  .optional = true,
+                  .default_provider = DefaultProvider::ActiveRestaurant,
+                  .description = "Restaurant ID (@ for active restaurant)",
+              },
+          },
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        auto setting = ctx.string_arg(0);
+        auto value = static_cast<int>(ctx.int_arg(1));
+        auto player_id = ctx.player_id(2);
+        auto restaurant_id = ctx.restaurant_id(3);
+
+        Restaurant* restaurant = nullptr;
+        if (auto err =
+                check_restaurant(ctx, player_id, restaurant_id, restaurant)) {
+          return *err;
+        }
+
+        auto& settings = restaurant->manager_settings();
+
+        if (setting == "behaviour") {
+          settings.behavior_towards_staff = static_cast<ManagerBehavior>(value);
+        }
+        else if (setting == "shopping" || setting == "prices" ||
+                 setting == "overdraw") {
+          if (value > 1) {
+            return CommandResult::error(
+                compat::format("{} is 0 or 1", setting));
+          }
+          bool on = value != 0;
+          if (setting == "shopping") {
+            settings.shopping_if_needed = on;
+          }
+          else if (setting == "prices") {
+            settings.change_prices = on;
+          }
+          else {
+            settings.overdraw_account = on;
+          }
+        }
+        else {
+          if (value > 2) {
+            return CommandResult::error(
+                compat::format("{} runs 0 to 2", setting));
+          }
+          auto reaction = static_cast<ManagerReaction>(value);
+          if (setting == "turnover_down") {
+            settings.turnover_decrease = reaction;
+          }
+          else if (setting == "turnover_up") {
+            settings.turnover_increase = reaction;
+          }
+          else if (setting == "supply") {
+            settings.supply_shortage = reaction;
+          }
+          else {
+            settings.staff_shortage = reaction;
+          }
+        }
+
+        return CommandResult::success(
+            {compat::format("Set {} to {} for restaurant {}", setting, value,
+                            restaurant_id.value)});
+      },
+  };
+}
+
 static CommandDef make_staff_train() {
   return CommandDef{
       .name = "train",
@@ -666,10 +880,12 @@ CommandDef make_staff_commands() {
       .name = "staff",
       .aliases = {"st"},
       .description = "Staff management and event testing commands",
-      .help_text = "Subcommands: event, set_motivation, set_days_away, train, "
-                   "finish_training, list",
+      .help_text = "Subcommands: event, hire, manager, set_motivation, "
+                   "set_days_away, train, finish_training, list",
   }
       .add_subcommand(make_staff_event())
+      .add_subcommand(make_staff_hire())
+      .add_subcommand(make_staff_manager())
       .add_subcommand(make_staff_set_motivation())
       .add_subcommand(make_staff_set_days_away())
       .add_subcommand(make_staff_train())
