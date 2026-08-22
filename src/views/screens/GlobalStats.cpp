@@ -243,25 +243,18 @@ void GlobalStats::render_month_overview(const RenderContext& ctx) {
   {
     ViewPoint pos{label_x, 72};
 
-    // Current month is summed per restaurant (so the drill-down matches);
-    // previous month is a per-player figure read with one player-level query.
+    // Both columns are per-player figures
     for (auto acct : PlayerFinancials::receipt_accounts()) {
       receipts_last += financials.previous_month_operational(acct, date);
-      for (auto* r : restaurants) {
-        receipts_this +=
-            financials.current_month_operational(acct, date, r->id());
-      }
+      receipts_this += financials.current_month_operational(acct, date);
     }
     draw_label_and_amounts("receipts", -receipts_last, -receipts_this, pos);
     create_clickable_row(Account::Sales, pos, true, true, "receipts_total");
 
     for (auto acct : PlayerFinancials::receipt_accounts()) {
       pos.y += line_spacing;
-      Money this_m = 0_usd;
+      Money this_m = financials.current_month_operational(acct, date);
       Money last_m = financials.previous_month_operational(acct, date);
-      for (auto* r : restaurants) {
-        this_m += financials.current_month_operational(acct, date, r->id());
-      }
       draw_label_and_amounts(to_string(acct), -last_m, -this_m, pos);
       create_clickable_row(acct, pos, true, false, to_string(acct));
     }
@@ -275,20 +268,15 @@ void GlobalStats::render_month_overview(const RenderContext& ctx) {
 
     for (auto acct : PlayerFinancials::expenditure_accounts()) {
       exp_last += financials.previous_month_operational(acct, date);
-      for (auto* r : restaurants) {
-        exp_this += financials.current_month_operational(acct, date, r->id());
-      }
+      exp_this += financials.current_month_operational(acct, date);
     }
     draw_label_and_amounts("expenditure", exp_last, exp_this, pos);
     create_clickable_row(Account::Staff, pos, false, true, "expenditure_total");
 
     for (auto acct : PlayerFinancials::expenditure_accounts()) {
       pos.y += line_spacing;
-      Money this_m = 0_usd;
+      Money this_m = financials.current_month_operational(acct, date);
       Money last_m = financials.previous_month_operational(acct, date);
-      for (auto* r : restaurants) {
-        this_m += financials.current_month_operational(acct, date, r->id());
-      }
       draw_label_and_amounts(to_string(acct), last_m, this_m, pos);
       create_clickable_row(acct, pos, false, false, to_string(acct));
     }
