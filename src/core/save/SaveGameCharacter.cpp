@@ -5,10 +5,12 @@
  */
 
 #include "core/save/SaveGameCharacter.h"
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <ctime>
 #include <string>
+#include <vector>
 #include "core/character/Awards.h"
 #include "core/character/InsurancePlayerState.h"
 #include "core/character/Player.h"
@@ -224,11 +226,14 @@ json player_to_json(const Player& player) {
   }
   j["investments"] = inv_array;
 
-  json visited_cities_array = json::array();
+  // Sorted, so the same game always writes the same document.
+  std::vector<int> visited_cities;
+  visited_cities.reserve(player.visited_city_ids().size());
   for (const auto& city_id : player.visited_city_ids()) {
-    visited_cities_array.push_back(city_id.value);
+    visited_cities.push_back(city_id.value);
   }
-  j["visited_city_ids"] = visited_cities_array;
+  std::ranges::sort(visited_cities);
+  j["visited_city_ids"] = visited_cities;
 
   j["inventory"] = inventory_to_json(player.inventory());
 
