@@ -158,15 +158,14 @@ bool NewspaperEventSystem::execute_named_event(NewspaperEvent event,
 
   // --- Interest rate events ---
   case InterestRatesRising: {
-    auto new_rate =
-        state.global_interest_rate() + engine::random::rand_max_n(4) + 2;
-    state.global_interest_rate(new_rate);
+    const int delta = engine::random::rand_max_n(5) + 2;
+    state.global_interest_rate(state.global_interest_rate() + delta);
     break;
   }
   case InterestRatesFalling: {
-    auto new_rate = std::max(
-        state.global_interest_rate() - engine::random::rand_max_n(4) + 2, 0);
-    state.global_interest_rate(new_rate);
+    const int delta = engine::random::rand_max_n(5) + 2;
+    state.global_interest_rate(
+        std::max(state.global_interest_rate() - delta, 0));
     break;
   }
   case LandPricesRising:
