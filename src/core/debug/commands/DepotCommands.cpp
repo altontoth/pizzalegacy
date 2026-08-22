@@ -7,9 +7,14 @@
 #include "core/debug/commands/DepotCommands.h"
 #include "core/city/City.h"
 #include "core/city/Property.h"
+#include "core/inventory/Inventory.h"
+#include "core/item/Item.h"
 #include "core/state/GameState.h"
 #include "core/util/Constants.h"
+#include "engine/FormatCompat.h"
 #include "engine/Random.h"
+
+#include <algorithm>
 
 using namespace debug::command;
 
@@ -21,6 +26,24 @@ static Property* find_available_depot(City& city) {
     if (property->type() == PropertyType::DEPOT && !property->is_owned() &&
         !property->is_rented()) {
       return property;
+    }
+  }
+  return nullptr;
+}
+
+// Depots are numbered in the order the city lists its properties.
+static Property* find_player_depot(City& city, core::PlayerId player_id,
+                                   int index) {
+  int seen = 0;
+  for (auto* property : city.properties()) {
+    if (property->type() == PropertyType::DEPOT) {
+      auto owner = property->owner_or_tenant();
+      if (owner && *owner == player_id) {
+        if (seen == index) {
+          return property;
+        }
+        ++seen;
+      }
     }
   }
   return nullptr;
@@ -438,6 +461,102 @@ Examples:
   };
 }
 
+static CommandDef make_depot_weapons() {
+  return CommandDef{
+      .name = "weapons",
+      .description = "Set a weapon count in the player's depot",
+      .help_text =
+          R"(Usage: depot weapons <item_id> <amount> [city_id] [player_id] [depot]
+
+Examples:
+  depot weapons 6 5             # five bazookas in the active depot
+  depot weapons 6 0             # clear them out again
+  depot weapons 6 5 @ @ 1       # five in the player's second depot
+)",
+      .args =
+          {
+              ArgSpec{
+                  .name = "item_id",
+                  .type = ArgType::ItemId,
+                  .optional = false,
+                  .description = "Weapon item ID (0-7)",
+              },
+              ArgSpec{
+                  .name = "amount",
+                  .type = ArgType::Int,
+                  .optional = false,
+                  .description = "Quantity (0-255)",
+                  .min_value = 0,
+                  .max_value = 255,
+              },
+              ArgSpec{
+                  .name = "city_id",
+                  .type = ArgType::CityId,
+                  .optional = true,
+                  .default_provider = DefaultProvider::ActiveCity,
+                  .description = "City ID (@ for active city)",
+                  .min_value = 0,
+                  .max_value = 9,
+              },
+              ArgSpec{
+                  .name = "player_id",
+                  .type = ArgType::PlayerId,
+                  .optional = true,
+                  .default_provider = DefaultProvider::ActivePlayer,
+                  .description = "Player ID (@ for active player)",
+                  .min_value = 0,
+                  .max_value = NUMBER_OF_PLAYERS - 1,
+              },
+              ArgSpec{
+                  .name = "depot",
+                  .type = ArgType::Int,
+                  .optional = true,
+                  .description = "Which of the player's depots in the city",
+                  .min_value = 0,
+              },
+          },
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        auto item_id = ctx.item_id(0);
+        auto amount = static_cast<int>(ctx.int_arg(1));
+        auto city_id = ctx.city_id(2);
+        auto player_id = ctx.player_id(3);
+        auto depot_index =
+            ctx.args.size() > 4 ? static_cast<int>(ctx.int_arg(4)) : 0;
+
+        if (std::ranges::find(core::item::weapon_list, item_id) ==
+            core::item::weapon_list.end()) {
+          return CommandResult::error(compat::format(
+              "{} is not a weapon", core::item::to_string(item_id)));
+        }
+
+        City* city = ctx.state.city(city_id);
+        if (!city) {
+          return CommandResult::error(
+              compat::format("City {} not loaded", city_id.value));
+        }
+
+        Property* depot = find_player_depot(*city, player_id, depot_index);
+        if (!depot) {
+          return CommandResult::error(
+              compat::format("Player {} has no depot {} in {}", player_id.value,
+                             depot_index, city->name()));
+        }
+
+        auto* weapons = depot->weapons();
+        if (!weapons) {
+          return CommandResult::error("That depot has no weapon store");
+        }
+
+        (*weapons)[item_id] = amount;
+
+        return CommandResult::success().add_message(
+            compat::format("Set {} to {} in player {}'s depot {} in {}",
+                           core::item::to_string(item_id), amount,
+                           player_id.value, depot_index, city->name()));
+      },
+  };
+}
+
 static CommandDef make_depot_stock() {
   return CommandDef{
       .name = "stock",
@@ -455,11 +574,12 @@ CommandDef make_depot_commands() {
       .name = "depot",
       .aliases = {"d", "dep"},
       .description = "Depot management commands",
-      .help_text = "Manage depots: give, info, stock",
+      .help_text = "Manage depots: give, info, stock, weapons",
   }
       .add_subcommand(make_depot_give())
       .add_subcommand(make_depot_info())
-      .add_subcommand(make_depot_stock());
+      .add_subcommand(make_depot_stock())
+      .add_subcommand(make_depot_weapons());
 }
 
 } // namespace debug::commands

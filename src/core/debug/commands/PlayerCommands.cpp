@@ -6,12 +6,17 @@
 
 #include "PlayerCommands.h"
 #include "core/character/Player.h"
+#include "core/common/Ids.h"
 #include "core/finance/Money.h"
 #include "core/food/Pizza.h"
 #include "core/state/GameState.h"
 #include "core/util/GameContext.h"
+#include "engine/FormatCompat.h"
 #include "factories/PizzaFactory.h"
 #include "resources/BobSizeFn.h"
+
+#include <array>
+#include <cstdint>
 
 using namespace debug::command;
 
@@ -462,17 +467,183 @@ static CommandDef make_player_recipes() {
       .add_subcommand(make_player_recipes_load());
 }
 
+static CommandDef make_player_weapon_profit() {
+  return CommandDef{
+      .name = "weapon_profit",
+      .description = "Set the player's weapon dealing profit",
+      .help_text = R"(Usage: player weapon_profit <amount> [player_id]
+
+The running total from the player's arms deals.
+
+Examples:
+  player weapon_profit 3000
+)",
+      .args =
+          {
+              ArgSpec{
+                  .name = "amount",
+                  .type = ArgType::Money,
+                  .optional = false,
+                  .description = "Dollar amount",
+              },
+              player_id_arg(),
+          },
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        auto amount = ctx.money_arg(0);
+        auto player_id = ctx.player_id(1);
+
+        auto* player = ctx.state.player(player_id);
+        if (!player) {
+          return CommandResult::error(
+              compat::format("Player {} not found", player_id.value));
+        }
+
+        player->weapon_dealing_profit(amount);
+
+        return CommandResult::success().add_message(
+            compat::format("Set player {}'s weapon dealing profit to {}",
+                           player_id.value, amount.whole()));
+      },
+  };
+}
+
+static CommandDef make_player_competition() {
+  return CommandDef{
+      .name = "competition",
+      .description = "Set an AI player's competition willingness and wins",
+      .help_text = R"(Usage: player competition <willingness> <wins> [player_id]
+
+An AI player turns down a challenge while its willingness counter is above
+zero. Losing to the human sets the counter, and it decays by one each turn.
+
+Examples:
+  player competition 0 2        # will accept a challenge, and has won twice
+)",
+      .args =
+          {
+              ArgSpec{
+                  .name = "willingness",
+                  .type = ArgType::Int,
+                  .optional = false,
+                  .description = "Willingness (0-255)",
+                  .min_value = 0,
+                  .max_value = 255,
+              },
+              ArgSpec{
+                  .name = "wins",
+                  .type = ArgType::Int,
+                  .optional = false,
+                  .description = "Competition wins (0-255)",
+                  .min_value = 0,
+                  .max_value = 255,
+              },
+              player_id_arg(),
+          },
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        auto willingness = static_cast<uint8_t>(ctx.int_arg(0));
+        auto wins = static_cast<uint8_t>(ctx.int_arg(1));
+        auto player_id = ctx.player_id(2);
+
+        auto* player = ctx.state.player(player_id);
+        if (!player) {
+          return CommandResult::error(
+              compat::format("Player {} not found", player_id.value));
+        }
+
+        player->set_competition_willingness(willingness);
+        player->competition_win_count(wins);
+
+        return CommandResult::success().add_message(compat::format(
+            "Set player {}'s competition willingness to {} and wins to {}",
+            player_id.value, willingness, wins));
+      },
+  };
+}
+
+static CommandDef make_player_ad_effectiveness() {
+  return CommandDef{
+      .name = "ad_effectiveness",
+      .description = "Set one advertising channel's effectiveness in a city",
+      .help_text =
+          R"(Usage: player ad_effectiveness <channel> <value> [city_id] [player_id]
+
+Effectiveness feeds a restaurant's popularity and keeps decaying after the
+campaign that bought it has ended.
+
+Examples:
+  player ad_effectiveness 0 60  # channel 0 at 60 in the active city
+)",
+      .args =
+          {
+              ArgSpec{
+                  .name = "channel",
+                  .type = ArgType::Int,
+                  .optional = false,
+                  .description = "Advertising channel (0-3)",
+                  .min_value = 0,
+                  .max_value = 3,
+              },
+              ArgSpec{
+                  .name = "value",
+                  .type = ArgType::Int,
+                  .optional = false,
+                  .description = "Effectiveness (0-255)",
+                  .min_value = 0,
+                  .max_value = 255,
+              },
+              ArgSpec{
+                  .name = "city_id",
+                  .type = ArgType::CityId,
+                  .optional = true,
+                  .default_provider = DefaultProvider::ActiveCity,
+                  .description = "City ID (@ for active city)",
+                  .min_value = 0,
+                  .max_value = 9,
+              },
+              player_id_arg(),
+          },
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        auto channel = static_cast<std::size_t>(ctx.int_arg(0));
+        auto value = static_cast<uint8_t>(ctx.int_arg(1));
+        auto city_id = ctx.city_id(2);
+        auto player_id = ctx.player_id(3);
+
+        auto* player = ctx.state.player(player_id);
+        if (!player) {
+          return CommandResult::error(
+              compat::format("Player {} not found", player_id.value));
+        }
+
+        std::array<uint8_t, 4> channels{};
+        const auto& all = player->ad_effectiveness();
+        if (auto it = all.find(city_id); it != all.end()) {
+          channels = it->second;
+        }
+        channels[channel] = value;
+        player->ad_effectiveness(city_id, channels);
+
+        return CommandResult::success().add_message(compat::format(
+            "Set player {}'s channel {} effectiveness to {} in city {}",
+            player_id.value, channel, value, city_id.value));
+      },
+  };
+}
+
 CommandDef make_player_commands() {
   return CommandDef{
       .name = "player",
       .aliases = {"p"},
       .description = "Player management commands",
-      .help_text = "Manage player state: info, money, inventory, recipes",
+      .help_text = "Manage player state: info, money, inventory, recipes, "
+                   "weapon_profit, competition, ad_effectiveness",
   }
       .add_subcommand(make_player_info())
       .add_subcommand(make_player_money())
       .add_subcommand(make_player_inventory())
-      .add_subcommand(make_player_recipes());
+      .add_subcommand(make_player_recipes())
+      .add_subcommand(make_player_weapon_profit())
+      .add_subcommand(make_player_competition())
+      .add_subcommand(make_player_ad_effectiveness());
 }
 
 } // namespace debug::commands

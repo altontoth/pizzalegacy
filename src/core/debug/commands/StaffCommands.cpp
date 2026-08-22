@@ -8,11 +8,13 @@
 
 #include "core/character/Character.h"
 #include "core/character/Staff.h"
+#include "core/character/Training.h"
 #include "core/city/Property.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/restaurant/StaffEventData.h"
 #include "core/state/GameState.h"
 #include "engine/FormatCompat.h"
+#include "factories/TrainingFactory.h"
 
 #include <algorithm>
 
@@ -380,6 +382,94 @@ Examples:
   };
 }
 
+static CommandDef make_staff_train() {
+  return CommandDef{
+      .name = "train",
+      .description = "Send a staff member on a training course",
+      .help_text =
+          R"(Usage: staff train <course> [player_id] [restaurant_id] [slot]
+
+Start a course without the skill requirement or the fee. Courses 0-5 are
+cooking, 6-11 serving and 12-17 management.
+
+Examples:
+  staff train 0                 # first cook starts Cookery Course 1
+  staff train 6 @ @ 6           # first waiter starts the serving course
+)",
+      .args =
+          {
+              ArgSpec{
+                  .name = "course",
+                  .type = ArgType::Int,
+                  .optional = false,
+                  .description = "Course index (0-17)",
+                  .min_value = 0,
+                  .max_value = 17,
+              },
+              ArgSpec{
+                  .name = "player_id",
+                  .type = ArgType::PlayerId,
+                  .optional = true,
+                  .default_provider = DefaultProvider::ActivePlayer,
+                  .description = "Player ID (@ for active player)",
+                  .min_value = 0,
+                  .max_value = NUMBER_OF_PLAYERS - 1,
+              },
+              ArgSpec{
+                  .name = "restaurant_id",
+                  .type = ArgType::RestaurantId,
+                  .optional = true,
+                  .default_provider = DefaultProvider::ActiveRestaurant,
+                  .description = "Restaurant ID (@ for active restaurant)",
+              },
+              ArgSpec{
+                  .name = "slot",
+                  .type = ArgType::Int,
+                  .optional = true,
+                  .description =
+                      "Staff slot (0-5 cooks, 6-11 waiters, 12 manager)",
+                  .min_value = 0,
+                  .max_value = 12,
+              },
+          },
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        auto course = static_cast<int>(ctx.int_arg(0));
+        auto player_id = ctx.player_id(1);
+        auto restaurant_id = ctx.restaurant_id(2);
+        auto slot = ctx.args.size() > 3 ? static_cast<int>(ctx.int_arg(3)) : 0;
+
+        Restaurant* restaurant = nullptr;
+        if (auto err =
+                check_restaurant(ctx, player_id, restaurant_id, restaurant)) {
+          return *err;
+        }
+
+        JobRole role = JobRole::NONE;
+        int array_index = -1;
+        Staff* staff = resolve_staff(restaurant, slot, role, array_index);
+        if (!staff) {
+          return CommandResult::error(
+              compat::format("No staff in slot {} of restaurant {}", slot,
+                             restaurant_id.value));
+        }
+        if (staff->on_course()) {
+          return CommandResult::error(compat::format(
+              "{} {} is already on a course", staff->character().first_name(),
+              staff->character().last_name()));
+        }
+
+        Training training =
+            TrainingFactory::create_training(static_cast<TrainingType>(course));
+        staff->send_on_training(training);
+
+        return CommandResult::success({compat::format(
+            "Sent {} {} on {} for {} days", staff->character().first_name(),
+            staff->character().last_name(), training.name(),
+            training.duration())});
+      },
+  };
+}
+
 static CommandDef make_staff_finish_training() {
   return CommandDef{
       .name = "finish_training",
@@ -576,12 +666,13 @@ CommandDef make_staff_commands() {
       .name = "staff",
       .aliases = {"st"},
       .description = "Staff management and event testing commands",
-      .help_text = "Subcommands: event, set_motivation, set_days_away, "
+      .help_text = "Subcommands: event, set_motivation, set_days_away, train, "
                    "finish_training, list",
   }
       .add_subcommand(make_staff_event())
       .add_subcommand(make_staff_set_motivation())
       .add_subcommand(make_staff_set_days_away())
+      .add_subcommand(make_staff_train())
       .add_subcommand(make_staff_finish_training())
       .add_subcommand(make_staff_list());
 }
