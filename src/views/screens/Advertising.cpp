@@ -13,7 +13,6 @@
 #include "gfx/Blit.h"
 #include "magic_enum/magic_enum.hpp"
 #include "resources/FontTypes.h"
-#include "resources/util/FileUtils.h"
 #include "views/base/ViewDefs.h"
 
 #include <array>
@@ -593,10 +592,8 @@ void Advertising::initialize_new_campaign(AdvertisingChannel channel) {
     tv_ads_.init();
     break;
   case AdvertisingChannel::NEWSPAPER_ADS:
-    if (werbung_e_.empty()) {
-      werbung_e_ = fileutils::load_text_lines("T/WERBUNG.E");
-    }
-    newspaper_game_.start(werbung_e_, state_.active_player()->name(),
+    newspaper_game_.start(NewspaperAdGame::ad_lines(),
+                          state_.active_player()->name(),
                           state_.options().fix_legacy_bugs);
     hovered_news_row_.reset();
     break;

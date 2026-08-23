@@ -6,10 +6,28 @@
 
 #include "core/finance/BalanceSheet.h"
 
-#include "BalanceSheet.h"
-
 BalanceSheet::BalanceSheet(const Player& player, bool fix_legacy_bugs)
     : player_(player), fix_legacy_bugs_(fix_legacy_bugs) {}
+
+Money BalanceSheet::profit_and_loss() const {
+  const auto& financials = player_.financials();
+  Money total = financials.balance(Account::ProfitAndLoss) +
+                financials.balance(Account::Sales) +
+                financials.balance(Account::CoinMachines) +
+                financials.balance(Account::Missions) +
+                financials.balance(Account::Staff) +
+                financials.balance(Account::Rents) +
+                financials.balance(Account::Protection) +
+                financials.balance(Account::Repayment) +
+                financials.balance(Account::Others) +
+                financials.balance(Account::FinesAndBribes);
+  // With the bug fixed an investment is an asset of its own; the original
+  // books it through the result instead.
+  if (!fix_legacy_bugs_) {
+    total += financials.balance(Account::Investments);
+  }
+  return total;
+}
 
 std::vector<BalanceEntry> BalanceSheet::assets() const {
   std::vector<BalanceEntry> result;
@@ -28,31 +46,9 @@ std::vector<BalanceEntry> BalanceSheet::assets() const {
         {Account::Investments, financials.balance(Account::Investments)});
   }
 
-  // Sum all revenue/expense accounts not shown on balance sheet
-  // (excluding Machines, Furniture, Stock which are shown as assets)
-  Money other_accounts = financials.balance(Account::Sales) +
-                         financials.balance(Account::CoinMachines) +
-                         financials.balance(Account::Missions) +
-                         financials.balance(Account::Staff) +
-                         financials.balance(Account::Rents) +
-                         financials.balance(Account::Protection) +
-                         financials.balance(Account::Repayment) +
-                         financials.balance(Account::Others) +
-                         financials.balance(Account::FinesAndBribes);
-
-  // In legacy mode, investments are lumped into P&L (original behavior).
-  // With fix_legacy_bugs, investments are shown as a separate asset line.
-  if (!fix_legacy_bugs_) {
-    other_accounts += financials.balance(Account::Investments);
-  }
-
-  // Add to ProfitAndLoss for balance sheet display
-  Money total_profit_and_loss =
-      financials.balance(Account::ProfitAndLoss) + other_accounts;
-
-  // If positive (loss), show on asset side
-  if (total_profit_and_loss.cents > 0) {
-    result.push_back({Account::ProfitAndLoss, total_profit_and_loss});
+  const Money result_for_year = profit_and_loss();
+  if (result_for_year.cents > 0) {
+    result.push_back({Account::ProfitAndLoss, result_for_year});
   }
 
   return result;
@@ -73,29 +69,9 @@ std::vector<BalanceEntry> BalanceSheet::liabilities() const {
   result.push_back(
       {Account::DeliveryDebts, -financials.balance(Account::DeliveryDebts)});
 
-  // Sum all revenue/expense accounts not shown on balance sheet
-  // (excluding Machines, Furniture, Stock which are shown as assets)
-  Money other_accounts = financials.balance(Account::Sales) +
-                         financials.balance(Account::CoinMachines) +
-                         financials.balance(Account::Missions) +
-                         financials.balance(Account::Staff) +
-                         financials.balance(Account::Rents) +
-                         financials.balance(Account::Protection) +
-                         financials.balance(Account::Repayment) +
-                         financials.balance(Account::Others) +
-                         financials.balance(Account::FinesAndBribes);
-
-  if (!fix_legacy_bugs_) {
-    other_accounts += financials.balance(Account::Investments);
-  }
-
-  // Add to ProfitAndLoss for balance sheet display
-  Money total_profit_and_loss =
-      financials.balance(Account::ProfitAndLoss) + other_accounts;
-
-  // If negative (profit), show on liabilities side
-  if (total_profit_and_loss.cents < 0) {
-    result.push_back({Account::ProfitAndLoss, -total_profit_and_loss});
+  const Money result_for_year = profit_and_loss();
+  if (result_for_year.cents < 0) {
+    result.push_back({Account::ProfitAndLoss, -result_for_year});
   }
 
   return result;

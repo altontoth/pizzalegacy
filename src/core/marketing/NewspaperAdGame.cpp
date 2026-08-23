@@ -11,6 +11,7 @@
 #include <utility>
 
 #include "engine/Random.h"
+#include "resources/util/FileUtils.h"
 
 namespace {
 constexpr int AD_SIZE_BASE = 80; // effectiveness base at size 0
@@ -54,12 +55,34 @@ void NewspaperAdGame::begin_round() {
   }
 }
 
-std::string NewspaperAdGame::substitute_company(const std::string& line) const {
+std::string NewspaperAdGame::substitute_company(const std::string& line,
+                                                const std::string& company) {
   auto pos = line.find('#');
   if (pos == std::string::npos) {
     return line;
   }
-  return line.substr(0, pos) + company_ + line.substr(pos + 1);
+  return line.substr(0, pos) + company + line.substr(pos + 1);
+}
+
+const std::vector<std::string>& NewspaperAdGame::ad_lines() {
+  static std::vector<std::string> cache =
+      fileutils::load_text_lines("t/werbung.e");
+  return cache;
+}
+
+std::vector<std::string>
+NewspaperAdGame::slogan(const std::array<int, NUM_ROUNDS>& indices,
+                        const std::string& company) {
+  const auto& lines = ad_lines();
+  std::vector<std::string> parts;
+  for (int round = 0; round < NUM_ROUNDS; ++round) {
+    const int idx = (round * (BLOCK_LINES + BLOCK_GAP)) + indices[round];
+    if (idx < 0 || idx >= static_cast<int>(lines.size())) {
+      return {};
+    }
+    parts.push_back(substitute_company(lines[idx], company));
+  }
+  return parts;
 }
 
 std::array<std::string, NewspaperAdGame::OPTIONS_PER_ROUND>
@@ -69,7 +92,7 @@ NewspaperAdGame::current_options() const {
   for (int row = 0; row < OPTIONS_PER_ROUND; ++row) {
     const int idx = base + row;
     if (idx >= 0 && idx < static_cast<int>(lines_.size())) {
-      options[row] = substitute_company(lines_[idx]);
+      options[row] = substitute_company(lines_[idx], company_);
     }
   }
   return options;

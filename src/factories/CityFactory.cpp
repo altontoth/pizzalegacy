@@ -709,6 +709,12 @@ void CityFactory::populate_properties(City& city) {
       }
       auto bp = std::make_unique<Property>(index, prop_type, Size{w, h}, r_id,
                                            status, city);
+      // Money is in cents, so the original's whole-dollar figure scales up.
+      int base_price = district->price_level() * w * h * 100;
+      if (prop_type == PropertyType::DEPOT) {
+        base_price *= depot_price_multiplier;
+      }
+      bp->purchase_price(Money{base_price});
       bp->kitchen_size(Size{kitchen_w, kitchen_h});
       bp->entrance_offset(entrance_offset);
       bp->kitchen_entry_offset(kitchen_entry_offset);

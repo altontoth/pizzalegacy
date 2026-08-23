@@ -52,19 +52,12 @@ constexpr int demographic_bias_intelligence = 40;
 int ai_demographic_bias(Property& property, int intelligence) {
   int bias = engine::random::rand_max_n(3);
 
-  auto customer_pool = [&property] {
-    int total = 0;
-    for (int count : property.potential_customers().data()) {
-      total += count;
-    }
-    return total;
-  };
+  property.ensure_demographics();
 
-  if (customer_pool() == 0) {
-    property.calculate_demographics();
+  int total = 0;
+  for (int count : property.potential_customers().data()) {
+    total += count;
   }
-
-  const int total = customer_pool();
   if (total == 0 || intelligence <= demographic_bias_intelligence) {
     return bias;
   }
@@ -138,8 +131,7 @@ Restaurant* RealEstate::rent_restaurant(Property& property, Player& player,
   return restaurant;
 }
 
-bool RealEstate::buy_depot(Property& property, Player& buyer) {
-  Money price = property.get_purchase_price();
+bool RealEstate::buy_depot(Property& property, Player& buyer, Money price) {
   GameDate today = gs_->time().current_date();
 
   // Property purchase is Capital, use transfer directly
@@ -368,7 +360,7 @@ RealEstate::furnish_new_restaurant(Player& player, Property& property,
   // pay when it can't.
   Restaurant* rest = nullptr;
   if (tenure == Tenure::Buy) {
-    const Money price = property.get_purchase_price();
+    const Money price = property.purchase_price();
     if (buy_restaurant(property, player, price,
                        /*free=*/player.cash_balance() < price) &&
         property.restaurant_id()) {

@@ -585,7 +585,7 @@ void Player::check_ai_expansion(GameState& game_state) {
     return;
   }
 
-  const bool buying = cash_balance() >= premise->get_purchase_price();
+  const bool buying = cash_balance() >= premise->purchase_price();
 
   // Any premise on the market, even if only for rent, can be bought.
   const bool available = buying

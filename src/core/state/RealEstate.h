@@ -28,7 +28,7 @@ public:
                       bool free = false);
   Restaurant* rent_restaurant(Property& property, Player& player,
                               bool free = false);
-  bool buy_depot(Property& property, Player& buyer);
+  bool buy_depot(Property& property, Player& buyer, Money price);
   bool rent_depot(Property& property, Player& player, bool free = false);
   std::vector<Property*> depots_for(core::PlayerId pid) const;
   bool sell_property(Property& property, Player& seller, Money sale_price);

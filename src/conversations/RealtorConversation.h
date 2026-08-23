@@ -28,14 +28,17 @@ public:
   bool has_ended() const override;
 
 private:
-  int round_to_nearest(int value, int rounding_unit) const;
   static RealtorLine compute_start_line(const GameState& state, const Actor*);
   Property* active_property() const;
-  Money list_price_{0};
+  // Hand the premise over at whatever sell_offer_ has reached.
+  void complete_sale();
+  // One round of haggling over the realtor's offer, options 1 to 4.
+  void haggle_sale(int option);
+  // Rank 0 is turned away at the door, before any check on the property.
+  bool welcome_here() const;
   Money price_{0};
-  bool ripoff_{false};
   bool buyer_haggled_already{false};
   Money sell_offer_{0};
   int sell_haggle_count_{0};
-  const RealtorSettings& realtor_settings_;
+  bool ripoff_;
 };

@@ -7,8 +7,10 @@
 #include "PlayerCommands.h"
 #include "core/character/Player.h"
 #include "core/common/Ids.h"
+#include "core/finance/BalanceSheet.h"
 #include "core/finance/Money.h"
 #include "core/food/Pizza.h"
+#include "core/marketing/AdvertisingCampaign.h"
 #include "core/state/GameState.h"
 #include "core/util/GameContext.h"
 #include "engine/FormatCompat.h"
@@ -17,6 +19,7 @@
 
 #include <array>
 #include <cstdint>
+#include <string>
 
 using namespace debug::command;
 
@@ -629,13 +632,140 @@ Examples:
   };
 }
 
+static const char* channel_name(AdvertisingChannel channel) {
+  switch (channel) {
+  case AdvertisingChannel::FLYERS:
+    return "flyers";
+  case AdvertisingChannel::POSTERS:
+    return "poster";
+  case AdvertisingChannel::NEWSPAPER_ADS:
+    return "newspaper";
+  case AdvertisingChannel::TV_ADS:
+    return "tv";
+  }
+  return "?";
+}
+
+static CommandDef make_player_campaigns() {
+  return CommandDef{
+      .name = "campaigns",
+      .description = "List a player's running advertising campaigns",
+      .help_text = R"(Usage: player campaigns [player_id]
+
+Prints every city the player has a campaign in, one line per channel, with the
+days left, the effectiveness it bought and what was booked. A newspaper
+campaign also prints the slogan its five fragments spell out.
+
+Examples:
+  player campaigns
+  player campaigns 0
+)",
+      .args = {player_id_arg()},
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        auto player_id = ctx.player_id(0);
+        auto* player = ctx.state.player(player_id);
+        if (!player) {
+          return CommandResult::error(
+              compat::format("Player {} not found", player_id.value));
+        }
+
+        CommandResult result = CommandResult::success();
+        int shown = 0;
+        for (const auto& [city_id, channels] : player->get_campaigns()) {
+          for (const auto& slot : channels) {
+            if (!slot) {
+              continue;
+            }
+            ++shown;
+            result.add_message(compat::format(
+                "city {} {:9} {:3} day(s) left, effectiveness {}, cost {:i}",
+                city_id.value, channel_name(slot->channel),
+                slot->days_remaining, slot->rate.effectiveness,
+                slot->rate.cost));
+            if (slot->flyer_count) {
+              result.add_message(
+                  compat::format("  {} flyers", *slot->flyer_count));
+            }
+            if (slot->poster_id) {
+              result.add_message(
+                  compat::format("  poster {}", *slot->poster_id));
+            }
+            if (slot->tv_ad_id) {
+              result.add_message(compat::format("  ad {}", *slot->tv_ad_id));
+            }
+            if (slot->newspaper_ad_format) {
+              result.add_message(compat::format(
+                  "  format {}", static_cast<int>(*slot->newspaper_ad_format)));
+            }
+            if (!slot->newspaper_lines.empty()) {
+              std::string slogan;
+              for (const auto& part : slot->newspaper_lines) {
+                slogan += part;
+              }
+              result.add_message(compat::format("  \"{}\"", slogan));
+            }
+          }
+        }
+        if (shown == 0) {
+          result.add_message(compat::format("Player {} is running no campaigns",
+                                            player_id.value));
+        }
+        return result;
+      },
+  };
+}
+
+static CommandDef make_player_balance() {
+  return CommandDef{
+      .name = "balance",
+      .description = "Print a player's balance sheet",
+      .help_text = R"(Usage: player balance [player_id]
+
+The same two columns the global stats Balance page shows: assets on the left,
+capital, loans and the year's result on the right. The two totals must agree.
+
+Examples:
+  player balance
+  player balance 0
+)",
+      .args = {player_id_arg()},
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        auto player_id = ctx.player_id(0);
+        auto* player = ctx.state.player(player_id);
+        if (!player) {
+          return CommandResult::error(
+              compat::format("Player {} not found", player_id.value));
+        }
+
+        BalanceSheet sheet{*player, ctx.state.options().fix_legacy_bugs};
+        CommandResult result = CommandResult::success();
+        result.add_message("Assets:");
+        for (const auto& entry : sheet.assets()) {
+          result.add_message(compat::format(
+              "  {:14} {:i}", to_string(entry.account), entry.amount));
+        }
+        result.add_message(
+            compat::format("  {:14} {:i}", "TOTAL", sheet.total_assets()));
+        result.add_message("Liabilities:");
+        for (const auto& entry : sheet.liabilities()) {
+          result.add_message(compat::format(
+              "  {:14} {:i}", to_string(entry.account), entry.amount));
+        }
+        result.add_message(
+            compat::format("  {:14} {:i}", "TOTAL", sheet.total_liabilities()));
+        return result;
+      },
+  };
+}
+
 CommandDef make_player_commands() {
   return CommandDef{
       .name = "player",
       .aliases = {"p"},
       .description = "Player management commands",
       .help_text = "Manage player state: info, money, inventory, recipes, "
-                   "weapon_profit, competition, ad_effectiveness",
+                   "weapon_profit, competition, campaigns, balance, "
+                   "ad_effectiveness",
   }
       .add_subcommand(make_player_info())
       .add_subcommand(make_player_money())
@@ -643,6 +773,8 @@ CommandDef make_player_commands() {
       .add_subcommand(make_player_recipes())
       .add_subcommand(make_player_weapon_profit())
       .add_subcommand(make_player_competition())
+      .add_subcommand(make_player_campaigns())
+      .add_subcommand(make_player_balance())
       .add_subcommand(make_player_ad_effectiveness());
 }
 

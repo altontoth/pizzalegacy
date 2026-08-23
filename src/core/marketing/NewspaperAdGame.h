@@ -41,8 +41,15 @@ public:
   // 1-indexed line number in WERBUNG.E where the size labels start.
   static constexpr int SIZE_LABEL_BASE_LINE = 150;
 
-  // lines: the WERBUNG.E lines where the '#' has already been replaced by the
-  // company name.
+  // The WERBUNG.E fragment lines, loaded once.
+  static const std::vector<std::string>& ad_lines();
+
+  // The slogan a finished ad spells out, one fragment index per round and the
+  // company name substituted. This is what a campaign stores.
+  static std::vector<std::string>
+  slogan(const std::array<int, NUM_ROUNDS>& indices,
+         const std::string& company);
+
   void start(std::vector<std::string> lines, std::string company,
              bool fix_legacy_bugs);
 
@@ -71,7 +78,8 @@ public:
   }
 
 private:
-  [[nodiscard]] std::string substitute_company(const std::string& line) const;
+  static std::string substitute_company(const std::string& line,
+                                        const std::string& company);
   void begin_round(); // random-walk the window and clamp it
 
   std::vector<std::string> lines_;

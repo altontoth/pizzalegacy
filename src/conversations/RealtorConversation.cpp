@@ -12,32 +12,40 @@
 #include "conversations/RealtorLine.h"
 #include "core/character/Actor.h"
 #include "core/character/Player.h"
+#include "core/character/SocialStatus.h"
 #include "core/character/Staff.h"
 #include "core/city/City.h"
 #include "core/city/CityTypes.h"
 #include "core/city/Property.h"
 #include "core/finance/Ledger.h"
+#include "core/finance/Money.h"
 #include "core/restaurant/Restaurant.h"
 #include "engine/FormatCompat.h"
-#include "engine/Logger.h"
 #include "engine/Random.h"
 
 constexpr double renter_discount = 0.70;
 constexpr double rip_off_markup = 2.00;
 constexpr double negotiate_minus = 0.80;
 constexpr double negotiate_plus = 1.10;
-constexpr double sell_start_factor = 0.80;
+constexpr double sell_start_factor = 0.90;
 constexpr double sell_high_threshold = 1.20;
-constexpr double sell_fail_factor = 0.90;
-constexpr int sell_random_variance = 500 * 100; // cents
-constexpr int sell_max_haggles = 3;
+constexpr double sell_fail_factor = 0.80;
+// Opening offer is purchase price minus a random amount.
+constexpr Money sell_opening_cut_step = 10_usd;
+constexpr int sell_opening_cut_range = 500;
+constexpr int sell_usable_haggles = 2;
+constexpr int personality_haggle_penalty = 30;
+constexpr int personality_haggle_option = 4;
+constexpr int haggle_base_chance = 70;
+constexpr int haggle_chance_step = 20;
 
 RealtorConversation::RealtorConversation(
     GameState& state, const Actor* actor,
     const RealtorSettings& realtor_settings)
     : BaseConversation(compute_start_line(state, actor), state, "t/makler.e",
                        actor),
-      realtor_settings_(realtor_settings) {}
+      ripoff_(engine::random::rand_percentage_chance(
+          realtor_settings.rip_off_chance)) {}
 
 /* This advances only the lines that don't require user choices */
 bool RealtorConversation::advance() {
@@ -59,12 +67,12 @@ bool RealtorConversation::advance() {
     current_line(RealtorLine::OK_MAYBE_WELL_FIND_SOMETHING_ELSE_FOR_YOU);
     break;
   case RealtorLine::OH_YES_JUST_REMEMBERED_MY_MISTAKE: {
-    price_ = list_price_;
-    ripoff_ = false;
+    price_ = active_property()->purchase_price();
     current_line(RealtorLine::DO_YOU_WANT_TO_BUY_FOR_PRICE);
     break;
   }
-  case RealtorLine::ALRIGHT_AT_THAT_PRICE_I_CAN_DO_FAVOUR: {
+  case RealtorLine::ALRIGHT_AT_THAT_PRICE_I_CAN_DO_FAVOUR:
+  case RealtorLine::SORRY_BUT_AT_THAT_PRICE_NO_FAVOR: {
     current_line(RealtorLine::DO_YOU_WANT_TO_BUY_FOR_PRICE);
     break;
   }
@@ -86,7 +94,10 @@ bool RealtorConversation::advance_line_choice(RealtorLine choice) {
 
   switch (choice) {
   case RealtorLine::I_WANT_TO_BUY_THIS_SHOP: {
-    Logger::warn("I want to buy this");
+    if (!welcome_here()) {
+      current_line(RealtorLine::WE_CANNOT_ALLOW_A_LOW_LIFE_IN_OUR_CITY);
+      break;
+    }
     if (owned_by_player && property->is_owned()) {
       current_line(RealtorLine::YOU_ALREADY_OWNER);
     }
@@ -96,21 +107,18 @@ bool RealtorConversation::advance_line_choice(RealtorLine choice) {
       current_line(RealtorLine::SORRY_NOT_FOR_SALE);
     }
     else {
-      list_price_ = property->get_purchase_price();
-      // Current tenant gets a 30% discount when buying
+      Money base = property->purchase_price();
+      // If you're renting the place you get a discount and they never try to
+      // cheat you.
       if (property->is_rented() &&
           property->owner_or_tenant() == player->id()) {
-        list_price_ =
-            Money(static_cast<int64_t>(list_price_.cents * renter_discount));
+        price_ = Money(static_cast<int64_t>(base.cents * renter_discount));
       }
-      Logger::warn("{} chance of rip off", realtor_settings_.rip_off_chance);
-      if (engine::random::rand_percentage_chance(
-              (realtor_settings_.rip_off_chance))) {
-        ripoff_ = true;
-        price_ = list_price_ * rip_off_markup;
+      else if (ripoff_) {
+        price_ = base * rip_off_markup;
       }
       else {
-        price_ = list_price_;
+        price_ = base;
       }
       current_line(RealtorLine::DO_YOU_WANT_TO_BUY_FOR_PRICE);
     }
@@ -121,14 +129,30 @@ bool RealtorConversation::advance_line_choice(RealtorLine choice) {
     break;
   case RealtorLine::PRICE_IS_TOO_HIGH:
     buyer_haggled_already = true;
-    price_ = price_ * negotiate_minus;
-    current_line(RealtorLine::ALRIGHT_AT_THAT_PRICE_I_CAN_DO_FAVOUR);
+    if (engine::random::rand_percentage_chance(charisma)) {
+      price_ = price_ * negotiate_minus;
+      current_line(RealtorLine::ALRIGHT_AT_THAT_PRICE_I_CAN_DO_FAVOUR);
+    }
+    else {
+      price_ = price_ * negotiate_plus;
+      property->purchase_price(price_);
+      current_line(RealtorLine::SORRY_BUT_AT_THAT_PRICE_NO_FAVOR);
+    }
     break;
   case RealtorLine::PLACE_WAS_PRICED_LESS:
-    current_line(ripoff_ ? RealtorLine::OH_YES_JUST_REMEMBERED_MY_MISTAKE
-                         : RealtorLine::THATS_NOT_TRUE_IM_NO_CHEAT_GET_OUT);
+    if (ripoff_) {
+      current_line(RealtorLine::OH_YES_JUST_REMEMBERED_MY_MISTAKE);
+    }
+    else {
+      current_line(RealtorLine::THATS_NOT_TRUE_IM_NO_CHEAT_GET_OUT);
+      state_.refuse_calls_from(actor_->id());
+    }
     break;
   case RealtorLine::I_WANT_TO_RENT_THIS_SHOP: {
+    if (!welcome_here()) {
+      current_line(RealtorLine::WE_CANNOT_ALLOW_A_LOW_LIFE_IN_OUR_CITY);
+      break;
+    }
     if (!property->is_for_rent()) {
       current_line(RealtorLine::THIS_SHOP_IS_NOT_FOR_RENT);
     }
@@ -150,90 +174,28 @@ bool RealtorConversation::advance_line_choice(RealtorLine choice) {
       current_line(RealtorLine::YOU_ARE_NOT_THE_OWNER_OF_THIS_SHOP);
     }
     else {
-      auto value = property->get_purchase_price();
-      int variance = engine::random::rand_max_n(sell_random_variance + 1) * 10;
+      auto value = property->purchase_price();
+      Money cut = sell_opening_cut_step *
+                  engine::random::rand_max_n(sell_opening_cut_range);
       sell_offer_ =
-          Money(static_cast<int64_t>(value.cents * sell_start_factor)) +
-          Money(variance);
+          Money(static_cast<int64_t>(value.cents * sell_start_factor)) - cut;
       sell_haggle_count_ = 0;
       current_line(RealtorLine::I_WOULD_GIVE_YOU);
     }
     break;
   }
-  case RealtorLine::I_WANT_10_PCT_MORE: {
-    if (sell_haggle_count_ >= sell_max_haggles) {
-      current_line(RealtorLine::NO_IVE_HAD_IT_WITH_YOU);
-      state_.refuse_calls_from(actor_->id());
-      break;
-    }
-    // 50% chance of success, +10% on success
-    if (engine::random::rand_percentage_chance(50)) {
-      sell_offer_ = Money(static_cast<int64_t>(sell_offer_.cents * 1.1));
-    }
-    else {
-      sell_offer_ =
-          Money(static_cast<int64_t>(sell_offer_.cents * sell_fail_factor));
-    }
-    sell_haggle_count_++;
-    current_line(RealtorLine::I_WOULD_GIVE_YOU);
+  case RealtorLine::I_WANT_10_PCT_MORE:
+    haggle_sale(1);
     break;
-  }
-  case RealtorLine::I_WANT_20_PCT_MORE: {
-    if (sell_haggle_count_ >= sell_max_haggles) {
-      current_line(RealtorLine::NO_IVE_HAD_IT_WITH_YOU);
-      state_.refuse_calls_from(actor_->id());
-      break;
-    }
-    // 30% chance of success, +20% on success
-    if (engine::random::rand_percentage_chance(30)) {
-      sell_offer_ = Money(static_cast<int64_t>(sell_offer_.cents * 1.2));
-    }
-    else {
-      sell_offer_ =
-          Money(static_cast<int64_t>(sell_offer_.cents * sell_fail_factor));
-    }
-    sell_haggle_count_++;
-    current_line(RealtorLine::I_WOULD_GIVE_YOU);
+  case RealtorLine::I_WANT_20_PCT_MORE:
+    haggle_sale(2);
     break;
-  }
-  case RealtorLine::THIS_PLACE_IS_WORTH_DOUBLE: {
-    if (sell_haggle_count_ >= sell_max_haggles) {
-      current_line(RealtorLine::NO_IVE_HAD_IT_WITH_YOU);
-      state_.refuse_calls_from(actor_->id());
-      break;
-    }
-    // 10% chance of success, +30% on success (NOT actually double!)
-    if (engine::random::rand_percentage_chance(10)) {
-      sell_offer_ = Money(static_cast<int64_t>(sell_offer_.cents * 1.3));
-    }
-    else {
-      sell_offer_ =
-          Money(static_cast<int64_t>(sell_offer_.cents * sell_fail_factor));
-    }
-    sell_haggle_count_++;
-    current_line(RealtorLine::I_WOULD_GIVE_YOU);
+  case RealtorLine::THIS_PLACE_IS_WORTH_DOUBLE:
+    haggle_sale(3);
     break;
-  }
-  case RealtorLine::NOT_ON_THOSE_CONDITIONS: {
-    if (sell_haggle_count_ >= sell_max_haggles) {
-      current_line(RealtorLine::NO_IVE_HAD_IT_WITH_YOU);
-      state_.refuse_calls_from(actor_->id());
-      break;
-    }
-    // Success chance based on player personality - 30, clamped 0-100
-    auto personality = player->character().personality();
-    int chance = std::clamp(static_cast<int>(personality) - 30, 0, 100);
-    if (engine::random::rand_percentage_chance(chance)) {
-      sell_offer_ = Money(static_cast<int64_t>(sell_offer_.cents * 1.1));
-    }
-    else {
-      sell_offer_ =
-          Money(static_cast<int64_t>(sell_offer_.cents * sell_fail_factor));
-    }
-    sell_haggle_count_++;
-    current_line(RealtorLine::I_WOULD_GIVE_YOU);
+  case RealtorLine::NOT_ON_THOSE_CONDITIONS:
+    haggle_sale(4);
     break;
-  }
   default:
     std::cerr << "I don't know how to advance with choice " << choice
               << " from state " << magic_enum::enum_name(current_line_)
@@ -279,7 +241,8 @@ bool RealtorConversation::advance_proposal(bool agree) {
       auto type = property->type();
       if (type == PropertyType::BUSINESS_PREMISE) {
         if (state_.real_estate().buy_restaurant(
-                *active_property(), *state_.active_player(), price_)) {
+                *property, *state_.active_player(), price_)) {
+          property->purchase_price(price_);
           current_line(RealtorLine::SHOP_IS_NOW_YOURS_SEE_US_AGAIN);
         }
         else {
@@ -287,8 +250,9 @@ bool RealtorConversation::advance_proposal(bool agree) {
         }
       }
       else if (type == PropertyType::DEPOT) {
-        if (state_.real_estate().buy_depot(*active_property(),
-                                           *state_.active_player())) {
+        if (state_.real_estate().buy_depot(*property, *state_.active_player(),
+                                           price_)) {
+          property->purchase_price(price_);
           current_line(RealtorLine::WAREHOUSE_NOW_BELONGS_TO_YOU);
         }
         else {
@@ -308,19 +272,18 @@ bool RealtorConversation::advance_proposal(bool agree) {
     break;
   case RealtorLine::I_WOULD_GIVE_YOU:
     if (agree) {
-      state_.real_estate().sell_property(*active_property(),
-                                         *state_.active_player(), sell_offer_);
-      current_line(RealtorLine::I_HOPE_NOT_LAST_TIME_WE_DO_BUSINESS);
+      complete_sale();
     }
     else {
-      // Thumbs down: show negotiation options (or refuse if too many haggles)
-      if (sell_haggle_count_ >= sell_max_haggles) {
-        current_line(RealtorLine::NO_IVE_HAD_IT_WITH_YOU);
-        state_.refuse_calls_from(actor_->id());
-      }
-      else {
-        current_line(RealtorLine::I_WANT_10_PCT_MORE);
-      }
+      current_line(RealtorLine::I_WANT_10_PCT_MORE);
+    }
+    break;
+  case RealtorLine::I_CANT_OFFER_YOU_MORE:
+    if (agree) {
+      complete_sale();
+    }
+    else {
+      current_line(RealtorLine::OK_MAYBE_WELL_FIND_SOMETHING_ELSE_FOR_YOU);
     }
     break;
   case RealtorLine::ARE_YOU_SURE:
@@ -522,7 +485,7 @@ std::vector<ConversationLine<RealtorLine>> RealtorConversation::lines() const {
     };
   case RealtorLine::I_CANT_OFFER_YOU_MORE:
     return {
-        make_line(RealtorLine::I_CANT_OFFER_YOU_MORE),
+        make_proposal(RealtorLine::I_CANT_OFFER_YOU_MORE),
     };
   case RealtorLine::YOU_PLANT_AUCTION_RATHER_SELL_TO_ME:
     return {
@@ -651,6 +614,7 @@ bool RealtorConversation::has_ended() const {
   case RealtorLine::THATS_NOT_TRUE_IM_NO_CHEAT_GET_OUT:
   case RealtorLine::NO_IVE_HAD_IT_WITH_YOU:
   case RealtorLine::I_DONT_DEAL_WITH_THIS_PLACE:
+  case RealtorLine::WE_CANNOT_ALLOW_A_LOW_LIFE_IN_OUR_CITY:
     return true;
   default:
     return false;
@@ -669,6 +633,61 @@ RealtorLine RealtorConversation::compute_start_line(const GameState& state,
     return RealtorLine::I_DONT_DEAL_WITH_THIS_PLACE;
   }
   return RealtorLine::REALTORS_MAY_I_HELP_YOU;
+}
+
+void RealtorConversation::complete_sale() {
+  auto* property = active_property();
+  state_.real_estate().sell_property(*property, *state_.active_player(),
+                                     sell_offer_);
+  // The agreed price becomes the premise's value.
+  property->purchase_price(sell_offer_);
+  current_line(RealtorLine::I_HOPE_NOT_LAST_TIME_WE_DO_BUSINESS);
+}
+
+void RealtorConversation::haggle_sale(int option) {
+  // Option 4 asks for the biggest raise and is the only one whose chance comes
+  // from personality. For the rest, the more you ask for the less likely they
+  // are to agree.
+  int chance = 0;
+  if (option == personality_haggle_option) {
+    int personality = state_.active_player()->character().personality();
+    chance = std::clamp(personality - personality_haggle_penalty, 0, 100);
+  }
+  else {
+    chance = haggle_base_chance - haggle_chance_step * option;
+  }
+
+  if (engine::random::rand_percentage_chance(chance)) {
+    sell_offer_ = Money{sell_offer_.cents * (option + 10) / 10};
+  }
+  else {
+    sell_offer_ =
+        Money(static_cast<int64_t>(sell_offer_.cents * sell_fail_factor));
+  }
+
+  sell_haggle_count_++;
+  if (sell_haggle_count_ > sell_usable_haggles) {
+    current_line(RealtorLine::NO_IVE_HAD_IT_WITH_YOU);
+    state_.refuse_calls_from(actor_->id());
+    return;
+  }
+
+  // Past the max the realtor stops offering, but the raise stands and the
+  // player can still take it.
+  auto max_offer = Money(static_cast<int64_t>(
+      active_property()->purchase_price().cents * sell_high_threshold));
+  if (sell_offer_ > max_offer) {
+    current_line(RealtorLine::I_CANT_OFFER_YOU_MORE);
+    return;
+  }
+
+  current_line(RealtorLine::I_WOULD_GIVE_YOU);
+}
+
+bool RealtorConversation::welcome_here() const {
+  const auto* player = state_.active_player();
+  return social_rank(player->social_status().social_score(),
+                     state_.difficulty_level()) > 0;
 }
 
 Property* RealtorConversation::active_property() const {

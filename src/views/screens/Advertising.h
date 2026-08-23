@@ -66,7 +66,6 @@ private:
   std::optional<int> tv_ad_selection_;
   std::optional<int> hovered_news_row_;
   std::optional<AdvertisingChannel> last_purchased_type_;
-  std::vector<std::string> werbung_e_;
   int campaign_duration_{7}; // Days (7-30)
   // True if we just purchased and haven't left screen
   bool campaign_editable_{false};

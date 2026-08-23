@@ -44,8 +44,9 @@ enum class Account {
   Weapons,
   // Off the books:
   FinesAndBribes,
-  // Don't quite understand these yet:
+  // The original's Balance page labels it; nothing in the game posts to it.
   Debts,
+  // Supplier-contract payables, normally settled the day they are delivered.
   DeliveryDebts,
   // Not in the original, added for debug console:
   Cheat,

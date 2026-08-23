@@ -225,7 +225,7 @@ StatusDisplayRecipe StatusController::build_city_property_info(const CityCtx& c,
   r.add_two_column(
       {.text = "PRICE:"},
       {
-          .text = compat::format("{:i}", property->get_purchase_price()),
+          .text = compat::format("{:i}", property->purchase_price()),
           .x = 100,
           .align = StatusAlignment::Left,
       });
@@ -314,7 +314,7 @@ StatusDisplayRecipe StatusController::build_city_customer_info(const CityCtx& c,
     }
   }
 
-  property->calculate_demographics(restaurant);
+  property->ensure_demographics(restaurant);
   const auto& counts = property->potential_customers();
   static constexpr std::array<const char*,
                               static_cast<int>(PopulationType::count)>

@@ -12,7 +12,6 @@
 #include "core/inventory/Inventory.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/util/Constants.h"
-#include "engine/Logger.h"
 #include "engine/Random.h"
 
 #include <algorithm>
@@ -257,20 +256,19 @@ float Property::calculate_tile_population(uint8_t tile_type,
   }
 }
 
-Money Property::get_purchase_price() const {
-  auto district_index = city_.district_by_index(index_);
-  const auto& district_ptr = city_.district(district_index);
-  Logger::debug("Price lvel is {} and wxh is {}", district_ptr.price_level(),
-                size_);
-
-  int base_price = district_ptr.price_level() * size_.w * size_.h * 100;
-
-  if (type_ == PropertyType::DEPOT) {
-    base_price *= 5;
+void Property::ensure_demographics(const Restaurant* restaurant) {
+  int total = 0;
+  for (int count : potential_customers_.data()) {
+    total += count;
   }
-
-  return Money{base_price};
+  if (total == 0) {
+    calculate_demographics(restaurant);
+  }
 }
+
+Money Property::purchase_price() const { return purchase_price_; }
+
+void Property::purchase_price(Money price) { purchase_price_ = price; }
 
 Money Property::get_monthly_rent() const {
   auto district_index = city_.district_by_index(index_);
@@ -279,9 +277,8 @@ Money Property::get_monthly_rent() const {
   int base_rent = district_ptr.rent_level() * static_cast<int>(size_.w) *
                   static_cast<int>(size_.h) * 100;
 
-  // depot costs 5x the rent
   if (type_ != PropertyType::BUSINESS_PREMISE) {
-    base_rent *= 5;
+    base_rent *= depot_price_multiplier;
   }
 
   return Money{base_rent};

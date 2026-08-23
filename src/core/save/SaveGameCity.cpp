@@ -15,6 +15,7 @@
 #include "core/city/JobMarket.h"
 #include "core/city/MayorOffice.h"
 #include "core/city/Property.h"
+#include "core/finance/Money.h"
 #include "core/food/IngredientCategory.h"
 #include "core/marketing/AdvertisingCampaign.h"
 #include "core/newspaper/NewspaperEventSystem.h"
@@ -35,6 +36,7 @@ json property_to_json(const Property& property) {
   j["entrance_offset"] = property.entrance_offset();
   j["kitchen_entry_offset"] = property.kitchen_entry_offset();
   j["realtor_id"] = property.realtor_id();
+  j["purchase_price"] = property.purchase_price().cents;
   j["status"] = static_cast<int>(property.status());
 
   // Save owner/tenant if any
@@ -83,6 +85,10 @@ void json_to_property(const json& j, Property& property) {
   // Restore realtor_id (important to preserve randomly assigned realtors)
   if (j.contains("realtor_id")) {
     property.realtor_id(j["realtor_id"].get<int>());
+  }
+
+  if (j.contains("purchase_price")) {
+    property.purchase_price(Money{j["purchase_price"].get<int64_t>()});
   }
 
   // Restore status

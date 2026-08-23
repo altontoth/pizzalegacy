@@ -83,6 +83,10 @@ Examples:
             compat::format("Restaurant ID: {}", restaurant_id.value));
         lines.push_back(compat::format("Owner: Player {}", player_id.value));
         lines.push_back(compat::format("Name: {}", restaurant->name()));
+        lines.push_back(compat::format(
+            "Inspection in: {} day(s){}",
+            restaurant->inspection_days_remaining(),
+            restaurant->first_inspection_pending() ? ", first one" : ""));
 
         auto& layout = restaurant->layout();
         int furniture_count = layout->placed_furniture().size() +

@@ -24,6 +24,10 @@ class District;
 
 std::ostream& operator<<(std::ostream& os, const Property& premise);
 
+// A warehouse costs five times what the same floor area would as a shop, in
+// both purchase price and rent.
+constexpr int depot_price_multiplier = 5;
+
 class Property {
 public:
   Property(int index, PropertyType type, Size size, int realtor_id,
@@ -54,9 +58,15 @@ public:
   bool is_rented() const;
   void rent(core::PlayerId player_id);
   void buy(core::PlayerId player_id);
-  Money get_purchase_price() const;
+  // Fixed when the city is built, then it moves: a failed haggle, a purchase
+  // and a sale each write the agreed figure back.
+  Money purchase_price() const;
+  void purchase_price(Money price);
   Money get_monthly_rent() const;
   void calculate_demographics(const Restaurant* restaurant = nullptr);
+  // The original fills the pool once and leaves it until the weekly
+  // settlement, so a reader recomputes only an empty pool.
+  void ensure_demographics(const Restaurant* restaurant = nullptr);
 
   // Potential customers - calculated by scanning surrounding tiles
   CustomerCounts& potential_customers() { return potential_customers_; }
@@ -96,6 +106,6 @@ private:
   CustomerCounts potential_customers_{};
   int total_population_{0};
   Money rent_price_{0};
-  Money list_price_{0};
+  Money purchase_price_{0};
   std::optional<core::inventory::Inventory> weapons_;
 };

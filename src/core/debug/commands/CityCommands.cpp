@@ -8,10 +8,13 @@
 
 #include <algorithm>
 #include <string>
+#include <vector>
+#include "core/character/Actor.h"
 #include "core/character/AiMenuSlot.h"
 #include "core/character/Player.h"
 #include "core/city/City.h"
 #include "core/city/PizzaCharts.h"
+#include "core/city/Property.h"
 #include "core/food/PlayerRecipes.h"
 #include "core/food/Recipe.h"
 #include "core/state/GameState.h"
@@ -216,6 +219,74 @@ Example:
   };
 }
 
+// Premise price, rent and broker -- what the realtor negotiates over.
+static CommandDef make_property() {
+  return CommandDef{
+      .name = "property",
+      .aliases = {"properties"},
+      .description = "Show premises with their price, rent and realtor",
+      .help_text = R"(Usage: city property [index]
+
+With no argument, lists every premise that is for sale or for rent. With an
+index, shows that one premise whatever its status.
+
+Examples:
+  city property
+  city property 4213
+)",
+      .args =
+          {
+              ArgSpec{
+                  .name = "index",
+                  .type = ArgType::Int,
+                  .optional = true,
+                  .default_provider = DefaultProvider::None,
+                  .description = "Map index of a single premise",
+              },
+          },
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        auto* city = ctx.state.active_city();
+        if (!city) {
+          return CommandResult::error("No active city");
+        }
+
+        std::vector<Property*> shown;
+        if (ctx.args.empty()) {
+          for (auto* property : city->properties()) {
+            if (property->is_for_sale() || property->is_for_rent()) {
+              shown.push_back(property);
+            }
+          }
+        }
+        else {
+          auto index = static_cast<int>(ctx.int_arg(0));
+          auto* property = city->property_by_index(index);
+          if (!property) {
+            return CommandResult::error(
+                compat::format("No premise at index {}", index));
+          }
+          shown.push_back(property);
+        }
+
+        CommandResult result = CommandResult::success();
+        result.add_message(
+            compat::format("{} premises in {}", shown.size(), city->name()));
+        for (auto* property : shown) {
+          const auto* realtor = city->actor_by_id(property->realtor_id());
+          const auto& pool = property->potential_customers().data();
+          result.add_message(compat::format(
+              "  {:5} {:2}x{:<2} price {:i} rent {:i} realtor {} ({}) "
+              "customers {} {} {} {} {} {}",
+              property->index(), property->size().w, property->size().h,
+              property->purchase_price(), property->get_monthly_rent(),
+              property->realtor_id(), realtor ? realtor->name() : "none",
+              pool[0], pool[1], pool[2], pool[3], pool[4], pool[5]));
+        }
+        return result;
+      },
+  };
+}
+
 static CommandDef make_chart() {
   return CommandDef{
       .name = "chart",
@@ -234,7 +305,8 @@ CommandDef make_city_commands() {
       .description = "City-level commands",
       .help_text = "City management and diagnostics",
   }
-      .add_subcommand(make_chart());
+      .add_subcommand(make_chart())
+      .add_subcommand(make_property());
 }
 
 } // namespace debug::commands
