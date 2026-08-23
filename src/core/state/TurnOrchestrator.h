@@ -57,10 +57,6 @@ public:
   // calendar day; also called by GameState when a city becomes active.
   void run_city_start_of_day(City& city);
 
-  // Mark a city's start-of-day as already done for today, so entering it does
-  // not run it.
-  void skip_city_start_of_day(core::CityId city);
-
   // Returns true if it ran (first time of the day), false for any subsequent
   // invocations.
   bool begin_restaurant_day(core::CityId city, core::PlayerId player);
