@@ -325,6 +325,8 @@ void FurnitureListView::show_invoice() {
                                          order_line.count);
         }
       }
+
+      state_.advance_time_blocks(3);
     }
 
     state_.restaurant_placement(std::move(furniture_copy));
@@ -379,10 +381,8 @@ void FurnitureListView::set_up_input_panel() {
                            [this] { show_invoice(); });
 
   input_panel_->add_button(Icon::ARROW_BACK, ButtonType::Square,
-                           ButtonPosition::BottomRight, "Back", [this] {
-                             state_.advance_time_blocks(2);
-                             state_.ui().pop();
-                           });
+                           ButtonPosition::BottomRight, "Back",
+                           [this] { state_.ui().pop(); });
 }
 
 SupplierType FurnitureListView::supplier_type() const {

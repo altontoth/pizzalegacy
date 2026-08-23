@@ -272,6 +272,9 @@ public:
 
   // Advance the clock by n ten-minute blocks. Stops at the player's end of day.
   void advance_time_blocks(int n);
+  // One interruption pass for a screen whose interruption rate is OnAction,
+  // run for each key press or mouse click.
+  void on_player_input();
 
   // Editing a restaurant's floor pattern tile by tile is a bonus feature,
   // available from floor_editing_bonus_date().
@@ -397,8 +400,9 @@ public:
   void push_protection_racket_offer(const RacketOffer& offer);
 
   // Process all pending messages for the active player immediately:
-  // award score, push fullscreen if needed, mark as shown.
-  void process_pending_milestones();
+  // award score, push fullscreen if needed, mark as shown. Returns whether
+  // anything was pending.
+  bool process_pending_milestones();
 
   // Presenter for staff event dialogs (to keep popup dependencies out of the
   // core).

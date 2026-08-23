@@ -114,5 +114,8 @@ void DepotIngredientSupplierList::render(const RenderContext& ctx) {
 void DepotIngredientSupplierList::set_up_input_panel() {
   renderer_->setup_pagination_buttons(
       input_panel_.get(), current_page_, [this] { mark_dirty(); },
-      [this] { state_.ui().pop(); });
+      [this] {
+        state_.advance_time_blocks(1);
+        state_.ui().pop();
+      });
 }

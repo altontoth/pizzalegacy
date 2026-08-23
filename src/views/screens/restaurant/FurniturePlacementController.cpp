@@ -188,6 +188,8 @@ void FurniturePlacementController::pick_up(core::FurnitureId id) {
     view_.invalidate_nav_grid();
   }
 
+  state_.advance_time_blocks(1);
+
   FurnitureBatch batch{.furniture = picked->furniture(),
                        .count = 1,
                        .bob_state = picked->bob_state()};

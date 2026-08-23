@@ -34,7 +34,7 @@ public:
 
   bool was_shown(MilestoneId msg_id, core::PlayerId player_id) const;
 
-  // Claim a message and scheduling it if needed. Returns false once the player
+  // Claim a message and schedule it if needed. Returns false once the player
   // has already seen it.
   bool claim_for_delivery(MilestoneId msg_id, core::PlayerId player_id,
                           const GameDate& date);

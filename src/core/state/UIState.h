@@ -164,8 +164,10 @@ struct FloorListState {
   SupplierID supplier_id;
 };
 struct TerminalState {
-  // Show the 'connection succeeded' string on return from an agent
+  // The category page the terminal opens on.
   std::optional<TerminalCategory> category = std::nullopt;
+  // Play the 'connection successful' line.
+  bool connection_made = false;
 };
 struct ActorTerminalState {
   ActorType type{};

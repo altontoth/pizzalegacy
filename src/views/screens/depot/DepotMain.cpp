@@ -79,43 +79,34 @@ void DepotMain::render(const RenderContext& ctx) {
 }
 
 void DepotMain::set_up_input_panel() {
-  input_panel_->add_button(
-      Icon::VEGETABLE, ButtonType::Square, ButtonPosition::TopLeft,
-      "Vegetables", [this]() {
-        state_.ui().replace_top<DepotIngredientCategoryViewState>(
-            IngredientCategory::VEGETABLES);
-      });
+  auto open_category = [this](IngredientCategory category) {
+    return [this, category] {
+      state_.advance_time_blocks(1);
+      state_.ui().replace_top<DepotIngredientCategoryViewState>(category);
+    };
+  };
+
+  input_panel_->add_button(Icon::VEGETABLE, ButtonType::Square,
+                           ButtonPosition::TopLeft, "Vegetables",
+                           open_category(IngredientCategory::VEGETABLES));
+
+  input_panel_->add_button(Icon::MEAT, ButtonType::Square,
+                           ButtonPosition::TopCenter, "Meat",
+                           open_category(IngredientCategory::MEAT));
+
+  input_panel_->add_button(Icon::FRUIT, ButtonType::Square,
+                           ButtonPosition::MiddleLeft, "Fruit",
+                           open_category(IngredientCategory::FRUIT));
+
+  input_panel_->add_button(Icon::CHEESE, ButtonType::Square,
+                           ButtonPosition::MiddleCenter, "Cheese",
+                           open_category(IngredientCategory::CHEESE));
 
   input_panel_->add_button(
-      Icon::MEAT, ButtonType::Square, ButtonPosition::TopCenter, "Meat",
-      [this]() {
-        state_.ui().replace_top<DepotIngredientCategoryViewState>(
-            IngredientCategory::MEAT);
-      });
-
-  input_panel_->add_button(
-      Icon::FRUIT, ButtonType::Square, ButtonPosition::MiddleLeft, "Fruit",
-      [this]() {
-        state_.ui().replace_top<DepotIngredientCategoryViewState>(
-            IngredientCategory::FRUIT);
-      });
-
-  input_panel_->add_button(
-      Icon::CHEESE, ButtonType::Square, ButtonPosition::MiddleCenter, "Cheese",
-      [this]() {
-        state_.ui().replace_top<DepotIngredientCategoryViewState>(
-            IngredientCategory::CHEESE);
-      });
-
-  input_panel_->add_button(Icon::BOMB, ButtonType::Horizontal,
-                           ButtonPosition::BottomLeft, "Weapons", [this]() {
-                             state_.ui().replace_top<DepotWeaponInterfaceState>(
-                                 property_);
-                           });
+      Icon::BOMB, ButtonType::Horizontal, ButtonPosition::BottomLeft, "Weapons",
+      [this]() { state_.ui().push<DepotWeaponInterfaceState>(property_); });
 
   input_panel_->add_button(Icon::ARROW_BACK, ButtonType::Square,
-                           ButtonPosition::BottomRight, "Back", [this]() {
-                             state_.advance_time_blocks(1);
-                             state_.ui().pop();
-                           });
+                           ButtonPosition::BottomRight, "Back",
+                           [this]() { state_.ui().pop(); });
 }

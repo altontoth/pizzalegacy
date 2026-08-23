@@ -7,4 +7,6 @@
 #pragma once
 
 // How often a screen runs an interruption pass while a window is open.
-enum class InterruptionRate { None, Half, Full };
+// OnAction has no rate of its own; those screens wait for input, so one pass
+// runs per key press or click.
+enum class InterruptionRate { None, OnAction, Half, Full };

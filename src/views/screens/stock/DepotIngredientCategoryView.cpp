@@ -152,37 +152,35 @@ void DepotIngredientCategoryView::draw_ingredient_list(
 }
 
 void DepotIngredientCategoryView::set_up_input_panel() {
+  auto show_category = [this](IngredientCategory category) {
+    return [this, category] {
+      show_priorities_ = false;
+      category_ = category;
+      state_.advance_time_blocks(1);
+      mark_dirty();
+    };
+  };
+
   input_panel_->add_button(Icon::VEGETABLE, ButtonType::Square,
-                           ButtonPosition::TopLeft, "Vegetables", [this]() {
-                             show_priorities_ = false;
-                             category_ = IngredientCategory::VEGETABLES;
-                             mark_dirty();
-                           });
+                           ButtonPosition::TopLeft, "Vegetables",
+                           show_category(IngredientCategory::VEGETABLES));
 
   input_panel_->add_button(Icon::MEAT, ButtonType::Square,
-                           ButtonPosition::TopCenter, "Meat", [this]() {
-                             show_priorities_ = false;
-                             category_ = IngredientCategory::MEAT;
-                             mark_dirty();
-                           });
+                           ButtonPosition::TopCenter, "Meat",
+                           show_category(IngredientCategory::MEAT));
 
   input_panel_->add_button(Icon::FRUIT, ButtonType::Square,
-                           ButtonPosition::MiddleLeft, "Fruit", [this]() {
-                             show_priorities_ = false;
-                             category_ = IngredientCategory::FRUIT;
-                             mark_dirty();
-                           });
+                           ButtonPosition::MiddleLeft, "Fruit",
+                           show_category(IngredientCategory::FRUIT));
 
   input_panel_->add_button(Icon::CHEESE, ButtonType::Square,
-                           ButtonPosition::MiddleCenter, "Cheese", [this]() {
-                             show_priorities_ = false;
-                             category_ = IngredientCategory::CHEESE;
-                             mark_dirty();
-                           });
+                           ButtonPosition::MiddleCenter, "Cheese",
+                           show_category(IngredientCategory::CHEESE));
 
   input_panel_->add_button(Icon::GLOBE, ButtonType::Square,
                            ButtonPosition::TopRight, "Export", [this]() {
                              show_priorities_ = false;
+                             state_.advance_time_blocks(1);
                              state_.ui().push<EuroMapState>(MapMode::DEPOT,
                                                             category_);
                            });

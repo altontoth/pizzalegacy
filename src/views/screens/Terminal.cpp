@@ -57,7 +57,12 @@ Terminal::Terminal(GameContext& context, GameState& state, TerminalState ts)
 
   if (ts.category) {
     current_category_ = *ts.category;
+  }
+  if (ts.connection_made) {
     transition_to_phase(DialingPhase::SUCCESSFUL_CONNECTION);
+    if (auto* top = state_.ui().top_as<TerminalState>()) {
+      top->connection_made = false;
+    }
   }
   reset_dialed_number();
 
@@ -631,6 +636,7 @@ void Terminal::on_dialing_phase_finished() {
     // Restore standard menu before returning to IDLE
     standard_inputmenu();
     transition_to_phase(DialingPhase::IDLE);
+    state_.process_pending_milestones();
     break;
 
   case DialingPhase::PHONE_PICKUP:
@@ -645,7 +651,7 @@ void Terminal::on_dialing_phase_finished() {
       // active
       transition_to_phase(DialingPhase::IDLE);
       // Replace our state with the state they need to return to
-      state_.ui().replace_top<TerminalState>(current_category_);
+      state_.ui().replace_top<TerminalState>(current_category_, true);
       // Now push the actor terminal view
       state_.ui().push<ActorTerminalState>(pending_actor_type_,
                                            *pending_actor_id_);

@@ -10,6 +10,7 @@
 
 #include "core/common/Ids.h"
 #include "core/restaurant/Restaurant.h"
+#include "core/state/InterruptionRate.h"
 #include "engine/input/InputListener.h"
 #include "engine/input/ListenerToken.h"
 #include "engine/input/TextSession.h"
@@ -29,6 +30,9 @@ public:
                  core::RestaurantId r_id);
   void tick() override;
   void render(const RenderContext& ctx) override;
+  InterruptionRate interruption_rate() const override {
+    return InterruptionRate::OnAction;
+  }
 
 private:
   void set_up_buttons();

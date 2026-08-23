@@ -646,6 +646,13 @@ void Game::handle_events(LoopState& loop_state) {
       }
       interaction_manager_->process(event);
       input_manager_->process(event);
+
+      const bool frozen = loop_state.overlays != nullptr &&
+                          loop_state.overlays->simulation_frozen();
+      if (!frozen && (event.type == SDL_EVENT_KEY_DOWN ||
+                      event.type == SDL_EVENT_MOUSE_BUTTON_DOWN)) {
+        loop_state.game_state.on_player_input();
+      }
     }
 
     if (event.type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) {

@@ -8,6 +8,7 @@
 
 #include "core/character/Staff.h"
 #include "core/restaurant/Restaurant.h"
+#include "core/state/InterruptionRate.h"
 #include "engine/geom/Spaces.h"
 #include "resources/Blitmap.h"
 #include "views/base/RestaurantSubView.h"
@@ -30,6 +31,9 @@ public:
   ~StaffView();
   void tick() override;
   void render(const RenderContext& ctx) override;
+  InterruptionRate interruption_rate() const override {
+    return InterruptionRate::OnAction;
+  }
 
 private:
   void navigate_to_restaurant(core::RestaurantId new_id) override;

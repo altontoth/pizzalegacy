@@ -104,7 +104,8 @@ public:
     return interruption_rate_;
   }
   [[nodiscard]] bool interruptions_allowed() const {
-    return interruption_rate_ != InterruptionRate::None;
+    return interruption_rate_ == InterruptionRate::Half ||
+           interruption_rate_ == InterruptionRate::Full;
   }
   [[nodiscard]] bool is_processing_end_of_turn() const {
     return processing_end_of_turn_;

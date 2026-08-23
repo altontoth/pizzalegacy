@@ -339,7 +339,6 @@ void GameState::advance_game_time() {
   if (turn_.interruptions_allowed()) {
     check_mafia_deadlines();
   }
-  process_pending_milestones();
 }
 
 void GameState::advance_second() {
@@ -368,8 +367,6 @@ void GameState::advance_second() {
   }
 }
 
-// TODO: the original charges the player a block on the way into an
-// interruption and five more on the way out.
 bool GameState::run_interruption_pass() {
   interruption_phase_ = next_phase(interruption_phase_);
 
@@ -399,6 +396,10 @@ bool GameState::dispatch_interruption() {
     return false;
   }
 
+  if (process_pending_milestones()) {
+    return true;
+  }
+
   // The player's end of day is checked ahead of the window, so it lands
   // whatever the second counter is doing.
   if (is_past_player_end_of_day()) {
@@ -412,6 +413,12 @@ bool GameState::dispatch_interruption() {
   return run_interruption_pass();
 }
 
+void GameState::on_player_input() {
+  if (turn_.interruption_rate() == InterruptionRate::OnAction) {
+    dispatch_interruption();
+  }
+}
+
 bool GameState::offer_interruption_tick() {
   switch (turn_.interruption_rate()) {
   case InterruptionRate::Full:
@@ -422,6 +429,7 @@ bool GameState::offer_interruption_tick() {
       return false;
     }
     break;
+  case InterruptionRate::OnAction:
   case InterruptionRate::None:
     return false;
   }
@@ -494,16 +502,17 @@ void GameState::eliminate_player(core::PlayerId id, GameOverCause cause) {
   ui_.push<GameOverState>(id, cause);
 }
 
-void GameState::process_pending_milestones() {
+bool GameState::process_pending_milestones() {
   auto* player = active_player();
   if (!player || !player->is_human_controlled()) {
-    return;
+    return false;
   }
 
   auto pending = career_log_.get_pending_for_player(player->id());
   for (auto msg_id : pending) {
     deliver_milestone(msg_id);
   }
+  return !pending.empty();
 }
 
 void GameState::pause_time_advancement() { clock_suspended_ = true; }

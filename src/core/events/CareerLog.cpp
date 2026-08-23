@@ -228,13 +228,10 @@ bool CareerLog::was_shown(MilestoneId msg_id, core::PlayerId player_id) const {
 
 bool CareerLog::claim_for_delivery(MilestoneId msg_id, core::PlayerId player_id,
                                    const GameDate& date) {
-  if (was_shown(msg_id, player_id)) {
-    return false;
-  }
-
+  const bool first_delivery = !was_shown(msg_id, player_id);
   schedule_message(msg_id, player_id, date);
   mark_as_shown(msg_id, player_id);
-  return true;
+  return first_delivery;
 }
 
 const EventData& CareerLog::get_data(MilestoneId msg_id) const {
@@ -274,7 +271,6 @@ void CareerLog::mark_as_shown(MilestoneId msg_id, core::PlayerId player_id) {
   for (auto& msg : messages) {
     if (msg.message_id == msg_id) {
       msg.shown = true;
-      break;
     }
   }
 }

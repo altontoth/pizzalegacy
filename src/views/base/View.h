@@ -33,8 +33,6 @@ public:
   void interaction_origin(ViewPoint p);
 
   // How often interruptions reach the player while this screen is up.
-  // TODO: a screen with no rate of its own dispatches once per key press or
-  // mouse click in the original, which None does not do.
   virtual InterruptionRate interruption_rate() const {
     return InterruptionRate::None;
   }

@@ -10,6 +10,7 @@
 #include <string>
 #include "core/GameTypes.h"
 #include "core/character/Actor.h"
+#include "core/state/InterruptionRate.h"
 #include "core/state/UIState.h"
 #include "views/base/MainPanelView.h"
 #include "views/helpers/TypewriterTextRenderer.h"
@@ -41,6 +42,9 @@ public:
   ~Terminal();
   void tick() override;
   void render(const RenderContext& ctx) override;
+  InterruptionRate interruption_rate() const override {
+    return InterruptionRate::OnAction;
+  }
 
 private:
   void standard_inputmenu();
