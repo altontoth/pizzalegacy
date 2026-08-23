@@ -597,6 +597,7 @@ static json mission_to_json(const MafiaMission& m) {
   j["item_index"] = m.item_index;
   j["quantity"] = m.quantity;
   j["clan"] = m.clan;
+  j["city"] = m.city.value;
   j["cash_amount"] = m.cash_amount.cents;
   j["pickup"] = mission_location_to_json(m.pickup);
   j["dropoff"] = mission_location_to_json(m.dropoff);
@@ -630,6 +631,7 @@ static MafiaMission json_to_mission(const json& j) {
   m.item_index = j.value("item_index", 0);
   m.quantity = j.value("quantity", 0);
   m.clan = j.value("clan", 0);
+  m.city = core::CityId{j.value("city", 0)};
   m.cash_amount = Money{j.value("cash_amount", int64_t{0})};
   if (j.contains("pickup")) {
     m.pickup = json_to_mission_location(j["pickup"]);

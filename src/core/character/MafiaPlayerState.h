@@ -9,6 +9,7 @@
 #include <array>
 #include <optional>
 #include <string>
+#include "core/common/Ids.h"
 #include "core/finance/Money.h"
 #include "core/time/GameDate.h"
 #include "core/time/GameTime.h"
@@ -57,6 +58,9 @@ struct MafiaMission {
   // Which mafia clan gave the mission: the index of the actor within the
   // city's mafia actors (city->actors(ActorType::MAFIA)).
   int clan = 0;
+
+  // The city the job was taken in (and the only one you can do it).
+  core::CityId city{0};
 
   // Package/Weapon: pickup and dropoff locations with date/time
   MissionLocation pickup;

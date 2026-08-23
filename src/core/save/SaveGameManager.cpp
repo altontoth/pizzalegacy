@@ -28,7 +28,6 @@
 #include "core/city/Property.h"
 #include "core/economy/WeaponMarket.h"
 #include "core/events/CareerLog.h"
-#include "core/finance/BankAccountRegistry.h"
 #include "core/mission/MissionTarget.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/save/SaveGameCharacter.h"
@@ -521,20 +520,6 @@ json SaveGameManager::state_to_json(const GameState& state,
 
   // Save RNG state so a loaded game resumes with the same random sequence
   j["rng_state"] = engine::random::get_state();
-
-  // Rebuilding on load misses mafia laundering and mission accounts, which are
-  // made at runtime.
-  json accounts = json::array();
-  for (const auto& account : state.bank_accounts().accounts_sorted()) {
-    json a;
-    a["number"] = account.number;
-    if (account.player_id) {
-      a["player_id"] = account.player_id->value;
-    }
-    a["deposited"] = account.deposited.cents;
-    accounts.push_back(a);
-  }
-  j["bank_accounts"] = accounts;
 
   // Save timestamp (ctime includes a trailing newline, so we need to trim it)
   std::time_t now = std::time(nullptr);
@@ -1035,18 +1020,6 @@ void SaveGameManager::json_to_state(const json& j, GameState& state,
         state.player_city(core::PlayerId{i},
                           core::CityId{cities[i].get<int>()});
       }
-    }
-  }
-
-  if (j.contains("bank_accounts")) {
-    for (const auto& a : j["bank_accounts"]) {
-      BankAccount account;
-      account.number = a["number"].get<int>();
-      if (a.contains("player_id")) {
-        account.player_id = core::PlayerId{a["player_id"].get<int>()};
-      }
-      account.deposited = Money{a["deposited"].get<int64_t>()};
-      state.bank_accounts().restore_account(account);
     }
   }
 

@@ -439,16 +439,9 @@ void PoliceConversation::apply_confiscation() {
       inv[item] = 0;
     }
     break;
-  case ArrestReason::LaunderingMoney: {
-    auto& mission = player->mafia_state().active_mission;
-    if (mission) {
-      for (int acct : mission->bank_accounts) {
-        state_.bank_accounts().close_account(acct);
-      }
-      player->mafia_state().active_mission = std::nullopt;
-    }
+  case ArrestReason::LaunderingMoney:
+    player->mafia_state().active_mission = std::nullopt;
     break;
-  }
   case ArrestReason::PosessingWeapons:
     sentence_days_ = std::max(sentence_days_, 4);
     for (auto item :

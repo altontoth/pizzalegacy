@@ -11,11 +11,13 @@
 
 #include <algorithm>
 #include <cassert>
+#include <optional>
 #include <ranges>
 #include <utility>
 #include "conversations/MayorConversation.h"
 #include "core/character/Actor.h"
 #include "core/character/Awards.h"
+#include "core/character/MafiaPlayerState.h"
 #include "core/character/Player.h"
 #include "core/character/Staff.h"
 #include "core/city/City.h"
@@ -864,29 +866,7 @@ void GameState::check_mafia_deadlines() {
     return;
   }
 
-  // Check laundering mission completion (all 4 accounts received their share)
   auto& mission = player->mafia_state().active_mission;
-  if (mission && mission->active &&
-      mission->mission_type == MafiaMissionType::Laundering &&
-      !mission->completed) {
-    Money per_account = mission->cash_amount / 4;
-    bool all_done = true;
-    for (int i = 0; i < 4; i++) {
-      auto* acct = bank_accounts_.find(mission->bank_accounts[i]);
-      if (acct && acct->deposited >= per_account) {
-        mission->launder_done[i] = true;
-      }
-      if (!mission->launder_done[i]) {
-        all_done = false;
-      }
-    }
-    if (all_done) {
-      mission->completed = true;
-      for (int acct : mission->bank_accounts) {
-        bank_accounts_.close_account(acct);
-      }
-    }
-  }
 
   // Mission deadline check
   if (mission && mission->active) {
@@ -1008,15 +988,6 @@ init::Config& GameState::initializer() {
   return *initializer_;
 }
 
-void GameState::register_bank_accounts() {
-  // Fixed player accounts, 111111 through 888888.
-  for (int i = 0; i < NUMBER_OF_PLAYERS; ++i) {
-    if (players_[i]) {
-      bank_accounts_.register_player_account(core::PlayerId{i});
-    }
-  }
-}
-
 void GameState::finalize_initialization(GameContext& context) {
   context_ = &context;
 
@@ -1078,8 +1049,6 @@ void GameState::finalize_initialization(GameContext& context) {
       players_[i]->mark_city_visited(cfg.city_id);
     }
   }
-
-  register_bank_accounts();
 
   initialise_city_for_ai(*active_city());
 
@@ -1540,6 +1509,21 @@ GameState::simulated_cities_for(core::PlayerId pid) const {
   return {};
 }
 
+// Each player's account number is a multiple of this: 111111 for the first
+// player, 222222 for the second.
+constexpr int player_account_factor = 111'111;
+
+Player* GameState::player_with_account(int account_number) const {
+  if (account_number <= 0 || account_number % player_account_factor != 0) {
+    return nullptr;
+  }
+  int index = (account_number / player_account_factor) - 1;
+  if (index < 0 || index >= NUMBER_OF_PLAYERS) {
+    return nullptr;
+  }
+  return player(core::PlayerId{index});
+}
+
 bool GameState::bank_transfer(int account_number, Money amount,
                               Player& sender) {
   // A mayor's account number only works in their own city.
@@ -1557,9 +1541,26 @@ bool GameState::bank_transfer(int account_number, Money amount,
     }
   }
 
-  auto* account = mayor ? nullptr : bank_accounts_.find(account_number);
-  if (!mayor && !account) {
-    return false;
+  std::optional<int> launder_slot;
+  auto& mission = sender.mafia_state().active_mission;
+  if (!mayor && mission && mission->active &&
+      mission->mission_type == MafiaMissionType::Laundering &&
+      mission->city == active_city_) {
+    for (int i = 0; i < 4; i++) {
+      if (account_number == mission->bank_accounts[i]) {
+        launder_slot = i;
+        break;
+      }
+    }
+  }
+
+  // Any other number has to be a player's own account.
+  Player* target = nullptr;
+  if (!mayor && !launder_slot) {
+    target = player_with_account(account_number);
+    if (!target) {
+      return false;
+    }
   }
 
   const auto& date = time().current_date();
@@ -1581,17 +1582,19 @@ bool GameState::bank_transfer(int account_number, Money amount,
     return true;
   }
 
-  // Credit the target
-  if (account->player_id) {
-    auto* target = player(*account->player_id);
-    if (target) {
-      target->financials().transfer(date, Account::Others, Account::Cash,
-                                    amount, AccountingScope::Operational);
+  // Paying less than the account's share loses the money.
+  if (launder_slot) {
+    if (amount >= mission->cash_amount / 4) {
+      mission->launder_done[*launder_slot] = true;
     }
+    if (std::all_of(mission->launder_done.begin(), mission->launder_done.end(),
+                    [](bool done) { return done; })) {
+      mission->completed = true;
+    }
+    return true;
   }
 
-  // Track the deposit (for the mafia to query)
-  bank_accounts_.deposit(account_number, amount);
-
+  target->financials().transfer(date, Account::Others, Account::Cash, amount,
+                                AccountingScope::Operational);
   return true;
 }

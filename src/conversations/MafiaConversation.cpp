@@ -506,10 +506,6 @@ bool MafiaConversation::advance_proposal(bool agree) {
           // Give the player the laundering cash up front
           player->financials().spend_cash(date, Account::Missions,
                                           -pending_mission_->cash_amount);
-          // Register the 4 laundering accounts so bank transfers reach them
-          for (int acct : pending_mission_->bank_accounts) {
-            state_.bank_accounts().register_account(acct);
-          }
         }
         else if (pending_mission_->mission_type ==
                  MafiaMissionType::Investment) {
@@ -890,6 +886,8 @@ std::optional<MafiaMission> MafiaConversation::generate_mission(int rank) {
   const auto& date = state_.time().current_date();
   auto* city = state_.active_city();
   int difficulty = state_.difficulty_level();
+
+  mission.city = city->id();
 
   // Higher rank unlocks higher mission types (rank/2, capped at 5).
   // rand_max_n(0) returns 0, so rank 0-1 always yields type 1 (package).

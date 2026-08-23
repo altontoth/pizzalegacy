@@ -11,7 +11,6 @@
 #include "core/city/CityViewMapState.h"
 #include "core/economy/WeaponMarket.h"
 #include "core/events/CareerLog.h"
-#include "core/finance/BankAccountRegistry.h"
 #include "core/food/CustomerTasteProfiles.h"
 #include "core/init/NewGameConfig.h"
 #include "core/mission/MissionTarget.h"
@@ -136,8 +135,6 @@ public:
   init::Config& initializer();
   void finalize_initialization(GameContext& context);
 
-  void register_bank_accounts();
-
   // Player management
   std::array<Player*, NUMBER_OF_PLAYERS> players() const;
   Player* active_player() const; // returns active player
@@ -153,8 +150,8 @@ public:
   [[nodiscard]] bool spend_cash(Account to, Money amount,
                                 core::RestaurantId restaurant_id);
 
-  BankAccountRegistry& bank_accounts() { return bank_accounts_; }
-  const BankAccountRegistry& bank_accounts() const { return bank_accounts_; }
+  // The player whose account number this is, or null if it is nobody's.
+  Player* player_with_account(int account_number) const;
 
   WeaponMarket& weapon_market() { return weapon_market_; }
   const WeaponMarket& weapon_market() const { return weapon_market_; }
@@ -510,7 +507,6 @@ private:
   std::optional<bool> pending_crt_;
   core::newspaper::ArticleDatabase article_database_;
   core::events::CareerLog career_log_;
-  BankAccountRegistry bank_accounts_;
   core::food::CustomerTasteProfiles customer_taste_profiles_{
       core::food::default_customer_taste_profiles()};
   WeaponMarket weapon_market_;

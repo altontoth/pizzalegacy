@@ -42,7 +42,6 @@ set(GAME_PLEGACY_SOURCES
     src/core/economy/WeaponMarket.cpp
     src/core/events/CareerLog.cpp
     src/core/finance/BalanceSheet.cpp
-    src/core/finance/BankAccountRegistry.cpp
     src/core/finance/Ledger.cpp
     src/core/finance/Loan.cpp
     src/core/finance/MoneyParse.cpp
@@ -368,7 +367,6 @@ set(PLEGACY_HEADERS
     src/core/events/CareerLog.h
     src/core/events/MilestoneId.h
     src/core/finance/BalanceSheet.h
-    src/core/finance/BankAccountRegistry.h
     src/core/finance/Investment.h
     src/core/finance/Ledger.h
     src/core/finance/Loan.h
