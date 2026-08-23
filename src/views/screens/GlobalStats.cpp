@@ -24,7 +24,22 @@
 constexpr int text_color = 11;
 
 namespace {
-// Helper functions removed - now query ledger directly
+// The Balance page labels four accounts differently from the rest of the game,
+// following the original's wording.
+std::string_view balance_label(Account account) {
+  switch (account) {
+  case Account::Property:
+    return "Property";
+  case Account::Stock:
+    return "supplies";
+  case Account::Cash:
+    return "money";
+  case Account::Loan:
+    return "loans";
+  default:
+    return to_string(account);
+  }
+}
 } // namespace
 
 GlobalStats::GlobalStats(GameContext& context, GameState& state)
@@ -220,7 +235,7 @@ void GlobalStats::render_month_overview(const RenderContext& ctx) {
   constexpr int row_height = 18;
 
   auto create_clickable_row = [&](Account acct, ViewPoint pos, bool is_receipt,
-                                  bool is_total, const std::string& label) {
+                                  bool is_total, std::string_view label) {
     ViewRect click_area{pos.x, pos.y - 2, row_width, row_height};
     interactions_.create_frame_item(
         click_area, label, [this, acct, is_receipt, is_total](auto& ie) {
@@ -872,9 +887,9 @@ void GlobalStats::render_balance(const RenderContext& ctx) {
   context_.font->render_text_onto(*ctx.surface, "Balance", {136, 42},
                                   FontFace::RUBY, ts);
   context_.font->render_text_onto(*ctx.surface, "Assets", {12, 82},
-                                  FontFace::RUBY, ts);
+                                  FontFace::ASTANDAR, ts);
   context_.font->render_text_onto(*ctx.surface, "Liabilities", {214, 82},
-                                  FontFace::RUBY, ts);
+                                  FontFace::ASTANDAR, ts);
 
   render_balance_lines(ctx);
 
@@ -910,10 +925,8 @@ void GlobalStats::render_balance(const RenderContext& ctx) {
       loss_amount = entry.amount;
       continue;
     }
-    std::string label = (entry.account == Account::Stock)
-                            ? "supplies"
-                            : to_string(entry.account);
-    draw_label_and_amount(label, entry.amount, label_pos);
+    draw_label_and_amount(balance_label(entry.account), entry.amount,
+                          label_pos);
     label_pos.y += line_spacing;
   }
   // loss sits one extra line below the regular assets, drawn in red
@@ -933,9 +946,9 @@ void GlobalStats::render_balance(const RenderContext& ctx) {
   label_pos = ViewPoint{190, 120};
   for (const auto& entry : balance.liabilities()) {
     // ProfitAndLoss shows as "profit" on liability side when positive
-    std::string label = (entry.account == Account::ProfitAndLoss)
-                            ? "profit"
-                            : to_string(entry.account);
+    std::string_view label = (entry.account == Account::ProfitAndLoss)
+                                 ? "profit"
+                                 : balance_label(entry.account);
     // Amounts are already negated in BalanceSheet to show as positive
     draw_label_and_amount(label, entry.amount, label_pos);
     label_pos.y += line_spacing;

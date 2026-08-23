@@ -30,13 +30,17 @@ void TurnPresenterView::show_weekly_reports(
 }
 
 void TurnPresenterView::show_electricity_slot_invoice(
-    core::RestaurantId restaurant_id, std::function<void()> on_done) {
+    const core::finance::ElectricitySlotInvoice& invoice,
+    std::function<void()> on_done) {
   views::ui::finance::show_electricity_slot_invoice_popup(
-      context_, gs_, restaurant_id, std::move(on_done));
+      context_, gs_, invoice, std::move(on_done));
 }
 
-void TurnPresenterView::show_monthly_invoice(core::PlayerId player_id) {
-  views::ui::finance::show_monthly_invoice_popup(context_, gs_, player_id);
+void TurnPresenterView::show_monthly_invoice(
+    core::PlayerId player_id, const core::finance::MonthlyCosts& costs,
+    std::function<void()> on_done) {
+  views::ui::finance::show_monthly_invoice_popup(context_, gs_, player_id,
+                                                 costs, std::move(on_done));
 }
 
 void TurnPresenterView::show_player_turn_card(core::PlayerId player,

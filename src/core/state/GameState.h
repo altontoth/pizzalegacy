@@ -520,5 +520,6 @@ private:
   StaffEventPresenter staff_event_presenter_;
   MonthlyEntryPresenter monthly_entry_presenter_;
   std::unique_ptr<TurnPresenter> turn_presenter_;
+  std::unique_ptr<TurnPresenter> no_turn_presenter_;
   std::unique_ptr<FadePresenter> fade_presenter_;
 };

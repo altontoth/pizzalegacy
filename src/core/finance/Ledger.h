@@ -10,6 +10,7 @@
 #include <optional>
 #include <ostream>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <vector>
 #include "core/common/Ids.h"
@@ -52,8 +53,7 @@ enum class Account {
   Cheat,
 };
 
-// Free function for converting Account to string
-inline std::string to_string(Account account) {
+inline std::string_view to_string(Account account) {
   switch (account) {
   case Account::Property:
     return "property";

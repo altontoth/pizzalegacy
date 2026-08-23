@@ -78,4 +78,12 @@ WeeklyCityProfits collect_weekly_city_profits(const GameState& gs,
 void apply_weekly_city_profits(GameState& gs, Player& player,
                                const WeeklyCityProfits& profits);
 
+// Everything the end-of-week report chain posts across its popups: wages for
+// each of the player's restaurants in the active city, their electricity
+// invoice when the month ends with the week, then the other cities' profits.
+// A run with no presenter shows none of those popups, so it posts them here.
+void apply_weekly_settlement(GameState& gs, core::PlayerId player_id,
+                             const std::vector<Restaurant*>& restaurants,
+                             bool with_electricity);
+
 } // namespace core::finance

@@ -26,9 +26,12 @@ public:
                            core::PlayerId previous_player,
                            std::function<void()> on_done,
                            bool interleave_electricity) override;
-  void show_electricity_slot_invoice(core::RestaurantId restaurant_id,
-                                     std::function<void()> on_done) override;
-  void show_monthly_invoice(core::PlayerId player_id) override;
+  void show_electricity_slot_invoice(
+      const core::finance::ElectricitySlotInvoice& invoice,
+      std::function<void()> on_done) override;
+  void show_monthly_invoice(core::PlayerId player_id,
+                            const core::finance::MonthlyCosts& costs,
+                            std::function<void()> on_done) override;
   void show_player_turn_card(core::PlayerId player, const GameDate& date,
                              std::function<void()> on_closed) override;
 

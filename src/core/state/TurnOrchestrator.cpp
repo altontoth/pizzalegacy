@@ -19,6 +19,7 @@
 #include "core/city/City.h"
 #include "core/city/Property.h"
 #include "core/events/MilestoneId.h"
+#include "core/finance/TurnInvoices.h"
 #include "core/food/IngredientType.h"
 #include "core/restaurant/AIEconomy.h"
 #include "core/restaurant/Restaurant.h"
@@ -990,17 +991,42 @@ TurnOrchestrator::execute_pipeline_step(const turn::Step& step) {
           },
 
           [&](const turn::MonthlyRestaurantInvoice& s) {
-            if (!gs_->restaurant(s.id)) {
+            auto* rest = gs_->restaurant(s.id);
+            if (!rest) {
               return StepResult::Done;
             }
+            auto owner = rest->property().owner_or_tenant();
+            if (!owner) {
+              return StepResult::Done;
+            }
+            auto invoice =
+                core::finance::collect_electricity_slot_invoice(*rest);
             gs_->turn_presenter().show_electricity_slot_invoice(
-                s.id, [this]() { advance_pipeline(); });
+                invoice, [this, invoice, owner = *owner]() {
+                  if (auto* player = gs_->player(owner)) {
+                    core::finance::apply_electricity_slot_invoice(*gs_, *player,
+                                                                  invoice);
+                  }
+                  advance_pipeline();
+                });
             return StepResult::Waiting;
           },
 
           [&](const turn::MonthlyInvoice& s) {
-            gs_->turn_presenter().show_monthly_invoice(s.previous_player);
-            return StepResult::Done;
+            auto* player = gs_->player(s.previous_player);
+            if (!player) {
+              return StepResult::Done;
+            }
+            auto costs = core::finance::collect_monthly_costs(*gs_, *player);
+            gs_->turn_presenter().show_monthly_invoice(
+                s.previous_player, costs,
+                [this, costs, id = s.previous_player]() {
+                  if (auto* p = gs_->player(id)) {
+                    core::finance::apply_monthly_costs(*gs_, *p, costs);
+                  }
+                  advance_pipeline();
+                });
+            return StepResult::Waiting;
           },
 
           [&](const turn::Autosave&) {

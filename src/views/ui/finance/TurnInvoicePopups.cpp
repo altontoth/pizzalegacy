@@ -63,19 +63,12 @@ void show_staff_invoice_popup(GameContext& context, GameState& gs,
   context.popup->create<InvoicePopup>(std::move(cfg));
 }
 
-void show_electricity_slot_invoice_popup(GameContext& context, GameState& gs,
-                                         core::RestaurantId restaurant_id,
-                                         std::function<void()> after) {
-  auto* rest = gs.restaurant(restaurant_id);
+void show_electricity_slot_invoice_popup(
+    GameContext& context, GameState& gs,
+    const core::finance::ElectricitySlotInvoice& invoice,
+    std::function<void()> after) {
+  auto* rest = gs.restaurant(invoice.restaurant_id);
   assert(rest);
-
-  auto owner_id = rest->property().owner_or_tenant();
-  assert(owner_id);
-
-  auto* player = gs.player(*owner_id);
-  assert(player);
-
-  auto invoice = core::finance::collect_electricity_slot_invoice(*rest);
 
   InvoiceConfig cfg;
   cfg.title = "Invoice";
@@ -90,12 +83,7 @@ void show_electricity_slot_invoice_popup(GameContext& context, GameState& gs,
   cfg.lines.push_back(empty_line);
   cfg.lines.push_back({"TOTAL:", invoice.total});
 
-  cfg.on_dismiss = [&gs, player, invoice, after = std::move(after)]() {
-    core::finance::apply_electricity_slot_invoice(gs, *player, invoice);
-    if (after) {
-      after();
-    }
-  };
+  cfg.on_dismiss = std::move(after);
 
   context.popup->origin(invoice_popup_origin);
   context.popup->create<InvoicePopup>(std::move(cfg));
@@ -103,13 +91,12 @@ void show_electricity_slot_invoice_popup(GameContext& context, GameState& gs,
 
 void show_monthly_invoice_popup(GameContext& context, GameState& gs,
                                 core::PlayerId player_id,
+                                const core::finance::MonthlyCosts& costs,
                                 std::function<void()> on_done) {
   auto* player = gs.player(player_id);
   if (!player) {
     return;
   }
-
-  auto costs = core::finance::collect_monthly_costs(gs, *player);
 
   InvoiceConfig cfg;
   cfg.subtitle = "for " + player->name();
@@ -124,13 +111,7 @@ void show_monthly_invoice_popup(GameContext& context, GameState& gs,
   cfg.lines.push_back(empty_line);
   cfg.lines.push_back({"TOTAL:", costs.total});
 
-  cfg.on_dismiss = [&gs, player, costs = std::move(costs),
-                    on_done = std::move(on_done)]() {
-    core::finance::apply_monthly_costs(gs, *player, costs);
-    if (on_done) {
-      on_done();
-    }
-  };
+  cfg.on_dismiss = std::move(on_done);
 
   context.popup->origin(invoice_popup_origin);
   context.popup->create<InvoicePopup>(std::move(cfg));
@@ -189,8 +170,26 @@ void push_weekly_restaurant_reports(GameContext& context, GameState& gs,
     auto rest_id = restaurant->id();
     if (interleave_electricity) {
       tail = [&context, &gs, rest_id, next = std::move(tail)]() mutable {
-        show_electricity_slot_invoice_popup(context, gs, rest_id,
-                                            std::move(next));
+        auto* rest = gs.restaurant(rest_id);
+        auto owner = rest ? rest->property().owner_or_tenant() : std::nullopt;
+        if (!owner) {
+          if (next) {
+            next();
+          }
+          return;
+        }
+        auto invoice = core::finance::collect_electricity_slot_invoice(*rest);
+        show_electricity_slot_invoice_popup(
+            context, gs, invoice,
+            [&gs, invoice, owner = *owner, next = std::move(next)]() mutable {
+              if (auto* player = gs.player(owner)) {
+                core::finance::apply_electricity_slot_invoice(gs, *player,
+                                                              invoice);
+              }
+              if (next) {
+                next();
+              }
+            });
       };
     }
     if (restaurant->wants_open() && !restaurant->is_force_closed()) {

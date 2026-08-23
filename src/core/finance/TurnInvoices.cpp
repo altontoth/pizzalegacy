@@ -156,4 +156,27 @@ void apply_weekly_city_profits(GameState& gs, Player& player,
   gs.status().refresh_header();
 }
 
+void apply_weekly_settlement(GameState& gs, core::PlayerId player_id,
+                             const std::vector<Restaurant*>& restaurants,
+                             bool with_electricity) {
+  Player* player = gs.player(player_id);
+  if (!player) {
+    return;
+  }
+  const auto* active_city = gs.active_city();
+  for (Restaurant* rest : restaurants) {
+    if (!rest || !active_city ||
+        rest->property().city().id() != active_city->id()) {
+      continue;
+    }
+    gs.deduct_staff_wages_for_restaurant(rest->id());
+    if (with_electricity) {
+      apply_electricity_slot_invoice(gs, *player,
+                                     collect_electricity_slot_invoice(*rest));
+    }
+  }
+  apply_weekly_city_profits(gs, *player,
+                            collect_weekly_city_profits(gs, *player));
+}
+
 } // namespace core::finance

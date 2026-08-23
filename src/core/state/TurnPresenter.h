@@ -7,6 +7,7 @@
 #pragma once
 
 #include "core/common/Ids.h"
+#include "core/finance/TurnInvoices.h"
 #include "core/time/GameDate.h"
 
 #include <functional>
@@ -39,11 +40,14 @@ public:
                                    bool interleave_electricity) = 0;
 
   // Per-restaurant electricity/slot invoice at end of month.
-  virtual void show_electricity_slot_invoice(core::RestaurantId restaurant_id,
-                                             std::function<void()> on_done) = 0;
+  virtual void show_electricity_slot_invoice(
+      const core::finance::ElectricitySlotInvoice& invoice,
+      std::function<void()> on_done) = 0;
 
   // Monthly loans and rent invoice for a player.
-  virtual void show_monthly_invoice(core::PlayerId player_id) = 0;
+  virtual void show_monthly_invoice(core::PlayerId player_id,
+                                    const core::finance::MonthlyCosts& costs,
+                                    std::function<void()> on_done) = 0;
 
   // The steps queued behind the turn card keep running while it is being shown.
   virtual void show_player_turn_card(core::PlayerId player,
@@ -54,27 +58,37 @@ public:
 };
 
 // When there is no presenter registered we use a NoTurnPresenter instead so the
-// turn can still finish without having popups.
+// turn can still finish without having popups. It never builds the end-of-week
+// report chain, so it posts that week's money itself.
 class NoTurnPresenter : public TurnPresenter {
 public:
+  explicit NoTurnPresenter(GameState& gs) : gs_(gs) {}
+
   void show_manager_alert(std::string /*message*/,
                           const RawRenderable* /*portrait*/,
                           std::function<void()> on_done) override {
     on_done();
   }
-  void show_weekly_reports(const std::vector<Restaurant*>& /*restaurants*/,
-                           core::PlayerId /*previous_player*/,
+  void show_weekly_reports(const std::vector<Restaurant*>& restaurants,
+                           core::PlayerId previous_player,
                            std::function<void()> on_done,
-                           bool /*interleave_electricity*/) override {
+                           bool interleave_electricity) override {
+    core::finance::apply_weekly_settlement(gs_, previous_player, restaurants,
+                                           interleave_electricity);
     if (on_done) {
       on_done();
     }
   }
-  void show_electricity_slot_invoice(core::RestaurantId /*restaurant_id*/,
-                                     std::function<void()> on_done) override {
+  void show_electricity_slot_invoice(
+      const core::finance::ElectricitySlotInvoice& /*invoice*/,
+      std::function<void()> on_done) override {
     on_done();
   }
-  void show_monthly_invoice(core::PlayerId /*player_id*/) override {}
+  void show_monthly_invoice(core::PlayerId /*player_id*/,
+                            const core::finance::MonthlyCosts& /*costs*/,
+                            std::function<void()> on_done) override {
+    on_done();
+  }
   // Held until the next tick so the steps queued behind the card run first.
   void show_player_turn_card(core::PlayerId /*player*/,
                              const GameDate& /*date*/,
@@ -88,5 +102,6 @@ public:
   }
 
 private:
+  GameState& gs_;
   std::function<void()> pending_close_;
 };

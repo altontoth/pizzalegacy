@@ -52,8 +52,13 @@ void GameState::turn_presenter(std::unique_ptr<TurnPresenter> presenter) {
 }
 
 TurnPresenter& GameState::turn_presenter() {
-  static NoTurnPresenter nobody;
-  return turn_presenter_ ? *turn_presenter_ : nobody;
+  if (turn_presenter_) {
+    return *turn_presenter_;
+  }
+  if (!no_turn_presenter_) {
+    no_turn_presenter_ = std::make_unique<NoTurnPresenter>(*this);
+  }
+  return *no_turn_presenter_;
 }
 
 void GameState::fade_presenter(std::unique_ptr<FadePresenter> presenter) {

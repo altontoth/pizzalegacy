@@ -1046,20 +1046,6 @@ void Restaurant::end_of_day(GameState& game_state) {
   assert(player);
   const auto& date = game_state.time().current_date();
 
-  // Pay monthly rent on the last day of the month
-  if (player->is_human_controlled() && date.is_end_of_month() &&
-      property_.is_rented()) {
-    Money monthly_rent = property_.get_monthly_rent();
-
-    if (monthly_rent.cents > 0) {
-      player->financials().transfer(date, Account::Cash, Account::Rents,
-                                    monthly_rent, restaurant_id_,
-                                    AccountingScope::Operational);
-      Logger::info("[Restaurant] {} - Paid monthly rent: {}", name_,
-                   monthly_rent);
-    }
-  }
-
   // AI players use a simplified pipeline: range, reputation, competition,
   // revenue. They skip full order fulfillment and ingredient consumption.
   if (!player->is_human_controlled()) {

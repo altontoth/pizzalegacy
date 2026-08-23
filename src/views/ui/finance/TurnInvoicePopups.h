@@ -7,6 +7,7 @@
 #pragma once
 
 #include "core/common/Ids.h"
+#include "core/finance/TurnInvoices.h"
 
 #include <functional>
 #include <vector>
@@ -16,21 +17,23 @@ class GameState;
 class Restaurant;
 
 // Popup builders for the periodic invoices shown around the turn boundary.
-// Amounts come from core/finance/TurnInvoices.h; each popup applies its
-// transfers on dismiss, then calls the given continuation.
+// Amounts come from core/finance/TurnInvoices.h; each popup runs the
+// continuation it is given when the player dismisses it.
 namespace views::ui::finance {
 
 void show_staff_invoice_popup(GameContext& context, GameState& gs,
                               core::RestaurantId restaurant_id,
                               std::function<void()> after);
 
-void show_electricity_slot_invoice_popup(GameContext& context, GameState& gs,
-                                         core::RestaurantId restaurant_id,
-                                         std::function<void()> after);
+void show_electricity_slot_invoice_popup(
+    GameContext& context, GameState& gs,
+    const core::finance::ElectricitySlotInvoice& invoice,
+    std::function<void()> after);
 
 // Monthly costs (loans + rent) for a player.
 void show_monthly_invoice_popup(GameContext& context, GameState& gs,
                                 core::PlayerId player_id,
+                                const core::finance::MonthlyCosts& costs,
                                 std::function<void()> on_done = {});
 
 // Weekly profit of all non-active cities (Saturday only).
