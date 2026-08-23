@@ -520,9 +520,9 @@ bool GameState::process_pending_milestones() {
   return !pending.empty();
 }
 
-void GameState::pause_time_advancement() { clock_suspended_ = true; }
+void GameState::suspend_clock() { clock_suspended_ = true; }
 
-void GameState::resume_time_advancement() {
+void GameState::resume_clock() {
   clock_suspended_ = false;
 
   if (turn_.may_auto_end_turn()) {
@@ -532,7 +532,7 @@ void GameState::resume_time_advancement() {
 
 void GameState::enter_realtime_play() {
   clock_rate_ = ClockRate::Running;
-  resume_time_advancement();
+  resume_clock();
   turn_.interruption_rate(InterruptionRate::Full);
 }
 

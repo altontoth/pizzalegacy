@@ -97,7 +97,7 @@ bool TurnOrchestrator::may_auto_end_turn() const {
 }
 
 void TurnOrchestrator::end_of_turn() {
-  gs_->pause_time_advancement();
+  gs_->suspend_clock();
 
   auto* current_player = gs_->active_player();
 
@@ -951,7 +951,7 @@ TurnOrchestrator::execute_pipeline_step(const turn::Step& step) {
           [&](const turn::ResumeTime&) {
             if (gs_->players_[gs_->active_player_.value]
                     ->is_human_controlled()) {
-              gs_->resume_time_advancement();
+              gs_->resume_clock();
             }
             return StepResult::Done;
           },

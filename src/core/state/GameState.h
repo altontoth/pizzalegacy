@@ -262,8 +262,10 @@ public:
   void advance_game_time();
   void update(uint32_t elapsed_ms);
 
-  void pause_time_advancement();
-  void resume_time_advancement();
+  // Stops and restarts the clock for the turn pipeline, separately from the
+  // rate the current screen sets.
+  void suspend_clock();
+  void resume_clock();
   void clock_rate(ClockRate rate) { clock_rate_ = rate; }
 
   // For headless play:
