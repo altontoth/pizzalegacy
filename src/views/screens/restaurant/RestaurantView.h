@@ -122,6 +122,7 @@ private:
   void render_guest_upper();
   void render_guest_pizzas();
 
+  void seed_seated_guests();
   void rebuild_guest_cache();
   static ViewPoint center_of(const ViewRect& r);
 
@@ -160,7 +161,6 @@ private:
   ScrollEdges scroll_edges_{camctrl_, wood_edge_rects(panel_origin_)};
   views::screens::restaurant::SeatedCharacterRenderer guest_renderer_{context_};
   std::vector<GuestRenderItem> guests_cache_;
-  std::vector<const PlacedFurniture*> shuffled_chairs_;
 
   // Returns the index into guests_cache_ for the guest on this chair, or
   // nullopt if the chair is unoccupied. Toggles selection state.
@@ -169,11 +169,18 @@ private:
   std::unordered_map<core::FurnitureId, bool, core::FurnitureId::Hasher>
       guest_talked_to_;
 
-  // Guest animation controllers (one per chair, keyed by furniture ID)
-  std::unordered_map<core::FurnitureId,
-                     views::screens::restaurant::CharacterController,
-                     core::FurnitureId::Hasher>
-      guest_controllers_;
+  // A guest in their chair, with the animation controller that draws them.
+  struct SeatedGuest {
+    core::FurnitureId chair_id;
+    views::screens::restaurant::CharacterController controller;
+  };
+
+  // The seated guests, oldest first.
+  std::vector<SeatedGuest> seated_guests_;
+  bool guests_seeded_{false};
+
+  // The guest on this chair, or null when it is empty.
+  SeatedGuest* seated_guest(core::FurnitureId chair_id);
 
   int furniture_draw_counter_{0};
   int interior_end_row_{0};

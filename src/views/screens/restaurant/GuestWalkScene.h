@@ -81,15 +81,8 @@ public:
   // Draw the walker (and walk debug overlays) onto the view background.
   void render();
 
-  // Chair whose guest is currently walking out; excluded from seating.
-  std::optional<core::FurnitureId> departing_chair_id() const {
-    return departing_chair_id_;
-  }
-
-  // Seated-guest count adjustment from walkers that arrived or departed on
-  // top of the restaurant's occupancy figure.
-  int occupancy_delta() const { return guest_occupancy_delta_; }
-  void reset_occupancy_delta() { guest_occupancy_delta_ = 0; }
+  // Drop the walking guest or waiter.
+  void reset() { walking_guest_.reset(); }
 
 #ifndef NDEBUG
   void toggle_walk_debug() { show_walk_debug_ = !show_walk_debug_; }
@@ -112,7 +105,6 @@ private:
   bool plan_route(WalkingGuest& walker);
   void try_replan(WalkingGuest& walker);
   void seat_arrived_guest();
-  void retire_chair(core::FurnitureId chair_id);
   WorldRect furniture_rect(const PlacedFurniture& pf) const;
   // Offset from a walker's world position to the top left of its sprite.
   ViewPoint sprite_anchor_offset(int guest_type) const;
@@ -136,9 +128,7 @@ private:
   GameState& state_;
 
   std::optional<WalkingGuest> walking_guest_;
-  std::optional<core::FurnitureId> departing_chair_id_;
   int spawn_anim_gate_{0};
-  int guest_occupancy_delta_{0};
 #ifndef NDEBUG
   bool show_walk_debug_{false};
   // 0=grid+path, 1=grid only, 2=path only, 3=full nav grid

@@ -6,7 +6,6 @@
 
 #include "views/screens/restaurant/GuestWalkScene.h"
 
-#include <algorithm>
 #include <array>
 #include <utility>
 #include <vector>
@@ -168,9 +167,6 @@ bool GuestWalkScene::give_up(WalkingGuest& walker) {
     walker.goal = kitchen_door();
     return plan_route(walker) ? true : begin_scripted_out(walker);
   }
-  if (walker.kind == WalkingGuest::WalkerKind::GUEST) {
-    retire_chair(walker.chair_id);
-  }
   return begin_scripted_out(walker);
 }
 
@@ -200,23 +196,9 @@ bool GuestWalkScene::begin_scripted_out(WalkingGuest& walker) {
 }
 
 bool GuestWalkScene::finish() {
-  if (walking_guest_->kind == WalkingGuest::WalkerKind::GUEST_DEPARTING) {
-    departing_chair_id_.reset();
-  }
   walking_guest_.reset();
   view_.mark_dirty();
   return false;
-}
-
-// Move a chair to the back of the seating order so it falls outside the
-// occupied range (0..effective_guests-1).
-void GuestWalkScene::retire_chair(core::FurnitureId chair_id) {
-  auto it = std::ranges::find_if(
-      view_.shuffled_chairs_,
-      [&](const PlacedFurniture* pf) { return pf->id() == chair_id; });
-  if (it != view_.shuffled_chairs_.end()) {
-    std::rotate(it, it + 1, view_.shuffled_chairs_.end());
-  }
 }
 
 void GuestWalkScene::seat_arrived_guest() {
@@ -226,64 +208,62 @@ void GuestWalkScene::seat_arrived_guest() {
   ctrl.set_eating(false);
   ctrl.set_guest_type(walker.guest_type);
   ctrl.set_face_index(walker.face_index);
-  view_.guest_controllers_[walker.chair_id] = ctrl;
-  ++guest_occupancy_delta_;
+  view_.seated_guests_.push_back({walker.chair_id, ctrl});
+  view_.guest_talked_to_.erase(walker.chair_id);
 }
 
 void GuestWalkScene::spawn_guest_departure() {
-  const WorldPoint exit_pos = customer_door();
+  // Oldest seated guests leaves first, guests that can't reach the door are
+  // skipped.
+  for (int i = 0; i < static_cast<int>(view_.seated_guests_.size());) {
+    const auto it = view_.seated_guests_.begin() + i;
+    const PlacedFurniture* chair =
+        view_.restaurant_->layout()->find_by_id(it->chair_id, false);
+    if (!chair) {
+      view_.seated_guests_.erase(it);
+      continue;
+    }
 
-  auto it = view_.guest_controllers_.begin();
-  if (it == view_.guest_controllers_.end()) {
+    const WorldPoint exit_pos = customer_door();
+    const WorldRect chair_rect = furniture_rect(*chair);
+    WalkingPath route = compute_walking_path(
+        view_.navigation_grid(), chair_rect.center(), exit_pos, chair_rect);
+    if (!route.reachable) {
+      ++i;
+      continue;
+    }
+
+    const core::FurnitureId chair_id = chair->id();
+    const ConsumerType demographic = it->controller.pose().customer_type;
+    const int guest_type = it->controller.guest_type();
+    const int face_index = it->controller.face_index();
+    const ViewPoint anchor = sprite_anchor_offset(guest_type);
+
+    view_.seated_guests_.erase(it);
+    view_.guest_talked_to_.erase(chair_id);
+
+    record_walk_debug_destination(exit_pos);
+    walking_guest_ = WalkingGuest{
+        .position = chair_rect.center(),
+        .kind = WalkingGuest::WalkerKind::GUEST_DEPARTING,
+        .phase = WalkingGuest::Phase::NAVIGATING,
+        .demographic = demographic,
+        .goal = exit_pos,
+        .goal_passable = chair_rect,
+        .chair_id = chair_id,
+        .guest_type = guest_type,
+        .face_index = face_index,
+        .path = std::move(route.steps),
+        .tail = std::vector<Orientation>(customer_door_cells(anchor.y),
+                                         Orientation::S),
+        .sprite_blit_offset_x = anchor.x,
+        .sprite_blit_offset_y = anchor.y,
+    };
+    snapshot_walk_debug_grid(*walking_guest_, route);
+
+    view_.mark_dirty();
     return;
   }
-  const PlacedFurniture* chair =
-      view_.restaurant_->layout()->find_by_id(it->first, false);
-  if (!chair) {
-    view_.guest_controllers_.erase(it);
-    return;
-  }
-
-  const WorldRect chair_rect = furniture_rect(*chair);
-  WalkingPath route = compute_walking_path(
-      view_.navigation_grid(), chair_rect.center(), exit_pos, chair_rect);
-  if (!route.reachable) {
-    return;
-  }
-
-  const core::FurnitureId chair_id = chair->id();
-  const ConsumerType demographic = it->second.pose().customer_type;
-  const int guest_type = it->second.guest_type();
-  const int face_index = it->second.face_index();
-  const ViewPoint anchor = sprite_anchor_offset(guest_type);
-
-  // Remove from seated state before the walker starts moving (matches
-  // original).
-  --guest_occupancy_delta_;
-  view_.guest_controllers_.erase(it);
-  retire_chair(chair_id);
-  departing_chair_id_ = chair_id;
-
-  record_walk_debug_destination(exit_pos);
-  walking_guest_ = WalkingGuest{
-      .position = chair_rect.center(),
-      .kind = WalkingGuest::WalkerKind::GUEST_DEPARTING,
-      .phase = WalkingGuest::Phase::NAVIGATING,
-      .demographic = demographic,
-      .goal = exit_pos,
-      .goal_passable = chair_rect,
-      .chair_id = chair_id,
-      .guest_type = guest_type,
-      .face_index = face_index,
-      .path = std::move(route.steps),
-      .tail = std::vector<Orientation>(customer_door_cells(anchor.y),
-                                       Orientation::S),
-      .sprite_blit_offset_x = anchor.x,
-      .sprite_blit_offset_y = anchor.y,
-  };
-  snapshot_walk_debug_grid(*walking_guest_, route);
-
-  view_.mark_dirty();
 }
 
 void GuestWalkScene::spawn_guest() {
@@ -344,9 +324,8 @@ void GuestWalkScene::spawn_waiter() {
 }
 
 bool GuestWalkScene::waiter_delivered(WalkingGuest& walker) {
-  auto it = view_.guest_controllers_.find(walker.chair_id);
-  if (it != view_.guest_controllers_.end()) {
-    it->second.set_eating(true);
+  if (auto* seated = view_.seated_guest(walker.chair_id)) {
+    seated->controller.set_eating(true);
   }
   view_.mark_dirty();
 
@@ -401,25 +380,31 @@ ViewPoint GuestWalkScene::sprite_anchor_offset(int guest_type) const {
   return {(walk_bob.width(0) / 2) + 10, (walk_bob.height(0) / 2) + 16};
 }
 
+// A random linked chair that is empty, or null when none are available.
 const PlacedFurniture* GuestWalkScene::get_guest_destination_chair() {
-  // Occupied seats occupy the first guests_to_show + guest_occupancy_delta_
-  // slots.
-  if (view_.shuffled_chairs_.empty()) {
+  std::vector<const PlacedFurniture*> free_chairs;
+  for (const auto& pf : view_.restaurant_->layout()->placed_furniture()) {
+    if (!pf || pf->furniture()->category() != FurnitureCategory::CHAIR ||
+        !pf->linked_furniture_id().has_value()) {
+      continue;
+    }
+    if (view_.seated_guest(pf->id())) {
+      continue;
+    }
+    free_chairs.push_back(pf.get());
+  }
+  if (free_chairs.empty()) {
     return nullptr;
   }
-  const int first_empty =
-      view_.restaurant_->guest_occupancy().guests + guest_occupancy_delta_;
-  if (first_empty < 0 ||
-      first_empty >= static_cast<int>(view_.shuffled_chairs_.size())) {
-    return nullptr;
-  }
-  return view_.shuffled_chairs_[first_empty];
+  return free_chairs[engine::random::presentation::rand_max_n(
+      static_cast<int>(free_chairs.size()))];
 }
 
 const PlacedFurniture* GuestWalkScene::find_unserved_guest_chair() {
-  for (const auto& [chair_id, ctrl] : view_.guest_controllers_) {
-    if (!ctrl.pose().eating) {
-      const auto* pf = view_.restaurant_->layout()->find_by_id(chair_id, false);
+  for (const auto& seated : view_.seated_guests_) {
+    if (!seated.controller.pose().eating) {
+      const auto* pf =
+          view_.restaurant_->layout()->find_by_id(seated.chair_id, false);
       if (pf) {
         return pf;
       }

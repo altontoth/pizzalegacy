@@ -615,8 +615,8 @@ void RestaurantView::tick() {
 
   // Tick guest animations
   if (restaurant_->is_open(state_.time().time_of_day()) && !kitchen_view_) {
-    for (auto& [chair_id, controller] : guest_controllers_) {
-      controller.tick();
+    for (auto& seated : seated_guests_) {
+      seated.controller.tick();
     }
     mark_dirty();
   }
@@ -891,112 +891,81 @@ void RestaurantView::render_guest_pizzas() {
   }
 }
 
+// gaeste.bob contains 12 seated guest types
+// Each type has 4 facing directions, so the frame index for any part is
+// `frame = base_index_for(part) + guest_type * 4 + facing`
+//
+// The 12 types have two options per demographic, first we
+// have demographic 0 to 5 for the first option, then 6 to 11 for the
+// second option per demographic (so 0 and 6 are two options for the first
+// demographic, etc).
+//
+// Portrait files are gfx/g0.vga through g23.vga, two per guest type:
+// face_index = guest_type * 2 + (0 or 1) (chosen randomly at spawn)
+//
+// We determine guest_type and face_index when a guest is spawned
+// and store it on the controller so sprite and portrait always match.
+void RestaurantView::seed_seated_guests() {
+  const auto [guests, seats] = restaurant_->guest_occupancy();
+  if (guests <= 0 || seats <= 0) {
+    return;
+  }
+  // A chair's chance to start occupied is the average occupancy.
+  const int occupied_percent = guests * 100 / seats;
+  const auto& customer_counts = restaurant_->economy().customer_counts();
+
+  for (const auto& pf : restaurant_->layout()->placed_furniture()) {
+    if (!pf || pf->furniture()->category() != FurnitureCategory::CHAIR ||
+        !pf->linked_furniture_id().has_value()) {
+      continue;
+    }
+    if (!engine::random::presentation::rand_percentage_chance(
+            occupied_percent)) {
+      continue;
+    }
+    const ConsumerType demo = pick_weighted_demographic(customer_counts);
+    CharacterController controller;
+    controller.set_customer_type(demo);
+    // The crowd is already mid-visit, so most have a pizza.
+    const int eating_percent =
+        60 + engine::random::presentation::rand_max_n(25);
+    controller.set_eating(
+        engine::random::presentation::rand_percentage_chance(eating_percent));
+    const int gt = pick_guest_type(demo);
+    controller.set_guest_type(gt);
+    controller.set_face_index(pick_face_index(gt));
+    seated_guests_.push_back(SeatedGuest{pf->id(), controller});
+  }
+}
+
 void RestaurantView::rebuild_guest_cache() {
   guests_cache_.clear();
 
-  // Only show guests in restaurant view (not kitchen) and when open
   if (kitchen_view_ || !restaurant_->is_open(state_.time().time_of_day())) {
-    shuffled_chairs_.clear();
-    walk_scene_.reset_occupancy_delta();
+    seated_guests_.clear();
+    guest_talked_to_.clear();
+    guests_seeded_ = false;
+    walk_scene_.reset();
     return;
   }
 
-  const auto [guests_to_show, seat_count] = restaurant_->guest_occupancy();
-  int effective_guests =
-      std::min(guests_to_show + walk_scene_.occupancy_delta(), seat_count);
-  if (effective_guests <= 0) {
-    return;
+  if (!guests_seeded_) {
+    seed_seated_guests();
+    guests_seeded_ = true;
   }
-
-  // Build shuffled chair list once per open period
-  if (shuffled_chairs_.empty()) {
-    for (const auto& pf : restaurant_->layout()->placed_furniture()) {
-      if (!pf || pf->furniture()->category() != FurnitureCategory::CHAIR) {
-        continue;
-      }
-      if (!pf->linked_furniture_id().has_value()) {
-        continue;
-      }
-      shuffled_chairs_.push_back(pf.get());
-    }
-    engine::random::presentation::shuffle(shuffled_chairs_.begin(),
-                                          shuffled_chairs_.end());
-  }
-
-  if (shuffled_chairs_.empty()) {
-    return;
-  }
-
-  // Exclude a chair whose guest is currently walking out
-  const auto departing_chair_id = walk_scene_.departing_chair_id();
-  if (departing_chair_id) {
-    for (int i = 0; i < effective_guests && i < (int)shuffled_chairs_.size();
-         ++i) {
-      if (shuffled_chairs_[i]->id() == *departing_chair_id) {
-        --effective_guests;
-        break;
-      }
-    }
-    if (effective_guests <= 0) {
-      return;
-    }
-  }
-
-  const auto& customer_counts = restaurant_->economy().customer_counts();
-
-  // Fill seats from the shuffled chair list.
 
   using namespace views::screens::restaurant;
 
   constexpr std::array<int, 4> seating_offset_x = {-4, -3, -3, 4};
   constexpr std::array<int, 4> seating_offset_y = {2, -5, -6, -9};
 
-  int chair_it = 0; // raw index into shuffled_chairs_
-  for (int placed = 0;
-       placed < effective_guests && chair_it < (int)shuffled_chairs_.size();) {
-    const PlacedFurniture* pf = shuffled_chairs_[chair_it++];
-    // Skip the chair whose guest is currently walking out; it is drawn by the
-    // walker system rather than as a seated guest, and effective_guests was
-    // already decremented above to leave its slot empty.
-    if (departing_chair_id && pf->id() == *departing_chair_id) {
+  for (auto it = seated_guests_.begin(); it != seated_guests_.end();) {
+    const core::FurnitureId chair_id = it->chair_id;
+    const PlacedFurniture* pf =
+        restaurant_->layout()->find_by_id(chair_id, false);
+    if (!pf) {
+      it = seated_guests_.erase(it);
       continue;
-    }
-    ++placed;
-    const core::FurnitureId chair_id = pf->id();
-
-    // gaeste.bob contains 12 seated guest types
-    // Each type has 4 facing directions, so the frame index for any part is
-    // `frame = base_index_for(part) + guest_type * 4 + facing`
-    //
-    // The 12 types have two options per demographic, first we
-    // have demographic 0 to 5 for the first option, then 6 to 11 for the
-    // second option per demographic (so 0 and 6 are two options for the first
-    // demographic, etc).
-    //
-    // Portrait files are gfx/g0.vga through g23.vga, two per guest type:
-    // face_index = guest_type * 2 + (0 or 1) (chosen randomly at spawn)
-    //
-    // We determine guest_type and face_index when a guest is spawned
-    // and store it on the controller so sprite and portrait always match.
-    //
-    // Create a controller lazily and keep it for the duration of the seating.
-    // Walker arrivals already have a controller, so they fall straight through
-    // to rendering; only chairs we seat directly are filled in here.
-    auto it = guest_controllers_.find(chair_id);
-    if (it == guest_controllers_.end()) {
-      const ConsumerType demo = pick_weighted_demographic(customer_counts);
-      CharacterController controller;
-      controller.set_customer_type(demo);
-      // Directly seated guests are mid-visit, so most already have a pizza.
-      int preseated_eating_percent =
-          60 + engine::random::presentation::rand_max_n(25);
-      controller.set_eating(
-          engine::random::presentation::rand_percentage_chance(
-              preseated_eating_percent));
-      const int gt = pick_guest_type(demo);
-      controller.set_guest_type(gt);
-      controller.set_face_index(pick_face_index(gt));
-      it = guest_controllers_.emplace(chair_id, controller).first;
     }
 
     const int rotation = pf->bob_state() % 4;
@@ -1025,16 +994,27 @@ void RestaurantView::rebuild_guest_cache() {
                                chair_pos.y + (furniture_size.h / 2) +
                                    (seating_offset_y[rotation] * 2)};
 
-    CharacterPose pose = it->second.pose();
+    CharacterPose pose = it->controller.pose();
     pose.facing = guest_facing;
     guests_cache_.push_back(GuestRenderItem{
         .torso_anchor_map = guest_pos,
         .pose = pose,
         .chair_id = chair_id,
         .interacted_before = false,
-        .face_index = it->second.face_index(),
+        .face_index = it->controller.face_index(),
     });
+    ++it;
   }
+}
+
+RestaurantView::SeatedGuest*
+RestaurantView::seated_guest(core::FurnitureId chair_id) {
+  for (auto& seated : seated_guests_) {
+    if (seated.chair_id == chair_id) {
+      return &seated;
+    }
+  }
+  return nullptr;
 }
 
 std::optional<int> RestaurantView::click_guest(core::FurnitureId chair_id) {
