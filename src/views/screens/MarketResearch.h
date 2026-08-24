@@ -34,7 +34,7 @@ enum class MarketResearchScreen {
 class MarketResearch : public MainPanelView {
 public:
   MarketResearch(GameContext& context, GameState& state,
-                 core::DistrictId district_id);
+                 core::DistrictIndex district_index);
   void tick() override;
   void render(const RenderContext& ctx) override;
 

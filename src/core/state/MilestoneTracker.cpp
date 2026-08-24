@@ -115,10 +115,11 @@ void MilestoneTracker::check_milestone_events(Player& player,
   auto* city = gs_->active_city();
   if (city && !city->districts().empty()) {
     const auto& all_districts = city->districts();
-    std::unordered_set<core::DistrictId, core::DistrictId::Hasher> covered;
+    std::unordered_set<core::DistrictIndex, core::DistrictIndex::Hasher>
+        covered;
     for (auto* rest : city_restaurants) {
       if (rest && rest->property().city().id() == active_city_id) {
-        covered.insert(rest->property().district().id());
+        covered.insert(rest->property().district().index());
       }
     }
     if (covered.size() >= all_districts.size()) {

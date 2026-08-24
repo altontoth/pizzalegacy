@@ -8,9 +8,11 @@
 
 #include <cassert>
 
-District::District(int id, std::string name)
-    : id_(core::DistrictId{id}), name_(name),
+District::District(int index, std::string name)
+    : index_(core::DistrictIndex{index}), name_(name),
       population_percentages_({0, 0, 0, 0, 0, 0}) {}
+
+void District::id(uint8_t id) { id_ = id; }
 
 void District::control_screen_alternate_color(bool setting) {
   control_screen_alternate_color_ = setting;
@@ -18,7 +20,7 @@ void District::control_screen_alternate_color(bool setting) {
 
 uint8_t District::bez_id() {
   int offset = 0x80 + ((control_screen_alternate_color_ ? 1 : 0) * 0x10);
-  return id_.value + offset;
+  return index_.value + offset;
 }
 
 void District::district_type(DistrictType district_type) {

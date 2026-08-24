@@ -200,7 +200,7 @@ public:
   std::vector<City*> initialized_cities() const;
   std::vector<City*> visited_cities(const Player& player) const;
   bool is_city_loaded(core::CityId city_id) const;
-  std::optional<core::DistrictId> active_district_id() const;
+  std::optional<core::DistrictIndex> active_district_index() const;
   void active_city(core::CityId city_id);
   // Create city without changing active_city (debug use):
   void ensure_city_loaded(core::CityId city_id);
@@ -211,7 +211,7 @@ public:
   void city_initialised_flags(const CityInitFlags& flags) {
     city_initialised_ = flags;
   }
-  void active_district_id(core::DistrictId);
+  void active_district_index(core::DistrictIndex);
   void clear_active_district();
   void city_position(ViewPoint p);
   void last_clicked_property_index(int);
@@ -469,7 +469,7 @@ private:
   // City whose restaurants the queued status notifications belong to.
   std::optional<core::CityId> status_queue_city_;
   ViewPoint city_position_{ViewPoint{-1, -1}};
-  std::optional<core::DistrictId> active_district_id_;
+  std::optional<core::DistrictIndex> active_district_index_;
   // Per-player city view state, persisted across screen transitions.
   std::array<CityViewMapState, NUMBER_OF_PLAYERS> city_view_view_state_;
   std::array<std::unique_ptr<City>, NUMBER_OF_CITIES> cities_;

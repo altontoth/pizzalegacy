@@ -128,9 +128,9 @@ StatusDisplayRecipe StatusController::build_city_default(const CityCtx& c) {
   r.add_two_column("CONTRACTS", std::to_string(player->contract_count_for_city(
                                     c.city->id())));
   r.add_header("DISTRICT:");
-  auto district_id = state->active_district_id();
-  r.add_single(district_id ? c.city->district(*district_id).name()
-                           : "- NONE -");
+  auto district_index = state->active_district_index();
+  r.add_single(district_index ? c.city->district(*district_index).name()
+                              : "- NONE -");
   return r;
 }
 
@@ -277,9 +277,9 @@ StatusController::build_city_competitor_restaurant(const CityCtx& c,
   if (property && property->has_restaurant() && property->owner_or_tenant()) {
     owner = c.state->player(*property->owner_or_tenant());
   }
-  auto district_id = c.city->district_by_index(index);
+  auto district_index = c.city->district_by_index(index);
   return build_competitor_recipe(c, owner,
-                                 c.city->district(district_id).name());
+                                 c.city->district(district_index).name());
 }
 
 StatusDisplayRecipe
@@ -364,8 +364,8 @@ StatusController::build_restaurant(const RestaurantCtx& rctx) {
   auto* rest = rctx.rest;
   auto* state = rctx.state;
   const auto* city = state->active_city();
-  auto district_id = city->district_by_index(rest->property().index());
-  const auto& district = city->district(district_id);
+  auto district_index = city->district_by_index(rest->property().index());
+  const auto& district = city->district(district_index);
 
   // Get real values from restaurant
   rctx.rest->calculate_popularity(*state->active_player(),

@@ -65,7 +65,7 @@ private:
   void render_districts(const RenderContext& ctx);
   void render_control(const RenderContext& ctx);
   void render_with_color(Surface& map,
-                         std::function<uint32_t(core::DistrictId)> color_fn);
+                         std::function<uint32_t(core::DistrictIndex)> color_fn);
   void render_with_cell_color(Surface& map,
                               std::function<uint8_t(int)> color_fn);
   void render_map_data(const RenderContext& ctx);
@@ -105,7 +105,7 @@ private:
   void highlight_properties(PremiseStatus status);
 
   // District
-  core::DistrictId district_at(WorldPoint p);
+  core::DistrictIndex district_at(WorldPoint p);
 
   // State
   void store_state_in_city(CityViewReentryMode entry_mode);
@@ -145,7 +145,7 @@ private:
   bool highlight_enabled_ = false;
   // Highlight is active on this specific frame:
   bool highlight_blink_visible_ = false;
-  std::unordered_map<core::DistrictId, uint8_t, core::DistrictId::Hasher>
+  std::unordered_map<core::DistrictIndex, uint8_t, core::DistrictIndex::Hasher>
       bezid_to_color_map_;
   bool color_map_initialized_ = false;
   Bob& stanbobs_;

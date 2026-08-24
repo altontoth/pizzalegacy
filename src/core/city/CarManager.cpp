@@ -70,8 +70,9 @@ void CarManager::update(const WorldRect& view, int ticks) {
         (center_tile_y * MAP_TILES_PER_ROW) + center_tile_x;
 
     // Get district and traffic density
-    const auto district_id = city_.district_by_index(center_index);
-    const int traffic_density = city_.district(district_id).traffic_density();
+    const auto district_index = city_.district_by_index(center_index);
+    const int traffic_density =
+        city_.district(district_index).traffic_density();
 
     spawn_cars_in_region(region, traffic_density);
   }

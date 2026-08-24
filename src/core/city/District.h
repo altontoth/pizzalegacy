@@ -47,9 +47,12 @@ enum class RangeDescriptor {
 
 class District {
 public:
-  District(int id, std::string name);
-  void id(uint8_t);
+  District(int index, std::string name);
   uint8_t bez_id();
+  void id(uint8_t);
+  // The id the city file gives this district: mostly its index plus one, but a
+  // couple of districts have a random different value for some reason.
+  uint8_t id() const { return id_; }
   void district_type(DistrictType);
   DistrictType district_type() const;
   void population_percentages(
@@ -66,7 +69,9 @@ public:
   void color(uint8_t);
   uint8_t color() const;
   std::string name() const;
-  core::DistrictId id() const { return id_; };
+  // Position in the city's district list, which is how the map's tiles and
+  // every lookup name a district.
+  core::DistrictIndex index() const { return index_; }
   void average_size(int);
   void average_size_modifier(int);
   int average_size() const;
@@ -103,7 +108,8 @@ public:
   uint8_t minimum_desired_user_pizza_count() const;
 
 private:
-  core::DistrictId id_;
+  core::DistrictIndex index_;
+  uint8_t id_{0};
   std::string name_;
   bool control_screen_alternate_color_ = false;
   std::array<uint8_t, static_cast<std::size_t>(PopulationType::count)>

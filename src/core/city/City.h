@@ -98,7 +98,7 @@ public:
   std::string building_specific_name(int index) const;
   std::string tile_description(int index) const;
   const std::vector<std::unique_ptr<District>>& districts() const;
-  const District& district(core::DistrictId district_id) const;
+  const District& district(core::DistrictIndex district_index) const;
   void end_of_day(int difficulty);
   void end_of_month();
   static constexpr int index_to_x(int index) {
@@ -169,10 +169,10 @@ public:
   PropertyInfo property_info_by_index(uint8_t index);
 
   // District methods
-  core::DistrictId district_by_district_index(int district_index) const;
-  core::DistrictId district_by_xy_index(int tile_x, int tile_y) const;
+  core::DistrictIndex district_by_district_index(int district_index) const;
+  core::DistrictIndex district_by_xy_index(int tile_x, int tile_y) const;
   static int district_index_by_xy_index(int tile_x, int tile_y);
-  core::DistrictId district_by_index(int index) const;
+  core::DistrictIndex district_by_index(int index) const;
 
   IngredientTrendSystem& ingredient_trend_system() {
     return ingredient_trend_system_;

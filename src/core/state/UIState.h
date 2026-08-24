@@ -252,7 +252,7 @@ struct WinSequenceState {
   core::PlayerId player_id;
 };
 struct MarketResearchState {
-  core::DistrictId district_id;
+  core::DistrictIndex district_index;
 };
 struct MafiaMissionViewState {
   MafiaLine line;

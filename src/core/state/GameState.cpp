@@ -964,14 +964,14 @@ void GameState::active_player(core::PlayerId player_id) {
   active_player_ = player_id;
 }
 
-void GameState::active_district_id(core::DistrictId id) {
-  active_district_id_ = id;
+void GameState::active_district_index(core::DistrictIndex id) {
+  active_district_index_ = id;
 }
 
-void GameState::clear_active_district() { active_district_id_.reset(); }
+void GameState::clear_active_district() { active_district_index_.reset(); }
 
-std::optional<core::DistrictId> GameState::active_district_id() const {
-  return active_district_id_;
+std::optional<core::DistrictIndex> GameState::active_district_index() const {
+  return active_district_index_;
 }
 
 void GameState::active_restaurant(core::RestaurantId r_id) {

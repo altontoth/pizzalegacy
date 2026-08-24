@@ -158,8 +158,8 @@ void Property::calculate_demographics(const Restaurant* restaurant) {
   int max_y = std::min(MAP_TILES_PER_COLUMN - 1, prop_y + radius);
 
   // Pre-calculate base multipliers for all demographics
-  auto property_district_id = city_.district_by_index(index_);
-  const auto& property_district = city_.district(property_district_id);
+  auto property_district_index = city_.district_by_index(index_);
+  const auto& property_district = city_.district(property_district_index);
   const auto& demographic_demand = property_district.demographic_demand();
 
   DemographicArray<float> base_multipliers{};

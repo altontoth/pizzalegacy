@@ -299,8 +299,8 @@ const std::vector<std::unique_ptr<District>>& City::districts() const {
   return districts_;
 }
 
-const District& City::district(core::DistrictId district_id) const {
-  return *districts_.at(district_id.value);
+const District& City::district(core::DistrictIndex district_index) const {
+  return *districts_.at(district_index.value);
 }
 
 void City::end_of_day(int difficulty) {
@@ -335,8 +335,8 @@ void City::end_of_month() {
   // If the roll succeeds, available properties are taken off market and
   // unavailable untenanted ones are put back on.
   for (auto& [index, property] : properties_) {
-    auto district_id = district_by_index(index);
-    const auto& dist = district(district_id);
+    auto district_index = district_by_index(index);
+    const auto& dist = district(district_index);
 
     if (!engine::random::rand_percentage_chance(dist.premises_availability())) {
       continue;
@@ -433,9 +433,9 @@ void City::district_bez(std::array<uint8_t, 300> district_bez) {
   district_bez_ = district_bez;
 }
 
-core::DistrictId City::district_by_district_index(int district_index) const {
+core::DistrictIndex City::district_by_district_index(int district_index) const {
   assert(district_index < static_cast<int>(district_bez_.size()));
-  return core::DistrictId{0x0F & district_bez_.at(district_index)};
+  return core::DistrictIndex{0x0F & district_bez_.at(district_index)};
 }
 
 // Given city tile coordinates (in the 160x120 grid), this function computes
@@ -454,12 +454,12 @@ int City::district_index_by_xy_index(int tile_x, int tile_y) {
   return (district_row * NUMBER_OF_DISTRICT_CELL_COLUMNS) + district_col;
 }
 
-core::DistrictId City::district_by_xy_index(int tile_x, int tile_y) const {
+core::DistrictIndex City::district_by_xy_index(int tile_x, int tile_y) const {
   return district_by_district_index(district_index_by_xy_index(tile_x, tile_y));
 }
 
 // Given the tile index, figure out which district it is in.
-core::DistrictId City::district_by_index(int index) const {
+core::DistrictIndex City::district_by_index(int index) const {
   int tile_x = index % MAP_TILES_PER_ROW;
   int tile_y = index / MAP_TILES_PER_ROW;
   return district_by_xy_index(tile_x, tile_y);

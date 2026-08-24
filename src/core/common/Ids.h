@@ -45,7 +45,7 @@ struct BankTag {};
 struct RecipeTag {};
 struct AiPizzaTag {};
 struct FurnitureTag {};
-struct DistrictTag {};
+struct DistrictIndexTag {};
 
 namespace core {
 using PlayerId = StrongId<PlayerTag>;
@@ -56,7 +56,7 @@ using RecipeId = StrongId<RecipeTag>;
 // A pizza an AI sells, named by PizzaCharts::ai_pizza_names().
 using AiPizzaId = StrongId<AiPizzaTag>;
 using FurnitureId = StrongId<FurnitureTag>;
-using DistrictId = StrongId<DistrictTag>;
+using DistrictIndex = StrongId<DistrictIndexTag>;
 } // namespace core
 
 template <class Tag, class Under>

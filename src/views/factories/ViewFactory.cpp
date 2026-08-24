@@ -265,8 +265,8 @@ ViewFactory::Result ViewFactory::create(GameContext& context, GameState& gs) {
 
           // data-bearing screens
           [&](const MarketResearchState& mr) {
-            view =
-                std::make_unique<MarketResearch>(context, gs, mr.district_id);
+            view = std::make_unique<MarketResearch>(context, gs,
+                                                    mr.district_index);
           },
           [&](const EuroMapState& em) {
             view = std::make_unique<EuroMap>(context, gs, em.mode, em.category);

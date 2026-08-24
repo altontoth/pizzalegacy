@@ -34,7 +34,7 @@ using namespace core;
 #pragma pack(push, 1)
 struct DistrictDataRaw {
   uint8_t traffic_intensity;
-  uint8_t unknown_1;
+  uint8_t id;
   char name[24];
   uint8_t unknown_2[4];
   uint8_t control_screen_alternate_color;
@@ -302,7 +302,6 @@ void CityFactory::load_suppliers(std::ifstream& is, int supplier_count) {
 }
 
 void CityFactory::load_districts(std::ifstream& is, uint8_t district_count) {
-  auto district_offset = static_cast<int>(is.tellg());
   for (int i = 0; i < district_count; ++i) {
     // Read the entire 104-byte struct in one call
     DistrictDataRaw raw{};
@@ -312,6 +311,7 @@ void CityFactory::load_districts(std::ifstream& is, uint8_t district_count) {
     auto name = text::iso8859_1_to_utf8(raw.name);
     auto district = std::make_unique<District>(i, name);
 
+    district->id(raw.id);
     district->control_screen_alternate_color(
         raw.control_screen_alternate_color == 1);
     district->traffic_density(raw.traffic_intensity);

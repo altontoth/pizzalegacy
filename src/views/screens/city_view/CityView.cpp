@@ -218,8 +218,8 @@ void CityView::register_map_interactions_viewport() {
             // offset
             const auto viewport_coords = camera_.view_to_world(ie.local);
             const auto did = district_at(viewport_coords);
-            if (did != state_.active_district_id()) {
-              state_.active_district_id(did);
+            if (did != state_.active_district_index()) {
+              state_.active_district_index(did);
               build_default_city_status_recipe();
               context_.status_panel->mark_dirty();
               mark_dirty();
@@ -593,9 +593,9 @@ void CityView::handle_mouse_click_zoom_close(WorldPoint p) {
   }
 
   state_.last_clicked_property_index(clicked_index);
-  auto district_id = district_at(p);
+  auto district_index = district_at(p);
   build_property_status_recipe(clicked_index);
-  state_.active_district_id(district_id);
+  state_.active_district_index(district_index);
 }
 
 void CityView::tick() {
@@ -862,7 +862,7 @@ bool CityView::is_valid_zoom_box_location(ViewPoint screen_p) {
 }
 
 void CityView::render_with_color(
-    Surface& map, std::function<uint32_t(core::DistrictId)> color_fn) {
+    Surface& map, std::function<uint32_t(core::DistrictIndex)> color_fn) {
   // District cells are in world coordinates (5120x3840 world space)
   const Size ws = camera_.world_size();
   const int cell_width_world = ws.w / NUMBER_OF_CELL_COLUMNS; // 5120/20 = 256
@@ -873,8 +873,8 @@ void CityView::render_with_color(
   // Iterate over every district cell
   for (int i = 0; i < NUMBER_OF_CELL_ROWS * NUMBER_OF_CELL_COLUMNS; ++i) {
     // Decide color for this cell
-    auto district_id = city_->district_by_district_index(i);
-    uint8_t color = color_fn(district_id);
+    auto district_index = city_->district_by_district_index(i);
+    uint8_t color = color_fn(district_index);
 
     // Figure out row/col in the district grid
     int row = i / NUMBER_OF_CELL_COLUMNS;
@@ -919,21 +919,19 @@ void CityView::render_districts(const RenderContext& ctx) {
   // Initialize the bez_id to Color map only once
   if (!color_map_initialized_) {
     for (const auto& district : city_->districts()) {
-      core::DistrictId id{district->id()};
-      uint8_t color = district->color();
-      bezid_to_color_map_[id] = color;
+      bezid_to_color_map_[district->index()] = district->color();
     }
     color_map_initialized_ = true;
   }
 
-  // We'll define a small lambda that, given a district_id, returns
+  // We'll define a small lambda that, given a district_index, returns
   // a stable color from district_color_list.
-  auto color_fn = [&](core::DistrictId district_id) -> uint8_t {
-    auto it = bezid_to_color_map_.find(district_id);
+  auto color_fn = [&](core::DistrictIndex district_index) -> uint8_t {
+    auto it = bezid_to_color_map_.find(district_index);
     if (it != bezid_to_color_map_.end()) {
       return it->second;
     }
-    Logger::debug("Unknown color for {}", district_id.value);
+    Logger::debug("Unknown color for {}", district_index.value);
     return 0;
   };
 
@@ -1005,8 +1003,8 @@ void CityView::render_control(const RenderContext& ctx) {
       return PLAYER_CONTROL_COLORS[owner->value];
     }
     // Fallback: district-based neutral color
-    auto district_id = city_->district_by_district_index(cell_index);
-    return city_->district(district_id).control_screen_alternate_color()
+    auto district_index = city_->district_by_district_index(cell_index);
+    return city_->district(district_index).control_screen_alternate_color()
                ? dark_brown
                : light_brown;
   };
@@ -1206,7 +1204,7 @@ void CityView::create_buttons() {
       Icon::QUESTION_MARK, ButtonType::Square, ButtonPosition::MiddleCenter,
       "Market research", side_menu_entry([this] {
         state_.ui().push<MarketResearchState>(
-            state_.active_district_id().value_or(core::DistrictId{0}));
+            state_.active_district_index().value_or(core::DistrictIndex{0}));
       }));
 
   input_panel_->add_button(
@@ -1500,7 +1498,7 @@ void CityView::highlight_building_type(BuildingType type) {
   });
 }
 
-core::DistrictId CityView::district_at(WorldPoint pw) {
+core::DistrictIndex CityView::district_at(WorldPoint pw) {
   // pw is always in normalized world coordinates because camera always uses
   // 5120x3840 as world_size
   const Size ws = camera_.world_size();

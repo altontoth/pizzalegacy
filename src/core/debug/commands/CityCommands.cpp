@@ -13,6 +13,7 @@
 #include "core/character/AiMenuSlot.h"
 #include "core/character/Player.h"
 #include "core/city/City.h"
+#include "core/city/District.h"
 #include "core/city/PizzaCharts.h"
 #include "core/city/Property.h"
 #include "core/food/PlayerRecipes.h"
@@ -299,6 +300,53 @@ static CommandDef make_chart() {
       .add_subcommand(make_chart_rebuild());
 }
 
+static CommandDef make_districts() {
+  return CommandDef{
+      .name = "districts",
+      .description = "List the active city's districts",
+      .help_text = R"(Usage: city districts [city_id]
+
+Lists each district with its position and the id the city file gives it.
+Loads the city if it is not loaded yet.
+
+Examples:
+  city districts       # the active city
+  city districts 3     # city 3
+)",
+      .args =
+          {
+              ArgSpec{
+                  .name = "city_id",
+                  .type = ArgType::CityId,
+                  .optional = true,
+                  .default_provider = DefaultProvider::ActiveCity,
+                  .description = "City ID (@ for active city)",
+                  .min_value = 0,
+                  .max_value = 9,
+              },
+          },
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        auto city_id = ctx.city_id(0);
+        ctx.state.ensure_city_loaded(city_id);
+        auto* city = ctx.state.city(city_id);
+        if (!city) {
+          return CommandResult::error(
+              compat::format("City {} not found", city_id.value));
+        }
+        CommandResult result = CommandResult::success();
+        result.add_message(compat::format("Districts of {}:", city->name()));
+        result.add_message("Pos  Id  Name");
+        result.add_message("---  --  ----------------");
+        for (const auto& district : city->districts()) {
+          result.add_message(compat::format("{:>3}  {:>2}  {}",
+                                            district->index().value,
+                                            district->id(), district->name()));
+        }
+        return result;
+      },
+  };
+}
+
 CommandDef make_city_commands() {
   return CommandDef{
       .name = "city",
@@ -306,6 +354,7 @@ CommandDef make_city_commands() {
       .help_text = "City management and diagnostics",
   }
       .add_subcommand(make_chart())
+      .add_subcommand(make_districts())
       .add_subcommand(make_property());
 }
 
