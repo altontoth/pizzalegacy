@@ -99,6 +99,10 @@ Examples:
   staff event late              # first cook, active restaurant
   staff event quit @ @ 6        # first waiter
   staff event destroycheesestock @ @ 1      # second cook
+  staff event late @ @ 2 queue  # third cook, waiting rather than shown
+
+when:   now shows the dialog, queue leaves it waiting like a day-start event
+        would (default: now)
 )",
       .args =
           {
@@ -137,6 +141,13 @@ Examples:
                       "Staff slot (0-5 cooks, 6-11 waiters, 12 manager)",
                   .min_value = 0,
                   .max_value = 12,
+              },
+              ArgSpec{
+                  .name = "when",
+                  .type = ArgType::String,
+                  .optional = true,
+                  .description = "now or queue (default: now)",
+                  .allowed_values = std::vector<std::string>{"now", "queue"},
               },
           },
       .handler = [](const CommandContext& ctx) -> CommandResult {
@@ -211,6 +222,15 @@ Examples:
             .slot_index = array_index,
             .type = event_type,
         };
+
+        if (ctx.args.size() > 4 && ctx.string_arg(4) == "queue") {
+          ctx.state.turn().restore_deferred_staff_event(event,
+                                                        restaurant->id());
+          return CommandResult::success(
+              {compat::format("Queued '{}' event for {} {} (slot {})", type_str,
+                              staff->character().first_name(),
+                              staff->character().last_name(), slot)});
+        }
 
         // show_staff_event_dialog applies the PERSF effect itself.
         ctx.state.show_staff_event_dialog(event, restaurant, []() {});

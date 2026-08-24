@@ -69,6 +69,10 @@ public:
     return current_block >= target_block;
   }
 
+  bool is_past_time(core::time::TimeOfDay t) const {
+    return current_block_of_day() >= t.to_block();
+  }
+
   static Season season_from_month(unsigned month) {
     if (month >= 3 && month <= 5) {
       return Season::Spring;

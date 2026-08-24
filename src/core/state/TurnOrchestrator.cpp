@@ -38,6 +38,10 @@
 #include "factories/CharacterFactory.h"
 
 namespace {
+// Staff events only fire during business hours.
+constexpr core::time::TimeOfDay staff_events_open{10, 0};
+constexpr core::time::TimeOfDay staff_events_close{21, 0};
+
 bool is_autosave_due(AutosaveFrequency frequency, bool is_end_of_week,
                      bool is_end_of_month) {
   switch (frequency) {
@@ -96,6 +100,9 @@ bool TurnOrchestrator::may_auto_end_turn() const {
   return gs_->is_past_player_end_of_day();
 }
 
+// The most staff event dialogs a day-end flush shows.
+constexpr int staff_events_per_day_end_flush = 2;
+
 void TurnOrchestrator::end_of_turn() {
   gs_->suspend_clock();
 
@@ -115,15 +122,20 @@ void TurnOrchestrator::end_of_turn() {
                   });
   }
 
-  // Ending the turn flushes staff event dialogs that have not fired yet
-  // (before 10:00): the original jumps the clock to the day-end block and
-  // runs the staff event check there, so events never carry to the next day.
-  if (interactive && !showing_deferred_staff_event_ &&
+  // Ending the turn flushes the staff event dialogs that have not fired yet,
+  // through the same business-hours gate as the rest of the day. A day ending
+  // at 21:00 or later carries its events to the morning.
+  const bool day_ends_in_business_hours =
+      current_player->end_of_day_time() < staff_events_close;
+  if (interactive && day_ends_in_business_hours &&
+      !flush_staff_events_then_end_turn_ && !showing_deferred_staff_event_ &&
       has_deliverable_staff_event()) {
     flush_staff_events_then_end_turn_ = true;
+    flush_staff_events_remaining_ = staff_events_per_day_end_flush;
     show_next_deferred_staff_event();
     return;
   }
+  flush_staff_events_then_end_turn_ = false;
 
   suppress_end_of_turn_reports_ = false;
   if (!interactive) {
@@ -289,13 +301,15 @@ void TurnOrchestrator::show_next_deferred_staff_event() {
       deferred_staff_events_, [this](const DeferredStaffEvent& d) {
         return can_deliver_to_active_player(d.restaurant_id);
       });
-  if (next == deferred_staff_events_.end()) {
+  const bool queue_empty = next == deferred_staff_events_.end();
+  if (flush_staff_events_then_end_turn_ &&
+      (flush_staff_events_remaining_ == 0 || queue_empty)) {
     showing_deferred_staff_event_ = false;
-    if (flush_staff_events_then_end_turn_) {
-      flush_staff_events_then_end_turn_ = false;
-      end_of_turn();
-      return;
-    }
+    end_of_turn();
+    return;
+  }
+  if (queue_empty) {
+    showing_deferred_staff_event_ = false;
     if (may_auto_end_turn()) {
       request_end_of_turn();
     }
@@ -320,6 +334,10 @@ void TurnOrchestrator::show_next_deferred_staff_event() {
     // Restaurant gone, skip and try next.
     show_next_deferred_staff_event();
     return;
+  }
+
+  if (flush_staff_events_then_end_turn_) {
+    --flush_staff_events_remaining_;
   }
 
   gs_->show_staff_event_dialog(deferred.event, restaurant,
@@ -573,8 +591,9 @@ bool TurnOrchestrator::fire_staff_events() {
     return false;
   }
 
-  // Fire deferred staff event dialogs at 10:00 the next day.
-  if (has_deliverable_staff_event() && gs_->time().is_past_time(10, 0)) {
+  const auto& time = gs_->time();
+  if (time.is_past_time(staff_events_open) &&
+      !time.is_past_time(staff_events_close) && has_deliverable_staff_event()) {
     show_next_deferred_staff_event();
     return true;
   }
