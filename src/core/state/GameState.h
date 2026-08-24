@@ -392,9 +392,9 @@ public:
     core::RestaurantId restaurant_id;
     bool first_contact;
   };
-  // Single protection racket roll: 2% chance, then one random restaurant of
-  // the active player must be open and have an expired timer. On success the
-  // restaurant is marked contacted and the offer is returned.
+  // Single protection racket roll: 2% chance, then the restaurant it lands
+  // on must be open and have an expired timer. On success the restaurant is
+  // marked contacted and the offer is returned.
   std::optional<RacketOffer> roll_protection_racket();
   void push_protection_racket_offer(const RacketOffer& offer);
 

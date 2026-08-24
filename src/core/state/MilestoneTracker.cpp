@@ -18,6 +18,7 @@
 #include "core/events/MilestoneId.h"
 #include "core/finance/Money.h"
 #include "core/restaurant/Restaurant.h"
+#include "core/state/GameOptions.h"
 #include "core/state/GameState.h"
 #include "core/util/Constants.h"
 
@@ -222,27 +223,42 @@ void MilestoneTracker::check_world_domination() {
   }
 
   constexpr int win_threshold = 5;
+  const int pid = p->id().value;
 
-  if (!gs_->options().fix_legacy_bugs) {
-    // Original: only Paris (city 0) needs >= 5% market share.
+  switch (gs_->options().win_condition) {
+  case WinCondition::Paris: {
     auto* paris = gs_->city(core::CityId{0});
-    if (!paris || !paris->control_map().has_market_share_at_least(
-                      p->id().value, win_threshold)) {
+    if (!paris ||
+        !paris->control_map().has_market_share_at_least(pid, win_threshold)) {
       return;
     }
+    break;
   }
-  else {
-    // Fixed: must have >= 5% in all 10 cities.
+  case WinCondition::AnyCity: {
+    bool dominated = false;
+    for (auto* c : gs_->initialized_cities()) {
+      if (c->control_map().has_market_share_at_least(pid, win_threshold)) {
+        dominated = true;
+        break;
+      }
+    }
+    if (!dominated) {
+      return;
+    }
+    break;
+  }
+  case WinCondition::AllCities: {
     auto cities = gs_->initialized_cities();
     if (static_cast<int>(cities.size()) < NUMBER_OF_CITIES) {
       return;
     }
     for (auto* c : cities) {
-      if (!c->control_map().has_market_share_at_least(p->id().value,
-                                                      win_threshold)) {
+      if (!c->control_map().has_market_share_at_least(pid, win_threshold)) {
         return;
       }
     }
+    break;
+  }
   }
 
   gs_->trigger_win_sequence(p->id());

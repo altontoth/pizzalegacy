@@ -198,12 +198,26 @@ void ConfigManager::save_options(const GameOptions& opts) {
   save_bool("crt_aspect_ratio", opts.crt_aspect_ratio);
   save_bool("fix_legacy_bugs", opts.fix_legacy_bugs);
   save_bool("qol_improvements", opts.qol_improvements);
+  save_bool("mafia_shakedowns_target_all_restaurants",
+            opts.mafia_shakedowns_target_all_restaurants);
   save_bool("rmb_drag_inverted", opts.rmb_drag_inverted);
   save_bool("scroll_zoom_inverted", opts.scroll_zoom_inverted);
   save_bool("software_cursor", opts.software_cursor);
   save_bool("vsync", opts.vsync);
 
   config_["render_fps"] = std::to_string(static_cast<int>(opts.render_fps));
+
+  switch (opts.win_condition) {
+  case WinCondition::Paris:
+    config_["win_condition"] = "paris";
+    break;
+  case WinCondition::AnyCity:
+    config_["win_condition"] = "any_city";
+    break;
+  case WinCondition::AllCities:
+    config_["win_condition"] = "all_cities";
+    break;
+  }
 
   switch (opts.autosave_frequency) {
   case AutosaveFrequency::Off:
@@ -256,6 +270,8 @@ GameOptions ConfigManager::load_options() const {
   load_bool("crt_aspect_ratio", opts.crt_aspect_ratio);
   load_bool("fix_legacy_bugs", opts.fix_legacy_bugs);
   load_bool("qol_improvements", opts.qol_improvements);
+  load_bool("mafia_shakedowns_target_all_restaurants",
+            opts.mafia_shakedowns_target_all_restaurants);
   load_bool("rmb_drag_inverted", opts.rmb_drag_inverted);
   load_bool("scroll_zoom_inverted", opts.scroll_zoom_inverted);
   load_bool("software_cursor", opts.software_cursor);
@@ -276,6 +292,20 @@ GameOptions ConfigManager::load_options() const {
       else if (fps == 120) {
         opts.render_fps = FpsOption::Fps120;
       }
+    }
+  }
+
+  auto win_it = config_.find("win_condition");
+  if (win_it != config_.end()) {
+    const std::string& s = win_it->second;
+    if (s == "paris") {
+      opts.win_condition = WinCondition::Paris;
+    }
+    else if (s == "any_city") {
+      opts.win_condition = WinCondition::AnyCity;
+    }
+    else if (s == "all_cities") {
+      opts.win_condition = WinCondition::AllCities;
     }
   }
 

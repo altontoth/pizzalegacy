@@ -43,6 +43,10 @@ inline std::string to_string(AutosaveFrequency freq) {
   return "??";
 }
 
+// Market share domination needed to win. The English release checks Paris
+// alone, apparently meaning any one city; the German one checks every city.
+enum class WinCondition { Paris, AnyCity, AllCities };
+
 struct GameOptions {
   static constexpr int AUTOSAVE_COUNT_MIN = 1;
   static constexpr int AUTOSAVE_COUNT_MAX = 9;
@@ -68,4 +72,9 @@ struct GameOptions {
   bool software_cursor = true;
   FpsOption render_fps = FpsOption::Fps60;
   bool vsync = true;
+
+  // Config file only, with no entry in the options screen.
+  // The mafia shakes down a random restaurant instead of always the first.
+  bool mafia_shakedowns_target_all_restaurants = false;
+  WinCondition win_condition = WinCondition::AnyCity;
 };

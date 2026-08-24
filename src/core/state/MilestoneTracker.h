@@ -32,8 +32,8 @@ public:
   // Market share milestones for every player in the given city.
   void check_market_share_milestones(const City& city);
 
-  // Win condition: market share domination (Paris only in the original,
-  // all cities with fix_legacy_bugs).
+  // Win condition: market share domination over as much of the map as
+  // GameOptions::win_condition asks for.
   void check_world_domination();
 
   // Central depot count milestones.

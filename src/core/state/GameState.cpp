@@ -918,10 +918,15 @@ std::optional<GameState::RacketOffer> GameState::roll_protection_racket() {
     return std::nullopt;
   }
 
-  // The 2% roll targets a single random restaurant; if the pick is closed or
-  // its timer hasn't expired, nothing happens this roll.
-  auto* restaurant = candidates[engine::random::rand_max_n(
-      static_cast<int>(candidates.size()))];
+  // The original appears to have called some kind of
+  // get_next_player_restaurant() repeatedly while discarding its return value,
+  // rather than assigning the returned restaurant back to the current
+  // restaurant, so every shakedown lands on the player's first restaurant.
+  auto* restaurant = candidates.front();
+  if (options().mafia_shakedowns_target_all_restaurants) {
+    restaurant = candidates[engine::random::rand_max_n(
+        static_cast<int>(candidates.size()))];
+  }
   if (!restaurant->wants_open()) {
     return std::nullopt;
   }

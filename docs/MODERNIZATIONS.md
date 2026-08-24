@@ -2,8 +2,8 @@
 
 This document lists intentional differences from the original game. Some are
 life quality improvements gated by an option, others are bug fixes for original
-bugs (gated by a separate option) and then there are some that are just always
-in effect.
+bugs (gated by a separate option), a couple are set in the config file only,
+and then there are some that are just always in effect.
 
 ## Always in effect
 
@@ -185,12 +185,6 @@ supplier contract, the original would halve it despite saying not seeing a
 reason to do so. Now the penalty is only reduced if the checks actually all
 succeed.
 
-### Win condition fixed
-In the original Pizza Tycoon there was a bug (at least I think it
-wasn't on purpose?) that you had to have >= 5% market share in just Paris
-instead of all 10 cities.
-
-
 ### Mission date mismatch
 The original mission files were created for the German release, which starts in
 1994. The English release starts in 1995, making it impossible to score 100% on
@@ -207,3 +201,25 @@ the city would keep the same trend for 256 weeks instead.
 
 With fixes enabled the countdown is always at least one week, so it never
 wraps.
+
+## Config file only
+
+Some of what I think were bugs have a big impact on the gameplay; given that
+the game was balanced with those bugs in it, the game might suddenly be too
+difficult with them fixed. To allow play testing with the new behavior I've
+created some options that can only be changed by editing the config file, there
+is no UI for these. All options are listed in the plegacy.conf file.
+
+### mafia_shakedowns_target_all_restaurants
+The original iterates over all restaurants but never assigns the result to
+anything, so it actually only checks the first restaurant. That means that once
+you have protection for the first restaurant you don't get mafia shakedown
+requests for the other restaurants. With this option on it doesn't just target
+the first restaurant but picks a random restaurant so all your restaurants have
+a chance to be the target of a shakedown.
+
+### win_condition
+This can take one of three options; the German release requires >= 5% market
+share in all ten cities to win the game (`all_cities`), the English version
+only checks Paris (`paris`), which looks like it was meant to be any single
+city (`any_city`).
