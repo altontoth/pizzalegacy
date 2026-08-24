@@ -170,10 +170,16 @@ Examples:
                               .winner_player_id = winner_id,
                               .is_ceremony = true};
 
+        if (auto* city = ctx.state.active_city()) {
+          ctx.state.score_and_grant_mayor_award(event, *city);
+          winner_id = event.winner_player_id;
+        }
+
         const std::string winner =
             winner_id.has_value() ? std::to_string(*winner_id) : "none";
         if (ctx.args.size() > 2 && ctx.string_arg(2) == "queue") {
-          ctx.state.turn().queue_mayor_award(event);
+          ctx.state.turn().queue_mayor_award(event,
+                                             ctx.state.active_player()->id());
           return CommandResult::success().add_message(
               compat::format("Queued {} award (winner={})", type_str, winner));
         }

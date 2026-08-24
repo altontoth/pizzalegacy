@@ -611,69 +611,54 @@ void GameState::update(uint32_t elapsed_ms) {
   turn_.run_pending_end_of_turn();
 }
 
-void GameState::process_mayor_award_event(const MayorAwardEvent& award_event) {
-  auto* city = active_city();
-  if (!city) {
-    return;
-  }
-  auto mayor_actors = city->actors(ActorType::MAYOR);
-  if (mayor_actors.empty()) {
-    return;
-  }
-  int mayor_id = mayor_actors[0]->id();
-
-  // For ceremonies, resolve the winner. Announcements always pass nullopt.
-  // MayorOffice resolves awards scored from its own accumulated tallies;
-  // restaurant-based awards (Most Beautiful, Golden Bow Tie) are scored from
-  // live restaurant state, so GameState (which owns the restaurants) does them.
-  std::optional<int> award_winner = award_event.winner_player_id;
-
+void GameState::score_and_grant_mayor_award(MayorAwardEvent& award_event,
+                                            City& city) {
   if (award_event.is_ceremony) {
     auto all_players = players();
     int pc = human_player_count();
-    const auto& mayor_office = city->mayor_office();
+    const auto& mayor_office = city.mayor_office();
 
     if (award_event.type == MayorAwardType::MostBeautifulRestaurant) {
       int best_score = -1;
-      award_winner = std::nullopt;
+      award_event.winner_player_id = std::nullopt;
       for (int i = 0; i < pc; ++i) {
         if (!all_players[i] || !mayor_office.fee_paid(i)) {
           continue;
         }
         int score = 0;
         for (auto* rest :
-             restaurants_in_city(all_players[i]->id(), city->id())) {
+             restaurants_in_city(all_players[i]->id(), city.id())) {
           for (int v : rest->economy().furniture_appeal()) {
             score += v;
           }
         }
         if (score > best_score) {
           best_score = score;
-          award_winner = i;
+          award_event.winner_player_id = i;
         }
       }
     }
     else if (award_event.type == MayorAwardType::GoldenBowTie) {
       int best_time = -1;
-      award_winner = std::nullopt;
+      award_event.winner_player_id = std::nullopt;
       for (int i = 0; i < pc; ++i) {
         if (!all_players[i] || !mayor_office.fee_paid(i)) {
           continue;
         }
         for (auto* rest :
-             restaurants_in_city(all_players[i]->id(), city->id())) {
+             restaurants_in_city(all_players[i]->id(), city.id())) {
           int t = rest->calculate_service_time_minutes();
           if (t > 0 && (best_time < 0 || t < best_time)) {
             best_time = t;
-            award_winner = i;
+            award_event.winner_player_id = i;
           }
         }
       }
     }
 
     // Grant a trophy level to the winner.
-    if (award_winner.has_value()) {
-      int winner_id = *award_winner;
+    if (award_event.winner_player_id.has_value()) {
+      int winner_id = *award_event.winner_player_id;
       if (winner_id >= 0 && winner_id < NUMBER_OF_PLAYERS &&
           all_players[winner_id]) {
         auto& player = *all_players[winner_id];
@@ -710,9 +695,9 @@ void GameState::process_mayor_award_event(const MayorAwardEvent& award_event) {
 
     // Schedule MilestoneId milestones for the winner if they are the active
     // player.
-    if (award_winner.has_value()) {
+    if (award_event.winner_player_id.has_value()) {
       auto* p = active_player();
-      if (p && p->id().value == *award_winner) {
+      if (p && p->id().value == *award_event.winner_player_id) {
         using core::events::MilestoneId;
         switch (award_event.type) {
         case MayorAwardType::MostBeautifulRestaurant:
@@ -739,7 +724,23 @@ void GameState::process_mayor_award_event(const MayorAwardEvent& award_event) {
         }
       }
     }
+  }
+}
 
+void GameState::process_mayor_award_event(const MayorAwardEvent& award_event) {
+  auto* city = active_city();
+  if (!city) {
+    return;
+  }
+  auto mayor_actors = city->actors(ActorType::MAYOR);
+  if (mayor_actors.empty()) {
+    return;
+  }
+  int mayor_id = mayor_actors[0]->id();
+
+  std::optional<int> award_winner = award_event.winner_player_id;
+
+  if (award_event.is_ceremony) {
     // Awards without a "nobody won" dialog silently skip if no one qualified.
     bool has_nobody_dialog =
         (award_event.type == MayorAwardType::BestImitator ||

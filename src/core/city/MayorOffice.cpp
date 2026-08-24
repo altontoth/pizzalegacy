@@ -157,7 +157,8 @@ void MayorOffice::schedule_quarterly_award(const GameDate& /*date*/) {
 std::optional<int> MayorOffice::compute_award_winner(MayorAwardType type,
                                                      int player_count) const {
   // MostBeautifulRestaurant and GoldenBowTie require iterating restaurant
-  // furniture/service data not accessible here. Computed by GameState.
+  // data not accessible here, Pizza of the Year has no winner until the
+  // competition is played.
   switch (type) {
   case MayorAwardType::BestInvestorInTown: {
     int best_score = 0;
@@ -201,8 +202,6 @@ std::optional<int> MayorOffice::compute_award_winner(MayorAwardType type,
     return winner;
   }
   default:
-    // MostBeautifulRestaurant, GoldenBowTie, PizzaOfTheYear:
-    // winner determined by GameState which has access to restaurant data.
     return std::nullopt;
   }
 }

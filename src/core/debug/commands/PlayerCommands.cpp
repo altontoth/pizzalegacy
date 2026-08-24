@@ -74,6 +74,15 @@ Examples:
           lines.push_back(line);
         }
 
+        if (player->is_on_holiday()) {
+          lines.push_back(compat::format("Holiday days left: {}",
+                                         *player->holiday_days_left()));
+        }
+        if (player->is_in_jail()) {
+          lines.push_back(compat::format("Jail days left: {}",
+                                         player->jail_days_left().value_or(0)));
+        }
+
         return CommandResult::success(lines);
       },
   };
@@ -758,6 +767,98 @@ Examples:
   };
 }
 
+static CommandDef make_player_holiday() {
+  return CommandDef{
+      .name = "holiday",
+      .aliases = {"vacation"},
+      .description = "Send a player on holiday",
+      .help_text = R"(Usage: player holiday <days> [player_id]
+
+Sends the player on holiday for the given number of days. Their turns run
+non-interactively until the counter runs down, which it does once per turn
+card; there is no command to end one early.
+
+Examples:
+  player holiday 7        # Active player leaves for a week
+  player holiday 3 1      # Player 1 leaves for three days
+)",
+      .args =
+          {
+              ArgSpec{
+                  .name = "days",
+                  .type = ArgType::Int,
+                  .optional = false,
+                  .default_provider = DefaultProvider::None,
+                  .description = "Days of holiday",
+                  .min_value = 1,
+                  .max_value = 99,
+              },
+              player_id_arg(),
+          },
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        auto days = static_cast<int>(ctx.int_arg(0));
+        auto player_id = ctx.player_id(1);
+
+        auto* player = ctx.state.player(player_id);
+        if (!player) {
+          return CommandResult::error(
+              compat::format("Player {} not found", player_id.value));
+        }
+
+        player->holiday(days);
+
+        return CommandResult::success().add_message(compat::format(
+            "{} is on holiday for {} days", player->name(), days));
+      },
+  };
+}
+
+static CommandDef make_player_jail() {
+  return CommandDef{
+      .name = "jail",
+      .aliases = {"prison"},
+      .description = "Send a player to prison",
+      .help_text = R"(Usage: player jail <days> [player_id]
+
+Imprisons the player for the given number of days, the same state an arrest
+produces. Their turns run non-interactively until the sentence is served.
+
+Examples:
+  player jail 5         # Active player serves five days
+  player jail 10 2      # Player 2 serves ten days
+)",
+      .args =
+          {
+              ArgSpec{
+                  .name = "days",
+                  .type = ArgType::Int,
+                  .optional = false,
+                  .default_provider = DefaultProvider::None,
+                  .description = "Days of the sentence",
+                  .min_value = 1,
+                  .max_value = 99,
+              },
+              player_id_arg(),
+          },
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        auto days = static_cast<int>(ctx.int_arg(0));
+        auto player_id = ctx.player_id(1);
+
+        auto* player = ctx.state.player(player_id);
+        if (!player) {
+          return CommandResult::error(
+              compat::format("Player {} not found", player_id.value));
+        }
+
+        player->jail(days);
+
+        return CommandResult::success().add_message(
+            compat::format("{} is in prison for {} days", player->name(),
+                           player->jail_days_left().value_or(0)));
+      },
+  };
+}
+
 CommandDef make_player_commands() {
   return CommandDef{
       .name = "player",
@@ -765,7 +866,7 @@ CommandDef make_player_commands() {
       .description = "Player management commands",
       .help_text = "Manage player state: info, money, inventory, recipes, "
                    "weapon_profit, competition, campaigns, balance, "
-                   "ad_effectiveness",
+                   "ad_effectiveness, holiday, jail",
   }
       .add_subcommand(make_player_info())
       .add_subcommand(make_player_money())
@@ -775,7 +876,9 @@ CommandDef make_player_commands() {
       .add_subcommand(make_player_competition())
       .add_subcommand(make_player_campaigns())
       .add_subcommand(make_player_balance())
-      .add_subcommand(make_player_ad_effectiveness());
+      .add_subcommand(make_player_ad_effectiveness())
+      .add_subcommand(make_player_holiday())
+      .add_subcommand(make_player_jail());
 }
 
 } // namespace debug::commands

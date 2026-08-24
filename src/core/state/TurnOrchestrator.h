@@ -141,6 +141,11 @@ public:
     int display_block;
   };
 
+  struct DeferredMayorAward {
+    MayorAwardEvent event;
+    core::PlayerId player_id;
+  };
+
   // Protection racket offers rolled during the day-end flush, delivered on
   // the owning player's next turn.
   struct DeferredRacketOffer {
@@ -152,7 +157,7 @@ public:
   void queue_manager_alert(core::RestaurantId rid, std::string message,
                            int display_block);
   void drop_city_local_events_outside(core::CityId city);
-  void queue_mayor_award(const MayorAwardEvent& ev);
+  void queue_mayor_award(const MayorAwardEvent& ev, core::PlayerId player_id);
 
   // Queue a mayor inspection and show it immediately (debug use).
   void trigger_mayor_inspection(core::RestaurantId rid, bool is_first);
@@ -173,7 +178,7 @@ public:
                                          int display_block) {
     deferred_mayor_inspections_.push_back({is_first, rid, display_block});
   }
-  const std::vector<MayorAwardEvent>& deferred_mayor_awards() const {
+  const std::vector<DeferredMayorAward>& deferred_mayor_awards() const {
     return deferred_mayor_awards_;
   }
   const std::vector<DeferredRacketOffer>& deferred_racket_offers() const {
@@ -286,7 +291,5 @@ private:
   std::vector<DeferredInspectionEvent> deferred_mayor_inspections_;
   bool showing_deferred_inspection_{false};
 
-  // Mayor award events from end_of_day() queued for delivery on the
-  // active player's next turn.
-  std::vector<MayorAwardEvent> deferred_mayor_awards_;
+  std::vector<DeferredMayorAward> deferred_mayor_awards_;
 };

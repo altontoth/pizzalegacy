@@ -655,11 +655,12 @@ json SaveGameManager::state_to_json(const GameState& state,
     j["deferred_mayor_inspections"] = insp_array;
 
     json award_array = json::array();
-    for (const auto& ev : state.turn().deferred_mayor_awards()) {
-      json entry = {{"type", static_cast<int>(ev.type)},
-                    {"is_ceremony", ev.is_ceremony}};
-      if (ev.winner_player_id.has_value()) {
-        entry["winner_player_id"] = *ev.winner_player_id;
+    for (const auto& d : state.turn().deferred_mayor_awards()) {
+      json entry = {{"type", static_cast<int>(d.event.type)},
+                    {"is_ceremony", d.event.is_ceremony},
+                    {"player_id", d.player_id.value}};
+      if (d.event.winner_player_id.has_value()) {
+        entry["winner_player_id"] = *d.event.winner_player_id;
       }
       else {
         entry["winner_player_id"] = nullptr;
@@ -940,7 +941,8 @@ void SaveGameManager::json_to_state(const json& j, GameState& state,
           !ev["winner_player_id"].is_null()) {
         award.winner_player_id = ev["winner_player_id"].get<int>();
       }
-      state.turn().queue_mayor_award(award);
+      state.turn().queue_mayor_award(award,
+                                     core::PlayerId{ev.value("player_id", 0)});
     }
   }
 

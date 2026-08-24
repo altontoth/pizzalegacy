@@ -101,17 +101,19 @@ void TurnOrchestrator::end_of_turn() {
 
   auto* current_player = gs_->active_player();
 
-  // A mayor inspection undelivered by the end of this player's day is lost;
-  // the 60-119 day countdown to the next one was re-armed when it was queued.
-  std::erase_if(deferred_mayor_inspections_,
-                [this](const DeferredInspectionEvent& ev) {
-                  return can_deliver_to_active_player(ev.restaurant_id);
-                });
-
   bool interactive = current_player->is_human_controlled() &&
                      !current_player->is_on_holiday() &&
                      !current_player->is_in_jail() &&
                      !suppress_end_of_turn_reports_;
+
+  // Inspections that were scheduled for today but not seen by the player (day
+  // ended early) are dropped. They have to wait for the next inspection.
+  if (interactive) {
+    std::erase_if(deferred_mayor_inspections_,
+                  [this](const DeferredInspectionEvent& ev) {
+                    return can_deliver_to_active_player(ev.restaurant_id);
+                  });
+  }
 
   // Ending the turn flushes staff event dialogs that have not fired yet
   // (before 10:00): the original jumps the clock to the day-end block and
@@ -202,7 +204,8 @@ TurnOrchestrator::process_restaurant_step(const turn::ProcessRestaurant& step) {
 
   gs_->status().refresh_header();
 
-  if (step.interactive) {
+  auto* owner = gs_->restaurant_owner(*restaurant);
+  if (owner && owner->is_human_controlled()) {
     // Queue mayor inspection event for delivery next day.
     if (auto insp = restaurant->take_pending_inspection()) {
       deferred_mayor_inspections_.push_back(
@@ -237,7 +240,9 @@ TurnOrchestrator::process_restaurant_step(const turn::ProcessRestaurant& step) {
         deferred_staff_events_.push_back({ev, restaurant->id()});
       }
     }
+  }
 
+  if (step.interactive) {
     // The daily report's dismiss button resumes the pipeline.
     if (!gs_->options().automatic_report && restaurant->wants_open() &&
         !restaurant->is_force_closed()) {
@@ -349,8 +354,9 @@ void TurnOrchestrator::drop_city_local_events_outside(core::CityId city) {
                 });
 }
 
-void TurnOrchestrator::queue_mayor_award(const MayorAwardEvent& ev) {
-  deferred_mayor_awards_.push_back(ev);
+void TurnOrchestrator::queue_mayor_award(const MayorAwardEvent& ev,
+                                         core::PlayerId player_id) {
+  deferred_mayor_awards_.push_back({ev, player_id});
 }
 
 bool TurnOrchestrator::show_next_deferred_manager_alert() {
@@ -545,12 +551,17 @@ bool TurnOrchestrator::fire_queued_events() {
 
   // Fire deferred mayor award events at 10:00 (after inspections).
   if (!showing_deferred_staff_event_ && !showing_deferred_inspection_ &&
-      !gs_->ui().is_top<MayorState>() && !deferred_mayor_awards_.empty() &&
-      time.is_past_time(10, 0)) {
-    auto ev = deferred_mayor_awards_.front();
-    deferred_mayor_awards_.erase(deferred_mayor_awards_.begin());
-    gs_->process_mayor_award_event(ev);
-    return true;
+      !gs_->ui().is_top<MayorState>() && time.is_past_time(10, 0)) {
+    auto it = std::ranges::find_if(
+        deferred_mayor_awards_, [&](const DeferredMayorAward& d) {
+          return d.player_id == gs_->active_player()->id();
+        });
+    if (it != deferred_mayor_awards_.end()) {
+      auto ev = it->event;
+      deferred_mayor_awards_.erase(it);
+      gs_->process_mayor_award_event(ev);
+      return true;
+    }
   }
 
   return false;
@@ -1280,6 +1291,7 @@ void TurnOrchestrator::run_city_start_of_day(City& city) {
   auto awards = city.mayor_office().process_daily_scheduling(
       gs_->time_.current_date(), gs_->human_player_count());
   for (auto& ev : awards) {
-    queue_mayor_award(ev);
+    gs_->score_and_grant_mayor_award(ev, city);
+    queue_mayor_award(ev, gs_->active_player_);
   }
 }

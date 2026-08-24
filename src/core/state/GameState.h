@@ -418,7 +418,9 @@ public:
                                Restaurant* restaurant,
                                std::function<void()> on_done);
 
-  // Push a mayor award event directly to the UI (debug use).
+  void score_and_grant_mayor_award(MayorAwardEvent& award_event, City& city);
+
+  // Push a mayor award dialog to the UI.
   void process_mayor_award_event(const MayorAwardEvent& award_event);
 
   // Presenter that asks one player whether and how to enter the monthly
