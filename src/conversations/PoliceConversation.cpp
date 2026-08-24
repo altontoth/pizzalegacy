@@ -13,10 +13,19 @@
 #include "core/events/MilestoneId.h"
 #include "core/finance/Ledger.h"
 #include "core/item/Item.h"
+#include "core/restaurant/Restaurant.h"
 #include "engine/Fatal.h"
 #include "engine/FormatCompat.h"
 #include "engine/Math.h"
 #include "engine/Random.h"
+
+namespace {
+
+// Visits more than this many days in the future don't qualify, neither do
+// restaurants that have never been visited by the mayor.
+constexpr int mayor_tip_horizon_days = 100;
+
+} // namespace
 
 PoliceConversation::PoliceConversation(GameState& state, const Actor* actor,
                                        std::optional<ArrestReason> ar)
@@ -56,11 +65,31 @@ PoliceConversation::PoliceConversation(GameState& state, const Actor* actor,
       flag = engine::random::coin_flip();
     }
 
-    // TODO: Find mayor schedule and depot inspection date
+    mayor_tip_ = mayor_tip(state_, player->id());
+
+    // TODO: Find depot inspection date
 
     // Compute donation amount
     donation_amount_ = (random_flags_[3] ? 2 : 1) * 2000 * business_rank;
   }
+}
+
+std::optional<PoliceConversation::MayorTip>
+PoliceConversation::mayor_tip(const GameState& state, core::PlayerId player) {
+  // The tip names the restaurant whose next visit is soonest, ties going to
+  // the one opened earliest.
+  std::optional<MayorTip> tip;
+  int soonest = mayor_tip_horizon_days;
+  for (const auto* restaurant :
+       state.restaurants_in_city(player, state.active_city_id())) {
+    if (restaurant->first_inspection_pending() ||
+        restaurant->inspection_days_remaining() >= soonest) {
+      continue;
+    }
+    soonest = restaurant->inspection_days_remaining();
+    tip = MayorTip{restaurant->name(), soonest};
+  }
+  return tip;
 }
 
 PoliceLine
@@ -176,13 +205,7 @@ bool PoliceConversation::advance_line_choice(PoliceLine choice) {
         PoliceLine::WHAT_DO_YOU_THINK_I_AM_I_FINE_YOU_1K_FOR_INSULTING);
     break;
 
-  case PoliceLine::HOW_ARE_YOU:
-    // TODO: If we have a restaurant to disclose:
-    // current_line(PoliceLine::YES_INDEED_I_HAPPENED_TO_FIND_OUT_MAYOR_VISIT_RESTAURANT_FOR_2K);
-    current_line(PoliceLine::ITS_NOT_THAT_NICE_STOP_BOTHERING_ME);
-    break;
-
-  case PoliceLine::NICE_DAY: {
+  case PoliceLine::HOW_ARE_YOU: {
     int charisma = player->character().charisma();
     // TODO When we have warehouse inspections hooked up
     bool warehouse_inspection = false;
@@ -194,6 +217,27 @@ bool PoliceConversation::advance_line_choice(PoliceLine choice) {
     }
     else {
       current_line(PoliceLine::NOT_TOO_GOOD_IM_VERY_BUSY_GOODBYE);
+    }
+    break;
+  }
+
+  case PoliceLine::NICE_DAY: {
+    // No restaurants in this city means no offer and no charisma roll.
+    bool offer = false;
+    if (!state_.restaurants_in_city(player->id(), state_.active_city_id())
+             .empty()) {
+      offer = engine::random::rand_percentage_chance(
+                  player->character().charisma()) &&
+              mayor_tip_.has_value();
+    }
+
+    if (offer) {
+      current_line(
+          PoliceLine::
+              YES_INDEED_I_HAPPENED_TO_FIND_OUT_MAYOR_VISIT_RESTAURANT_FOR_2K);
+    }
+    else {
+      current_line(PoliceLine::ITS_NOT_THAT_NICE_STOP_BOTHERING_ME);
     }
     break;
   }
@@ -352,11 +396,10 @@ std::vector<ConversationLine<PoliceLine>> PoliceConversation::lines() const {
     return {make_terminal_line(
         PoliceLine::THANKS_A_LOT_NEXT_MONTH_WE_WILL_EXAMINE_WAREHOUSES_IN)};
   case PoliceLine::THANK_YOU_THE_MAYOR_WILL_VISIT_YOUR_RESTAURANT:
-    // TODO: when mayor schedule is known we need to append:
-    // "{restaurant name} in exactly {day count} days!"
-    Logger::warn("We don't know the mayors schedule yet!");
     return {make_terminal_line(
-        PoliceLine::THANK_YOU_THE_MAYOR_WILL_VISIT_YOUR_RESTAURANT)};
+        PoliceLine::THANK_YOU_THE_MAYOR_WILL_VISIT_YOUR_RESTAURANT,
+        compat::format("{} in exactly {} days!", mayor_tip_->restaurant,
+                       mayor_tip_->countdown_days))};
 
   case PoliceLine::YES_THANKS_WHAT_WOULD_I_HAVE_DONE_WITHOUT:
     return {make_terminal_line(

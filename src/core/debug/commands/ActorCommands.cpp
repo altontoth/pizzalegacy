@@ -6,6 +6,7 @@
 
 #include "core/debug/commands/ActorCommands.h"
 
+#include "conversations/PoliceConversation.h"
 #include "core/GameTypes.h"
 #include "core/character/Actor.h"
 #include "core/character/MafiaPlayerState.h"
@@ -497,14 +498,14 @@ static CommandDef make_police_arrest() {
   return CommandDef{
       .name = "arrest",
       .description = "Trigger a police arrest with a given crime code",
-      .help_text = R"(Usage: actor police arrest <crime_code>
+      .help_text = R"(Usage: police arrest <crime_code>
 
 Triggers a police arrest for the given crime code (1-9):
   1=Receiving, 2=Burglary, 3=WeaponsDealing, 4=LaunderingMoney,
   5=ShadyDealings, 6=SuspectedHomicide, 7=PossessingWeapons
 
 Example:
-  actor police arrest 3
+  police arrest 3
 )",
       .args =
           {
@@ -533,12 +534,12 @@ static CommandDef make_police_visit() {
   return CommandDef{
       .name = "visit",
       .description = "Trigger a voluntary police station visit",
-      .help_text = R"(Usage: actor police visit
+      .help_text = R"(Usage: police visit
 
 Opens the police conversation as a voluntary visit.
 
 Example:
-  actor police visit
+  police visit
 )",
       .handler = [](const CommandContext& ctx) -> CommandResult {
         auto* city = ctx.state.active_city();
@@ -557,16 +558,45 @@ Example:
   };
 }
 
+static CommandDef make_police_tip() {
+  return CommandDef{
+      .name = "tip",
+      .description = "Show what the mayor-visit tip would say",
+      .help_text = R"(Usage: police tip
+
+Reports the restaurant the mayor tip would name and the countdown it would
+quote, or that no visit is near enough to be available.
+
+Example:
+  police tip
+)",
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        auto* player = ctx.state.active_player();
+        if (!player) {
+          return CommandResult::error("No active player");
+        }
+        auto tip = PoliceConversation::mayor_tip(ctx.state, player->id());
+        if (!tip) {
+          return CommandResult::success().add_message(
+              "Mayor tip: nothing available");
+        }
+        return CommandResult::success().add_message(
+            compat::format("Mayor tip: {} in exactly {} days", tip->restaurant,
+                           tip->countdown_days));
+      },
+  };
+}
+
 static CommandDef make_police_status() {
   return CommandDef{
       .name = "status",
       .description = "Show player's criminal record and jail status",
-      .help_text = R"(Usage: actor police status
+      .help_text = R"(Usage: police status
 
 Shows criminal record, jail days left, and social score/rank.
 
 Example:
-  actor police status
+  police status
 )",
       .handler = [](const CommandContext& ctx) -> CommandResult {
         auto* player = ctx.state.active_player();
@@ -601,10 +631,11 @@ CommandDef make_police_commands() {
   return CommandDef{
       .name = "police",
       .description = "Police interaction commands",
-      .help_text = "Trigger police events (arrest, visit, status)",
+      .help_text = "Trigger police events (arrest, visit, tip, status)",
   }
       .add_subcommand(make_police_arrest())
       .add_subcommand(make_police_visit())
+      .add_subcommand(make_police_tip())
       .add_subcommand(make_police_status());
 }
 

@@ -218,12 +218,6 @@ TurnOrchestrator::process_restaurant_step(const turn::ProcessRestaurant& step) {
 
   auto* owner = gs_->restaurant_owner(*restaurant);
   if (owner && owner->is_human_controlled()) {
-    // Queue mayor inspection event for delivery next day.
-    if (auto insp = restaurant->take_pending_inspection()) {
-      deferred_mayor_inspections_.push_back(
-          {*insp, restaurant->id(), roll_inspection_block()});
-    }
-
     // Queue staff event dialogs for the next day: delivered at 10:00, or
     // flushed by that day's End Turn if it comes first.
     // Replace any existing queued event for the same staff member so that
@@ -962,6 +956,12 @@ TurnOrchestrator::execute_pipeline_step(const turn::Step& step) {
                   is_restaurant_in_processing_scope(*restaurant,
                                                     gs_->active_player_)) {
                 restaurant->start_of_day(*gs_);
+                if (is_human) {
+                  if (auto insp = restaurant->take_pending_inspection()) {
+                    deferred_mayor_inspections_.push_back(
+                        {*insp, restaurant->id(), roll_inspection_block()});
+                  }
+                }
               }
             }
             deliver_depot_stock(gs_->active_player_);

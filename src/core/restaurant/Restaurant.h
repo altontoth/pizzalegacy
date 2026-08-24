@@ -462,7 +462,8 @@ public:
   int star_rating() const { return star_rating_; }
   void star_rating(int v) { star_rating_ = v; } // for save/load
 
-  // Returns (and clears) a pending inspection event queued during end_of_day.
+  // Returns (and clears) a pending inspection event queued during
+  // start_of_day.
   // Returns true if it is the first-ever inspection, false for subsequent.
   // Returns nullopt if no inspection is pending.
   std::optional<bool> take_pending_inspection() {

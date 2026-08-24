@@ -1133,17 +1133,6 @@ void Restaurant::end_of_day(GameState& game_state) {
     pending_staff_events_ = staff_events.take_pending_dialogs();
   }
 
-  // Inspection countdown: only ticks while the restaurant is open.
-  // When it reaches 0 an inspection is queued for delivery next morning.
-  if (wants_open() && !is_force_closed() && inspection_days_remaining_ > 0) {
-    inspection_days_remaining_--;
-    if (inspection_days_remaining_ == 0) {
-      pending_inspection_ = first_inspection_pending_;
-      first_inspection_pending_ = false;
-      inspection_days_remaining_ = engine::random::rand_max_n(60) + 60;
-    }
-  }
-
   if (!wants_open_ || forced_days_remaining_ > 0) {
     stats_.end_of_day(0);
     return;
@@ -1719,6 +1708,19 @@ void Restaurant::start_of_day(GameState& game_state) {
   }
 
   decrement_protection_timer();
+
+  // Inspection countdown: only ticks while the restaurant is open. The day it
+  // fires is not a day it counts down, so a countdown of n means n+1 days.
+  if (wants_open() && !is_force_closed()) {
+    if (inspection_days_remaining_ > 0) {
+      inspection_days_remaining_--;
+    }
+    else {
+      pending_inspection_ = first_inspection_pending_;
+      first_inspection_pending_ = false;
+      inspection_days_remaining_ = engine::random::rand_max_n(60) + 60;
+    }
+  }
 
   // Stock spoils first so the manager reacts to what is left of it.
   Money rotten_value{0};

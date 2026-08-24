@@ -8,6 +8,7 @@
 
 #include <array>
 #include <iostream>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -29,6 +30,16 @@ public:
   bool has_ended() const override;
   bool back_allowed() const override { return !arrest_reason_.has_value(); }
 
+  struct MayorTip {
+    std::string restaurant;
+    int countdown_days;
+  };
+
+  // The tip the police will give about the mayor's next visit, or nothing
+  // when there is no visit close enough.
+  static std::optional<MayorTip> mayor_tip(const GameState& state,
+                                           core::PlayerId player);
+
 private:
   static PoliceLine compute_start_line(const GameState& state, const Actor*,
                                        std::optional<ArrestReason> reason);
@@ -41,4 +52,5 @@ private:
   int bribe_or_fine_cost_ = 0;
   int donation_amount_ = 0;
   std::array<bool, 4> random_flags_{};
+  std::optional<MayorTip> mayor_tip_;
 };
