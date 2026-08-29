@@ -5,6 +5,7 @@
  */
 
 #include "core/debug/commands/NavCommands.h"
+#include "core/debug/command/CommonArgs.h"
 #include "core/state/GameState.h"
 #include "core/state/UIState.h"
 #include "engine/Logger.h"
@@ -48,15 +49,7 @@ Examples:
 )",
       .args =
           {
-              ArgSpec{
-                  .name = "city_id",
-                  .type = ArgType::CityId,
-                  .optional = true,
-                  .default_provider = DefaultProvider::ActiveCity,
-                  .description = "City ID (@ for active city)",
-                  .min_value = 0,
-                  .max_value = 9,
-              },
+              active_city_arg(),
           },
       .handler = [](const CommandContext& ctx) -> CommandResult {
         auto city_id = ctx.city_id(0);
@@ -84,13 +77,7 @@ Examples:
 )",
       .args =
           {
-              ArgSpec{
-                  .name = "restaurant_id",
-                  .type = ArgType::RestaurantId,
-                  .optional = true,
-                  .default_provider = DefaultProvider::ActiveRestaurant,
-                  .description = "Restaurant ID (@ for active)",
-              },
+              active_restaurant_arg(),
           },
       .handler = [](const CommandContext& ctx) -> CommandResult {
         auto rid = ctx.restaurant_id(0);

@@ -14,6 +14,7 @@
 #include "core/character/SocialStatus.h"
 #include "core/city/City.h"
 #include "core/city/CityNames.h"
+#include "core/debug/command/CommonArgs.h"
 #include "core/item/Item.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/state/GameState.h"
@@ -71,13 +72,7 @@ Examples:
 )",
       .args =
           {
-              ArgSpec{
-                  .name = "restaurant_id",
-                  .type = ArgType::RestaurantId,
-                  .optional = true,
-                  .default_provider = DefaultProvider::ActiveRestaurant,
-                  .description = "Restaurant ID (@ for active)",
-              },
+              active_restaurant_arg(),
               ArgSpec{
                   .name = "when",
                   .type = ArgType::String,

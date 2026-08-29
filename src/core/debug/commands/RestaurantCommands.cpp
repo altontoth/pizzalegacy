@@ -10,6 +10,7 @@
 #include "core/character/Staff.h"
 #include "core/city/City.h"
 #include "core/city/Property.h"
+#include "core/debug/command/CommonArgs.h"
 #include "core/finance/Ledger.h"
 #include "core/food/IngredientCategory.h"
 #include "core/food/IngredientCategoryType.h"
@@ -54,28 +55,6 @@ static std::optional<Money> buy_ingredient(GameState& state, Player& player,
   return cost;
 }
 
-// Common argument specs for restaurant commands
-static std::vector<ArgSpec> restaurant_args() {
-  return {
-      ArgSpec{
-          .name = "player_id",
-          .type = ArgType::PlayerId,
-          .optional = true,
-          .default_provider = DefaultProvider::ActivePlayer,
-          .description = "Player ID (@ for active player)",
-          .min_value = 0,
-          .max_value = NUMBER_OF_PLAYERS - 1,
-      },
-      ArgSpec{
-          .name = "restaurant_id",
-          .type = ArgType::RestaurantId,
-          .optional = true,
-          .default_provider = DefaultProvider::ActiveRestaurant,
-          .description = "Restaurant ID (@ for active restaurant)",
-      },
-  };
-}
-
 static CommandDef make_restaurant_info() {
   return CommandDef{
       .name = "info",
@@ -91,7 +70,7 @@ Examples:
   restaurant info @ 0          # Active player's restaurant 0
   restaurant info 2 3          # Player 2's restaurant 3
 )",
-      .args = restaurant_args(),
+      .args = {active_player_arg(), active_restaurant_arg()},
       .handler = [](const CommandContext& ctx) -> CommandResult {
         auto player_id = ctx.player_id(0);
         auto restaurant_id = ctx.restaurant_id(1);
@@ -145,7 +124,7 @@ Examples:
   restaurant clear @ 0         # Clear restaurant 0 of active player
   restaurant clear 2 3         # Clear player 2's restaurant 3
 )",
-      .args = restaurant_args(),
+      .args = {active_player_arg(), active_restaurant_arg()},
       .handler = [](const CommandContext& ctx) -> CommandResult {
         auto player_id = ctx.player_id(0);
         auto restaurant_id = ctx.restaurant_id(1);
@@ -185,7 +164,7 @@ Examples:
   restaurant shutdown          # Shut down the active restaurant
   restaurant shutdown 3 1      # Shut down player 3's restaurant 1
 )",
-      .args = restaurant_args(),
+      .args = {active_player_arg(), active_restaurant_arg()},
       .handler = [](const CommandContext& ctx) -> CommandResult {
         auto player_id = ctx.player_id(0);
         auto restaurant_id = ctx.restaurant_id(1);
@@ -239,7 +218,7 @@ Examples:
   restaurant open              # Open the active restaurant
   restaurant open 3 1          # Open player 3's restaurant 1
 )",
-      .args = restaurant_args(),
+      .args = {active_player_arg(), active_restaurant_arg()},
       .handler = [](const CommandContext& ctx) -> CommandResult {
         auto player_id = ctx.player_id(0);
         auto restaurant_id = ctx.restaurant_id(1);
@@ -283,7 +262,7 @@ Examples:
   restaurant close             # Close the active restaurant
   restaurant close 3 1         # Close player 3's restaurant 1
 )",
-      .args = restaurant_args(),
+      .args = {active_player_arg(), active_restaurant_arg()},
       .handler = [](const CommandContext& ctx) -> CommandResult {
         auto player_id = ctx.player_id(0);
         auto restaurant_id = ctx.restaurant_id(1);
@@ -336,22 +315,8 @@ Examples:
                   .min_value = 1,
                   .max_value = RestaurantLayoutFactory::ai_layout_count,
               },
-              ArgSpec{
-                  .name = "player_id",
-                  .type = ArgType::PlayerId,
-                  .optional = true,
-                  .default_provider = DefaultProvider::ActivePlayer,
-                  .description = "Player ID (@ for active player)",
-                  .min_value = 0,
-                  .max_value = NUMBER_OF_PLAYERS - 1,
-              },
-              ArgSpec{
-                  .name = "restaurant_id",
-                  .type = ArgType::RestaurantId,
-                  .optional = true,
-                  .default_provider = DefaultProvider::ActiveRestaurant,
-                  .description = "Restaurant ID (@ for active restaurant)",
-              },
+              active_player_arg(),
+              active_restaurant_arg(),
           },
       .handler = [](const CommandContext& ctx) -> CommandResult {
         const int index = static_cast<int>(ctx.int_arg(0));
@@ -399,7 +364,7 @@ Examples:
   restaurant furniture list        # Active restaurant
   restaurant furniture list @ 0    # Restaurant 0 of active player
 )",
-      .args = restaurant_args(),
+      .args = {active_player_arg(), active_restaurant_arg()},
       .handler = [](const CommandContext& ctx) -> CommandResult {
         auto player_id = ctx.player_id(0);
         auto restaurant_id = ctx.restaurant_id(1);
@@ -489,22 +454,8 @@ Examples:
                   .min_value = 1,
                   .max_value = 650,
               },
-              ArgSpec{
-                  .name = "player_id",
-                  .type = ArgType::PlayerId,
-                  .optional = true,
-                  .default_provider = DefaultProvider::ActivePlayer,
-                  .description = "Player ID (@ for active player)",
-                  .min_value = 0,
-                  .max_value = NUMBER_OF_PLAYERS - 1,
-              },
-              ArgSpec{
-                  .name = "restaurant_id",
-                  .type = ArgType::RestaurantId,
-                  .optional = true,
-                  .default_provider = DefaultProvider::ActiveRestaurant,
-                  .description = "Restaurant ID (@ for active restaurant)",
-              },
+              active_player_arg(),
+              active_restaurant_arg(),
           },
       .handler = [](const CommandContext& ctx) -> CommandResult {
         auto wanted_supplier = static_cast<uint8_t>(ctx.int_arg(0));
@@ -600,22 +551,8 @@ Examples:
                   .min_value = 1,
                   .max_value = 650,
               },
-              ArgSpec{
-                  .name = "player_id",
-                  .type = ArgType::PlayerId,
-                  .optional = true,
-                  .default_provider = DefaultProvider::ActivePlayer,
-                  .description = "Player ID (@ for active player)",
-                  .min_value = 0,
-                  .max_value = NUMBER_OF_PLAYERS - 1,
-              },
-              ArgSpec{
-                  .name = "restaurant_id",
-                  .type = ArgType::RestaurantId,
-                  .optional = true,
-                  .default_provider = DefaultProvider::ActiveRestaurant,
-                  .description = "Restaurant ID (@ for active restaurant)",
-              },
+              active_player_arg(),
+              active_restaurant_arg(),
           },
       .handler = [](const CommandContext& ctx) -> CommandResult {
         auto kg = static_cast<int>(ctx.int_arg(0));
@@ -686,7 +623,7 @@ Examples:
   restaurant stock clear             # Clear active restaurant
   restaurant stock clear @ 0         # Clear restaurant 0 of active player
 )",
-      .args = restaurant_args(),
+      .args = {active_player_arg(), active_restaurant_arg()},
       .handler = [](const CommandContext& ctx) -> CommandResult {
         auto player_id = ctx.player_id(0);
         auto restaurant_id = ctx.restaurant_id(1);
@@ -752,24 +689,8 @@ Examples:
 )",
       .args =
           {
-              ArgSpec{
-                  .name = "city_id",
-                  .type = ArgType::CityId,
-                  .optional = true,
-                  .default_provider = DefaultProvider::ActiveCity,
-                  .description = "City ID (@ for active city)",
-                  .min_value = 0,
-                  .max_value = 9,
-              },
-              ArgSpec{
-                  .name = "player_id",
-                  .type = ArgType::PlayerId,
-                  .optional = true,
-                  .default_provider = DefaultProvider::ActivePlayer,
-                  .description = "Player ID (@ for active player)",
-                  .min_value = 0,
-                  .max_value = NUMBER_OF_PLAYERS - 1,
-              },
+              active_city_arg(),
+              active_player_arg(),
               ArgSpec{
                   .name = "layout_id",
                   .type = ArgType::Int,
@@ -847,24 +768,8 @@ Examples:
 )",
       .args =
           {
-              ArgSpec{
-                  .name = "city_id",
-                  .type = ArgType::CityId,
-                  .optional = true,
-                  .default_provider = DefaultProvider::ActiveCity,
-                  .description = "City ID (@ for active city)",
-                  .min_value = 0,
-                  .max_value = 9,
-              },
-              ArgSpec{
-                  .name = "player_id",
-                  .type = ArgType::PlayerId,
-                  .optional = true,
-                  .default_provider = DefaultProvider::ActivePlayer,
-                  .description = "Player ID (@ for active player)",
-                  .min_value = 0,
-                  .max_value = NUMBER_OF_PLAYERS - 1,
-              },
+              active_city_arg(),
+              active_player_arg(),
           },
       .handler = [](const CommandContext& ctx) -> CommandResult {
         auto city_id = ctx.city_id(0);
@@ -1033,22 +938,8 @@ Examples:
                   .min_value = 0,
                   .max_value = 365,
               },
-              ArgSpec{
-                  .name = "player_id",
-                  .type = ArgType::PlayerId,
-                  .optional = true,
-                  .default_provider = DefaultProvider::ActivePlayer,
-                  .description = "Player ID (@ for active player)",
-                  .min_value = 0,
-                  .max_value = NUMBER_OF_PLAYERS - 1,
-              },
-              ArgSpec{
-                  .name = "restaurant_id",
-                  .type = ArgType::RestaurantId,
-                  .optional = true,
-                  .default_provider = DefaultProvider::ActiveRestaurant,
-                  .description = "Restaurant ID (@ for active restaurant)",
-              },
+              active_player_arg(),
+              active_restaurant_arg(),
           },
       .handler = [](const CommandContext& ctx) -> CommandResult {
         int days = static_cast<int>(ctx.int_arg(0));

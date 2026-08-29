@@ -8,6 +8,7 @@
 
 #include "core/city/City.h"
 #include "core/city/MayorOffice.h"
+#include "core/debug/command/CommonArgs.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/state/GameState.h"
 #include "engine/FormatCompat.h"
@@ -56,13 +57,7 @@ Examples:
 )",
       .args =
           {
-              ArgSpec{
-                  .name = "restaurant_id",
-                  .type = ArgType::RestaurantId,
-                  .optional = true,
-                  .default_provider = DefaultProvider::ActiveRestaurant,
-                  .description = "Restaurant ID (@ for active)",
-              },
+              active_restaurant_arg(),
               ArgSpec{
                   .name = "first",
                   .type = ArgType::Bool,
@@ -215,15 +210,7 @@ Examples:
                   .min_value = 0,
                   .max_value = 200,
               },
-              ArgSpec{
-                  .name = "player_id",
-                  .type = ArgType::PlayerId,
-                  .optional = true,
-                  .default_provider = DefaultProvider::ActivePlayer,
-                  .description = "Player ID (@ for active player)",
-                  .min_value = 0,
-                  .max_value = NUMBER_OF_PLAYERS - 1,
-              },
+              active_player_arg(),
           },
       .handler = [](const CommandContext& ctx) -> CommandResult {
         int amount = static_cast<int>(ctx.int_arg(0));

@@ -10,6 +10,7 @@
 #include "core/character/Staff.h"
 #include "core/character/Training.h"
 #include "core/city/Property.h"
+#include "core/debug/command/CommonArgs.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/restaurant/StaffEventData.h"
 #include "core/state/GameState.h"
@@ -117,22 +118,8 @@ when:   now shows the dialog, queue leaves it waiting like a day-start event
                           "destroycheesestock", "blowupoven", "spillwine",
                           "messeduporders", "forgottoopen"},
               },
-              ArgSpec{
-                  .name = "player_id",
-                  .type = ArgType::PlayerId,
-                  .optional = true,
-                  .default_provider = DefaultProvider::ActivePlayer,
-                  .description = "Player ID (@ for active player)",
-                  .min_value = 0,
-                  .max_value = NUMBER_OF_PLAYERS - 1,
-              },
-              ArgSpec{
-                  .name = "restaurant_id",
-                  .type = ArgType::RestaurantId,
-                  .optional = true,
-                  .default_provider = DefaultProvider::ActiveRestaurant,
-                  .description = "Restaurant ID (@ for active restaurant)",
-              },
+              active_player_arg(),
+              active_restaurant_arg(),
               ArgSpec{
                   .name = "slot",
                   .type = ArgType::Int,
@@ -267,22 +254,8 @@ Examples:
                   .min_value = 0,
                   .max_value = 100,
               },
-              ArgSpec{
-                  .name = "player_id",
-                  .type = ArgType::PlayerId,
-                  .optional = true,
-                  .default_provider = DefaultProvider::ActivePlayer,
-                  .description = "Player ID (@ for active player)",
-                  .min_value = 0,
-                  .max_value = NUMBER_OF_PLAYERS - 1,
-              },
-              ArgSpec{
-                  .name = "restaurant_id",
-                  .type = ArgType::RestaurantId,
-                  .optional = true,
-                  .default_provider = DefaultProvider::ActiveRestaurant,
-                  .description = "Restaurant ID (@ for active restaurant)",
-              },
+              active_player_arg(),
+              active_restaurant_arg(),
               ArgSpec{
                   .name = "slot",
                   .type = ArgType::Int,
@@ -349,22 +322,8 @@ Examples:
                   .min_value = 0,
                   .max_value = 365,
               },
-              ArgSpec{
-                  .name = "player_id",
-                  .type = ArgType::PlayerId,
-                  .optional = true,
-                  .default_provider = DefaultProvider::ActivePlayer,
-                  .description = "Player ID (@ for active player)",
-                  .min_value = 0,
-                  .max_value = NUMBER_OF_PLAYERS - 1,
-              },
-              ArgSpec{
-                  .name = "restaurant_id",
-                  .type = ArgType::RestaurantId,
-                  .optional = true,
-                  .default_provider = DefaultProvider::ActiveRestaurant,
-                  .description = "Restaurant ID (@ for active restaurant)",
-              },
+              active_player_arg(),
+              active_restaurant_arg(),
               ArgSpec{
                   .name = "slot",
                   .type = ArgType::Int,
@@ -430,22 +389,8 @@ Examples:
                   .min_value = 0,
                   .max_value = 2,
               },
-              ArgSpec{
-                  .name = "player_id",
-                  .type = ArgType::PlayerId,
-                  .optional = true,
-                  .default_provider = DefaultProvider::ActivePlayer,
-                  .description = "Player ID (@ for active player)",
-                  .min_value = 0,
-                  .max_value = NUMBER_OF_PLAYERS - 1,
-              },
-              ArgSpec{
-                  .name = "restaurant_id",
-                  .type = ArgType::RestaurantId,
-                  .optional = true,
-                  .default_provider = DefaultProvider::ActiveRestaurant,
-                  .description = "Restaurant ID (@ for active restaurant)",
-              },
+              active_player_arg(),
+              active_restaurant_arg(),
               ArgSpec{
                   .name = "character_id",
                   .type = ArgType::Int,
@@ -538,22 +483,8 @@ Examples:
                   .min_value = 0,
                   .max_value = 6,
               },
-              ArgSpec{
-                  .name = "player_id",
-                  .type = ArgType::PlayerId,
-                  .optional = true,
-                  .default_provider = DefaultProvider::ActivePlayer,
-                  .description = "Player ID (@ for active player)",
-                  .min_value = 0,
-                  .max_value = NUMBER_OF_PLAYERS - 1,
-              },
-              ArgSpec{
-                  .name = "restaurant_id",
-                  .type = ArgType::RestaurantId,
-                  .optional = true,
-                  .default_provider = DefaultProvider::ActiveRestaurant,
-                  .description = "Restaurant ID (@ for active restaurant)",
-              },
+              active_player_arg(),
+              active_restaurant_arg(),
           },
       .handler = [](const CommandContext& ctx) -> CommandResult {
         auto setting = ctx.string_arg(0);
@@ -640,22 +571,8 @@ Examples:
                   .min_value = 0,
                   .max_value = 17,
               },
-              ArgSpec{
-                  .name = "player_id",
-                  .type = ArgType::PlayerId,
-                  .optional = true,
-                  .default_provider = DefaultProvider::ActivePlayer,
-                  .description = "Player ID (@ for active player)",
-                  .min_value = 0,
-                  .max_value = NUMBER_OF_PLAYERS - 1,
-              },
-              ArgSpec{
-                  .name = "restaurant_id",
-                  .type = ArgType::RestaurantId,
-                  .optional = true,
-                  .default_provider = DefaultProvider::ActiveRestaurant,
-                  .description = "Restaurant ID (@ for active restaurant)",
-              },
+              active_player_arg(),
+              active_restaurant_arg(),
               ArgSpec{
                   .name = "slot",
                   .type = ArgType::Int,
@@ -732,22 +649,8 @@ Examples:
                   .min_value = 1,
                   .max_value = 365,
               },
-              ArgSpec{
-                  .name = "player_id",
-                  .type = ArgType::PlayerId,
-                  .optional = true,
-                  .default_provider = DefaultProvider::ActivePlayer,
-                  .description = "Player ID (@ for active player)",
-                  .min_value = 0,
-                  .max_value = NUMBER_OF_PLAYERS - 1,
-              },
-              ArgSpec{
-                  .name = "restaurant_id",
-                  .type = ArgType::RestaurantId,
-                  .optional = true,
-                  .default_provider = DefaultProvider::ActiveRestaurant,
-                  .description = "Restaurant ID (@ for active restaurant)",
-              },
+              active_player_arg(),
+              active_restaurant_arg(),
           },
       .handler = [](const CommandContext& ctx) -> CommandResult {
         // The Zero provider yields 0; the real default is 1.
@@ -804,22 +707,8 @@ Examples:
 )",
       .args =
           {
-              ArgSpec{
-                  .name = "player_id",
-                  .type = ArgType::PlayerId,
-                  .optional = true,
-                  .default_provider = DefaultProvider::ActivePlayer,
-                  .description = "Player ID (@ for active player)",
-                  .min_value = 0,
-                  .max_value = NUMBER_OF_PLAYERS - 1,
-              },
-              ArgSpec{
-                  .name = "restaurant_id",
-                  .type = ArgType::RestaurantId,
-                  .optional = true,
-                  .default_provider = DefaultProvider::ActiveRestaurant,
-                  .description = "Restaurant ID (@ for active restaurant)",
-              },
+              active_player_arg(),
+              active_restaurant_arg(),
           },
       .handler = [](const CommandContext& ctx) -> CommandResult {
         auto player_id = ctx.player_id(0);

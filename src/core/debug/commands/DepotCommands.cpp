@@ -9,6 +9,7 @@
 #include "core/city/City.h"
 #include "core/city/District.h"
 #include "core/city/Property.h"
+#include "core/debug/command/CommonArgs.h"
 #include "core/economy/WeaponMarket.h"
 #include "core/finance/Ledger.h"
 #include "core/food/IngredientCategory.h"
@@ -17,7 +18,6 @@
 #include "core/item/Item.h"
 #include "core/state/GameState.h"
 #include "core/supply/FoodSupplier.h"
-#include "core/util/Constants.h"
 #include "engine/FormatCompat.h"
 #include "engine/Random.h"
 
@@ -71,30 +71,6 @@ static int count_player_depots(const City& city, core::PlayerId player_id) {
   return count;
 }
 
-// Common argument specs: (city_id, player_id)
-static std::vector<ArgSpec> city_player_args() {
-  return {
-      ArgSpec{
-          .name = "city_id",
-          .type = ArgType::CityId,
-          .optional = true,
-          .default_provider = DefaultProvider::ActiveCity,
-          .description = "City ID (@ for active city)",
-          .min_value = 0,
-          .max_value = 9,
-      },
-      ArgSpec{
-          .name = "player_id",
-          .type = ArgType::PlayerId,
-          .optional = true,
-          .default_provider = DefaultProvider::ActivePlayer,
-          .description = "Player ID (@ for active player)",
-          .min_value = 0,
-          .max_value = NUMBER_OF_PLAYERS - 1,
-      },
-  };
-}
-
 static CommandDef make_depot_give() {
   return CommandDef{
       .name = "give",
@@ -109,7 +85,7 @@ Examples:
   depot give @ @          # Active city/player (explicit)
   depot give 6 0          # Madrid, player 0
 )",
-      .args = city_player_args(),
+      .args = {active_city_arg(), active_player_arg()},
       .handler = [](const CommandContext& ctx) -> CommandResult {
         auto city_id = ctx.city_id(0);
         auto player_id = ctx.player_id(1);
@@ -165,7 +141,7 @@ Examples:
   depot info @ 0          # Active city, player 0
   depot info 6 @          # Madrid, active player
 )",
-      .args = city_player_args(),
+      .args = {active_city_arg(), active_player_arg()},
       .handler = [](const CommandContext& ctx) -> CommandResult {
         auto city_id = ctx.city_id(0);
         auto player_id = ctx.player_id(1);
@@ -280,24 +256,8 @@ Examples:
                   .min_value = 0,
                   .max_value = 100,
               },
-              ArgSpec{
-                  .name = "city_id",
-                  .type = ArgType::CityId,
-                  .optional = true,
-                  .default_provider = DefaultProvider::ActiveCity,
-                  .description = "City ID (@ for active city)",
-                  .min_value = 0,
-                  .max_value = 9,
-              },
-              ArgSpec{
-                  .name = "player_id",
-                  .type = ArgType::PlayerId,
-                  .optional = true,
-                  .default_provider = DefaultProvider::ActivePlayer,
-                  .description = "Player ID (@ for active player)",
-                  .min_value = 0,
-                  .max_value = NUMBER_OF_PLAYERS - 1,
-              },
+              active_city_arg(),
+              active_player_arg(),
           },
       .handler = [](const CommandContext& ctx) -> CommandResult {
         auto ingredient_id = ctx.int_arg(0);
@@ -356,24 +316,8 @@ Examples:
                   .min_value = 1,
                   .max_value = 650,
               },
-              ArgSpec{
-                  .name = "city_id",
-                  .type = ArgType::CityId,
-                  .optional = true,
-                  .default_provider = DefaultProvider::ActiveCity,
-                  .description = "City ID (@ for active city)",
-                  .min_value = 0,
-                  .max_value = 9,
-              },
-              ArgSpec{
-                  .name = "player_id",
-                  .type = ArgType::PlayerId,
-                  .optional = true,
-                  .default_provider = DefaultProvider::ActivePlayer,
-                  .description = "Player ID (@ for active player)",
-                  .min_value = 0,
-                  .max_value = NUMBER_OF_PLAYERS - 1,
-              },
+              active_city_arg(),
+              active_player_arg(),
           },
       .handler = [](const CommandContext& ctx) -> CommandResult {
         auto kg = static_cast<int>(ctx.int_arg(0));
@@ -445,7 +389,7 @@ Examples:
   depot stock steal             # Steal from active city/player depot
   depot stock steal @ 0         # Active city, player 0
 )",
-      .args = city_player_args(),
+      .args = {active_city_arg(), active_player_arg()},
       .handler = [](const CommandContext& ctx) -> CommandResult {
         auto city_id = ctx.city_id(0);
         auto player_id = ctx.player_id(1);
@@ -486,7 +430,7 @@ Examples:
   depot stock clear             # Clear active city/player depot
   depot stock clear @ 0         # Active city, player 0
 )",
-      .args = city_player_args(),
+      .args = {active_city_arg(), active_player_arg()},
       .handler = [](const CommandContext& ctx) -> CommandResult {
         auto city_id = ctx.city_id(0);
         auto player_id = ctx.player_id(1);
@@ -545,24 +489,8 @@ Examples:
                   .min_value = 0,
                   .max_value = 255,
               },
-              ArgSpec{
-                  .name = "city_id",
-                  .type = ArgType::CityId,
-                  .optional = true,
-                  .default_provider = DefaultProvider::ActiveCity,
-                  .description = "City ID (@ for active city)",
-                  .min_value = 0,
-                  .max_value = 9,
-              },
-              ArgSpec{
-                  .name = "player_id",
-                  .type = ArgType::PlayerId,
-                  .optional = true,
-                  .default_provider = DefaultProvider::ActivePlayer,
-                  .description = "Player ID (@ for active player)",
-                  .min_value = 0,
-                  .max_value = NUMBER_OF_PLAYERS - 1,
-              },
+              active_city_arg(),
+              active_player_arg(),
               ArgSpec{
                   .name = "depot",
                   .type = ArgType::Int,

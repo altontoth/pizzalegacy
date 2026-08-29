@@ -348,6 +348,7 @@ set(PLEGACY_HEADERS
     src/core/debug/command/CommandRegistry.h
     src/core/debug/command/CommandResult.h
     src/core/debug/command/CommandTokenizer.h
+    src/core/debug/command/CommonArgs.h
     src/core/debug/command/DefaultProvider.h
     src/core/debug/command/ParsedValue.h
     src/core/debug/command/TypeParser.h

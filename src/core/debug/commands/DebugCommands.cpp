@@ -9,6 +9,7 @@
 #include <fstream>
 #include <sstream>
 #include "core/debug/command/CommandRegistry.h"
+#include "core/debug/command/CommonArgs.h"
 #include "core/save/SaveGameManager.h"
 #include "core/state/GameState.h"
 #include "core/util/GameContext.h"
@@ -33,15 +34,7 @@ Examples:
 )",
       .args =
           {
-              ArgSpec{
-                  .name = "player_id",
-                  .type = ArgType::PlayerId,
-                  .optional = true,
-                  .default_provider = DefaultProvider::ActivePlayer,
-                  .description = "Player ID (@ for active player)",
-                  .min_value = 0,
-                  .max_value = 7,
-              },
+              active_player_arg(),
           },
       .handler = [](const CommandContext& ctx) -> CommandResult {
         auto player_id = ctx.player_id(0);
@@ -120,15 +113,7 @@ Examples:
 )",
       .args =
           {
-              ArgSpec{
-                  .name = "player_id",
-                  .type = ArgType::PlayerId,
-                  .optional = true,
-                  .default_provider = DefaultProvider::ActivePlayer,
-                  .description = "Player ID (@ for active player)",
-                  .min_value = 0,
-                  .max_value = 7,
-              },
+              active_player_arg(),
           },
       .handler = [](const CommandContext& ctx) -> CommandResult {
         auto player_id = ctx.player_id(0);
@@ -292,15 +277,7 @@ Examples:
 )",
       .args =
           {
-              ArgSpec{
-                  .name = "player_id",
-                  .type = ArgType::PlayerId,
-                  .optional = true,
-                  .default_provider = DefaultProvider::ActivePlayer,
-                  .description = "Player ID (@ for active player)",
-                  .min_value = 0,
-                  .max_value = 7,
-              },
+              active_player_arg(),
           },
       .handler = [](const CommandContext& ctx) -> CommandResult {
         auto player_id = ctx.player_id(0);

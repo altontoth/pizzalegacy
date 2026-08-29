@@ -8,6 +8,7 @@
 #include "core/character/Player.h"
 #include "core/city/City.h"
 #include "core/common/Ids.h"
+#include "core/debug/command/CommonArgs.h"
 #include "core/economy/WeaponMarket.h"
 #include "core/finance/BalanceSheet.h"
 #include "core/finance/Ledger.h"
@@ -30,19 +31,6 @@ using namespace debug::command;
 
 namespace debug::commands {
 
-// Common argument spec for player_id
-static ArgSpec player_id_arg() {
-  return ArgSpec{
-      .name = "player_id",
-      .type = ArgType::PlayerId,
-      .optional = true,
-      .default_provider = DefaultProvider::ActivePlayer,
-      .description = "Player ID (@ for active player)",
-      .min_value = 0,
-      .max_value = 7,
-  };
-}
-
 static CommandDef make_player_info() {
   return CommandDef{
       .name = "info",
@@ -58,7 +46,7 @@ Examples:
   player info 0        # Show player 0 info
   player info 2        # Show player 2 info
 )",
-      .args = {player_id_arg()},
+      .args = {active_player_arg()},
       .handler = [](const CommandContext& ctx) -> CommandResult {
         auto player_id = ctx.player_id(0);
         auto* player = ctx.state.player(player_id);
@@ -116,7 +104,7 @@ Examples:
                   .description = "Dollar amount to set",
                   .min_value = 0,
               },
-              player_id_arg(),
+              active_player_arg(),
           },
       .handler = [](const CommandContext& ctx) -> CommandResult {
         auto amount = ctx.money_arg(0);
@@ -181,7 +169,7 @@ Examples:
                   .description = "Dollar amount to add",
                   .min_value = 0,
               },
-              player_id_arg(),
+              active_player_arg(),
           },
       .handler = [](const CommandContext& ctx) -> CommandResult {
         auto amount = ctx.money_arg(0);
@@ -228,7 +216,7 @@ Examples:
                   .description = "Dollar amount to subtract",
                   .min_value = 0,
               },
-              player_id_arg(),
+              active_player_arg(),
           },
       .handler = [](const CommandContext& ctx) -> CommandResult {
         auto amount = ctx.money_arg(0);
@@ -293,7 +281,7 @@ Examples:
                   .min_value = 0,
                   .max_value = 255,
               },
-              player_id_arg(),
+              active_player_arg(),
           },
       .handler = [](const CommandContext& ctx) -> CommandResult {
         auto item_id = ctx.item_id(0);
@@ -362,7 +350,7 @@ Examples:
   player inventory clear       # Clear active player's inventory
   player inventory clear 2     # Clear player 2's inventory
 )",
-      .args = {player_id_arg()},
+      .args = {active_player_arg()},
       .handler = [](const CommandContext& ctx) -> CommandResult {
         auto player_id = ctx.player_id(0);
         auto* player = ctx.state.player(player_id);
@@ -421,7 +409,7 @@ Examples:
 )",
       .args =
           {
-              player_id_arg(),
+              active_player_arg(),
               ArgSpec{
                   .name = "index",
                   .type = ArgType::Int,
@@ -523,7 +511,7 @@ Examples:
                   .optional = false,
                   .description = "Dollar amount",
               },
-              player_id_arg(),
+              active_player_arg(),
           },
       .handler = [](const CommandContext& ctx) -> CommandResult {
         auto amount = ctx.money_arg(0);
@@ -574,7 +562,7 @@ Examples:
                   .min_value = 0,
                   .max_value = 255,
               },
-              player_id_arg(),
+              active_player_arg(),
           },
       .handler = [](const CommandContext& ctx) -> CommandResult {
         auto willingness = static_cast<uint8_t>(ctx.int_arg(0));
@@ -628,16 +616,8 @@ Examples:
                   .min_value = 0,
                   .max_value = 255,
               },
-              ArgSpec{
-                  .name = "city_id",
-                  .type = ArgType::CityId,
-                  .optional = true,
-                  .default_provider = DefaultProvider::ActiveCity,
-                  .description = "City ID (@ for active city)",
-                  .min_value = 0,
-                  .max_value = 9,
-              },
-              player_id_arg(),
+              active_city_arg(),
+              active_player_arg(),
           },
       .handler = [](const CommandContext& ctx) -> CommandResult {
         auto channel = static_cast<std::size_t>(ctx.int_arg(0));
@@ -694,7 +674,7 @@ Examples:
   player campaigns
   player campaigns 0
 )",
-      .args = {player_id_arg()},
+      .args = {active_player_arg()},
       .handler = [](const CommandContext& ctx) -> CommandResult {
         auto player_id = ctx.player_id(0);
         auto* player = ctx.state.player(player_id);
@@ -762,7 +742,7 @@ Examples:
   player balance
   player balance 0
 )",
-      .args = {player_id_arg()},
+      .args = {active_player_arg()},
       .handler = [](const CommandContext& ctx) -> CommandResult {
         auto player_id = ctx.player_id(0);
         auto* player = ctx.state.player(player_id);
@@ -818,7 +798,7 @@ Examples:
                   .min_value = 1,
                   .max_value = 99,
               },
-              player_id_arg(),
+              active_player_arg(),
           },
       .handler = [](const CommandContext& ctx) -> CommandResult {
         auto days = static_cast<int>(ctx.int_arg(0));
@@ -863,7 +843,7 @@ Examples:
                   .min_value = 1,
                   .max_value = 99,
               },
-              player_id_arg(),
+              active_player_arg(),
           },
       .handler = [](const CommandContext& ctx) -> CommandResult {
         auto days = static_cast<int>(ctx.int_arg(0));
