@@ -27,7 +27,6 @@
 #include "resources/FontManager.h"
 
 #include <algorithm>
-#include <array>
 
 constexpr int depot_sell_price_percent = 80;
 
@@ -366,15 +365,14 @@ Money DepotIngredientOrderScreen::calculate_ingredient_price(
     return Money{0};
   }
 
-  static constexpr std::array<float, 5> difficulty_multipliers = {
-      0.6f, 0.8f, 1.0f, 1.5f, 1.9f};
-
   auto* city = state_.active_city();
   Money base_price = city->ingredient_base_price(ingredient_type);
-  int difficulty = state_.difficulty_level();
 
-  return supplier_->calculate_price(ingredient_type, base_price,
-                                    difficulty_multipliers[difficulty - 1]);
+  return supplier_
+      ->calculate_price(
+          ingredient_type, base_price,
+          FoodSupplier::price_multiplier(state_.difficulty_level()))
+      .value_or(Money{0});
 }
 
 Money DepotIngredientOrderScreen::calculate_total_cost() const {

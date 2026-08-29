@@ -30,7 +30,6 @@
 #include "engine/input/Key.h"
 
 #include <algorithm>
-#include <array>
 
 IngredientOrderScreen::IngredientOrderScreen(
     GameContext& context, GameState& state, uint8_t supplier_id,
@@ -207,7 +206,7 @@ void IngredientOrderScreen::draw_ingredient_list(const RenderContext& ctx) {
   for (size_t i = 0; i < ingredients_.size(); i++) {
     auto& batch = ingredients_[i];
 
-    bool supplier_sells = batch.price_per_unit.cents > 0;
+    bool supplier_sells = supplier_ && supplier_->sells(batch.ingredient_type);
 
     // Draw gray background on hover or when holding button (only if supplier
     // sells this ingredient)
@@ -340,6 +339,10 @@ void IngredientOrderScreen::place_order() {
     rel.total_spent += total_cost;
   }
 
+  if (supplier_ && total_items > 0) {
+    restaurant->preferred_suppliers()[supplier_->category()] = supplier_->id();
+  }
+
   if (total_items > 0) {
     if (auto* player = state_.active_player()) {
       player->on_food_shop_visit();
@@ -356,16 +359,14 @@ Money IngredientOrderScreen::calculate_ingredient_price(
     return Money{0};
   }
 
-  static constexpr std::array<float, 5> difficulty_multipliers = {
-      0.6f, 0.8f, 1.0f, 1.5f, 1.9f};
-
   auto* city = state_.active_city();
   Money base_price = city->ingredient_base_price(ingredient_type);
 
-  int difficulty = state_.difficulty_level();
-
-  return supplier_->calculate_price(ingredient_type, base_price,
-                                    difficulty_multipliers[difficulty - 1]);
+  return supplier_
+      ->calculate_price(
+          ingredient_type, base_price,
+          FoodSupplier::price_multiplier(state_.difficulty_level()))
+      .value_or(Money{0});
 }
 
 Money IngredientOrderScreen::calculate_total_cost() const {

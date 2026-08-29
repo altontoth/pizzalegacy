@@ -6,10 +6,10 @@
 
 #include "core/restaurant/ManagerRoutine.h"
 #include <algorithm>
-#include <array>
 #include <string_view>
 #include "core/city/City.h"
 #include "core/city/Property.h"
+#include "core/food/IngredientCategory.h"
 #include "core/food/IngredientCategoryType.h"
 #include "core/food/IngredientType.h"
 #include "core/logistics/IngredientStock.h"
@@ -31,23 +31,7 @@ using engine::random::rand_percentage_chance;
 static constexpr Money price_adjust_up = 30_c;
 static constexpr Money price_adjust_down = 40_c;
 
-// Ingredient type index ranges per category (start index, count)
-struct CategoryRange {
-  int start;
-  int count;
-};
-static constexpr std::array<CategoryRange, 4> CATEGORY_RANGES{{
-    {.start = 0, .count = 22},
-    {.start = 24, .count = 17},
-    {.start = 48, .count = 13},
-    {.start = 72, .count = 13},
-}};
-
 namespace {
-const CategoryRange& category_range(IngredientCategory category) {
-  return CATEGORY_RANGES[static_cast<int>(category)];
-}
-
 constexpr int opening_block = Restaurant::DEFAULT_OPENING_TIME.to_block();
 } // namespace
 
@@ -153,13 +137,10 @@ bool ManagerRoutine::report_previous_day_shortages(
 // demand are ignored.
 int ManagerRoutine::count_category_shortages(const Restaurant& restaurant,
                                              IngredientCategory category) {
-  const auto& range = category_range(category);
   const auto& daily_demand = restaurant.daily_ingredient_demand_cache();
 
   int shortage_count = 0;
-  for (int i = 0; i < range.count; ++i) {
-    auto ingredient_type =
-        static_cast<core::food::IngredientType>(range.start + i);
+  for (auto ingredient_type : core::food::CategoryRegistry::range(category)) {
     int daily_grams = daily_demand[ingredient_type];
     if (daily_grams <= 0) {
       continue;
@@ -206,14 +187,12 @@ void ManagerRoutine::do_shopping() {
 
   const auto& daily_demand = restaurant_.daily_ingredient_demand_cache();
 
-  static constexpr std::array<float, 5> difficulty_multipliers = {
-      0.6f, 0.8f, 1.0f, 1.5f, 1.9f};
   float difficulty_mult =
-      difficulty_multipliers[game_state_.difficulty_level() - 1];
+      FoodSupplier::price_multiplier(game_state_.difficulty_level());
+
+  const bool fix_legacy_bugs = game_state_.options().fix_legacy_bugs;
 
   for (auto category : ALL_INGREDIENT_CATEGORIES) {
-    const auto& range = category_range(category);
-
     int shortage_count = count_category_shortages(restaurant_, category);
     if (shortage_count == 0) {
       continue;
@@ -228,20 +207,7 @@ void ManagerRoutine::do_shopping() {
       continue;
     }
 
-    // Find the preferred supplier, falling back to first available
-    const FoodSupplier* supplier = nullptr;
-    auto preferred_id = restaurant_.preferred_suppliers()[category];
-    for (const auto& s : city.suppliers()) {
-      if (s->category() != category) {
-        continue;
-      }
-      if (!preferred_id || s->id() == preferred_id) {
-        supplier = s.get();
-        if (s->id() == preferred_id) {
-          break; // Found exact match
-        }
-      }
-    }
+    const FoodSupplier* supplier = restaurant_.supplier_for(city, category);
     if (!supplier) {
       continue;
     }
@@ -251,9 +217,7 @@ void ManagerRoutine::do_shopping() {
     int category_qty = 0;
     int best_discount = 0;
 
-    for (int i = 0; i < range.count; ++i) {
-      auto ingredient_type =
-          static_cast<core::food::IngredientType>(range.start + i);
+    for (auto ingredient_type : core::food::CategoryRegistry::range(category)) {
       int daily_grams = daily_demand[ingredient_type];
       if (daily_grams <= 0) {
         continue;
@@ -269,8 +233,19 @@ void ManagerRoutine::do_shopping() {
       }
 
       Money base_price = city.ingredient_base_price(ingredient_type);
-      Money price_per_kg = supplier->calculate_price(
-          ingredient_type, base_price, difficulty_mult);
+      auto quoted = supplier->calculate_price(ingredient_type, base_price,
+                                              difficulty_mult);
+
+      // In the original the price for an ingredient a supplier does not
+      // sell is 0, so the manager gets those for free. When fix_legacy_bugs
+      // is on we charge the city base price for them instead.
+      Money price_per_kg{0};
+      if (quoted) {
+        price_per_kg = *quoted;
+      }
+      else if (fix_legacy_bugs) {
+        price_per_kg = FoodSupplier::city_price(base_price, difficulty_mult);
+      }
 
       // Negotiation: experience% chance to get a discount up to motivation/2 %
       if (rand_percentage_chance(manager->character().experience())) {

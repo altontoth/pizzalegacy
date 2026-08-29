@@ -6,11 +6,17 @@
 
 #include "core/debug/commands/RestaurantCommands.h"
 
+#include "core/character/Player.h"
 #include "core/character/Staff.h"
+#include "core/city/City.h"
 #include "core/city/Property.h"
+#include "core/finance/Ledger.h"
+#include "core/food/IngredientCategory.h"
+#include "core/food/IngredientCategoryType.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/state/GameState.h"
 #include "core/state/RealEstate.h"
+#include "core/supply/FoodSupplier.h"
 #include "core/util/GameContext.h"
 #include "factories/CharacterFactory.h"
 #include "factories/PizzaFactory.h"
@@ -21,6 +27,32 @@
 using namespace debug::command;
 
 namespace debug::commands {
+
+// The supplier sets the price and quality, and the player pays. Empty when
+// the ingredient is not sold or the player can't afford it.
+static std::optional<Money> buy_ingredient(GameState& state, Player& player,
+                                           Restaurant& restaurant,
+                                           const FoodSupplier& supplier,
+                                           core::food::IngredientType type,
+                                           int kg) {
+  const auto& city = restaurant.property().city();
+  auto price_per_kg = supplier.calculate_price(
+      type, city.ingredient_base_price(type),
+      FoodSupplier::price_multiplier(state.difficulty_level()));
+  if (!price_per_kg) {
+    return std::nullopt;
+  }
+
+  Money cost{price_per_kg->cents * kg};
+  if (player.cash_balance() < cost) {
+    return std::nullopt;
+  }
+  (void)player.spend_cash(state.time().current_date(), Account::Stock, cost,
+                          restaurant.id());
+  restaurant.inventory().add_ingredient(type, kg * 1000, supplier.quality(),
+                                        *price_per_kg);
+  return cost;
+}
 
 // Common argument specs for restaurant commands
 static std::vector<ArgSpec> restaurant_args() {
@@ -409,29 +441,38 @@ static CommandDef make_restaurant_furniture() {
       .add_subcommand(make_restaurant_furniture_list());
 }
 
-static CommandDef make_restaurant_stock_add() {
+static CommandDef make_restaurant_stock_buy() {
   return CommandDef{
-      .name = "add",
-      .description = "Add stock for a specific ingredient",
+      .name = "buy",
+      .description = "Buy stock for one ingredient from a supplier",
       .help_text =
-          R"(Usage: restaurant stock add <ingredient_id> [quantity] [quality] [player_id] [restaurant_id]
+          R"(Usage: restaurant stock buy <supplier_id> <ingredient_id> <kg> [player_id] [restaurant_id]
 
-Adds stock for a specific ingredient type.
+Buys stock from a supplier in the restaurant's city. The supplier sets the
+price and the quality, and the player pays, so the stock ends up costing what
+stock bought in play costs. Fails if the player can't afford it.
 
 Arguments:
-  ingredient_id - Ingredient ID (0-89)
-  quantity      - Quantity in grams (default: 10000)
-  quality       - Quality 0-100 (default: 100)
+  supplier_id   - Supplier to buy from; `city suppliers` lists them
+  ingredient_id - Ingredient ID (0-21, 24-40, 48-60, 72-84)
+  kg            - Kilograms to buy
   player_id     - Player ID (@ for active player)
   restaurant_id - Restaurant ID (@ for active restaurant)
 
 Examples:
-  restaurant stock add 0              # Add 10kg of ingredient 0 at quality 100
-  restaurant stock add 5 5000         # Add 5kg of ingredient 5 at quality 100
-  restaurant stock add 10 20000 80    # Add 20kg of ingredient 10 at quality 80
+  restaurant stock buy 1 0 10     # 10kg of ingredient 0 from supplier 1
+  restaurant stock buy 7 25 20    # 20kg of ingredient 25 from supplier 7
 )",
       .args =
           {
+              ArgSpec{
+                  .name = "supplier_id",
+                  .type = ArgType::Int,
+                  .optional = false,
+                  .description = "Supplier id, from `city suppliers`",
+                  .min_value = 0,
+                  .max_value = 255,
+              },
               ArgSpec{
                   .name = "ingredient_id",
                   .type = ArgType::Int,
@@ -441,20 +482,12 @@ Examples:
                   .max_value = 89,
               },
               ArgSpec{
-                  .name = "quantity",
+                  .name = "kg",
                   .type = ArgType::Int,
-                  .optional = true,
-                  .description = "Quantity in grams",
-                  .min_value = 0,
-                  .max_value = 1000000,
-              },
-              ArgSpec{
-                  .name = "quality",
-                  .type = ArgType::Int,
-                  .optional = true,
-                  .description = "Quality 0-100",
-                  .min_value = 0,
-                  .max_value = 100,
+                  .optional = false,
+                  .description = "Kilograms to buy",
+                  .min_value = 1,
+                  .max_value = 650,
               },
               ArgSpec{
                   .name = "player_id",
@@ -474,14 +507,15 @@ Examples:
               },
           },
       .handler = [](const CommandContext& ctx) -> CommandResult {
-        auto ingredient_id = ctx.int_arg(0);
-        auto quantity = ctx.args.size() > 1 ? ctx.int_arg(1) : 10000;
-        auto quality = ctx.args.size() > 2 ? ctx.int_arg(2) : 100;
+        auto wanted_supplier = static_cast<uint8_t>(ctx.int_arg(0));
+        auto ingredient_id = ctx.int_arg(1);
+        auto kg = static_cast<int>(ctx.int_arg(2));
         auto player_id = ctx.player_id(3);
         auto restaurant_id = ctx.restaurant_id(4);
 
+        auto* player = ctx.state.player(player_id);
         auto* restaurant = ctx.state.restaurant(restaurant_id);
-        if (!restaurant) {
+        if (!player || !restaurant) {
           return CommandResult::error(
               compat::format("Restaurant {} not found", restaurant_id.value));
         }
@@ -493,14 +527,44 @@ Examples:
                              restaurant_id.value, player_id.value));
         }
 
+        auto category =
+            core::food::CategoryRegistry::from_ingredient_id(ingredient_id);
+        if (!category) {
+          return CommandResult::error(
+              compat::format("{} is not an ingredient id", ingredient_id));
+        }
         auto ingredient_type =
             static_cast<core::food::IngredientType>(ingredient_id);
-        restaurant->inventory().add_ingredient(ingredient_type, quantity,
-                                               quality, Money{100});
+
+        const FoodSupplier* supplier = nullptr;
+        for (const auto& s : restaurant->property().city().suppliers()) {
+          if (s->category() == *category && s->id() == wanted_supplier) {
+            supplier = s.get();
+            break;
+          }
+        }
+        if (!supplier) {
+          return CommandResult::error(compat::format(
+              "No supplier {} for that category in {}", wanted_supplier,
+              restaurant->property().city().name()));
+        }
+        if (!supplier->sells(ingredient_type)) {
+          return CommandResult::error(
+              compat::format("{} does not sell ingredient {}", supplier->name(),
+                             ingredient_id));
+        }
+
+        auto spent = buy_ingredient(ctx.state, *player, *restaurant, *supplier,
+                                    ingredient_type, kg);
+        if (!spent) {
+          return CommandResult::error(
+              compat::format("Player {} can't afford {}kg of ingredient {}",
+                             player_id.value, kg, ingredient_id));
+        }
 
         return CommandResult::success().add_message(compat::format(
-            "Added {}g of ingredient {} at quality {} to restaurant {}",
-            quantity, ingredient_id, quality, restaurant_id.value));
+            "Bought {}kg of ingredient {} from {} for ${:n} at quality {}", kg,
+            ingredient_id, supplier->name(), *spent, supplier->quality()));
       },
   };
 }
@@ -508,40 +572,33 @@ Examples:
 static CommandDef make_restaurant_stock_fill() {
   return CommandDef{
       .name = "fill",
-      .description = "Fill all ingredient stocks to specified quantity",
+      .description = "Buy the same weight of every ingredient sold",
       .help_text =
-          R"(Usage: restaurant stock fill <quantity> <quality> [player_id] [restaurant_id]
+          R"(Usage: restaurant stock fill <kg> [player_id] [restaurant_id]
 
-Fills all ingredient stocks to the specified quantity and quality.
+Buys the given weight of every ingredient from the restaurant's usual
+supplier in each category. The supplier sets the price and the quality, and
+the player pays. Stops with an error if the player runs out of money
+partway. Ingredients that supplier does not sell are skipped.
 
 Arguments:
-  quantity      - Quantity in kilogram per ingredient
-  quality       - Quality 0-100
+  kg            - Kilograms to buy of each ingredient
   player_id     - Player ID (@ for active player)
   restaurant_id - Restaurant ID (@ for active restaurant)
 
 Examples:
-  restaurant stock fill 10 100    # Fill all to 10kg at quality 100
-  restaurant stock fill 20 100    # Fill all to 20kg at quality 100
-  restaurant stock fill 15 80     # Fill all to 15kg at quality 80
+  restaurant stock fill 10        # 10kg of everything
+  restaurant stock fill 20        # 20kg of everything
 )",
       .args =
           {
               ArgSpec{
-                  .name = "quantity",
+                  .name = "kg",
                   .type = ArgType::Int,
                   .optional = false,
-                  .description = "Quantity in kilogram",
-                  .min_value = 0,
+                  .description = "Kilograms of each ingredient",
+                  .min_value = 1,
                   .max_value = 650,
-              },
-              ArgSpec{
-                  .name = "quality",
-                  .type = ArgType::Int,
-                  .optional = false,
-                  .description = "Quality 0-100",
-                  .min_value = 0,
-                  .max_value = 100,
               },
               ArgSpec{
                   .name = "player_id",
@@ -561,10 +618,9 @@ Examples:
               },
           },
       .handler = [](const CommandContext& ctx) -> CommandResult {
-        auto quantity = ctx.int_arg(0) * 1000;
-        auto quality = ctx.int_arg(1);
-        auto player_id = ctx.player_id(2);
-        auto restaurant_id = ctx.restaurant_id(3);
+        auto kg = static_cast<int>(ctx.int_arg(0));
+        auto player_id = ctx.player_id(1);
+        auto restaurant_id = ctx.restaurant_id(2);
 
         auto* restaurant = ctx.state.restaurant(restaurant_id);
         if (!restaurant) {
@@ -579,17 +635,40 @@ Examples:
                              restaurant_id.value, player_id.value));
         }
 
-        // Fill all 90 ingredient types
-        for (int i = 0; i < 90; i++) {
-          auto ingredient_type = static_cast<core::food::IngredientType>(i);
-          restaurant->inventory().add_ingredient(ingredient_type, quantity,
-                                                 quality, Money{100});
+        auto* player = ctx.state.player(player_id);
+        if (!player) {
+          return CommandResult::error(
+              compat::format("Player {} not found", player_id.value));
         }
 
-        return CommandResult::success().add_message(
-            compat::format("Filled all 90 ingredients with {}g at quality {} "
-                           "for restaurant {}",
-                           quantity, quality, restaurant_id.value));
+        const auto& city = restaurant->property().city();
+        Money spent{0};
+        int bought = 0;
+        for (auto category : ALL_INGREDIENT_CATEGORIES) {
+          const auto* supplier = restaurant->supplier_for(city, category);
+          if (!supplier) {
+            continue;
+          }
+          for (auto type : core::food::CategoryRegistry::range(category)) {
+            if (!supplier->sells(type)) {
+              continue;
+            }
+            auto cost = buy_ingredient(ctx.state, *player, *restaurant,
+                                       *supplier, type, kg);
+            if (!cost) {
+              return CommandResult::error(
+                  compat::format("Player {} ran out of money after {} "
+                                 "ingredients (${:n} spent)",
+                                 player_id.value, bought, spent));
+            }
+            spent = spent + *cost;
+            ++bought;
+          }
+        }
+
+        return CommandResult::success().add_message(compat::format(
+            "Bought {}kg of each of {} ingredients for ${:n} for restaurant {}",
+            kg, bought, spent, restaurant_id.value));
       },
   };
 }
@@ -646,7 +725,7 @@ static CommandDef make_restaurant_stock() {
       .description = "Manage restaurant ingredient stocks",
       .help_text = "Subcommands: add, fill, clear",
   }
-      .add_subcommand(make_restaurant_stock_add())
+      .add_subcommand(make_restaurant_stock_buy())
       .add_subcommand(make_restaurant_stock_fill())
       .add_subcommand(make_restaurant_stock_clear());
 }
@@ -895,13 +974,25 @@ Examples:
           result.add_message("Failed to hire waiter");
         }
 
-        // Fill ingredient stock (500 kg = 500,000 grams at quality 100)
-        for (int i = 0; i < 90; i++) {
-          auto ingredient_type = static_cast<core::food::IngredientType>(i);
-          restaurant->inventory().add_ingredient(ingredient_type, 500000, 100,
-                                                 Money{100});
+        constexpr int quickstart_stock_kg = 500;
+        const auto& stock_city = restaurant->property().city();
+        Money stock_spent{0};
+        for (auto category : ALL_INGREDIENT_CATEGORIES) {
+          const auto* supplier = restaurant->supplier_for(stock_city, category);
+          if (!supplier) {
+            continue;
+          }
+          for (auto type : core::food::CategoryRegistry::range(category)) {
+            if (auto cost =
+                    buy_ingredient(ctx.state, *player, *restaurant, *supplier,
+                                   type, quickstart_stock_kg)) {
+              stock_spent = stock_spent + *cost;
+            }
+          }
         }
-        result.add_message("Filled all ingredients with 500kg at quality 100");
+        result.add_message(
+            compat::format("Bought {}kg of each ingredient for ${:n}",
+                           quickstart_stock_kg, stock_spent));
 
         // Open the restaurant
         if (restaurant->is_force_closed()) {

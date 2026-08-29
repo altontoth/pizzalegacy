@@ -6,7 +6,9 @@
 
 #pragma once
 
+#include <algorithm>
 #include <array>
+#include <optional>
 #include <unordered_map>
 #include "core/character/Actor.h"
 #include "core/common/Ids.h"
@@ -42,9 +44,23 @@ public:
   uint8_t
   price_level_for_ingredient(core::food::IngredientType ingredient_type) const;
 
-  // Calculate final price for an ingredient
-  Money calculate_price(core::food::IngredientType ingredient_type,
-                        Money base_price, float difficulty_multiplier) const;
+  bool sells(core::food::IngredientType ingredient_type) const;
+
+  // Final price for an ingredient, empty when the supplier does not sell it.
+  std::optional<Money>
+  calculate_price(core::food::IngredientType ingredient_type, Money base_price,
+                  float difficulty_multiplier) const;
+
+  // The city's base price with the difficulty adjustment, before any
+  // supplier's own price level is applied.
+  static Money city_price(Money base_price, float difficulty_multiplier);
+
+  // Impact of difficulty level on prices
+  static constexpr float price_multiplier(int difficulty_level) {
+    constexpr std::array<float, 5> multipliers = {0.6f, 0.8f, 1.0f, 1.5f, 1.9f};
+    return multipliers[static_cast<std::size_t>(
+        std::clamp(difficulty_level - 1, 0, 4))];
+  }
 
   // Get/set stock for an ingredient
   int stock(core::food::IngredientType ingredient_type) const;

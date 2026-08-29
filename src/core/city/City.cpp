@@ -40,11 +40,28 @@ core::CityId City::id() const { return id_; }
 
 std::string_view City::name() const { return core::city_name(id_); }
 
+const FoodSupplier* City::supplier_for(IngredientCategory category,
+                                       std::optional<int> preferred_id) const {
+  const FoodSupplier* first_in_category = nullptr;
+  for (const auto& supplier : suppliers_) {
+    if (supplier->category() != category) {
+      continue;
+    }
+    if (preferred_id && supplier->id() == *preferred_id) {
+      return supplier.get();
+    }
+    if (!first_in_category) {
+      first_in_category = supplier.get();
+    }
+  }
+  return first_in_category;
+}
+
 void City::init_supplier_stock_levels() {
   for (auto& supplier : suppliers_) {
     for (auto ing_type :
          core::food::CategoryRegistry::range(supplier->category())) {
-      if (supplier->price_level_for_ingredient(ing_type) != 0) {
+      if (supplier->sells(ing_type)) {
         int random_stock =
             engine::random::rand_max_n(5000) + 8000; // 8000-13000 kg
         supplier->set_stock(ing_type, random_stock);
@@ -65,7 +82,7 @@ void City::replenish_supplier_stock_levels() {
     // If chosen we check if less than 10K and if so increasy by 4K to 12 K
     for (auto ing_type :
          core::food::CategoryRegistry::range(supplier->category())) {
-      if (supplier->price_level_for_ingredient(ing_type) == 0) {
+      if (!supplier->sells(ing_type)) {
         continue;
       }
       const auto current_stock = supplier->stock(ing_type);

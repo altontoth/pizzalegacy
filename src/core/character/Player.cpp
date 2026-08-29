@@ -711,14 +711,15 @@ void Player::process_contracts(GameState& game_state) {
     }
 
     // Deliver the order
-    int difficulty = game_state.difficulty_level();
-    static constexpr float difficulty_multipliers[] = {0.6f, 0.8f, 1.0f, 1.5f,
-                                                       1.9f};
-    float diff_mult = difficulty_multipliers[std::clamp(difficulty - 1, 0, 4)];
+    float diff_mult =
+        FoodSupplier::price_multiplier(game_state.difficulty_level());
 
     for (const auto& item : c.items) {
-      Money price = supplier->calculate_price(
-          item.type, city->ingredient_base_price(item.type), diff_mult);
+      Money price =
+          supplier
+              ->calculate_price(
+                  item.type, city->ingredient_base_price(item.type), diff_mult)
+              .value_or(Money{0});
       restaurant->purchase_ingredients(item.type, item.kg_per_day,
                                        supplier->quality(), price);
     }
@@ -735,8 +736,12 @@ void Player::process_contracts(GameState& game_state) {
         int headroom_grams = cap_grams - current_grams;
         if (headroom_grams > 1000) {
           int extra_kg = headroom_grams / 1000;
-          Money price = supplier->calculate_price(
-              item.type, city->ingredient_base_price(item.type), diff_mult);
+          Money price =
+              supplier
+                  ->calculate_price(item.type,
+                                    city->ingredient_base_price(item.type),
+                                    diff_mult)
+                  .value_or(Money{0});
           restaurant->purchase_ingredients(item.type, extra_kg,
                                            supplier->quality(), price);
           extra_cost += price * extra_kg;

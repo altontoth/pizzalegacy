@@ -6,6 +6,8 @@
 
 #include "core/food/IngredientCategory.h"
 
+#include <optional>
+
 namespace core::food {
 
 const std::array<CategoryMetadata, 4> CategoryRegistry::metadata_ = {{
@@ -84,6 +86,15 @@ CategoryIdRange CategoryRegistry::range(IngredientCategory category) {
 std::pair<int, int> CategoryRegistry::id_range(IngredientCategory category) {
   const auto& meta = get(category);
   return {meta.start_id, meta.end_id};
+}
+
+std::optional<IngredientCategory> CategoryRegistry::from_ingredient_id(int id) {
+  for (const auto& meta : metadata_) {
+    if (id >= meta.start_id && id < meta.end_id) {
+      return meta.category;
+    }
+  }
+  return std::nullopt;
 }
 
 IngredientCategory CategoryRegistry::from_actor_type(ActorType type) {

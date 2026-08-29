@@ -7,6 +7,7 @@
 #pragma once
 
 #include <array>
+#include <optional>
 #include <string_view>
 #include "core/character/Actor.h"
 #include "core/food/Ingredient.h"
@@ -70,6 +71,10 @@ public:
   static std::pair<int, int> id_range(IngredientCategory category);
 
   static IngredientCategory from_actor_type(ActorType type);
+
+  // The category an ingredient belongs to, empty for the padding ids between
+  // the categories.
+  static std::optional<IngredientCategory> from_ingredient_id(int id);
 
 private:
   static const std::array<CategoryMetadata, 4> metadata_;

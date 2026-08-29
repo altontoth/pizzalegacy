@@ -149,6 +149,12 @@ public:
   const std::vector<std::unique_ptr<FoodSupplier>>& suppliers() const {
     return suppliers_;
   }
+
+  // Returns the supplier with the preferred_id, or the first supplier in the
+  // city if no preferred_id specified.
+  const FoodSupplier* supplier_for(IngredientCategory category,
+                                   std::optional<int> preferred_id) const;
+
   Actor* actor_by_id(uint8_t actor_id) const;
   Actor* mayor() const { return actor_by_id(static_cast<uint8_t>(mayor_id_)); }
   Actor* police() const {

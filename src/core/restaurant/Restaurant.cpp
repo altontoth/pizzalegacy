@@ -34,6 +34,7 @@
 #include "core/restaurant/StaffEvents.h"
 #include "core/state/GameState.h"
 #include "core/status/StatusHub.h"
+#include "core/supply/FoodSupplier.h"
 #include "core/util/ConfigManager.h"
 #include "engine/Fatal.h"
 #include "engine/FormatCompat.h"
@@ -95,6 +96,11 @@ bool Restaurant::is_open(const core::time::TimeOfDay& now) const {
 bool Restaurant::is_within_business_hours(
     const core::time::TimeOfDay& now) const {
   return now >= opening_time_ && now < closing_time_;
+}
+
+const FoodSupplier*
+Restaurant::supplier_for(const City& city, IngredientCategory category) const {
+  return city.supplier_for(category, preferred_suppliers_[category]);
 }
 
 void Restaurant::wants_open(bool wants) {

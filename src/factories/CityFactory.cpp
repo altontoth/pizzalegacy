@@ -213,7 +213,7 @@ void CityFactory::load_building_names(std::ifstream& is) {
 void CityFactory::load_ingredient_prices(std::ifstream& is) {
   is.seekg(2026);
 
-  for (int i = 0; i < 90; ++i) {
+  for (int i = 0; i < max_ingredient_count; ++i) {
     uint8_t low = is.get();
     uint8_t high = is.get();
     uint16_t price = endian::u16le(low, high);
@@ -259,10 +259,10 @@ void CityFactory::load_suppliers(std::ifstream& is, int supplier_count) {
 
     is.seekg(5, std::ios_base::cur);
 
-    // But then there is an array that specifies what products are available.
-    // Length of the array depends on the type (22 for cheese, more for
-    // vegetables, etc) Since 22 is the max, we just read that and ignore the
-    // rest.
+    // A price level per product, indexed within the category. Zero means
+    // this supplier does not sell that product. The original stores 24 per
+    // category, but no category has more than 22 ingredients, so 22 is all
+    // we read.
     std::array<uint8_t, 22> price_levels{};
     is.read((char*)price_levels.data(), 22);
 

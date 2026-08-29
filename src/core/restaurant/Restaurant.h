@@ -485,6 +485,11 @@ public:
     return preferred_suppliers_;
   }
 
+  // Where this restaurant buys a category: the preferred supplier, or the
+  // first one in the city selling that category.
+  const class FoodSupplier* supplier_for(const class City& city,
+                                         IngredientCategory category) const;
+
   core::character::JobRole manager_filled_in_as() const {
     return manager_filled_in_as_;
   }

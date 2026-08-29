@@ -11,14 +11,18 @@
 #include "core/city/Property.h"
 #include "core/economy/WeaponMarket.h"
 #include "core/finance/Ledger.h"
+#include "core/food/IngredientCategory.h"
+#include "core/food/IngredientCategoryType.h"
 #include "core/inventory/Inventory.h"
 #include "core/item/Item.h"
 #include "core/state/GameState.h"
+#include "core/supply/FoodSupplier.h"
 #include "core/util/Constants.h"
 #include "engine/FormatCompat.h"
 #include "engine/Random.h"
 
 #include <algorithm>
+#include <optional>
 
 using namespace debug::command;
 
@@ -188,16 +192,20 @@ Examples:
         // Count non-zero stocks
         int stocked_ingredients = 0;
         int total_quantity = 0;
-        for (int i = 0; i < 90; ++i) {
-          auto* stock = depot.get_ingredient_stock(i);
-          if (stock && stock->quantity > 0) {
-            ++stocked_ingredients;
-            total_quantity += stock->quantity;
+        int ingredient_count = 0;
+        for (auto category : ALL_INGREDIENT_CATEGORIES) {
+          for (auto type : core::food::CategoryRegistry::range(category)) {
+            ++ingredient_count;
+            auto* stock = depot.get_ingredient_stock(static_cast<int>(type));
+            if (stock && stock->quantity > 0) {
+              ++stocked_ingredients;
+              total_quantity += stock->quantity;
+            }
           }
         }
-        lines.push_back(
-            compat::format("  Stocked ingredients: {}/90 ({} grams total)",
-                           stocked_ingredients, total_quantity));
+        lines.push_back(compat::format(
+            "  Stocked ingredients: {}/{} ({} grams total)",
+            stocked_ingredients, ingredient_count, total_quantity));
 
         for (const auto* property : city->properties()) {
           if (property->type() != PropertyType::DEPOT) {
@@ -320,40 +328,33 @@ Examples:
 static CommandDef make_depot_stock_fill() {
   return CommandDef{
       .name = "fill",
-      .description = "Fill all ingredient stocks to specified quantity",
+      .description = "Buy stock for every ingredient the city's suppliers sell",
       .help_text =
-          R"(Usage: depot stock fill [quantity] [quality] [city_id] [player_id]
+          R"(Usage: depot stock fill <kg> [city_id] [player_id]
 
-Fills all ingredient stocks to the specified quantity and quality.
+Buys the given weight of each ingredient from the first supplier in each
+category. The supplier sets the price and the quality, and the player pays.
+Stops with an error if the player runs out of money partway. Ingredients
+that supplier does not sell are skipped.
 
 Arguments:
-  quantity      - Quantity in grams per ingredient (default: 10000)
-  quality       - Quality 0-100 (default: 100)
+  kg            - Kilograms of each ingredient
   city_id       - City ID (@ for active city)
   player_id     - Player ID (@ for active player)
 
 Examples:
-  depot stock fill              # Fill all to 10kg at quality 100
-  depot stock fill 20000        # Fill all to 20kg at quality 100
-  depot stock fill 15000 80     # Fill all to 15kg at quality 80
+  depot stock fill 10           # Buy 10kg of each
+  depot stock fill 50 @ @       # 50kg of each, active city and player
 )",
       .args =
           {
               ArgSpec{
-                  .name = "quantity",
+                  .name = "kg",
                   .type = ArgType::Int,
-                  .optional = true,
-                  .description = "Quantity in grams",
-                  .min_value = 0,
-                  .max_value = 1000000,
-              },
-              ArgSpec{
-                  .name = "quality",
-                  .type = ArgType::Int,
-                  .optional = true,
-                  .description = "Quality 0-100",
-                  .min_value = 0,
-                  .max_value = 100,
+                  .optional = false,
+                  .description = "Kilograms of each ingredient",
+                  .min_value = 1,
+                  .max_value = 650,
               },
               ArgSpec{
                   .name = "city_id",
@@ -375,10 +376,9 @@ Examples:
               },
           },
       .handler = [](const CommandContext& ctx) -> CommandResult {
-        auto quantity = !ctx.args.empty() ? ctx.int_arg(0) : 10000;
-        auto quality = ctx.args.size() > 1 ? ctx.int_arg(1) : 100;
-        auto city_id = ctx.city_id(2);
-        auto player_id = ctx.player_id(3);
+        auto kg = static_cast<int>(ctx.int_arg(0));
+        auto city_id = ctx.city_id(1);
+        auto player_id = ctx.player_id(2);
 
         ctx.state.ensure_city_loaded(city_id);
         auto* city = ctx.state.city(city_id);
@@ -386,19 +386,48 @@ Examples:
           return CommandResult::error(
               compat::format("Failed to load city {}", city_id.value));
         }
-
-        auto& depot = city->central_depot(player_id);
-
-        // Fill all 90 ingredient types
-        for (int i = 0; i < 90; i++) {
-          auto ingredient_type = static_cast<core::food::IngredientType>(i);
-          depot.add_ingredient(ingredient_type, quantity, quality, Money{100});
+        auto* player = ctx.state.player(player_id);
+        if (!player) {
+          return CommandResult::error(
+              compat::format("Player {} not found", player_id.value));
         }
 
-        return CommandResult::success().add_message(
-            compat::format("Filled all 90 ingredients with {}g at quality {} "
-                           "for player {}'s depot in {}",
-                           quantity, quality, player_id.value, city->name()));
+        auto& depot = city->central_depot(player_id);
+        float multiplier =
+            FoodSupplier::price_multiplier(ctx.state.difficulty_level());
+
+        Money spent{0};
+        int bought = 0;
+        for (auto category : ALL_INGREDIENT_CATEGORIES) {
+          const auto* supplier = city->supplier_for(category, std::nullopt);
+          if (!supplier) {
+            continue;
+          }
+          for (auto type : core::food::CategoryRegistry::range(category)) {
+            auto price_per_kg = supplier->calculate_price(
+                type, city->ingredient_base_price(type), multiplier);
+            if (!price_per_kg) {
+              continue;
+            }
+            Money cost{price_per_kg->cents * kg};
+            if (!player->spend_cash(ctx.state.time().current_date(),
+                                    Account::Stock, cost)) {
+              return CommandResult::error(compat::format(
+                  "Player {} ran out of money after {} ingredients (${:n} "
+                  "spent)",
+                  player_id.value, bought, spent));
+            }
+            depot.add_ingredient(type, kg * 1000, supplier->quality(),
+                                 *price_per_kg);
+            spent = spent + cost;
+            ++bought;
+          }
+        }
+
+        return CommandResult::success().add_message(compat::format(
+            "Bought {}kg of each of {} ingredients for ${:n} for player {}'s "
+            "depot in {}",
+            kg, bought, spent, player_id.value, city->name()));
       },
   };
 }

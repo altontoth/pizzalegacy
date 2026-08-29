@@ -16,9 +16,11 @@
 #include "core/city/District.h"
 #include "core/city/PizzaCharts.h"
 #include "core/city/Property.h"
+#include "core/food/IngredientCategory.h"
 #include "core/food/PlayerRecipes.h"
 #include "core/food/Recipe.h"
 #include "core/state/GameState.h"
+#include "core/supply/FoodSupplier.h"
 #include "core/util/Constants.h"
 #include "engine/FormatCompat.h"
 
@@ -347,6 +349,39 @@ Examples:
   };
 }
 
+static CommandDef make_suppliers() {
+  return CommandDef{
+      .name = "suppliers",
+      .description = "List the active city's food suppliers",
+      .help_text = R"(Usage: city suppliers
+
+Lists each food supplier with the id `restaurant stock buy` takes, the
+category it carries and the quality it delivers.
+
+Example:
+  city suppliers
+)",
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        auto* city = ctx.state.active_city();
+        if (!city) {
+          return CommandResult::error("No active city");
+        }
+        auto result = CommandResult::success();
+        result.add_message(
+            compat::format("Food suppliers in {}:", city->name()));
+        result.add_message("Id  Quality  Category    Name");
+        result.add_message("--  -------  ----------  ----------------");
+        for (const auto& supplier : city->suppliers()) {
+          result.add_message(compat::format(
+              "{:>2}  {:>7}  {:<10}  {}", supplier->id(), supplier->quality(),
+              core::food::CategoryRegistry::name(supplier->category()),
+              supplier->name()));
+        }
+        return result;
+      },
+  };
+}
+
 static CommandDef make_investigation() {
   return CommandDef{
       .name = "investigation",
@@ -388,6 +423,7 @@ CommandDef make_city_commands() {
       .add_subcommand(make_chart())
       .add_subcommand(make_districts())
       .add_subcommand(make_investigation())
+      .add_subcommand(make_suppliers())
       .add_subcommand(make_property());
 }
 

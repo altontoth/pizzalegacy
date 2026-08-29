@@ -8,6 +8,8 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
+#include <optional>
 #include "core/food/Ingredient.h"
 #include "core/food/IngredientCategory.h"
 
@@ -70,14 +72,23 @@ uint8_t FoodSupplier::price_level_for_ingredient(
   return 0;
 }
 
-Money FoodSupplier::calculate_price(core::food::IngredientType ingredient_type,
-                                    Money base_price,
-                                    float difficulty_multiplier) const {
-  if (base_price.cents == 0) {
-    return Money{0};
-  }
+Money FoodSupplier::city_price(Money base_price, float difficulty_multiplier) {
+  return Money{static_cast<int64_t>(std::round(
+      static_cast<float>(base_price.cents) * difficulty_multiplier))};
+}
 
+bool FoodSupplier::sells(core::food::IngredientType ingredient_type) const {
+  return price_level_for_ingredient(ingredient_type) != 0;
+}
+
+std::optional<Money>
+FoodSupplier::calculate_price(core::food::IngredientType ingredient_type,
+                              Money base_price,
+                              float difficulty_multiplier) const {
   uint8_t price_level = price_level_for_ingredient(ingredient_type);
+  if (price_level == 0) {
+    return std::nullopt;
+  }
 
   // Formula: base = round((float)T * DifficultyMultiplier * (Q / 100.0))
   float calculated = static_cast<float>(base_price.cents) *
