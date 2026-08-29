@@ -92,7 +92,7 @@ bool MayorConversation::advance() {
     current_line(MayorLine::ILL_LOOK_AGAIN_WHEN_I_CAN);
     break;
 
-  // Ceremony "goes to" lines: advance to the award-specific name screen.
+  // Winner "goes to" lines: advance to the award-specific name screen.
   case MayorLine::THE_AWARD_FOR_MOST_BEAUTIFUL_RESTAURANT_GOES_TO:
     current_line(MayorLine::AWARD_WINNER_NAME_EXCLAIM);
     break;
@@ -149,7 +149,8 @@ bool MayorConversation::advance() {
     current_line(MayorLine::YOU_WON_TRANS_ATLANTIC_TRADE_AWARD);
     break;
 
-  // Quarterly award greeting: if ceremony show "goes to" line, else fee text
+  // Quarterly award greeting: the "goes to" line once a winner is determined,
+  // the fee text before that.
   case MayorLine::HELLO_MOST_BEAUTIFUL_RESTAURANT_IN_TOWN:
     if (award_winner_player_id_.has_value()) {
       current_line(MayorLine::THE_AWARD_FOR_MOST_BEAUTIFUL_RESTAURANT_GOES_TO);
@@ -283,7 +284,7 @@ std::vector<ConversationLine<MayorLine>> MayorConversation::lines() const {
   case MayorLine::HELLO_BEST_IMITATOR_OF_THE_YEAR:
   case MayorLine::HELLO_GOLDEN_BOW_TIE:
   case MayorLine::HELLO_TRANS_ATLANTIC_TRADE_AWARD:
-  // Ceremony "goes to" lines: always non-terminal. Winner name follows as its
+  // Winner "goes to" lines: always non-terminal. Winner name follows as its
   // own screen (AWARD_WINNER_NAME).
   case MayorLine::THE_AWARD_FOR_MOST_BEAUTIFUL_RESTAURANT_GOES_TO:
   case MayorLine::BEST_INVESTOR_IN_TOWN_WENT_TO:

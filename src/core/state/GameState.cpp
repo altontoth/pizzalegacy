@@ -613,7 +613,7 @@ void GameState::update(uint32_t elapsed_ms) {
 
 void GameState::score_and_grant_mayor_award(MayorAwardEvent& award_event,
                                             City& city) {
-  if (award_event.is_ceremony) {
+  if (award_event.announces_winner) {
     auto all_players = players();
     int pc = human_player_count();
     const auto& mayor_office = city.mayor_office();
@@ -740,7 +740,7 @@ void GameState::process_mayor_award_event(const MayorAwardEvent& award_event) {
 
   std::optional<int> award_winner = award_event.winner_player_id;
 
-  if (award_event.is_ceremony) {
+  if (award_event.announces_winner) {
     // Awards without a "nobody won" dialog silently skip if no one qualified.
     bool has_nobody_dialog =
         (award_event.type == MayorAwardType::BestImitator ||
@@ -1583,7 +1583,7 @@ bool GameState::bank_transfer(int account_number, Money amount,
       mayor->add_favor(sender.id().value, amount);
     }
     else {
-      mayor->fee_paid(sender.id().value);
+      mayor->fee_paid(sender.id().value, true);
     }
     return true;
   }

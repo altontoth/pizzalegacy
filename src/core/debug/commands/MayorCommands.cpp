@@ -94,9 +94,8 @@ static CommandDef make_mayor_award() {
       .help_text = R"(Usage: mayor award <type> [winner_player_id] [when]
 
 Has the mayor call to announce an award.
-winner_player_id defaults to the active player. Pass -1 to name no winner, the
-way the pizza competition announcement does. beauty and bowtie score their own
-winner, so -1 will not stop them.
+winner_player_id defaults to the active player. Pass -1 for the announcement
+the mayor sends ahead of time, which doesn't name a winner.
 
 Types: beauty, pizza, investor, imitator, bowtie, trade
 
@@ -161,9 +160,11 @@ Examples:
           }
         }
 
+        // -1 leaves no winner, which is the announcement the quarterly cycle
+        // sends out first.
         MayorAwardEvent event{.type = *award_type,
                               .winner_player_id = winner_id,
-                              .is_ceremony = true};
+                              .announces_winner = winner_id.has_value()};
 
         if (auto* city = ctx.state.active_city()) {
           ctx.state.score_and_grant_mayor_award(event, *city);
@@ -228,6 +229,37 @@ Examples:
   };
 }
 
+static CommandDef make_mayor_fee() {
+  return CommandDef{
+      .name = "fee",
+      .description = "Mark the award participation fee as paid",
+      .help_text = R"(Usage: mayor fee [player_id]
+
+The mayor only scores players who have paid the fee, and clears every payment
+once a winner has been named. Paying it is otherwise a conversation with the
+mayor.
+
+Examples:
+  mayor fee                     # the active player
+  mayor fee 1                   # player 1
+)",
+      .args = {active_player_arg()},
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        auto player_id = ctx.player_id(0);
+        auto* city = ctx.state.active_city();
+        if (!city) {
+          return CommandResult::error("No active city");
+        }
+
+        city->mayor_office().fee_paid(player_id.value, true);
+
+        return CommandResult::success().add_message(
+            compat::format("Player {} has paid the award fee in {}",
+                           player_id.value, city->name()));
+      },
+  };
+}
+
 static CommandDef make_mayor_status() {
   return CommandDef{
       .name = "status",
@@ -247,7 +279,7 @@ Example:
           return CommandResult::error("No active city");
         }
 
-        auto& mo = city->mayor_office();
+        const auto& mo = city->mayor_office();
         auto result = CommandResult::success();
 
         result.add_message(compat::format("Private (donation) account: {}",
@@ -259,7 +291,8 @@ Example:
         for (int i = 0; i < static_cast<int>(players.size()); ++i) {
           if (players[i]) {
             result.add_message(
-                compat::format("Player {} favor: {}", i, mo.favor_score(i)));
+                compat::format("Player {} favor: {}, fee paid: {}", i,
+                               mo.favor_score(i), mo.fee_paid(i)));
           }
         }
 
@@ -275,10 +308,11 @@ CommandDef make_mayor_commands() {
   return CommandDef{
       .name = "mayor",
       .description = "Mayor interaction commands",
-      .help_text = "Trigger mayor events (inspect, award, favor, status)",
+      .help_text = "Trigger mayor events (inspect, award, fee, favor, status)",
   }
       .add_subcommand(make_mayor_inspect())
       .add_subcommand(make_mayor_award())
+      .add_subcommand(make_mayor_fee())
       .add_subcommand(make_mayor_favor())
       .add_subcommand(make_mayor_status());
 }

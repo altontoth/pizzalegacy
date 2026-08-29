@@ -46,7 +46,9 @@ void MayorOffice::add_trade(int player_id, int32_t amount) {
   trade_activity_[player_id] += amount;
 }
 
-void MayorOffice::fee_paid(int player_id) { fee_paid_[player_id] = true; }
+void MayorOffice::fee_paid(int player_id, bool paid) {
+  fee_paid_[player_id] = paid;
+}
 
 bool MayorOffice::fee_paid(int player_id) const { return fee_paid_[player_id]; }
 
@@ -83,13 +85,13 @@ MayorOffice::process_daily_scheduling(const GameDate& date, int player_count) {
   auto day = static_cast<int>(date.day());
   auto month = static_cast<int>(date.month());
 
-  // June 30: Best Imitator of the Year (always a ceremony)
+  // June 30: Best Imitator of the Year (always names a winner)
   if (month == 6 && day == 30) {
     std::optional<int> winner =
         compute_award_winner(MayorAwardType::BestImitator, player_count);
     events.push_back({.type = MayorAwardType::BestImitator,
                       .winner_player_id = winner,
-                      .is_ceremony = true});
+                      .announces_winner = true});
     return events;
   }
 
@@ -97,7 +99,7 @@ MayorOffice::process_daily_scheduling(const GameDate& date, int player_count) {
   if (month == 12 && day == 31) {
     events.push_back({.type = MayorAwardType::PizzaOfTheYear,
                       .winner_player_id = std::nullopt,
-                      .is_ceremony = true});
+                      .announces_winner = true});
     return events;
   }
 
@@ -114,16 +116,16 @@ MayorOffice::process_daily_scheduling(const GameDate& date, int player_count) {
     announcement_day_ = 0; // consumed
   }
 
-  // Quarterly award ceremony: compute winner and deliver result
-  if (current_quarterly_award_ != MayorAwardType::None && ceremony_day_ > 0 &&
-      day == ceremony_day_) {
+  // Quarterly award result: work the winner out and deliver it
+  if (current_quarterly_award_ != MayorAwardType::None && winner_day_ > 0 &&
+      day == winner_day_) {
     std::optional<int> winner =
         compute_award_winner(current_quarterly_award_, player_count);
     events.push_back({.type = current_quarterly_award_,
                       .winner_player_id = winner,
-                      .is_ceremony = true});
+                      .announces_winner = true});
     current_quarterly_award_ = MayorAwardType::None;
-    ceremony_day_ = 0;
+    winner_day_ = 0;
     clear_fee_paid();
   }
 
@@ -149,7 +151,7 @@ void MayorOffice::schedule_quarterly_award(const GameDate& /*date*/) {
 
   if (award != MayorAwardType::None) {
     announcement_day_ = engine::random::rand_max_n(5) + 1;
-    ceremony_day_ = engine::random::rand_max_n(10) + 10;
+    winner_day_ = engine::random::rand_max_n(10) + 10;
     public_bank_account_ = roll_public_account();
   }
 }

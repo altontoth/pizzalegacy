@@ -660,7 +660,7 @@ json SaveGameManager::state_to_json(const GameState& state,
     json award_array = json::array();
     for (const auto& d : state.turn().deferred_mayor_awards()) {
       json entry = {{"type", static_cast<int>(d.event.type)},
-                    {"is_ceremony", d.event.is_ceremony},
+                    {"announces_winner", d.event.announces_winner},
                     {"player_id", d.player_id.value}};
       if (d.event.winner_player_id.has_value()) {
         entry["winner_player_id"] = *d.event.winner_player_id;
@@ -950,8 +950,8 @@ void SaveGameManager::json_to_state(const json& j, GameState& state,
     for (const auto& ev : j["deferred_mayor_awards"]) {
       MayorAwardEvent award;
       award.type = static_cast<MayorAwardType>(ev["type"].get<int>());
-      award.is_ceremony =
-          ev.contains("is_ceremony") && ev["is_ceremony"].get<bool>();
+      award.announces_winner =
+          ev.contains("announces_winner") && ev["announces_winner"].get<bool>();
       if (ev.contains("winner_player_id") &&
           !ev["winner_player_id"].is_null()) {
         award.winner_player_id = ev["winner_player_id"].get<int>();

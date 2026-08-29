@@ -29,11 +29,11 @@ enum class MayorAwardType {
 
 struct MayorAwardEvent {
   MayorAwardType type{MayorAwardType::None};
-  // nullopt = announcement (no winner determined yet).
-  // Some(id) = ceremony; id is the winning player index, or -1 if nobody
-  // qualified (used by awards that have a "nobody won" dialog).
+  // nullopt = advance notice (no winner determined yet).
+  // Some(id) = the winner's player index, or -1 if nobody qualified (used by
+  // awards that have a "nobody won" dialog).
   std::optional<int> winner_player_id{std::nullopt};
-  bool is_ceremony{false};
+  bool announces_winner{false};
 };
 
 class MayorOffice {
@@ -66,7 +66,7 @@ public:
   }
 
   // Award participation fee payment (one entry per player).
-  void fee_paid(int player_id);
+  void fee_paid(int player_id, bool paid);
   bool fee_paid(int player_id) const;
   void clear_fee_paid() { fee_paid_.fill(false); }
 
@@ -103,8 +103,8 @@ public:
   }
   int award_announcement_day() const { return announcement_day_; }
   void award_announcement_day(int d) { announcement_day_ = d; }
-  int award_ceremony_day() const { return ceremony_day_; }
-  void award_ceremony_day(int d) { ceremony_day_ = d; }
+  int award_winner_day() const { return winner_day_; }
+  void award_winner_day(int d) { winner_day_ = d; }
 
   // Returns any award events that should fire today. Also decays favor scores
   // and advances the appointment system.
@@ -134,7 +134,7 @@ private:
   // Quarterly award scheduling (values are day-of-month within next month).
   MayorAwardType current_quarterly_award_{MayorAwardType::None};
   int announcement_day_{0}; // 0 = not scheduled
-  int ceremony_day_{0};     // 0 = not scheduled
+  int winner_day_{0};       // 0 = not scheduled
 
   // Day-of-month when the player can meet the mayor for a donation.
   int appointment_day_{0};

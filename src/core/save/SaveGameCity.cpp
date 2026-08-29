@@ -371,7 +371,7 @@ json mayor_office_to_json(const MayorOffice& mo) {
   j["appointment_day"] = mo.appointment_day();
   j["current_quarterly_award"] = static_cast<int>(mo.current_quarterly_award());
   j["award_announcement_day"] = mo.award_announcement_day();
-  j["award_ceremony_day"] = mo.award_ceremony_day();
+  j["award_winner_day"] = mo.award_winner_day();
 
   return j;
 }
@@ -404,7 +404,7 @@ void json_to_mayor_office(const json& j, MayorOffice& mo) {
          i < NUMBER_OF_PLAYERS && i < static_cast<int>(j["fee_paid"].size());
          ++i) {
       if (j["fee_paid"][i].get<bool>()) {
-        mo.fee_paid(i);
+        mo.fee_paid(i, true);
       }
     }
   }
@@ -431,8 +431,8 @@ void json_to_mayor_office(const json& j, MayorOffice& mo) {
   if (j.contains("award_announcement_day")) {
     mo.award_announcement_day(j["award_announcement_day"].get<int>());
   }
-  if (j.contains("award_ceremony_day")) {
-    mo.award_ceremony_day(j["award_ceremony_day"].get<int>());
+  if (j.contains("award_winner_day")) {
+    mo.award_winner_day(j["award_winner_day"].get<int>());
   }
 }
 
