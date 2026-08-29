@@ -286,6 +286,16 @@ public:
   int difficulty_level() const { return difficulty_level_; };
   void difficulty_level(int d) { difficulty_level_ = d; }
 
+  // The day of the month the police schedule next month's raid.
+  static constexpr int district_investigation_draw_day = 20;
+
+  std::optional<int> district_under_investigation() const {
+    return district_under_investigation_;
+  }
+  void district_under_investigation(std::optional<int> d) {
+    district_under_investigation_ = d;
+  }
+
   RankChange adjust_underworld_score(Player& player, int delta);
   RankChange adjust_social_score(Player& player, int delta);
 
@@ -496,6 +506,7 @@ private:
   std::optional<core::mission::MissionTarget> mission_target_;
   std::optional<init::Config> initializer_;
   int difficulty_level_{1};
+  std::optional<int> district_under_investigation_;
   int time_scale_{1};
   bool quit_{false};
   core::RestaurantId next_restaurant_id_{0};

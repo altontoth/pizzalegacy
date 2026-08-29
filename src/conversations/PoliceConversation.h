@@ -40,6 +40,14 @@ public:
   static std::optional<MayorTip> mayor_tip(const GameState& state,
                                            core::PlayerId player);
 
+  static std::optional<std::string>
+  investigated_district(const GameState& state);
+
+  static bool warehouse_tip_available(const GameState& state,
+                                      core::PlayerId player);
+
+  static void seize_carried_weapons(GameState& state, Player& player);
+
 private:
   static PoliceLine compute_start_line(const GameState& state, const Actor*,
                                        std::optional<ArrestReason> reason);

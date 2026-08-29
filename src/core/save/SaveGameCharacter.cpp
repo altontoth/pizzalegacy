@@ -759,7 +759,8 @@ json inventory_to_json(const core::inventory::Inventory& inventory) {
     auto item = static_cast<core::item::Item>(i);
     int qty = inventory[item];
     if (qty > 0) {
-      j[std::string(core::item::to_string(item))] = qty;
+      j[std::string(core::item::to_string(item))] = {
+          {"qty", qty}, {"cost", inventory.cost_basis[i].cents}};
     }
   }
   return j;
@@ -769,8 +770,17 @@ void load_inventory(const json& j, core::inventory::Inventory& inventory) {
   for (std::size_t i = 0; i < core::item::item_count; ++i) {
     auto item = static_cast<core::item::Item>(i);
     auto key = std::string(core::item::to_string(item));
-    if (j.contains(key)) {
-      inventory[item] = j[key].get<int>();
+    if (!j.contains(key)) {
+      continue;
+    }
+    const auto& entry = j[key];
+    // Saves up to format 2 wrote the count on its own, with no cost basis.
+    if (entry.is_object()) {
+      inventory[item] = entry.value("qty", 0);
+      inventory.cost_basis[i] = Money{entry.value("cost", int64_t{0})};
+    }
+    else {
+      inventory[item] = entry.get<int>();
     }
   }
 }

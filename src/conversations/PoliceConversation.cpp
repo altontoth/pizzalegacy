@@ -10,8 +10,12 @@
 
 #include "core/character/Player.h"
 #include "core/character/SocialStatus.h"
+#include "core/city/CentralDepot.h"
+#include "core/city/City.h"
+#include "core/city/District.h"
 #include "core/events/MilestoneId.h"
 #include "core/finance/Ledger.h"
+#include "core/inventory/Inventory.h"
 #include "core/item/Item.h"
 #include "core/restaurant/Restaurant.h"
 #include "engine/Fatal.h"
@@ -90,6 +94,30 @@ PoliceConversation::mayor_tip(const GameState& state, core::PlayerId player) {
     tip = MayorTip{restaurant->name(), soonest};
   }
   return tip;
+}
+
+bool PoliceConversation::warehouse_tip_available(const GameState& state,
+                                                 core::PlayerId player) {
+  auto* city = state.active_city();
+  return city != nullptr && city->central_depot(player).capacity() > 0 &&
+         state.district_under_investigation().has_value() &&
+         static_cast<int>(state.time().current_date().day()) >=
+             GameState::district_investigation_draw_day;
+}
+
+std::optional<std::string>
+PoliceConversation::investigated_district(const GameState& state) {
+  auto drawn = state.district_under_investigation();
+  auto* city = state.active_city();
+  if (!drawn || !city) {
+    return std::nullopt;
+  }
+  for (const auto& district : city->districts()) {
+    if (district->id() == *drawn) {
+      return district->name();
+    }
+  }
+  return std::nullopt;
 }
 
 PoliceLine
@@ -206,11 +234,7 @@ bool PoliceConversation::advance_line_choice(PoliceLine choice) {
     break;
 
   case PoliceLine::HOW_ARE_YOU: {
-    int charisma = player->character().charisma();
-    // TODO When we have warehouse inspections hooked up
-    bool warehouse_inspection = false;
-    if (warehouse_inspection &&
-        engine::random::rand_percentage_chance(charisma)) {
+    if (warehouse_tip_available(state_, player->id())) {
       current_line(
           PoliceLine::
               FINE_THANKS_I_EVEN_KNOW_WHERE_WE_WILL_BE_CHECKING_WAREHOUSE_NEXT_MONTH_FOR_4K);
@@ -308,7 +332,10 @@ bool PoliceConversation::advance_proposal(bool agree) {
                                     Account::FinesAndBribes, 4000_usd,
                                     AccountingScope::Operational);
       current_line(
-          PoliceLine::THANKS_A_LOT_NEXT_MONTH_WE_WILL_EXAMINE_WAREHOUSES_IN);
+          investigated_district(state_)
+              ? PoliceLine::
+                    THANKS_A_LOT_NEXT_MONTH_WE_WILL_EXAMINE_WAREHOUSES_IN
+              : PoliceLine::POLICE_HUNG_UP);
     }
     else {
       current_line(PoliceLine::NOT_TOO_GOOD_IM_VERY_BUSY_GOODBYE);
@@ -391,10 +418,9 @@ std::vector<ConversationLine<PoliceLine>> PoliceConversation::lines() const {
     return {make_terminal_line(current_line_)};
 
   case PoliceLine::THANKS_A_LOT_NEXT_MONTH_WE_WILL_EXAMINE_WAREHOUSES_IN:
-    // TODO: append district name when district lookup is wired
-    Logger::warn("We don't have warehouse inspections yet!");
     return {make_terminal_line(
-        PoliceLine::THANKS_A_LOT_NEXT_MONTH_WE_WILL_EXAMINE_WAREHOUSES_IN)};
+        PoliceLine::THANKS_A_LOT_NEXT_MONTH_WE_WILL_EXAMINE_WAREHOUSES_IN,
+        compat::format(" {}.", *investigated_district(state_)))};
   case PoliceLine::THANK_YOU_THE_MAYOR_WILL_VISIT_YOUR_RESTAURANT:
     return {make_terminal_line(
         PoliceLine::THANK_YOU_THE_MAYOR_WILL_VISIT_YOUR_RESTAURANT,
@@ -433,8 +459,13 @@ std::vector<ConversationLine<PoliceLine>> PoliceConversation::lines() const {
         make_option(PoliceLine::COULD_YOU_DO_WITH_A_SPORTS_CAR),
     };
 
+  case PoliceLine::DURING_INSPECTION_OF_WAREHOUSE_WEAPONS_CONFISCATED:
+    return {make_terminal_line(
+        PoliceLine::DURING_INSPECTION_OF_WAREHOUSE_WEAPONS_CONFISCATED)};
+
   case PoliceLine::PLAYER_GOING_TO_JAIL:
   case PoliceLine::PLAYER_PAID_FINE:
+  case PoliceLine::POLICE_HUNG_UP:
     return {};
 
   default:
@@ -453,6 +484,8 @@ bool PoliceConversation::has_ended() const {
   case PoliceLine::YOU_CANNOT_BRIBE_ME_SENTENCED_DOUBLED:
   case PoliceLine::PLAYER_GOING_TO_JAIL:
   case PoliceLine::PLAYER_PAID_FINE:
+  case PoliceLine::POLICE_HUNG_UP:
+  case PoliceLine::DURING_INSPECTION_OF_WAREHOUSE_WEAPONS_CONFISCATED:
   case PoliceLine::WHO_ARE_YOU_GET_OUT_OF_HERE_AT_ONCE:
   case PoliceLine::WHAT_DO_YOU_THINK_I_AM_I_FINE_YOU_1K_FOR_INSULTING:
   case PoliceLine::
@@ -469,28 +502,38 @@ bool PoliceConversation::has_ended() const {
   }
 }
 
+void PoliceConversation::seize_carried_weapons(GameState& state,
+                                               Player& player) {
+  auto& inv = player.inventory();
+  Money seized{0};
+  for (auto item : core::item::attack_weapon_list) {
+    seized = seized + inv.remove_with_cost(item, inv.count(item));
+  }
+  if (seized.cents > 0) {
+    player.financials().transfer(state.time().current_date(), Account::Weapons,
+                                 Account::ProfitAndLoss, seized,
+                                 AccountingScope::Operational);
+  }
+}
+
 void PoliceConversation::apply_confiscation() {
   auto* player = state_.active_player();
-  auto& inv = player->inventory();
-  using core::item::Item;
 
   switch (*arrest_reason_) {
   case ArrestReason::WeaponsDealing:
     sentence_days_ = std::max(sentence_days_, 8);
-    for (auto item :
-         {Item::FlameThrower, Item::Chemicals, Item::Bazooka, Item::Bomb}) {
-      inv[item] = 0;
-    }
+    seize_carried_weapons(state_, *player);
     break;
   case ArrestReason::LaunderingMoney:
     player->mafia_state().active_mission = std::nullopt;
     break;
+  // The weapons went when the police searched the depot.
+  case ArrestReason::WarehouseWeapons:
+    sentence_days_ = std::max(sentence_days_, 20);
+    break;
   case ArrestReason::PosessingWeapons:
     sentence_days_ = std::max(sentence_days_, 4);
-    for (auto item :
-         {Item::FlameThrower, Item::Chemicals, Item::Bazooka, Item::Bomb}) {
-      inv[item] = 0;
-    }
+    seize_carried_weapons(state_, *player);
     break;
   default:
     break;

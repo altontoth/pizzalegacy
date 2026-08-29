@@ -494,19 +494,35 @@ CommandDef make_mafia_commands() {
       .add_subcommand(make_mafia_set_deadline());
 }
 
+constexpr int lowest_crime_code = static_cast<int>(ArrestReason::Receiving);
+constexpr int highest_crime_code =
+    static_cast<int>(ArrestReason::WarehouseWeapons);
+
 static CommandDef make_police_arrest() {
   return CommandDef{
       .name = "arrest",
       .description = "Trigger a police arrest with a given crime code",
-      .help_text = R"(Usage: police arrest <crime_code>
+      .help_text = compat::format(
+          R"(Usage: police arrest <crime_code>
 
-Triggers a police arrest for the given crime code (1-9):
-  1=Receiving, 2=Burglary, 3=WeaponsDealing, 4=LaunderingMoney,
-  5=ShadyDealings, 6=SuspectedHomicide, 7=PossessingWeapons
+Triggers a police arrest for the given crime code ({}-{}):
+  {}=Receiving, {}=Burglary, {}=WeaponsDealing, {}=LaunderingMoney,
+  {}=ShadyDealings, {}=SuspectedHomicide, {}=PossessingWeapons,
+  {}=WarehouseWeapons
 
 Example:
-  police arrest 3
+  police arrest {}
 )",
+          lowest_crime_code, highest_crime_code,
+          static_cast<int>(ArrestReason::Receiving),
+          static_cast<int>(ArrestReason::Burglary),
+          static_cast<int>(ArrestReason::WeaponsDealing),
+          static_cast<int>(ArrestReason::LaunderingMoney),
+          static_cast<int>(ArrestReason::ShadyDealings),
+          static_cast<int>(ArrestReason::SuspectedHomicide),
+          static_cast<int>(ArrestReason::PosessingWeapons),
+          static_cast<int>(ArrestReason::WarehouseWeapons),
+          static_cast<int>(ArrestReason::WeaponsDealing)),
       .args =
           {
               ArgSpec{
@@ -514,18 +530,42 @@ Example:
                   .type = ArgType::Int,
                   .optional = false,
                   .default_provider = DefaultProvider::None,
-                  .description = "Crime code (1-7)",
+                  .description =
+                      compat::format("Crime code ({}-{})", lowest_crime_code,
+                                     highest_crime_code),
+                  .min_value = lowest_crime_code,
+                  .max_value = highest_crime_code,
               },
           },
       .handler = [](const CommandContext& ctx) -> CommandResult {
-        int code = static_cast<int>(ctx.int_arg(0));
-        if (code < 1 || code > 7) {
-          return CommandResult::error("Crime code must be between 1 and 7");
-        }
-        auto reason = static_cast<ArrestReason>(code);
+        auto reason = static_cast<ArrestReason>(ctx.int_arg(0));
         ctx.state.initiate_arrest(reason);
+        return CommandResult::success().add_message(compat::format(
+            "Triggered police arrest for crime code {}", ctx.int_arg(0)));
+      },
+  };
+}
+
+static CommandDef make_police_seize() {
+  return CommandDef{
+      .name = "seize",
+      .description = "Seize the weapons a player is carrying",
+      .help_text = R"(Usage: police seize
+
+Seizes the weapons the player is carrying and writes their value off,
+without the sentence or the conversation an arrest would run.
+
+Example:
+  police seize
+)",
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        auto* player = ctx.state.active_player();
+        if (!player) {
+          return CommandResult::error("No active player");
+        }
+        PoliceConversation::seize_carried_weapons(ctx.state, *player);
         return CommandResult::success().add_message(
-            compat::format("Triggered police arrest for crime code {}", code));
+            "Seized the active player's carried weapons");
       },
   };
 }
@@ -587,6 +627,70 @@ Example:
   };
 }
 
+static CommandDef make_police_warehouse() {
+  return CommandDef{
+      .name = "warehouse",
+      .description = "Show what the warehouse inspection tip would say",
+      .help_text = R"(Usage: police warehouse
+
+Reports whether the warehouse tip is on offer and what it would say. An
+offer that can't name a district is the original's bug: the money is taken
+and the officer hangs up.
+
+Example:
+  police warehouse
+)",
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        auto* player = ctx.state.active_player();
+        if (!player) {
+          return CommandResult::error("No active player");
+        }
+        auto result = CommandResult::success();
+        auto drawn = ctx.state.district_under_investigation();
+        result.add_message(
+            compat::format("District under investigation: {}",
+                           drawn ? std::to_string(*drawn) : "none drawn"));
+        if (!PoliceConversation::warehouse_tip_available(ctx.state,
+                                                         player->id())) {
+          result.add_message("Warehouse tip: nothing on offer");
+          return result;
+        }
+        auto district = PoliceConversation::investigated_district(ctx.state);
+        result.add_message(
+            district
+                ? compat::format("Warehouse tip: warehouses in {}", *district)
+                : "Warehouse tip: on offer, but the officer hangs up");
+        return result;
+      },
+  };
+}
+
+static CommandDef make_police_raids() {
+  return CommandDef{
+      .name = "raids",
+      .description = "List depot raids waiting to be told to their owners",
+      .help_text = R"(Usage: police raids
+
+Lists depot raids waiting to be told to their owners.
+
+Example:
+  police raids
+)",
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        const auto& raids = ctx.state.turn().deferred_depot_raids();
+        if (raids.empty()) {
+          return CommandResult::success().add_message("No raids to report");
+        }
+        auto result = CommandResult::success();
+        for (auto player_id : raids) {
+          result.add_message(
+              compat::format("player {} to be told", player_id.value));
+        }
+        return result;
+      },
+  };
+}
+
 static CommandDef make_police_status() {
   return CommandDef{
       .name = "status",
@@ -631,11 +735,16 @@ CommandDef make_police_commands() {
   return CommandDef{
       .name = "police",
       .description = "Police interaction commands",
-      .help_text = "Trigger police events (arrest, visit, tip, status)",
+      .help_text =
+          "Trigger police events (arrest, visit, tip, warehouse, raids, "
+          "status)",
   }
       .add_subcommand(make_police_arrest())
+      .add_subcommand(make_police_seize())
       .add_subcommand(make_police_visit())
       .add_subcommand(make_police_tip())
+      .add_subcommand(make_police_warehouse())
+      .add_subcommand(make_police_raids())
       .add_subcommand(make_police_status());
 }
 

@@ -11,13 +11,25 @@
 #include "core/mission/MissionScoring.h"
 #include "core/mission/MissionTarget.h"
 #include "core/save/SaveGameManager.h"
+#include "core/state/GameOptions.h"
 #include "core/state/GameState.h"
+#include "core/state/Overloaded.h"
 #include "core/state/UIState.h"
 #include "core/time/GameDate.h"
 #include "core/time/GameTime.h"
+#include "core/util/GameContext.h"
+#include "engine/DisplayConstants.h"
 #include "engine/FormatCompat.h"
+#include "engine/audio/AudioManager.h"
+#include "engine/ui/ICursorManager.h"
 
+#include <charconv>
 #include <cstdio>
+#include <optional>
+#include <stdexcept>
+#include <string>
+#include <string_view>
+#include <variant>
 
 using namespace debug::command;
 
@@ -205,6 +217,313 @@ Examples:
             "Date set to {} ({})", time.to_date_string(), season));
       },
   };
+}
+
+struct OptionDef {
+  std::string_view name;
+  std::variant<bool GameOptions::*, int GameOptions::*, float GameOptions::*,
+               WinCondition GameOptions::*, FpsOption GameOptions::*,
+               AutosaveFrequency GameOptions::*,
+               ScreenResolution GameOptions::*>
+      member;
+  std::string_view description;
+  // Inclusive bounds, for the numeric options only.
+  double lowest = 0;
+  double highest = 0;
+  // Setting the field is not the whole job for these: the audio, display or
+  // cursor has to be told as well, which this does the way MenuOptions does.
+  void (*apply)(GameState&, GameContext&) = nullptr;
+};
+
+static const OptionDef option_defs[] = {
+    {.name = "fix_legacy_bugs",
+     .member = &GameOptions::fix_legacy_bugs,
+     .description = "Correct the original's bugs rather than reproduce them"},
+    {.name = "qol_improvements",
+     .member = &GameOptions::qol_improvements,
+     .description = "Conveniences the original did without"},
+    {.name = "automatic_report",
+     .member = &GameOptions::automatic_report,
+     .description = "Skip the daily report screen"},
+    {.name = "mafia_shakedowns_target_all_restaurants",
+     .member = &GameOptions::mafia_shakedowns_target_all_restaurants,
+     .description = "Shake down a random restaurant instead of always the "
+                    "first"},
+    {.name = "win_condition",
+     .member = &GameOptions::win_condition,
+     .description = "Cities to dominate to win: paris, any_city or "
+                    "all_cities"},
+    {.name = "autosave_frequency",
+     .member = &GameOptions::autosave_frequency,
+     .description = "off, daily, weekly or monthly"},
+    {.name = "autosave_count",
+     .member = &GameOptions::autosave_count,
+     .description = "Rotating autosave slots",
+     .lowest = GameOptions::AUTOSAVE_COUNT_MIN,
+     .highest = GameOptions::AUTOSAVE_COUNT_MAX},
+    {.name = "map_fx",
+     .member = &GameOptions::map_fx,
+     .description = "Sound effects on the city map"},
+    {.name = "restaurant_fx",
+     .member = &GameOptions::restaurant_fx,
+     .description = "Sound effects in the restaurant"},
+    {.name = "music",
+     .member = &GameOptions::music,
+     .description = "Play music"},
+    {.name = "sound_volume",
+     .member = &GameOptions::sound_volume,
+     .description = "Effects volume, 0 to 1",
+     .lowest = 0.0,
+     .highest = 1.0,
+     .apply =
+         [](GameState& state, GameContext& context) {
+           context.audio->sound_volume(state.options().sound_volume);
+         }},
+    {.name = "music_volume",
+     .member = &GameOptions::music_volume,
+     .description = "Music volume, 0 to 1",
+     .lowest = 0.0,
+     .highest = 1.0,
+     .apply =
+         [](GameState& state, GameContext& context) {
+           context.audio->music_volume(state.options().music_volume);
+         }},
+    {.name = "crt_aspect_ratio",
+     .member = &GameOptions::crt_aspect_ratio,
+     .description = "Show 640x480 (4:3) rather than 640x400",
+     .apply =
+         [](GameState& state, GameContext&) {
+           state.request_crt_change(state.options().crt_aspect_ratio);
+         }},
+    {.name = "resolution",
+     .member = &GameOptions::resolution,
+     .description = "640x400 or 1280x800",
+     .apply =
+         [](GameState& state, GameContext&) {
+           state.request_resolution_change(state.options().resolution);
+         }},
+    {.name = "render_fps",
+     .member = &GameOptions::render_fps,
+     .description = "30, 60 or 120; the simulation stays at 30Hz"},
+    {.name = "vsync", .member = &GameOptions::vsync, .description = "Vsync"},
+    {.name = "software_cursor",
+     .member = &GameOptions::software_cursor,
+     .description = "Draw the cursor rather than letting the system do it",
+     .apply =
+         [](GameState& state, GameContext& context) {
+           context.cursor->software_mode(state.options().software_cursor);
+         }},
+};
+
+static const OptionDef* find_option(std::string_view name) {
+  for (const auto& option : option_defs) {
+    if (option.name == name) {
+      return &option;
+    }
+  }
+  return nullptr;
+}
+
+static std::string option_value(const GameOptions& options,
+                                const OptionDef& option) {
+  return std::visit(
+      overloaded{[&](bool GameOptions::* member) -> std::string {
+                   return options.*member ? "on" : "off";
+                 },
+                 [&](int GameOptions::* member) -> std::string {
+                   return std::to_string(options.*member);
+                 },
+                 [&](float GameOptions::* member) -> std::string {
+                   return compat::format("{:.2f}", options.*member);
+                 },
+                 [&](WinCondition GameOptions::* member) -> std::string {
+                   return std::string(to_config_value(options.*member));
+                 },
+                 [&](FpsOption GameOptions::* member) -> std::string {
+                   return std::string(to_config_value(options.*member));
+                 },
+                 [&](AutosaveFrequency GameOptions::* member) -> std::string {
+                   return std::string(to_config_value(options.*member));
+                 },
+                 [&](ScreenResolution GameOptions::* member) -> std::string {
+                   return std::string(to_config_value(options.*member));
+                 }},
+      option.member);
+}
+
+// Returns what went wrong, or nothing when the option was set.
+static std::optional<std::string> set_option(GameOptions& options,
+                                             const OptionDef& option,
+                                             const std::string& value) {
+  auto out_of_range = [&](double v) {
+    return compat::format("{} takes {} to {}, got '{}'", option.name,
+                          option.lowest, option.highest, value);
+  };
+  std::optional<std::string> failure;
+  std::visit(
+      overloaded{
+          [&](bool GameOptions::* member) {
+            if (value == "on" || value == "true" || value == "1") {
+              options.*member = true;
+            }
+            else if (value == "off" || value == "false" || value == "0") {
+              options.*member = false;
+            }
+            else {
+              failure = compat::format("Expected on or off, got '{}'", value);
+            }
+          },
+          [&](int GameOptions::* member) {
+            int parsed = 0;
+            auto [ptr, ec] = std::from_chars(
+                value.data(), value.data() + value.size(), parsed);
+            if (ec != std::errc{} || ptr != value.data() + value.size()) {
+              failure = compat::format("Expected a number, got '{}'", value);
+            }
+            else if (parsed < option.lowest || parsed > option.highest) {
+              failure = out_of_range(parsed);
+            }
+            else {
+              options.*member = parsed;
+            }
+          },
+          [&](float GameOptions::* member) {
+            try {
+              size_t consumed = 0;
+              float parsed = std::stof(value, &consumed);
+              if (consumed != value.size()) {
+                failure = compat::format("Expected a number, got '{}'", value);
+              }
+              else if (parsed < option.lowest || parsed > option.highest) {
+                failure = out_of_range(parsed);
+              }
+              else {
+                options.*member = parsed;
+              }
+            }
+            catch (const std::exception&) {
+              failure = compat::format("Expected a number, got '{}'", value);
+            }
+          },
+          [&](WinCondition GameOptions::* member) {
+            if (auto parsed = win_condition_from_config_value(value)) {
+              options.*member = *parsed;
+            }
+            else {
+              failure = compat::format(
+                  "Expected paris, any_city or all_cities, got '{}'", value);
+            }
+          },
+          [&](FpsOption GameOptions::* member) {
+            if (auto parsed = fps_option_from_config_value(value)) {
+              options.*member = *parsed;
+            }
+            else {
+              failure =
+                  compat::format("Expected 30, 60 or 120, got '{}'", value);
+            }
+          },
+          [&](AutosaveFrequency GameOptions::* member) {
+            if (auto parsed = autosave_frequency_from_config_value(value)) {
+              options.*member = *parsed;
+            }
+            else {
+              failure = compat::format(
+                  "Expected off, daily, weekly or monthly, got '{}'", value);
+            }
+          },
+          [&](ScreenResolution GameOptions::* member) {
+            if (auto parsed = screen_resolution_from_config_value(value)) {
+              options.*member = *parsed;
+            }
+            else {
+              failure = compat::format("Expected 640x400 or 1280x800, got '{}'",
+                                       value);
+            }
+          }},
+      option.member);
+  return failure;
+}
+
+static CommandDef make_game_options_set() {
+  return CommandDef{
+      .name = "set",
+      .description = "Change an option for this run",
+      .help_text = R"(Usage: game options set <name> <value>
+
+Changes the option for this run only; the config file is left alone. Values
+are spelled the way the config file spells them, which `game options` shows.
+
+Examples:
+  game options set fix_legacy_bugs off
+  game options set win_condition all_cities
+  game options set render_fps 120
+)",
+      .args =
+          {
+              ArgSpec{
+                  .name = "name",
+                  .type = ArgType::String,
+                  .optional = false,
+                  .default_provider = DefaultProvider::None,
+                  .description = "Option name, as listed by `game options`",
+              },
+              ArgSpec{
+                  .name = "value",
+                  .type = ArgType::String,
+                  .optional = false,
+                  .default_provider = DefaultProvider::None,
+                  .description = "New value for the option",
+              },
+          },
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        std::string name = ctx.string_arg(0);
+        std::string value = ctx.string_arg(1);
+
+        const auto* option = find_option(name);
+        if (!option) {
+          return CommandResult::error(
+              compat::format("Unknown option '{}'", name));
+        }
+
+        auto& options = ctx.state.options();
+        if (auto failure = set_option(options, *option, value)) {
+          return CommandResult::error(*failure);
+        }
+        if (option->apply) {
+          option->apply(ctx.state, ctx.context);
+        }
+        return CommandResult::success().add_message(compat::format(
+            "{} is now {}", name, option_value(options, *option)));
+      },
+  };
+}
+
+static CommandDef make_game_options() {
+  return CommandDef{
+      .name = "options",
+      .description = "Show the game options",
+      .help_text = R"(Usage: game options
+
+Lists the options and their current values. `game options set` changes one
+for this run.
+
+Example:
+  game options
+)",
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        const auto& options = ctx.state.options();
+        auto result = CommandResult::success();
+        result.add_message("Options:");
+        for (const auto& option : option_defs) {
+          result.add_message(compat::format("  {:<40} {:<10}  {}", option.name,
+                                            option_value(options, option),
+                                            option.description));
+        }
+        return result;
+      },
+  }
+      .add_subcommand(make_game_options_set());
 }
 
 static CommandDef make_game_date() {
@@ -676,6 +995,7 @@ CommandDef make_game_commands() {
       .add_subcommand(make_game_load())
       .add_subcommand(make_game_exit())
       .add_subcommand(make_game_date())
+      .add_subcommand(make_game_options())
       .add_subcommand(make_game_time())
       .add_subcommand(make_game_competition())
       .add_subcommand(make_game_end())

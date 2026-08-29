@@ -5,8 +5,12 @@
  */
 
 #include "core/debug/commands/DepotCommands.h"
+#include "core/character/Player.h"
 #include "core/city/City.h"
+#include "core/city/District.h"
 #include "core/city/Property.h"
+#include "core/economy/WeaponMarket.h"
+#include "core/finance/Ledger.h"
 #include "core/inventory/Inventory.h"
 #include "core/item/Item.h"
 #include "core/state/GameState.h"
@@ -134,9 +138,11 @@ Examples:
         int tile_x = City::index_to_x(property->index());
         int tile_y = City::index_to_y(property->index());
 
-        return CommandResult::success().add_message(
-            compat::format("Gave player {} a depot at tile ({}, {}) in {}",
-                           player_id.value, tile_x, tile_y, city->name()));
+        return CommandResult::success().add_message(compat::format(
+            "Gave player {} a depot at tile ({}, {}) in {}, district {} "
+            "(id {})",
+            player_id.value, tile_x, tile_y, city->name(),
+            property->district().name(), property->district().id()));
       },
   };
 }
@@ -192,6 +198,27 @@ Examples:
         lines.push_back(
             compat::format("  Stocked ingredients: {}/90 ({} grams total)",
                            stocked_ingredients, total_quantity));
+
+        for (const auto* property : city->properties()) {
+          if (property->type() != PropertyType::DEPOT) {
+            continue;
+          }
+          auto owner = property->owner_or_tenant();
+          const auto* weapons = property->weapons();
+          if (!owner || *owner != player_id || !weapons) {
+            continue;
+          }
+          lines.push_back(compat::format(
+              "  Weapons in {} (district id {}):", property->district().name(),
+              property->district().id()));
+          for (auto item : core::item::weapon_list) {
+            int held = weapons->count(item);
+            if (held > 0) {
+              lines.push_back(
+                  compat::format("    {} x{}", to_string(item), held));
+            }
+          }
+        }
 
         return CommandResult::success(lines);
       },
@@ -547,7 +574,33 @@ Examples:
           return CommandResult::error("That depot has no weapon store");
         }
 
-        (*weapons)[item_id] = amount;
+        auto* player = ctx.state.player(player_id);
+        if (!player) {
+          return CommandResult::error(
+              compat::format("Player {} not found", player_id.value));
+        }
+
+        const GameDate today = ctx.state.time().current_date();
+        auto& financials = player->financials();
+
+        int held = weapons->count(item_id);
+        if (held > 0) {
+          Money basis = weapons->remove_with_cost(item_id, held);
+          if (basis.cents > 0) {
+            financials.transfer(today, Account::Weapons, Account::Cheat, basis,
+                                AccountingScope::Capital);
+          }
+        }
+        if (amount > 0) {
+          Money cost =
+              ctx.state.weapon_market().purchase_price(city_id, item_id) *
+              amount;
+          weapons->add_with_cost(item_id, amount, cost);
+          if (cost.cents > 0) {
+            financials.transfer(today, Account::Cheat, Account::Weapons, cost,
+                                AccountingScope::Capital);
+          }
+        }
 
         return CommandResult::success().add_message(
             compat::format("Set {} to {} in player {}'s depot {} in {}",

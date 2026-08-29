@@ -146,6 +146,15 @@ public:
     core::PlayerId player_id;
   };
 
+  // The owner is told on their next turn; the seizure happened when the depot
+  // was searched.
+  void queue_depot_raid_call(core::PlayerId player_id) {
+    deferred_depot_raids_.push_back(player_id);
+  }
+  const std::vector<core::PlayerId>& deferred_depot_raids() const {
+    return deferred_depot_raids_;
+  }
+
   // Protection racket offers rolled during the day-end flush, delivered on
   // the owning player's next turn.
   struct DeferredRacketOffer {
@@ -204,6 +213,8 @@ private:
   // Gives control to the next player once their turn card is gone. If that
   // player is AI their turn ends here.
   void on_player_turn_card_finished();
+
+  void raid_depots(core::PlayerId player_id);
   turn::StepResult execute_pipeline_step(const turn::Step& step);
   turn::StepResult process_restaurant_step(const turn::ProcessRestaurant& step);
   turn::StepResult finish_end_of_turn(const turn::FinishTurn& step);
@@ -293,4 +304,5 @@ private:
   bool showing_deferred_inspection_{false};
 
   std::vector<DeferredMayorAward> deferred_mayor_awards_;
+  std::vector<core::PlayerId> deferred_depot_raids_;
 };

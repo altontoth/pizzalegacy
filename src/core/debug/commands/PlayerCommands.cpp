@@ -6,10 +6,15 @@
 
 #include "PlayerCommands.h"
 #include "core/character/Player.h"
+#include "core/city/City.h"
 #include "core/common/Ids.h"
+#include "core/economy/WeaponMarket.h"
 #include "core/finance/BalanceSheet.h"
+#include "core/finance/Ledger.h"
 #include "core/finance/Money.h"
 #include "core/food/Pizza.h"
+#include "core/inventory/Inventory.h"
+#include "core/item/Item.h"
 #include "core/marketing/AdvertisingCampaign.h"
 #include "core/state/GameState.h"
 #include "core/util/GameContext.h"
@@ -301,20 +306,40 @@ Examples:
               compat::format("Player {} not found", player_id.value));
         }
 
+        auto* city = ctx.state.active_city();
+        if (!city) {
+          return CommandResult::error("No active city to price weapons in");
+        }
+
         auto& inv = player->inventory();
         int current = inv.count(item_id);
         int delta = amount - current;
 
+        // Booked at what the dealer here charges for them.
+        const GameDate today = ctx.state.time().current_date();
+        auto& financials = player->financials();
+
         if (delta > 0) {
-          int added = inv.add(item_id, delta);
+          Money cost =
+              ctx.state.weapon_market().purchase_price(city->id(), item_id) *
+              delta;
+          int added = inv.add_with_cost(item_id, delta, cost);
+          if (cost.cents > 0) {
+            financials.transfer(today, Account::Cheat, Account::Weapons, cost,
+                                AccountingScope::Capital);
+          }
           return CommandResult::success().add_message(compat::format(
               "Added {} units of {} (total: {})", added,
               core::item::to_string(item_id), inv.count(item_id)));
         }
         else if (delta < 0) {
-          int removed = inv.remove(item_id, -delta);
+          Money basis = inv.remove_with_cost(item_id, -delta);
+          if (basis.cents > 0) {
+            financials.transfer(today, Account::Weapons, Account::Cheat, basis,
+                                AccountingScope::Capital);
+          }
           return CommandResult::success().add_message(compat::format(
-              "Removed {} units of {} (total: {})", removed,
+              "Removed {} units of {} (total: {})", -delta,
               core::item::to_string(item_id), inv.count(item_id)));
         }
         else {

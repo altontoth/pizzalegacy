@@ -6,7 +6,9 @@
 
 #pragma once
 
+#include <optional>
 #include <string>
+#include <string_view>
 
 #include "engine/DisplayConstants.h"
 #include "resources/util/Platform.h"
@@ -46,6 +48,89 @@ inline std::string to_string(AutosaveFrequency freq) {
 // Market share domination needed to win. The English release checks Paris
 // alone, apparently meaning any one city; the German one checks every city.
 enum class WinCondition { Paris, AnyCity, AllCities };
+
+inline std::string_view to_config_value(WinCondition condition) {
+  switch (condition) {
+  case WinCondition::Paris:
+    return "paris";
+  case WinCondition::AnyCity:
+    return "any_city";
+  case WinCondition::AllCities:
+    return "all_cities";
+  }
+  return "any_city";
+}
+
+inline std::string_view to_config_value(FpsOption fps) {
+  switch (fps) {
+  case FpsOption::Fps30:
+    return "30";
+  case FpsOption::Fps60:
+    return "60";
+  case FpsOption::Fps120:
+    return "120";
+  }
+  return "60";
+}
+
+inline std::optional<FpsOption>
+fps_option_from_config_value(std::string_view value) {
+  if (value == "30") {
+    return FpsOption::Fps30;
+  }
+  if (value == "60") {
+    return FpsOption::Fps60;
+  }
+  if (value == "120") {
+    return FpsOption::Fps120;
+  }
+  return std::nullopt;
+}
+
+inline std::string_view to_config_value(AutosaveFrequency frequency) {
+  switch (frequency) {
+  case AutosaveFrequency::Off:
+    return "off";
+  case AutosaveFrequency::Daily:
+    return "daily";
+  case AutosaveFrequency::Weekly:
+    return "weekly";
+  case AutosaveFrequency::Monthly:
+    return "monthly";
+  }
+  return "daily";
+}
+
+inline std::optional<AutosaveFrequency>
+autosave_frequency_from_config_value(std::string_view value) {
+  if (value == "off") {
+    return AutosaveFrequency::Off;
+  }
+  if (value == "daily") {
+    return AutosaveFrequency::Daily;
+  }
+  if (value == "weekly") {
+    return AutosaveFrequency::Weekly;
+  }
+  if (value == "monthly") {
+    return AutosaveFrequency::Monthly;
+  }
+  return std::nullopt;
+}
+
+inline std::optional<WinCondition>
+win_condition_from_config_value(std::string_view value) {
+  if (value == "paris") {
+    return WinCondition::Paris;
+  }
+  if (value == "any_city") {
+    return WinCondition::AnyCity;
+  }
+  if (value == "all_cities") {
+    return WinCondition::AllCities;
+  }
+  return std::nullopt;
+}
 
 struct GameOptions {
   static constexpr int AUTOSAVE_COUNT_MIN = 1;

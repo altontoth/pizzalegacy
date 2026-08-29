@@ -52,4 +52,5 @@ enum class PoliceLine {
   // Synthetic states (no .E line)
   PLAYER_GOING_TO_JAIL,
   PLAYER_PAID_FINE,
+  POLICE_HUNG_UP,
 };

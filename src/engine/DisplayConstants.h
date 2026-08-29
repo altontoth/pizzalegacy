@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <optional>
 #include <string_view>
 
 namespace DisplayConstants {
@@ -33,6 +34,21 @@ constexpr std::string_view to_string(ScreenResolution r) {
     return "1280x800";
   }
   return "Unknown";
+}
+
+constexpr std::string_view to_config_value(ScreenResolution r) {
+  return to_string(r);
+}
+
+inline std::optional<ScreenResolution>
+screen_resolution_from_config_value(std::string_view value) {
+  if (value == "640x400") {
+    return ScreenResolution::Res_640x400;
+  }
+  if (value == "1280x800") {
+    return ScreenResolution::Res_1280x800;
+  }
+  return std::nullopt;
 }
 
 constexpr int resolution_scale(ScreenResolution r) {

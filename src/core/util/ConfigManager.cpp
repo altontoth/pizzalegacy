@@ -205,41 +205,19 @@ void ConfigManager::save_options(const GameOptions& opts) {
   save_bool("software_cursor", opts.software_cursor);
   save_bool("vsync", opts.vsync);
 
-  config_["render_fps"] = std::to_string(static_cast<int>(opts.render_fps));
+  config_["render_fps"] = std::string(to_config_value(opts.render_fps));
 
-  switch (opts.win_condition) {
-  case WinCondition::Paris:
-    config_["win_condition"] = "paris";
-    break;
-  case WinCondition::AnyCity:
-    config_["win_condition"] = "any_city";
-    break;
-  case WinCondition::AllCities:
-    config_["win_condition"] = "all_cities";
-    break;
-  }
+  config_["win_condition"] = std::string(to_config_value(opts.win_condition));
 
-  switch (opts.autosave_frequency) {
-  case AutosaveFrequency::Off:
-    config_["autosave_frequency"] = "off";
-    break;
-  case AutosaveFrequency::Daily:
-    config_["autosave_frequency"] = "daily";
-    break;
-  case AutosaveFrequency::Weekly:
-    config_["autosave_frequency"] = "weekly";
-    break;
-  case AutosaveFrequency::Monthly:
-    config_["autosave_frequency"] = "monthly";
-    break;
-  }
+  config_["autosave_frequency"] =
+      std::string(to_config_value(opts.autosave_frequency));
   config_["autosave_count"] = std::to_string(opts.autosave_count);
 
   config_["active_asset_format"] =
       (opts.asset_format == platform::AssetFormat::GERMAN) ? "german"
                                                            : "english";
 
-  config_["resolution"] = std::string(to_string(opts.resolution));
+  config_["resolution"] = std::string(to_config_value(opts.resolution));
 
   save_config();
 }
@@ -279,50 +257,23 @@ GameOptions ConfigManager::load_options() const {
 
   auto fps_it = config_.find("render_fps");
   if (fps_it != config_.end()) {
-    const std::string& s = fps_it->second;
-    int fps = 0;
-    auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), fps);
-    if (ec == std::errc{}) {
-      if (fps == 30) {
-        opts.render_fps = FpsOption::Fps30;
-      }
-      else if (fps == 60) {
-        opts.render_fps = FpsOption::Fps60;
-      }
-      else if (fps == 120) {
-        opts.render_fps = FpsOption::Fps120;
-      }
+    if (auto fps = fps_option_from_config_value(fps_it->second)) {
+      opts.render_fps = *fps;
     }
   }
 
   auto win_it = config_.find("win_condition");
   if (win_it != config_.end()) {
-    const std::string& s = win_it->second;
-    if (s == "paris") {
-      opts.win_condition = WinCondition::Paris;
-    }
-    else if (s == "any_city") {
-      opts.win_condition = WinCondition::AnyCity;
-    }
-    else if (s == "all_cities") {
-      opts.win_condition = WinCondition::AllCities;
+    if (auto condition = win_condition_from_config_value(win_it->second)) {
+      opts.win_condition = *condition;
     }
   }
 
   auto freq_it = config_.find("autosave_frequency");
   if (freq_it != config_.end()) {
-    const std::string& s = freq_it->second;
-    if (s == "off") {
-      opts.autosave_frequency = AutosaveFrequency::Off;
-    }
-    else if (s == "daily") {
-      opts.autosave_frequency = AutosaveFrequency::Daily;
-    }
-    else if (s == "weekly") {
-      opts.autosave_frequency = AutosaveFrequency::Weekly;
-    }
-    else if (s == "monthly") {
-      opts.autosave_frequency = AutosaveFrequency::Monthly;
+    if (auto frequency =
+            autosave_frequency_from_config_value(freq_it->second)) {
+      opts.autosave_frequency = *frequency;
     }
   }
 
@@ -346,11 +297,8 @@ GameOptions ConfigManager::load_options() const {
 
   auto res_it = config_.find("resolution");
   if (res_it != config_.end()) {
-    if (res_it->second == "1280x800") {
-      opts.resolution = ScreenResolution::Res_1280x800;
-    }
-    else {
-      opts.resolution = ScreenResolution::Res_640x400;
+    if (auto resolution = screen_resolution_from_config_value(res_it->second)) {
+      opts.resolution = *resolution;
     }
   }
 

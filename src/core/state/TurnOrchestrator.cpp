@@ -17,10 +17,13 @@
 #include "core/character/Actor.h"
 #include "core/character/Player.h"
 #include "core/city/City.h"
+#include "core/city/District.h"
 #include "core/city/Property.h"
 #include "core/events/MilestoneId.h"
 #include "core/finance/TurnInvoices.h"
 #include "core/food/IngredientType.h"
+#include "core/inventory/Inventory.h"
+#include "core/item/Item.h"
 #include "core/restaurant/AIEconomy.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/save/SaveGameManager.h"
@@ -561,6 +564,18 @@ bool TurnOrchestrator::fire_queued_events() {
     return true;
   }
 
+  // A raided player is told on their next turn.
+  if (!showing_deferred_staff_event_ && !showing_deferred_inspection_ &&
+      !gs_->ui().is_top<PoliceState>() && time.is_past_time(10, 0)) {
+    auto it =
+        std::ranges::find(deferred_depot_raids_, gs_->active_player()->id());
+    if (it != deferred_depot_raids_.end()) {
+      deferred_depot_raids_.erase(it);
+      gs_->initiate_arrest(ArrestReason::WarehouseWeapons);
+      return true;
+    }
+  }
+
   // Fire deferred mayor award events at 10:00 (after inspections).
   if (!showing_deferred_staff_event_ && !showing_deferred_inspection_ &&
       !gs_->ui().is_top<MayorState>() && time.is_past_time(10, 0)) {
@@ -964,6 +979,9 @@ TurnOrchestrator::execute_pipeline_step(const turn::Step& step) {
                 }
               }
             }
+            if (run_day) {
+              raid_depots(gs_->active_player_);
+            }
             deliver_depot_stock(gs_->active_player_);
             pending_ai_auto_end_turn_ =
                 !gs_->players_[gs_->active_player_.value]
@@ -1274,11 +1292,80 @@ bool TurnOrchestrator::begin_restaurant_day(core::CityId city,
   return true;
 }
 
+// Chance each day before district_investigation_draw_day that the police
+// searches the depots in the district it picked.
+constexpr int depot_raid_chance_percent = 5;
+
+void TurnOrchestrator::raid_depots(core::PlayerId player_id) {
+  auto* city = gs_->active_city();
+  auto* player = gs_->player(player_id);
+  if (!city || !player || !player->is_human_controlled()) {
+    return;
+  }
+  if (static_cast<int>(gs_->time().current_date().day()) >=
+      GameState::district_investigation_draw_day) {
+    return;
+  }
+  auto drawn = gs_->district_under_investigation();
+  if (!drawn) {
+    return;
+  }
+  if (!engine::random::rand_percentage_chance(depot_raid_chance_percent)) {
+    return;
+  }
+
+  for (auto* property : city->properties()) {
+    if (property->type() != PropertyType::DEPOT) {
+      continue;
+    }
+    auto owner = property->owner_or_tenant();
+    auto* weapons = property->weapons();
+    if (!owner || *owner != player_id || !weapons ||
+        property->district().id() != *drawn) {
+      continue;
+    }
+
+    Money seized{0};
+    Money bomb_value{0};
+    for (auto item : core::item::attack_weapon_list) {
+      int held = weapons->count(item);
+      if (held <= 0) {
+        continue;
+      }
+      Money value = weapons->remove_with_cost(item, held);
+      seized = seized + value;
+      if (item == core::item::Item::Bomb) {
+        bomb_value = value;
+      }
+    }
+
+    // The original does not write the seized weapons off.
+    if (seized.cents > 0 && gs_->options().fix_legacy_bugs) {
+      player->financials().transfer(gs_->time().current_date(),
+                                    Account::Weapons, Account::ProfitAndLoss,
+                                    seized, AccountingScope::Operational);
+    }
+
+    // The original stops investigating a district only when it finds a bomb,
+    // emptying every other weapon out of the depots it visits on the way.
+    const bool raid_satisfied = gs_->options().fix_legacy_bugs
+                                    ? seized.cents > 0
+                                    : bomb_value.cents > 0;
+    if (raid_satisfied) {
+      queue_depot_raid_call(player_id);
+      gs_->district_under_investigation(std::nullopt);
+      return;
+    }
+  }
+}
+
 void TurnOrchestrator::run_city_start_of_day(City& city) {
   int idx = city.id().value;
   if (city_start_of_day_ran_[idx]) {
     return;
   }
+  const bool first_city_today = std::ranges::none_of(
+      city_start_of_day_ran_, [](bool ran) { return ran; });
   city_start_of_day_ran_[idx] = true;
 
   // The weekly trend step. Arriving from the map runs this pass, so a city
@@ -1304,6 +1391,21 @@ void TurnOrchestrator::run_city_start_of_day(City& city) {
   }
   city.control_map().build(*gs_, city);
   gs_->milestones().check_market_share_milestones(city);
+
+  // The police pick the district whose depots they will raid next month, once
+  // a day, in whichever city the player is in. The original's draw is off by
+  // one against the district ids, so the last district is never picked and a
+  // draw of zero matches nothing.
+  if (first_city_today &&
+      gs_->time().current_date().day() ==
+          GameState::district_investigation_draw_day &&
+      !city.districts().empty()) {
+    int drawn =
+        engine::random::rand_max_n(static_cast<int>(city.districts().size()));
+    gs_->district_under_investigation(gs_->options().fix_legacy_bugs
+                                          ? city.districts().at(drawn)->id()
+                                          : drawn);
+  }
 
   city.newspaper_event_system().daily_update(*gs_, city);
   city.mayor_office().start_of_day(gs_->time_.current_date());

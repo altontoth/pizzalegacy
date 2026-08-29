@@ -347,6 +347,38 @@ Examples:
   };
 }
 
+static CommandDef make_investigation() {
+  return CommandDef{
+      .name = "investigation",
+      .description = "Set the district id the police are investigating",
+      .help_text = R"(Usage: city investigation <district_id>
+
+Sets the district id whose depots the police will raid next month. Ids come
+from `city districts`; an invalid id produces no result.
+
+Example:
+  city investigation 4
+)",
+      .args =
+          {
+              ArgSpec{
+                  .name = "district_id",
+                  .type = ArgType::Int,
+                  .optional = false,
+                  .description = "District id to investigate",
+                  .min_value = 0,
+                  .max_value = 255,
+              },
+          },
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        int id = static_cast<int>(ctx.int_arg(0));
+        ctx.state.district_under_investigation(id);
+        return CommandResult::success().add_message(
+            compat::format("District under investigation set to {}", id));
+      },
+  };
+}
+
 CommandDef make_city_commands() {
   return CommandDef{
       .name = "city",
@@ -355,6 +387,7 @@ CommandDef make_city_commands() {
   }
       .add_subcommand(make_chart())
       .add_subcommand(make_districts())
+      .add_subcommand(make_investigation())
       .add_subcommand(make_property());
 }
 

@@ -24,6 +24,7 @@ enum class ArrestReason {
   ShadyDealings = 5,
   SuspectedHomicide = 6,
   PosessingWeapons = 7,
+  WarehouseWeapons = 8,
 };
 
 enum class GameMode {

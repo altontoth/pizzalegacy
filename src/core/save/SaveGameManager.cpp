@@ -549,6 +549,9 @@ json SaveGameManager::state_to_json(const GameState& state,
 
   // Save difficulty
   j["difficulty_level"] = state.difficulty_level();
+  if (auto district = state.district_under_investigation()) {
+    j["district_under_investigation"] = *district;
+  }
   j["game_mode"] = static_cast<int>(state.game_mode());
 
   // Save the mission target CV (full dates, so loaded games never depend
@@ -683,6 +686,14 @@ json SaveGameManager::state_to_json(const GameState& state,
   }
 
   {
+    json raid_array = json::array();
+    for (const auto& player_id : state.turn().deferred_depot_raids()) {
+      raid_array.push_back(player_id.value);
+    }
+    j["deferred_depot_raids"] = raid_array;
+  }
+
+  {
     json alert_array = json::array();
     for (const auto& alert : state.turn().deferred_manager_alerts()) {
       alert_array.push_back({{"restaurant_id", alert.restaurant_id.value},
@@ -764,6 +775,10 @@ void SaveGameManager::json_to_state(const json& j, GameState& state,
   }
   if (j.contains("difficulty_level")) {
     state.difficulty_level(j["difficulty_level"].get<int>());
+  }
+  if (j.contains("district_under_investigation")) {
+    state.district_under_investigation(
+        j["district_under_investigation"].get<int>());
   }
 
   // active_city and active_restaurant will be set after
@@ -953,6 +968,12 @@ void SaveGameManager::json_to_state(const json& j, GameState& state,
           {.player_id = core::PlayerId{ev["player_id"].get<int>()},
            .restaurant_id = core::RestaurantId{ev["restaurant_id"].get<int>()},
            .first_contact = ev["first_contact"].get<bool>()});
+    }
+  }
+
+  if (j.contains("deferred_depot_raids")) {
+    for (const auto& player_id : j["deferred_depot_raids"]) {
+      state.turn().queue_depot_raid_call(core::PlayerId{player_id.get<int>()});
     }
   }
 
