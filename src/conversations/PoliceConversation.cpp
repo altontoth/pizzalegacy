@@ -507,7 +507,8 @@ void PoliceConversation::seize_carried_weapons(GameState& state,
   auto& inv = player.inventory();
   Money seized{0};
   for (auto item : core::item::attack_weapon_list) {
-    seized = seized + inv.remove_with_cost(item, inv.count(item));
+    seized = seized + player.weapon_unit_cost(item) * inv.count(item);
+    inv.remove(item, inv.count(item));
   }
   if (seized.cents > 0) {
     player.financials().transfer(state.time().current_date(), Account::Weapons,

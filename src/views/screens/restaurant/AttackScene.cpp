@@ -192,7 +192,7 @@ void AttackScene::begin_attack(core::item::Item weapon) {
   view_.restaurant_->reset_contamination();
   core::character::Character* attacker_char = nullptr;
   if (auto* player = state_.active_player()) {
-    player->inventory().remove(weapon, 1);
+    player->use_weapon(state_.time().current_date(), weapon);
     attacker_char = &player->character();
   }
 

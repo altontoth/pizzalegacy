@@ -23,6 +23,7 @@
 #include "core/finance/PlayerFinancials.h"
 #include "core/food/PlayerRecipes.h"
 #include "core/inventory/Inventory.h"
+#include "core/item/Item.h"
 #include "core/marketing/AdvertisingCampaign.h"
 #include "core/status/StatusHub.h"
 #include "core/supply/ActiveContract.h"
@@ -104,6 +105,17 @@ public:
   Money cash_balance() const;
   core::inventory::Inventory& inventory();
   const core::inventory::Inventory& inventory() const;
+
+  // The average price paid for a weapon type.
+  Money weapon_unit_cost(core::item::Item id) const;
+  void weapon_unit_cost(core::item::Item id, Money unit_cost);
+
+  // Buy weapons at a unit price and return how many the player was able to
+  // carry. The average price is truncated to whole dollars, like the original.
+  int buy_weapons(const GameDate& date, core::item::Item id, int qty,
+                  Money price_per);
+
+  void use_weapon(const GameDate& date, core::item::Item id);
   core::food::PlayerRecipes& recipes() { return recipes_; };
   const core::food::PlayerRecipes& recipes() const { return recipes_; };
 
@@ -245,6 +257,7 @@ private:
   InsurancePlayerState insurance_state_;
   SocialStatus social_status_;
   Money weapon_dealing_profit_{0};
+  std::array<Money, core::item::item_count> weapon_unit_cost_{};
   std::unordered_set<core::CityId> visited_city_ids_;
   uint8_t competition_willingness_{0};
   uint8_t competition_win_count_{0};

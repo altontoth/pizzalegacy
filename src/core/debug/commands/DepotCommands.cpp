@@ -464,14 +464,18 @@ Examples:
 static CommandDef make_depot_weapons() {
   return CommandDef{
       .name = "weapons",
-      .description = "Set a weapon count in the player's depot",
+      .description = "Move weapons between the player's bag and a depot",
       .help_text =
           R"(Usage: depot weapons <item_id> <amount> [city_id] [player_id] [depot]
 
+Moves weapons the player is carrying into the depot. Buy them with
+`player inventory buy` first. Zero moves the depot's stock back to the player,
+as much of it as they can still carry.
+
 Examples:
-  depot weapons 6 5             # five bazookas in the active depot
-  depot weapons 6 0             # clear them out again
-  depot weapons 6 5 @ @ 1       # five in the player's second depot
+  depot weapons 6 5             # five carried bazookas into the active depot
+  depot weapons 6 0             # take them all back out again
+  depot weapons 6 5 @ @ 1       # five into the player's second depot
 )",
       .args =
           {
@@ -485,7 +489,7 @@ Examples:
                   .name = "amount",
                   .type = ArgType::Int,
                   .optional = false,
-                  .description = "Quantity (0-255)",
+                  .description = "Quantity to store, or 0 to take stock back",
                   .min_value = 0,
                   .max_value = 255,
               },
@@ -537,32 +541,26 @@ Examples:
               compat::format("Player {} not found", player_id.value));
         }
 
-        const GameDate today = ctx.state.time().current_date();
-        auto& financials = player->financials();
-
-        int held = weapons->count(item_id);
-        if (held > 0) {
-          Money basis = weapons->remove_with_cost(item_id, held);
-          if (basis.cents > 0) {
-            financials.transfer(today, Account::Weapons, Account::Cheat, basis,
-                                AccountingScope::Capital);
-          }
-        }
+        auto& carried = player->inventory();
+        int moved = 0;
         if (amount > 0) {
-          Money cost =
-              ctx.state.weapon_market().purchase_price(city_id, item_id) *
-              amount;
-          weapons->add_with_cost(item_id, amount, cost);
-          if (cost.cents > 0) {
-            financials.transfer(today, Account::Cheat, Account::Weapons, cost,
-                                AccountingScope::Capital);
+          if (carried.count(item_id) < amount) {
+            return CommandResult::error(compat::format(
+                "Player {} carries only {} {}; buy more first", player_id.value,
+                carried.count(item_id), core::item::to_string(item_id)));
           }
+          moved = weapons->add(item_id, amount);
+          carried.remove(item_id, moved);
+        }
+        else {
+          moved = carried.add(item_id, weapons->count(item_id));
+          weapons->remove(item_id, moved);
         }
 
-        return CommandResult::success().add_message(
-            compat::format("Set {} to {} in player {}'s depot {} in {}",
-                           core::item::to_string(item_id), amount,
-                           player_id.value, depot_index, city->name()));
+        return CommandResult::success().add_message(compat::format(
+            "Moved {} {} {} player {}'s depot {} in {}", moved,
+            core::item::to_string(item_id), amount > 0 ? "into" : "out of",
+            player_id.value, depot_index, city->name()));
       },
   };
 }

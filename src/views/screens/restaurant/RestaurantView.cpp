@@ -1456,7 +1456,7 @@ void RestaurantView::execute_sabotage_attack(core::item::Item item) {
     return;
   }
 
-  attacker->inventory().remove(item, 1);
+  attacker->use_weapon(state_.time().current_date(), item);
   restaurant_->apply_sabotage(item);
 
   constexpr int first_sabotage_item =

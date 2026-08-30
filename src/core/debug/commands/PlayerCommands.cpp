@@ -251,17 +251,19 @@ static CommandDef make_player_money() {
       .add_subcommand(make_player_money_sub());
 }
 
-static CommandDef make_player_inventory_set() {
+static CommandDef make_player_inventory_buy() {
   return CommandDef{
-      .name = "set",
-      .description = "Set item quantity in inventory",
-      .help_text = R"(Usage: player inventory set <item_id> <amount> [player_id]
+      .name = "buy",
+      .description = "Buy weapons at the active city's price",
+      .help_text = R"(Usage: player inventory buy <item_id> <amount> [player_id]
 
-Sets the quantity of an item in the player's inventory.
+Buys weapons at the arms dealer's price in the active city, the same as
+buying them from the dealer: the cash is spent and the goods are booked.
+Fails if the player cannot afford them.
 
 Examples:
-  player inventory set 0 10        # Set item 0 to quantity 10
-  player inventory set 3 5 1       # Set item 3 to quantity 5 for player 1
+  player inventory buy 0 10        # Buy 10 of item 0
+  player inventory buy 3 5 1       # Buy 5 of item 3 for player 1
 )",
       .args =
           {
@@ -277,8 +279,8 @@ Examples:
                   .type = ArgType::Int,
                   .optional = false,
                   .default_provider = DefaultProvider::None,
-                  .description = "Quantity (0-255)",
-                  .min_value = 0,
+                  .description = "Quantity to buy (1-255)",
+                  .min_value = 1,
                   .max_value = 255,
               },
               active_player_arg(),
@@ -296,44 +298,33 @@ Examples:
 
         auto* city = ctx.state.active_city();
         if (!city) {
-          return CommandResult::error("No active city to price weapons in");
+          return CommandResult::error("No active city to buy weapons in");
         }
 
         auto& inv = player->inventory();
-        int current = inv.count(item_id);
-        int delta = amount - current;
+        const Money price =
+            ctx.state.weapon_market().purchase_price(city->id(), item_id);
+        const Money cost = price * amount;
 
-        // Booked at what the dealer here charges for them.
-        const GameDate today = ctx.state.time().current_date();
-        auto& financials = player->financials();
+        if (player->cash_balance() < cost) {
+          return CommandResult::error(
+              compat::format("{} {} costs ${:n}, player {} has ${:n}", amount,
+                             core::item::to_string(item_id), cost,
+                             player_id.value, player->cash_balance()));
+        }
 
-        if (delta > 0) {
-          Money cost =
-              ctx.state.weapon_market().purchase_price(city->id(), item_id) *
-              delta;
-          int added = inv.add_with_cost(item_id, delta, cost);
-          if (cost.cents > 0) {
-            financials.transfer(today, Account::Cheat, Account::Weapons, cost,
-                                AccountingScope::Capital);
-          }
-          return CommandResult::success().add_message(compat::format(
-              "Added {} units of {} (total: {})", added,
-              core::item::to_string(item_id), inv.count(item_id)));
+        const int added = player->buy_weapons(ctx.state.time().current_date(),
+                                              item_id, amount, price);
+        if (added == 0) {
+          return CommandResult::error(
+              compat::format("Player {} cannot carry any more {}",
+                             player_id.value, core::item::to_string(item_id)));
         }
-        else if (delta < 0) {
-          Money basis = inv.remove_with_cost(item_id, -delta);
-          if (basis.cents > 0) {
-            financials.transfer(today, Account::Weapons, Account::Cheat, basis,
-                                AccountingScope::Capital);
-          }
-          return CommandResult::success().add_message(compat::format(
-              "Removed {} units of {} (total: {})", -delta,
-              core::item::to_string(item_id), inv.count(item_id)));
-        }
-        else {
-          return CommandResult::success().add_message(
-              compat::format("No change (already {})", amount));
-        }
+
+        const Money paid = price * added;
+        return CommandResult::success().add_message(compat::format(
+            "Bought {} {} for ${:n} (carrying {})", added,
+            core::item::to_string(item_id), paid, inv.count(item_id)));
       },
   };
 }
@@ -344,7 +335,8 @@ static CommandDef make_player_inventory_clear() {
       .description = "Clear all items from inventory",
       .help_text = R"(Usage: player inventory clear [player_id]
 
-Removes all items from the player's inventory.
+Removes all items from the player's inventory, writing what they cost off to
+profit and loss the way spending them on an attack would.
 
 Examples:
   player inventory clear       # Clear active player's inventory
@@ -362,20 +354,28 @@ Examples:
 
         auto& inv = player->inventory();
         int total = 0;
+        Money written_off{0};
 
-        // Clear all items
-        for (size_t i = 0; i < static_cast<size_t>(core::item::Item::Count);
-             ++i) {
-          auto item_id = static_cast<core::item::Item>(i);
+        for (auto item_id : core::item::weapon_list) {
           int count = inv.count(item_id);
           if (count > 0) {
+            written_off =
+                written_off + player->weapon_unit_cost(item_id) * count;
             inv.remove(item_id, count);
             total += count;
           }
         }
 
+        if (written_off.cents > 0) {
+          player->financials().transfer(ctx.state.time().current_date(),
+                                        Account::Weapons,
+                                        Account::ProfitAndLoss, written_off,
+                                        AccountingScope::Operational);
+        }
+
         return CommandResult::success().add_message(
-            compat::format("Cleared {} items from inventory", total));
+            compat::format("Cleared {} items from inventory, writing off ${:n}",
+                           total, written_off));
       },
   };
 }
@@ -385,9 +385,9 @@ static CommandDef make_player_inventory() {
       .name = "inventory",
       .aliases = {"inv"},
       .description = "Manage player's inventory",
-      .help_text = "Subcommands: set, clear",
+      .help_text = "Subcommands: buy, clear",
   }
-      .add_subcommand(make_player_inventory_set())
+      .add_subcommand(make_player_inventory_buy())
       .add_subcommand(make_player_inventory_clear());
 }
 

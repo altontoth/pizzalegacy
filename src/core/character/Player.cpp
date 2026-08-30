@@ -368,6 +368,42 @@ const core::inventory::Inventory& Player::inventory() const {
   return inventory_;
 }
 
+Money Player::weapon_unit_cost(core::item::Item id) const {
+  return weapon_unit_cost_[static_cast<std::size_t>(id)];
+}
+
+void Player::weapon_unit_cost(core::item::Item id, Money unit_cost) {
+  weapon_unit_cost_[static_cast<std::size_t>(id)] = unit_cost;
+}
+
+void Player::use_weapon(const GameDate& date, core::item::Item id) {
+  if (inventory_.remove(id, 1) == 0) {
+    return;
+  }
+  Money cost = weapon_unit_cost(id);
+  if (cost.cents > 0) {
+    financials_.transfer(date, Account::Weapons, Account::ProfitAndLoss, cost,
+                         AccountingScope::Operational);
+  }
+}
+
+int Player::buy_weapons(const GameDate& date, core::item::Item id, int qty,
+                        Money price_per) {
+  const int added = inventory_.add(id, qty);
+  if (added == 0) {
+    return 0;
+  }
+  const Money paid = price_per * added;
+  // The caller has already checked the player can afford these.
+  (void)spend_cash(date, Account::Weapons, paid);
+
+  const int held = inventory_.count(id);
+  auto& unit_cost = weapon_unit_cost_[static_cast<std::size_t>(id)];
+  Money total = unit_cost * (held - added) + paid;
+  unit_cost = Money{total.cents / held}.truncated_to_dollars();
+  return added;
+}
+
 void Player::add_campaign(const AdvertisingCampaign& campaign) {
   int channel_index = static_cast<int>(campaign.channel);
   campaigns_[campaign.city_id][channel_index] = campaign;

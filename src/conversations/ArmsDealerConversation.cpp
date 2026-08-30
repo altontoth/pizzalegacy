@@ -460,19 +460,13 @@ ArmsDealerConversation::make_purchase(int requested, core::item::Item id,
     return PurchaseResult::NOT_ENOUGH_MONEY;
   }
 
-  // Just making sure we're adding something:
-  const Money cost_for_requested = price_per * to_buy;
-  const int actually_added = inv.add_with_cost(id, to_buy, cost_for_requested);
+  // Pay only for what really went in.
+  const int actually_added =
+      player.buy_weapons(state_.time().current_date(), id, to_buy, price_per);
   if (actually_added == 0) {
     return PurchaseResult::ALREADY_AT_MAX;
   }
-
-  // Pay only for what really went in.
   const Money actual_cost = price_per * actually_added;
-  // Don't have to check return value because we already checked if we have
-  // enough money
-  (void)player.spend_cash(state_.time().current_date(), Account::Weapons,
-                          actual_cost);
 
   // Underworld score: total_cost / 500
   const auto delta = static_cast<int>(actual_cost.whole() / 500);
@@ -500,16 +494,19 @@ ArmsDealerConversation::make_sale(int requested, core::item::Item id,
     return SaleResult::NOT_ENOUGH_STOCK;
   }
 
-  const Money cost_basis = inv.remove_with_cost(id, requested);
+  const Money cost_basis = player.weapon_unit_cost(id) * requested;
+  inv.remove(id, requested);
 
   const GameDate date = state_.time().current_date();
   const Money proceeds = price_per * requested;
+  const Money profit = proceeds - cost_basis;
 
   player.financials().transfer(date, Account::Weapons, Account::Cash, proceeds,
                                AccountingScope::Operational);
+  player.financials().transfer(date, Account::ProfitAndLoss, Account::Weapons,
+                               profit, AccountingScope::Operational);
 
   // Underworld score: profit / 100
-  const Money profit = proceeds - cost_basis;
   if (profit > 0_usd) {
     const int delta = static_cast<int>(profit.whole() / 100);
     if (delta > 0) {

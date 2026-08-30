@@ -240,6 +240,14 @@ json player_to_json(const Player& player) {
   j["social_score"] = player.social_status().social_score();
   j["underworld_score"] = player.social_status().underworld_score();
   j["weapon_dealing_profit"] = player.weapon_dealing_profit().cents;
+  json weapon_costs_obj = json::object();
+  for (auto item : core::item::weapon_list) {
+    Money unit = player.weapon_unit_cost(item);
+    if (unit.cents > 0) {
+      weapon_costs_obj[std::string(core::item::to_string(item))] = unit.cents;
+    }
+  }
+  j["weapon_unit_costs"] = weapon_costs_obj;
   j["competition_willingness"] = player.competition_willingness();
   j["competition_win_count"] = player.competition_win_count();
 
@@ -439,6 +447,15 @@ json_to_player(const json& j, GameContext& context,
   }
   player->weapon_dealing_profit(
       Money{j.value("weapon_dealing_profit", int64_t{0})});
+  if (j.contains("weapon_unit_costs")) {
+    const auto& costs = j["weapon_unit_costs"];
+    for (auto item : core::item::weapon_list) {
+      auto key = std::string(core::item::to_string(item));
+      if (costs.contains(key)) {
+        player->weapon_unit_cost(item, Money{costs[key].get<int64_t>()});
+      }
+    }
+  }
   player->set_competition_willingness(
       j.value("competition_willingness", uint8_t{0}));
   player->competition_win_count(j.value("competition_win_count", uint8_t{0}));
@@ -759,8 +776,7 @@ json inventory_to_json(const core::inventory::Inventory& inventory) {
     auto item = static_cast<core::item::Item>(i);
     int qty = inventory[item];
     if (qty > 0) {
-      j[std::string(core::item::to_string(item))] = {
-          {"qty", qty}, {"cost", inventory.cost_basis[i].cents}};
+      j[std::string(core::item::to_string(item))] = qty;
     }
   }
   return j;
@@ -774,14 +790,10 @@ void load_inventory(const json& j, core::inventory::Inventory& inventory) {
       continue;
     }
     const auto& entry = j[key];
-    // Saves up to format 2 wrote the count on its own, with no cost basis.
-    if (entry.is_object()) {
-      inventory[item] = entry.value("qty", 0);
-      inventory.cost_basis[i] = Money{entry.value("cost", int64_t{0})};
-    }
-    else {
-      inventory[item] = entry.get<int>();
-    }
+    // Save format version 3 wrote a per-item cost beside the count; the player
+    // owns the price now, so only the count is read.
+    inventory[item] =
+        entry.is_object() ? entry.value("qty", 0) : entry.get<int>();
   }
 }
 

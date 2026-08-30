@@ -1332,7 +1332,8 @@ void TurnOrchestrator::raid_depots(core::PlayerId player_id) {
       if (held <= 0) {
         continue;
       }
-      Money value = weapons->remove_with_cost(item, held);
+      Money value = player->weapon_unit_cost(item) * held;
+      weapons->remove(item, held);
       seized = seized + value;
       if (item == core::item::Item::Bomb) {
         bomb_value = value;
