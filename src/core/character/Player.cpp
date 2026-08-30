@@ -791,7 +791,7 @@ void Player::process_contracts(GameState& game_state) {
       payment += c.charge;
     }
 
-    if (!game_state.spend_cash(Account::Stock, payment)) {
+    if (!game_state.spend_cash(Account::Stock, payment, c.restaurant_id)) {
       rel.outstanding_debt += payment;
       rel.missed_payment_penalty =
           static_cast<uint8_t>(std::max(1, supplier->spending_rank(id_)));
@@ -799,7 +799,7 @@ void Player::process_contracts(GameState& game_state) {
       // DeliveryDebts so it shows on the balance sheet.
       financials_.transfer(game_state.time().current_date(),
                            Account::DeliveryDebts, Account::Stock, payment,
-                           AccountingScope::Operational);
+                           c.restaurant_id, AccountingScope::Operational);
       game_state.status().post(StatusMsg{
           .payload = compat::format(
               "{}: Delivery from {}: because of insolvency the amount will be "
