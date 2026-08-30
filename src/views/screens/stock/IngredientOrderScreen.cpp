@@ -315,8 +315,10 @@ void IngredientOrderScreen::place_order() {
   auto* restaurant = state_.active_restaurant();
   for (const auto& batch : ingredients_) {
     if (batch.count > 0) {
-      restaurant->purchase_ingredients(batch.ingredient_type, batch.count,
-                                       batch.quality, batch.price_per_unit);
+      Money cost =
+          restaurant->purchase_ingredients(batch.ingredient_type, batch.count,
+                                           batch.quality, batch.price_per_unit);
+      restaurant->record_ingredient_spend(batch.ingredient_type, cost);
       if (supplier_) {
         int remaining =
             std::max(0, supplier_->stock(batch.ingredient_type) - batch.count);

@@ -2056,22 +2056,23 @@ Money Restaurant::purchase_ingredients(core::food::IngredientType type,
   int headroom_kg = (max_ingredient_stock_kg * 1000 - current_grams) / 1000;
   int capped_kg = std::min(quantity_kg, std::max(headroom_kg, 0));
   inventory_.add_ingredient(type, capped_kg * 1000, quality, price_per_kg);
+  return total_cost;
+}
 
+void Restaurant::record_ingredient_spend(core::food::IngredientType type,
+                                         Money cost) {
   int ing_id = static_cast<int>(type);
   for (int cat_idx = 0; cat_idx < 4; ++cat_idx) {
     auto category = static_cast<IngredientCategory>(cat_idx);
     if (ing_id >= core::food::CategoryRegistry::start_id(category) &&
         ing_id < core::food::CategoryRegistry::end_id(category)) {
       stats_.today.ingredient_purchases_by_category[cat_idx] =
-          stats_.today.ingredient_purchases_by_category[cat_idx] + total_cost;
+          stats_.today.ingredient_purchases_by_category[cat_idx] + cost;
       Logger::debug("[{}] Ingredient purchase tracked: {} (cat {}) = {}", name_,
-                    ing_id, cat_idx, total_cost);
+                    ing_id, cat_idx, cost);
       break;
     }
   }
 
-  stats_.today.ingredient_purchases =
-      stats_.today.ingredient_purchases + total_cost;
-
-  return total_cost;
+  stats_.today.ingredient_purchases = stats_.today.ingredient_purchases + cost;
 }

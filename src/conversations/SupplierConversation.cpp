@@ -104,7 +104,7 @@ SupplierConversation::compute_greeting(const GameState& state,
   const auto& rel = supplier->relationship(player_id);
   auto spending_rank = supplier->spending_rank(player_id);
 
-  if (rel.outstanding_debt.cents > 0) {
+  if (rel.outstanding_debt > total_order_value) {
     return SupplierLine::SETTLE_DEBTS_BEFORE_NEW_CONTRACT;
   }
 

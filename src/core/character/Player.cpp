@@ -31,6 +31,7 @@
 #include <optional>
 #include <ranges>
 #include <utility>
+#include <vector>
 
 using namespace core;
 using namespace core::character;
@@ -750,14 +751,16 @@ void Player::process_contracts(GameState& game_state) {
     float diff_mult =
         FoodSupplier::price_multiplier(game_state.difficulty_level());
 
+    std::vector<std::pair<core::food::IngredientType, Money>> delivered;
     for (const auto& item : c.items) {
       Money price =
           supplier
               ->calculate_price(
                   item.type, city->ingredient_base_price(item.type), diff_mult)
               .value_or(Money{0});
-      restaurant->purchase_ingredients(item.type, item.kg_per_day,
-                                       supplier->quality(), price);
+      Money cost = restaurant->purchase_ingredients(item.type, item.kg_per_day,
+                                                    supplier->quality(), price);
+      delivered.emplace_back(item.type, cost);
     }
 
     // deliver_as_required: top up to 2x daily demand beyond ordered amount
@@ -778,8 +781,9 @@ void Player::process_contracts(GameState& game_state) {
                                     city->ingredient_base_price(item.type),
                                     diff_mult)
                   .value_or(Money{0});
-          restaurant->purchase_ingredients(item.type, extra_kg,
-                                           supplier->quality(), price);
+          Money cost = restaurant->purchase_ingredients(
+              item.type, extra_kg, supplier->quality(), price);
+          delivered.emplace_back(item.type, cost);
           extra_cost += price * extra_kg;
         }
       }
@@ -795,11 +799,11 @@ void Player::process_contracts(GameState& game_state) {
       rel.outstanding_debt += payment;
       rel.missed_payment_penalty =
           static_cast<uint8_t>(std::max(1, supplier->spending_rank(id_)));
-      // Ingredients delivered but not paid: record the expense against
-      // DeliveryDebts so it shows on the balance sheet.
+      // The original shows an unpaid delivery on the balance sheet, not in
+      // the monthly overview.
       financials_.transfer(game_state.time().current_date(),
                            Account::DeliveryDebts, Account::Stock, payment,
-                           c.restaurant_id, AccountingScope::Operational);
+                           AccountingScope::Capital);
       game_state.status().post(StatusMsg{
           .payload = compat::format(
               "{}: Delivery from {}: because of insolvency the amount will be "
@@ -809,6 +813,9 @@ void Player::process_contracts(GameState& game_state) {
       });
     }
     else {
+      for (const auto& [type, cost] : delivered) {
+        restaurant->record_ingredient_spend(type, cost);
+      }
       game_state.status().post(StatusMsg{
           .payload = compat::format("{}: Delivery from {} arrived.", rest_name,
                                     supplier->name()),

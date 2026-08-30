@@ -299,6 +299,9 @@ public:
 
   Money purchase_ingredients(core::food::IngredientType type, int quantity_kg,
                              int quality, Money price_per_kg);
+  // Adds to the day's spend and the week's ingredient categories, which
+  // only count goods once they are paid for.
+  void record_ingredient_spend(core::food::IngredientType type, Money cost);
   Money purchase_furniture(const class Furniture* furniture, int quantity);
 
   core::restaurant::RestaurantStats& stats() { return stats_; }

@@ -42,7 +42,9 @@ public:
   static std::vector<Account> receipt_accounts();
   static std::vector<Account> expenditure_accounts();
 
-  // Methods for calculating category totals
+  // Methods for calculating category totals. A player total counts every
+  // posting, including the many that name no restaurant, so it adds up to
+  // more than the per restaurant figures.
   Money total_receipts(std::optional<uint32_t> restaurant = std::nullopt) const;
   Money
   total_expenditures(std::optional<uint32_t> restaurant = std::nullopt) const;
