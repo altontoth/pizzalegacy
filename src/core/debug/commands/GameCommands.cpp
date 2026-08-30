@@ -11,6 +11,7 @@
 #include "core/mission/MissionScoring.h"
 #include "core/mission/MissionTarget.h"
 #include "core/save/SaveGameManager.h"
+#include "core/state/EndOfDayCause.h"
 #include "core/state/GameOptions.h"
 #include "core/state/GameState.h"
 #include "core/state/Overloaded.h"
@@ -924,15 +925,15 @@ static CommandDef make_game_turn_end() {
       .description = "End the active player's turn",
       .help_text = R"(Usage: game turn end
 
-Ends the active player's turn on the next simulation tick, the same way
-running out of day does. Run `game tick` afterwards to let the turn boundary
+Ends the active player's turn on the next simulation tick, the same way the
+End turn button does. Run `game tick` afterwards to let the turn boundary
 play out.
 )",
       .handler = [](const CommandContext& ctx) -> CommandResult {
         if (!ctx.state.active_player()) {
           return CommandResult::error("No active player");
         }
-        ctx.state.turn().request_end_of_turn();
+        ctx.state.turn().request_end_of_turn(EndOfDayCause::PlayerAction);
         return CommandResult::success().add_message("End of turn requested");
       },
   };

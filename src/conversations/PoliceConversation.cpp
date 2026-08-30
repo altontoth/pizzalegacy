@@ -18,6 +18,7 @@
 #include "core/inventory/Inventory.h"
 #include "core/item/Item.h"
 #include "core/restaurant/Restaurant.h"
+#include "core/state/EndOfDayCause.h"
 #include "engine/Fatal.h"
 #include "engine/FormatCompat.h"
 #include "engine/Math.h"
@@ -552,7 +553,9 @@ void PoliceConversation::go_to_jail(int days) {
   // Show prison fullscreen after the conversation view pops.
   // The on_dismiss callback starts the jail day loop.
   on_end_ = [&state = state_] {
-    state.deliver_milestone(core::events::MilestoneId::YouAreOnTheWayToPrison,
-                            [&state] { state.turn().request_end_of_turn(); });
+    state.deliver_milestone(
+        core::events::MilestoneId::YouAreOnTheWayToPrison, [&state] {
+          state.turn().request_end_of_turn(EndOfDayCause::PlayerAction);
+        });
   };
 }

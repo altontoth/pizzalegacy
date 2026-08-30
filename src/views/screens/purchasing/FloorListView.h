@@ -20,8 +20,10 @@ protected:
   void draw_page_screen(const RenderContext& ctx) override;
   void draw_page_header(const RenderContext& ctx) override;
   SupplierType supplier_type() const override;
+  void back_out() override;
 
 private:
+  void charge_exit();
   void draw_flooring_page(const RenderContext& ctx) override;
   void draw_flooring_list(const RenderContext& ctx);
 

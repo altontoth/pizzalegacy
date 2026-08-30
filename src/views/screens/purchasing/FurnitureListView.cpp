@@ -274,6 +274,13 @@ void FurnitureListView::draw_furniture_preview(const RenderContext& ctx,
 void FurnitureListView::handle_furniture_selection(int furniture_id) {}
 
 void FurnitureListView::show_invoice() {
+  if (std::ranges::none_of(furniture_, [](const FurnitureBatch& batch) {
+        return batch.count > 0;
+      })) {
+    alert_no_selection();
+    return;
+  }
+
   using views::ui::finance::InvoiceConfig;
   using views::ui::finance::InvoiceLine;
 
@@ -382,7 +389,7 @@ void FurnitureListView::set_up_input_panel() {
 
   input_panel_->add_button(Icon::ARROW_BACK, ButtonType::Square,
                            ButtonPosition::BottomRight, "Back",
-                           [this] { state_.ui().pop(); });
+                           [this] { back_out(); });
 }
 
 SupplierType FurnitureListView::supplier_type() const {

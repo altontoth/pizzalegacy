@@ -299,6 +299,10 @@ void IngredientOrderScreen::render(const RenderContext& ctx) {
   draw_page_screen(ctx);
 }
 
+void IngredientOrderScreen::charge_exit(GameState& state) {
+  state.advance_time_blocks(1);
+}
+
 void IngredientOrderScreen::place_order() {
   Money total_cost = calculate_total_cost();
   int total_items = 0;
@@ -345,13 +349,8 @@ void IngredientOrderScreen::place_order() {
     restaurant->preferred_suppliers()[supplier_->category()] = supplier_->id();
   }
 
-  if (total_items > 0) {
-    if (auto* player = state_.active_player()) {
-      player->on_food_shop_visit();
-    }
-  }
-
   // Return to supplier list
+  charge_exit(state_);
   state_.ui().pop();
 }
 
@@ -421,7 +420,7 @@ void IngredientOrderScreen::set_up_input_panel() {
 
   input_panel_->add_button(Icon::ARROW_BACK, ButtonType::Square,
                            ButtonPosition::BottomRight, "Back", [this] {
-                             state_.advance_time_blocks(1);
+                             charge_exit(state_);
                              state_.ui().pop();
                            });
 }

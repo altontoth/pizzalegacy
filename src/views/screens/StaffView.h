@@ -28,7 +28,6 @@ class StaffView : public RestaurantSubView {
 public:
   static constexpr int PANEL_SPACE_ON_TOP = 16;
   StaffView(GameContext& context, GameState& state);
-  ~StaffView();
   void tick() override;
   void render(const RenderContext& ctx) override;
   InterruptionRate interruption_rate() const override {

@@ -42,6 +42,25 @@ namespace {
 // existing AI restaurants.
 constexpr int ai_restaurant_spacing_tiles = 6;
 
+// Number of health and energy rolls (each) per day off.
+constexpr int holiday_recovery_rolls = 4;
+
+constexpr int health_chance_per_energy_roll = 10;
+
+constexpr int supplier_visit_energy_rolls = 2;
+
+constexpr int city_travel_energy_rolls = 6;
+
+// When the day ends for a player without energy.
+constexpr int earliest_end_of_day_block = 90;
+
+// Chance of the energy bonus for a day ended at its very end.
+constexpr int early_day_end_min_chance = 10;
+
+int end_of_day_block_for_energy(int energy) {
+  return earliest_end_of_day_block + energy / 2;
+}
+
 bool crowds_an_ai_restaurant(GameState& game_state, const Property& premise) {
   const int x = City::index_to_x(premise.index());
   const int y = City::index_to_y(premise.index());
@@ -88,6 +107,7 @@ Player::Player(core::PlayerId id, Character character, bool is_human)
 
   social_status_.social_score((character.personality() / 2) + 220);
   social_status_.underworld_score((character.courage() / 2) + 220);
+  determine_end_of_day();
 }
 
 Player::~Player() = default;
@@ -105,13 +125,42 @@ core::time::TimeOfDay Player::start_of_day_time() const {
 }
 
 core::time::TimeOfDay Player::end_of_day_time() const {
-  // threshold = 90 + energy/2 blocks from midnight
-  // Full energy (100) -> 140 blocks = 23:20; zero energy -> 90 blocks = 15:00
-  int threshold_blocks = 90 + (character_.energy() / 2);
-  return core::time::TimeOfDay::from_block(threshold_blocks);
+  return core::time::TimeOfDay::from_block(end_of_day_block_);
 }
 
-void Player::end_of_day(GameState& game_state) {
+void Player::roll_early_start_drain() {
+  const int health_roll_chance =
+      std::max(0, 100 - (2 * start_of_day_time().to_block()));
+  if (health_roll_chance == 0) {
+    return;
+  }
+  if (engine::random::rand_percentage_chance(health_roll_chance)) {
+    character_.health(
+        static_cast<uint8_t>(std::max(0, (int)character_.health() - 2)));
+  }
+  const int energy_rolls = health_roll_chance / health_chance_per_energy_roll;
+  for (int i = 0; i < energy_rolls; ++i) {
+    if (engine::random::rand_percentage_chance(100 - character_.health())) {
+      character_.energy(
+          static_cast<uint8_t>(std::max(0, (int)character_.energy() - 1)));
+    }
+  }
+}
+
+void Player::determine_end_of_day() {
+  end_of_day_block_ = end_of_day_block_for_energy(character_.energy());
+}
+
+void Player::roll_early_day_end_bonus(int current_block) {
+  const int chance = std::clamp(
+      end_of_day_block_ - current_block + early_day_end_min_chance, 0, 100);
+  if (engine::random::rand_percentage_chance(chance)) {
+    character_.energy(
+        static_cast<uint8_t>(std::min(100, (int)character_.energy() + 1)));
+  }
+}
+
+void Player::end_of_day(GameState& game_state, EndOfDayCause cause) {
   // Each candidate this player fired gets a charisma-driven daily chance to
   // forgive them and become available again.
   for (City* city : game_state.initialized_cities()) {
@@ -122,7 +171,7 @@ void Player::end_of_day(GameState& game_state) {
   if (!is_human_controlled()) {
     return;
   }
-  end_of_day_human(game_state);
+  end_of_day_human(game_state, cause);
 }
 
 void Player::ai_end_of_day(GameState& game_state) {
@@ -130,7 +179,7 @@ void Player::ai_end_of_day(GameState& game_state) {
   check_ai_expansion(game_state);
 }
 
-void Player::end_of_day_human(GameState& game_state) {
+void Player::end_of_day_human(GameState& game_state, EndOfDayCause cause) {
 
   // From here on only human players
 
@@ -159,56 +208,37 @@ void Player::end_of_day_human(GameState& game_state) {
   // Update advertising campaigns (decrement days_remaining, remove expired)
   update_campaigns(active_city_id);
 
-  // Daily health/energy drain based on start time
-  {
-    int start_blocks = start_of_day_hour_ * 6;
-    int stress = std::max(0, 100 - (2 * start_blocks));
-    if (stress > 0) {
-      if (engine::random::rand_percentage_chance(stress)) {
-        character_.health(
-            static_cast<uint8_t>(std::max(0, (int)character_.health() - 2)));
-      }
-      int energy_rolls = stress / 10;
-      for (int i = 0; i < energy_rolls; ++i) {
-        if (engine::random::rand_percentage_chance(100 - character_.health())) {
-          character_.energy(
-              static_cast<uint8_t>(std::max(0, (int)character_.energy() - 1)));
-        }
-      }
-    }
-    // Unconditional daily energy drain
-    if (engine::random::rand_percentage_chance(character_.age())) {
-      character_.energy(
-          static_cast<uint8_t>(std::max(0, (int)character_.energy() - 1)));
-    }
+  if (cause == EndOfDayCause::Clock &&
+      engine::random::rand_percentage_chance(character_.age())) {
+    character_.energy(
+        static_cast<uint8_t>(std::max(0, (int)character_.energy() - 1)));
   }
 
-  // Early day-end energy bonus
-  // prob = (end_threshold - current_block) + 10
-  {
-    int end_threshold = 90 + (character_.energy() / 2);
-    int current_block = game_state.time().current_block_of_day();
-    int early_prob = std::clamp(end_threshold - current_block + 10, 0, 100);
-    if (engine::random::rand_percentage_chance(early_prob)) {
-      character_.energy(
-          static_cast<uint8_t>(std::min(100, (int)character_.energy() + 1)));
-    }
+  if (cause == EndOfDayCause::PlayerAction) {
+    roll_early_day_end_bonus(game_state.time().current_block_of_day());
   }
 
-  // Daily recovery
-  {
+  // A holiday restores health and energy.
+  if (is_on_holiday()) {
     int recovery_health_prob = 100 - character_.age();
-    for (int i = 0; i < 4; ++i) {
+    for (int i = 0; i < holiday_recovery_rolls; ++i) {
       if (engine::random::rand_percentage_chance(recovery_health_prob)) {
         character_.health(
             static_cast<uint8_t>(std::min(100, (int)character_.health() + 1)));
       }
     }
-    for (int i = 0; i < 4; ++i) {
+    for (int i = 0; i < holiday_recovery_rolls; ++i) {
       if (engine::random::rand_percentage_chance(character_.health())) {
         character_.energy(
             static_cast<uint8_t>(std::min(100, (int)character_.energy() + 1)));
       }
+    }
+  }
+  // Being in jail costs health.
+  else if (is_in_jail()) {
+    if (engine::random::rand_percentage_chance(character_.age())) {
+      character_.health(
+          static_cast<uint8_t>(std::max(0, (int)character_.health() - 1)));
     }
   }
 
@@ -504,8 +534,8 @@ void Player::apply_monthly_loan_payments(const GameDate& date) {
   }
 }
 
-void Player::on_food_shop_visit() {
-  for (int i = 0; i < 2; ++i) {
+void Player::on_supplier_visit() {
+  for (int i = 0; i < supplier_visit_energy_rolls; ++i) {
     if (engine::random::rand_percentage_chance(character_.age())) {
       character_.energy(
           static_cast<uint8_t>(std::max(0, (int)character_.energy() - 1)));
@@ -515,7 +545,7 @@ void Player::on_food_shop_visit() {
 
 void Player::on_city_travel() {
   int health = character_.health();
-  for (int i = 0; i < 6; ++i) {
+  for (int i = 0; i < city_travel_energy_rolls; ++i) {
     if (engine::random::rand_percentage_chance(100 - health)) {
       character_.energy(
           static_cast<uint8_t>(std::max(0, (int)character_.energy() - 1)));

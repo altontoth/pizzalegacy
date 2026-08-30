@@ -351,7 +351,7 @@ void EuroMap::attempt_flight() {
   }
 
   // Flying to another city costs money instead of time:
-  state_.side_menu_charge_pending(false);
+  state_.pending_screen_charge(0);
   state_.ui().push<CityViewState>(target);
 }
 

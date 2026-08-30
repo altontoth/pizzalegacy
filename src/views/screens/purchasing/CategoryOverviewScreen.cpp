@@ -6,6 +6,7 @@
 
 #include "views/screens/purchasing/CategoryOverviewScreen.h"
 
+#include "core/character/Player.h"
 #include "core/finance/Money.h"
 #include "core/restaurant/Furniture.h"
 #include "core/restaurant/PlacedFurniture.h"
@@ -19,6 +20,8 @@
 #include "gfx/Blit.h"
 #include "resources/BlitmapManager.h"
 #include "resources/FontManager.h"
+#include "views/ui/PopupManager.h"
+#include "views/ui/popups/AlertPopup.h"
 
 #include <algorithm>
 #include <cstddef>
@@ -469,6 +472,18 @@ void CategoryOverviewScreen::draw_extras_page(const RenderContext& ctx) {
   draw_info_section(ctx, lines);
 }
 
+void CategoryOverviewScreen::back_out() {
+  state_.advance_time_blocks(1);
+  state_.ui().pop();
+}
+
+void CategoryOverviewScreen::alert_no_selection() {
+  context_.popup->origin(ViewPoint{52, 80});
+  context_.popup->create<AlertPopup>(
+      "Which items do you want to buy? You have not yet made a selection!",
+      [this] { back_out(); });
+}
+
 void CategoryOverviewScreen::set_up_input_panel() {
   input_panel_->delete_buttons();
 
@@ -497,13 +512,16 @@ void CategoryOverviewScreen::set_up_input_panel() {
                            });
 
   input_panel_->add_button(Icon::ARROW_BACK, ButtonType::Square,
-                           ButtonPosition::BottomRight, "Back", [this]() {
-                             state_.advance_time_blocks(1);
-                             state_.ui().pop();
-                           });
+                           ButtonPosition::BottomRight, "Back",
+                           [this]() { back_out(); });
 
   input_panel_->add_button(Icon::SHOPPING_CART, ButtonType::Horizontal,
                            ButtonPosition::BottomLeft, "Shop", [this]() {
+                             // The visit costs energy whether or
+                             // not anything is bought.
+                             if (auto* player = state_.active_player()) {
+                               player->on_supplier_visit();
+                             }
                              state_.ui().push<SupplierListState>(
                                  supplier_type_);
                              mark_dirty();

@@ -25,6 +25,7 @@
 #include "core/inventory/Inventory.h"
 #include "core/item/Item.h"
 #include "core/marketing/AdvertisingCampaign.h"
+#include "core/state/EndOfDayCause.h"
 #include "core/status/StatusHub.h"
 #include "core/supply/ActiveContract.h"
 #include "core/time/TimeOfDay.h"
@@ -48,6 +49,15 @@ public:
   void character(core::character::Character character);
   core::time::TimeOfDay start_of_day_time() const;
   core::time::TimeOfDay end_of_day_time() const;
+
+  // An early start costs health and energy, more the earlier it is.
+  void roll_early_start_drain();
+
+  // Determined each morning from the player's energy.
+  void determine_end_of_day();
+  int end_of_day_block() const { return end_of_day_block_; }
+  void end_of_day_block(int blocks) { end_of_day_block_ = blocks; }
+
   static constexpr uint8_t default_start_of_day_hour = 9;
   uint8_t start_of_day_hour() const { return start_of_day_hour_; }
   void start_of_day_hour(uint8_t h) { start_of_day_hour_ = h; }
@@ -72,12 +82,12 @@ public:
   PlayerStatus status() const { return status_; }
   void eliminate() { status_ = PlayerStatus::Eliminated; }
   void restore_active() { status_ = PlayerStatus::Active; }
-  void end_of_day(class GameState& game_state);
+  void end_of_day(class GameState& game_state, EndOfDayCause cause);
 
   // Runs once the AI's restaurants have had their day.
   void ai_end_of_day(class GameState& game_state);
   void end_of_week(class GameState& game_state);
-  void on_food_shop_visit();
+  void on_supplier_visit();
   void on_city_travel();
   void add_loan(core::CityId city_id, Loan loan, GameDate date);
   std::vector<Loan>& loans_in_city(core::CityId city_id);
@@ -238,13 +248,16 @@ private:
   Awards awards_{};
   std::optional<int> holiday_days_left_;
   uint8_t start_of_day_hour_{default_start_of_day_hour};
+  int end_of_day_block_{0};
 
   // days until next restaurant expansion check
   int ai_expansion_cooldown_{ai_initial_expansion_cooldown};
   // Pizza slots with production history
   MenuSlots ai_menu_slots_{};
   void check_ai_expansion(class GameState& game_state);
-  void end_of_day_human(class GameState& game_state);
+  void end_of_day_human(class GameState& game_state, EndOfDayCause cause);
+
+  void roll_early_day_end_bonus(int current_block);
   void process_contracts(class GameState& game_state);
 
   std::map<core::CityId, CityCampaigns> campaigns_;

@@ -351,6 +351,7 @@ ViewFactory::Result ViewFactory::create(GameContext& context, GameState& gs) {
               // to it after the contract is signed.
               conversation->on_end_ = [&gs, conv_ptr]() {
                 if (conv_ptr->contract_accepted()) {
+                  IngredientOrderScreen::charge_exit(gs);
                   gs.ui().pop();
                 }
               };

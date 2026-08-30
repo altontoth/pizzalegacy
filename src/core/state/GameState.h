@@ -270,6 +270,17 @@ public:
 
   // Advance the clock by n ten-minute blocks. Stops at the player's end of day.
   void advance_time_blocks(int n);
+
+  // Time cost of the screen the player is on, charged when they land back on
+  // the city map or in the restaurant they left.
+  int pending_screen_charge() const { return pending_screen_charge_blocks_; }
+  void pending_screen_charge(int blocks) {
+    pending_screen_charge_blocks_ = blocks;
+  }
+  [[nodiscard]] int take_pending_screen_charge() {
+    return std::exchange(pending_screen_charge_blocks_, 0);
+  }
+
   // One interruption pass for a screen whose interruption rate is OnAction,
   // run for each key press or mouse click.
   void on_player_input();
@@ -385,12 +396,6 @@ public:
   void second_in_block(int seconds) { second_in_block_ = seconds; }
   int pit_tick_in_second() const { return pit_tick_in_second_; }
   void pit_tick_in_second(int tick) { pit_tick_in_second_ = tick; }
-  // A side menu screen costs ten minutes, charged once the player is back on
-  // the city map.
-  bool side_menu_charge_pending() const { return side_menu_charge_pending_; }
-  void side_menu_charge_pending(bool pending) {
-    side_menu_charge_pending_ = pending;
-  }
 
   struct RacketOffer {
     core::RestaurantId restaurant_id;
@@ -494,7 +499,7 @@ private:
   // Seconds into the current ten-minute block.
   int second_in_block_{0};
   InterruptionPhase interruption_phase_{InterruptionPhase::QueuedEvents};
-  bool side_menu_charge_pending_{false};
+  int pending_screen_charge_blocks_{0};
   std::optional<core::RestaurantId> active_restaurant_;
   GameMode game_mode_;
   std::optional<core::mission::MissionTarget> mission_target_;

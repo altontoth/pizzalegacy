@@ -27,6 +27,7 @@
 #include "core/city/Property.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/restaurant/RestaurantTypes.h"
+#include "core/state/EndOfDayCause.h"
 #include "core/state/TurnOrchestrator.h"
 #include "core/time/GameTime.h"
 #include "core/util/Constants.h"
@@ -86,6 +87,9 @@ constexpr PaletteHandle palette_for_season(Season season) {
 using namespace views::base;
 using namespace LegacyConstants;
 
+// What a screen opened from the side menu costs.
+static constexpr int side_menu_charge_blocks = 1;
+
 CityView::CityView(GameContext& context, GameState& state, core::CityId id)
     : MainPanelView(context, state),
       tiles_medium_(context_.vga->get("gfx/med1")), zoom_(ZoomLevel::FAR),
@@ -106,10 +110,11 @@ CityView::CityView(GameContext& context, GameState& state, core::CityId id)
     state_.on_city_entered(id, *player);
   }
 
-  if (state_.side_menu_charge_pending() &&
-      !state_.turn().is_processing_end_of_turn()) {
-    state_.side_menu_charge_pending(false);
-    state_.advance_time_blocks(1);
+  if (!state_.turn().is_processing_end_of_turn()) {
+    const int blocks = state_.take_pending_screen_charge();
+    if (blocks > 0) {
+      state_.advance_time_blocks(blocks);
+    }
   }
 
   for (int i = 0; i < city_->data_length(); ++i) {
@@ -1171,7 +1176,7 @@ void CityView::create_buttons() {
   // Most buttons cost time to click:
   auto side_menu_entry = [this](auto open) {
     return [this, open] {
-      state_.side_menu_charge_pending(true);
+      state_.pending_screen_charge(side_menu_charge_blocks);
       open();
     };
   };
@@ -1226,8 +1231,10 @@ void CityView::create_buttons() {
                            }));
 
   input_panel_->add_button(Icon::SUNSET, ButtonType::Square,
-                           ButtonPosition::BottomRight, "End turn",
-                           [this] { state_.turn().request_end_of_turn(); });
+                           ButtonPosition::BottomRight, "End turn", [this] {
+                             state_.turn().request_end_of_turn(
+                                 EndOfDayCause::PlayerAction);
+                           });
 }
 
 void CityView::create_dropdowns() {

@@ -5,6 +5,7 @@
  */
 
 #include "PlayerCommands.h"
+#include "core/character/Character.h"
 #include "core/character/Player.h"
 #include "core/city/City.h"
 #include "core/common/Ids.h"
@@ -18,6 +19,7 @@
 #include "core/item/Item.h"
 #include "core/marketing/AdvertisingCampaign.h"
 #include "core/state/GameState.h"
+#include "core/time/TimeOfDay.h"
 #include "core/util/GameContext.h"
 #include "engine/FormatCompat.h"
 #include "factories/PizzaFactory.h"
@@ -38,7 +40,7 @@ static CommandDef make_player_info() {
       .help_text = R"(Usage: player info [player_id]
 
 Displays detailed information about a player including name, cash balance,
-and other stats.
+age, health, energy and the hours their day runs.
 
 Examples:
   player info          # Show active player info
@@ -66,6 +68,15 @@ Examples:
         while (std::getline(stream, line)) {
           lines.push_back(line);
         }
+
+        const auto& character = player->character();
+        lines.push_back(compat::format("Age: {}  Health: {}  Energy: {}",
+                                       character.age(), character.health(),
+                                       character.energy()));
+
+        lines.push_back(compat::format("Day runs {} to {}",
+                                       player->start_of_day_time(),
+                                       player->end_of_day_time()));
 
         if (player->is_on_holiday()) {
           lines.push_back(compat::format("Holiday days left: {}",
@@ -818,6 +829,53 @@ Examples:
   };
 }
 
+static CommandDef make_player_startofday() {
+  return CommandDef{
+      .name = "startofday",
+      .description = "Set the hour a player's next day starts",
+      .help_text = R"(Usage: player startofday <hour> [player_id]
+
+Sets the hour the player's next day starts, in whole hours. The setting
+survives the day it is made on, so a start of day moved earlier just before
+leaving on holiday takes effect on the first day away, and it returns to 9
+once used.
+
+Examples:
+  player startofday 0     # Active player rises at midnight tomorrow
+  player startofday 6 1   # Player 1 rises at 6am tomorrow
+)",
+      .args =
+          {
+              ArgSpec{
+                  .name = "hour",
+                  .type = ArgType::Int,
+                  .optional = false,
+                  .default_provider = DefaultProvider::None,
+                  .description = "Hour of the day to start at",
+                  .min_value = 0,
+                  .max_value = Player::default_start_of_day_hour,
+              },
+              active_player_arg(),
+          },
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        auto hour = static_cast<int>(ctx.int_arg(0));
+        auto player_id = ctx.player_id(1);
+
+        auto* player = ctx.state.player(player_id);
+        if (!player) {
+          return CommandResult::error(
+              compat::format("Player {} not found", player_id.value));
+        }
+
+        player->start_of_day_hour(static_cast<uint8_t>(hour));
+
+        return CommandResult::success().add_message(
+            compat::format("{} starts the next day at {}", player->name(),
+                           player->start_of_day_time()));
+      },
+  };
+}
+
 static CommandDef make_player_jail() {
   return CommandDef{
       .name = "jail",
@@ -871,7 +929,7 @@ CommandDef make_player_commands() {
       .description = "Player management commands",
       .help_text = "Manage player state: info, money, inventory, recipes, "
                    "weapon_profit, competition, campaigns, balance, "
-                   "ad_effectiveness, holiday, jail",
+                   "ad_effectiveness, holiday, startofday, jail",
   }
       .add_subcommand(make_player_info())
       .add_subcommand(make_player_money())
@@ -883,6 +941,7 @@ CommandDef make_player_commands() {
       .add_subcommand(make_player_balance())
       .add_subcommand(make_player_ad_effectiveness())
       .add_subcommand(make_player_holiday())
+      .add_subcommand(make_player_startofday())
       .add_subcommand(make_player_jail());
 }
 

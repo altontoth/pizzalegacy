@@ -43,6 +43,7 @@ private:
   void draw_page_header(const RenderContext& ctx);
   void draw_ingredient_list(const RenderContext& ctx);
   void execute_export();
+  void charge_exit();
 
   void handle_button_press(size_t ingredient_index, bool is_left_button);
   void handle_button_release(bool is_left_button);

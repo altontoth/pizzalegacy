@@ -130,6 +130,9 @@ static constexpr int MS_WIDE_BUTTON_X = 200;
 static constexpr int MS_WIDE_BUTTON_W = 160;
 static constexpr int MS_GAP_BEFORE_BEHAVIOR = 36;
 
+static constexpr int hire_time_blocks = 4;
+static constexpr int applicant_exit_time_blocks = 1;
+
 StaffView::StaffView(GameContext& context, GameState& state)
     : RestaurantSubView(context, state, state.active_restaurant()->id()),
       blitmap3_(context_.blitmap->get<Blitmap3Icon>()) {
@@ -170,8 +173,6 @@ StaffView::StaffView(GameContext& context, GameState& state)
         }
       });
 }
-
-StaffView::~StaffView() { state_.advance_time_blocks(4); }
 
 void StaffView::tick() {
   if (card_slider_.update()) {
@@ -1352,6 +1353,11 @@ void StaffView::add_common_buttons() {
                                state_.ui().pop();
                              }
                              else {
+                               if (screen_ == StaffScreen::APPLICANT_CARD ||
+                                   screen_ == StaffScreen::APPLICATIONS) {
+                                 state_.advance_time_blocks(
+                                     applicant_exit_time_blocks);
+                               }
                                card_slider_.dismiss();
                                change_screen(StaffScreen::OVERVIEW);
                              }
@@ -1614,6 +1620,7 @@ void StaffView::add_applicant_buttons() {
                 if (result == HiringResult::Success) {
                   Logger::info("Successfully hired {} {}",
                                char_data->first_name, char_data->last_name);
+                  state_.advance_time_blocks(hire_time_blocks);
 
                   // Mark character as hired in the city job market
                   city->job_market().set_status(

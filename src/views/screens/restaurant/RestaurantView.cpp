@@ -56,6 +56,9 @@ using namespace views::base;
 using namespace views::screens::restaurant;
 using namespace LegacyConstants;
 
+static constexpr int screen_charge_blocks = 1;
+static constexpr int staff_screen_charge_blocks = 2;
+
 RestaurantView::RestaurantView(GameContext& context, GameState& state,
                                RestaurantViewState r_state)
     : MainPanelView(context, state), k0_(context_.vga->get("gfx/k0")),
@@ -77,6 +80,10 @@ RestaurantView::RestaurantView(GameContext& context, GameState& state,
   // Set this restaurant as the active one so other views know which restaurant
   // we're working with
   state_.active_restaurant(r_state.id);
+
+  if (const int blocks = state_.take_pending_screen_charge(); blocks > 0) {
+    state_.advance_time_blocks(blocks);
+  }
 
   kitchen_view_ = r_state.kitchen_view;
 
@@ -419,45 +426,59 @@ void RestaurantView::set_up_buttons() {
       });
 
   input_panel_->add_button(Icon::STOCK, ButtonType::Square,
-                           ButtonPosition::TopCenter, "Stock",
-                           [this]() { state_.ui().push<StockMainState>(); });
+                           ButtonPosition::TopCenter, "Stock", [this]() {
+                             state_.pending_screen_charge(screen_charge_blocks);
+                             state_.ui().push<StockMainState>();
+                           });
 
   input_panel_->add_button(Icon::MENU, ButtonType::Square,
                            ButtonPosition::TopRight, "Menu", [this]() {
                              assert(restaurant_);
+                             state_.pending_screen_charge(screen_charge_blocks);
                              state_.ui().push<RestaurantMenuState>(
                                  restaurant_->id());
                            });
 
-  input_panel_->add_button(
-      Icon::FURNISHING, ButtonType::Square, ButtonPosition::MiddleLeft,
-      "Furnishing",
-      [this]() { state_.ui().push<PurchasingState>(SupplierType::FURNITURE); });
+  input_panel_->add_button(Icon::FURNISHING, ButtonType::Square,
+                           ButtonPosition::MiddleLeft, "Furnishing", [this]() {
+                             state_.pending_screen_charge(screen_charge_blocks);
+                             state_.ui().push<PurchasingState>(
+                                 SupplierType::FURNITURE);
+                           });
 
   input_panel_->add_button(
       Icon::CHARACTER2, ButtonType::Square, ButtonPosition::MiddleCenter,
-      "Staff",
-      [this]() { state_.ui().push_screen(ScreenTag::Kind::StaffView); });
+      "Staff", [this]() {
+        state_.pending_screen_charge(staff_screen_charge_blocks);
+        state_.ui().push_screen(ScreenTag::Kind::StaffView);
+      });
 
   input_panel_->add_button(
       Icon::PARCHMENT, ButtonType::Square, ButtonPosition::MiddleRight,
       "Recipe list", [this]() {
+        state_.pending_screen_charge(screen_charge_blocks);
         state_.ui().push<PizzaDesignState>(PizzaDesignMode::Recipes);
       });
 
   input_panel_->add_button(
       Icon::GRAPH, ButtonType::Square, ButtonPosition::BottomLeft,
-      "Restaurant stats",
-      [this]() { state_.ui().push<RestaurantStatsState>(restaurant_->id()); });
+      "Restaurant stats", [this]() {
+        state_.pending_screen_charge(screen_charge_blocks);
+        state_.ui().push<RestaurantStatsState>(restaurant_->id());
+      });
 
   input_panel_->add_button(Icon::COMPUTER, ButtonType::Square,
-                           ButtonPosition::BottomCenter, "Terminal",
-                           [this]() { state_.ui().push<TerminalState>(); });
+                           ButtonPosition::BottomCenter, "Terminal", [this]() {
+                             state_.pending_screen_charge(screen_charge_blocks);
+                             state_.ui().push<TerminalState>();
+                           });
 
   input_panel_->add_button(
       Icon::ARROW_UP_DOWN, ButtonType::Square, ButtonPosition::BottomRight,
-      "Animated stats",
-      [this]() { state_.ui().push<AnimatedStatsState>(restaurant_->id()); });
+      "Animated stats", [this]() {
+        state_.pending_screen_charge(screen_charge_blocks);
+        state_.ui().push<AnimatedStatsState>(restaurant_->id());
+      });
 }
 
 void RestaurantView::register_interactions_viewport() {

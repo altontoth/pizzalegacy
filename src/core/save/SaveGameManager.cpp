@@ -708,7 +708,7 @@ json SaveGameManager::state_to_json(const GameState& state,
   j["interruption_phase"] = static_cast<int>(state.interruption_phase());
   j["second_in_block"] = state.second_in_block();
   j["pit_tick_in_second"] = state.pit_tick_in_second();
-  j["side_menu_charge_pending"] = state.side_menu_charge_pending();
+  j["pending_screen_charge_blocks"] = state.pending_screen_charge();
 
   json player_cities = json::array();
   for (const auto& city_id : state.player_cities()) {
@@ -1023,7 +1023,7 @@ void SaveGameManager::json_to_state(const json& j, GameState& state,
   state.interruption_phase(static_cast<InterruptionPhase>(phase));
   state.second_in_block(j.value("second_in_block", 0));
   state.pit_tick_in_second(j.value("pit_tick_in_second", 0));
-  state.side_menu_charge_pending(j.value("side_menu_charge_pending", false));
+  state.pending_screen_charge(j.value("pending_screen_charge_blocks", 0));
 
   // Save format version 3 kept one list for the whole world; it belongs to the
   // city the player is in.

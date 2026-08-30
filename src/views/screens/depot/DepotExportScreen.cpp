@@ -223,9 +223,13 @@ void DepotExportScreen::set_up_input_panel() {
                            [this] { execute_export(); });
 
   input_panel_->add_button(Icon::ARROW_BACK, ButtonType::Square,
-                           ButtonPosition::BottomRight, "Back",
-                           [this] { state_.ui().pop(); });
+                           ButtonPosition::BottomRight, "Back", [this] {
+                             charge_exit();
+                             state_.ui().pop();
+                           });
 }
+
+void DepotExportScreen::charge_exit() { state_.advance_time_blocks(2); }
 
 void DepotExportScreen::execute_export() {
   // Check if there's anything to transfer
@@ -237,6 +241,7 @@ void DepotExportScreen::execute_export() {
     }
   }
   if (!has_transfer) {
+    charge_exit();
     state_.ui().pop();
     return;
   }
@@ -267,6 +272,7 @@ void DepotExportScreen::execute_export() {
     target_depot.add_ingredient(type, qty_grams, quality, cost);
   }
 
+  charge_exit();
   state_.ui().pop();
 }
 

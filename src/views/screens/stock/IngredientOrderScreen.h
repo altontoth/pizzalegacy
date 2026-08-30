@@ -26,6 +26,8 @@ public:
   void render(const RenderContext& ctx) override;
   bool on_action(const input::ActionEvent& ev) override;
 
+  static void charge_exit(GameState& state);
+
 protected:
   void draw_icon(const RenderContext& ctx);
   void draw_page_header(const RenderContext& ctx);

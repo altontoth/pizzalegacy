@@ -176,6 +176,7 @@ json player_to_json(const Player& player) {
   j["financials"] = player_financials_to_json(player.financials());
 
   j["start_of_day_hour"] = player.start_of_day_hour();
+  j["end_of_day_block"] = player.end_of_day_block();
   j["ai_expansion_cooldown"] = player.ai_expansion_cooldown();
   if (player.holiday_days_left().has_value()) {
     j["holiday_days_left"] = *player.holiday_days_left();
@@ -376,6 +377,9 @@ json_to_player(const json& j, GameContext& context,
   }
   if (j.contains("start_of_day_hour")) {
     player->start_of_day_hour(j["start_of_day_hour"].get<uint8_t>());
+  }
+  if (j.contains("end_of_day_block")) {
+    player->end_of_day_block(j["end_of_day_block"].get<int>());
   }
   if (j.contains("holiday_days_left")) {
     player->holiday(j["holiday_days_left"].get<int>());

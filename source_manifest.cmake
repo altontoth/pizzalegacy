@@ -440,6 +440,7 @@ set(PLEGACY_HEADERS
     src/core/state/ClockRate.h
     src/core/state/CompetitionCoordinator.h
     src/core/state/CompetitionSession.h
+    src/core/state/EndOfDayCause.h
     src/core/state/FadePresenter.h
     src/core/state/GameOptions.h
     src/core/state/GameState.h

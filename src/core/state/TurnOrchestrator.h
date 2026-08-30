@@ -9,6 +9,7 @@
 #include "core/city/MayorOffice.h"
 #include "core/common/Ids.h"
 #include "core/restaurant/StaffEventData.h"
+#include "core/state/EndOfDayCause.h"
 #include "core/state/InterruptionRate.h"
 #include "core/state/TurnPipeline.h"
 #include "core/util/Constants.h"
@@ -32,9 +33,9 @@ public:
 
   // Ends the active player's turn: builds the restaurant processing steps
   // and starts draining the pipeline.
-  void end_of_turn();
+  void end_of_turn(EndOfDayCause cause);
   // Defer end_of_turn to the next GameState::update() tick.
-  void request_end_of_turn();
+  void request_end_of_turn(EndOfDayCause cause);
   void skip_to_next_player(); // jail/holiday release: non-interactive
 
   // Drain the end-of-turn pipeline until a step yields to the UI. Async
@@ -279,6 +280,7 @@ private:
   std::string_view pipeline_activity_;
 
   bool should_end_of_turn_{false};
+  EndOfDayCause end_of_day_cause_{EndOfDayCause::Away};
   bool suppress_end_of_turn_reports_{false};
   InterruptionRate interruption_rate_{InterruptionRate::None};
   // Track whether the current player turn card is for an AI that should

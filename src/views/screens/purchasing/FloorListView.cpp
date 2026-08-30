@@ -68,6 +68,13 @@ FloorListView::FloorListView(GameContext& context, GameState& state,
 
 void FloorListView::tick() {}
 
+void FloorListView::charge_exit() { state_.advance_time_blocks(2); }
+
+void FloorListView::back_out() {
+  charge_exit();
+  state_.ui().pop();
+}
+
 void FloorListView::render(const RenderContext& ctx) {
   gfx::blit::blit_raw_with_palette(*ctx.surface,
                                    context_.vga->get("gfx/back9"));
@@ -203,6 +210,10 @@ void FloorListView::set_up_input_panel() {
   input_panel_->add_button(
       Icon::SHOPPING_CART, ButtonType::Horizontal, ButtonPosition::BottomLeft,
       "BUY", [this] {
+        if (!selected_index_) {
+          alert_no_selection();
+          return;
+        }
         auto* player = state_.active_player();
         auto* restaurant = state_.active_restaurant();
         const auto tile_count = restaurant->size().w * restaurant->size().h;
@@ -211,6 +222,7 @@ void FloorListView::set_up_input_panel() {
         if (player->spend_cash(state_.time().current_date(), Account::Furniture,
                                price, restaurant->id())) {
           restaurant->layout()->floor_pattern(patterns_[*selected_index_]);
+          charge_exit();
           state_.ui().push<RestaurantViewState>(RestaurantViewState{
               .id = state_.active_restaurant()->id(),
               .mode = RestaurantViewMode::PLAYER_DEFAULT,
@@ -221,5 +233,5 @@ void FloorListView::set_up_input_panel() {
   // Back
   input_panel_->add_button(Icon::ARROW_BACK, ButtonType::Square,
                            ButtonPosition::BottomRight, "Back",
-                           [this] { state_.ui().pop(); });
+                           [this] { back_out(); });
 }

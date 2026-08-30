@@ -267,6 +267,10 @@ void DepotIngredientOrderScreen::render(const RenderContext& ctx) {
   draw_ingredient_list(ctx);
 }
 
+void DepotIngredientOrderScreen::charge_exit() {
+  state_.advance_time_blocks(2);
+}
+
 void DepotIngredientOrderScreen::place_order() {
   Money total_cost = calculate_total_cost();
   int total_items = 0;
@@ -350,12 +354,7 @@ void DepotIngredientOrderScreen::place_order() {
     }
   }
 
-  if (!is_sell_ && total_items > 0) {
-    if (auto* player = state_.active_player()) {
-      player->on_food_shop_visit();
-    }
-  }
-
+  charge_exit();
   state_.ui().pop();
 }
 
@@ -436,7 +435,7 @@ void DepotIngredientOrderScreen::set_up_input_panel() {
 
   input_panel_->add_button(Icon::ARROW_BACK, ButtonType::Square,
                            ButtonPosition::BottomRight, "Back", [this] {
-                             state_.advance_time_blocks(2);
+                             charge_exit();
                              state_.ui().pop();
                            });
 }

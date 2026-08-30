@@ -67,16 +67,19 @@ int TurnOrchestrator::roll_inspection_block() {
   return earliest_block + engine::random::rand_max_n(block_span);
 }
 
-void TurnOrchestrator::request_end_of_turn() { should_end_of_turn_ = true; }
+void TurnOrchestrator::request_end_of_turn(EndOfDayCause cause) {
+  should_end_of_turn_ = true;
+  end_of_day_cause_ = cause;
+}
 
 void TurnOrchestrator::skip_to_next_player() {
   suppress_end_of_turn_reports_ = true;
-  end_of_turn();
+  end_of_turn(EndOfDayCause::Away);
 }
 
 void TurnOrchestrator::run_pending_end_of_turn() {
   if (should_end_of_turn_) {
-    end_of_turn();
+    end_of_turn(end_of_day_cause_);
     should_end_of_turn_ = false;
   }
 }
@@ -106,8 +109,12 @@ bool TurnOrchestrator::may_auto_end_turn() const {
 // The most staff event dialogs a day-end flush shows.
 constexpr int staff_events_per_day_end_flush = 2;
 
-void TurnOrchestrator::end_of_turn() {
+void TurnOrchestrator::end_of_turn(EndOfDayCause cause) {
+  end_of_day_cause_ = cause;
   gs_->suspend_clock();
+
+  // The day ends any pending screen charge.
+  (void)gs_->take_pending_screen_charge();
 
   auto* current_player = gs_->active_player();
 
@@ -160,7 +167,7 @@ void TurnOrchestrator::end_of_turn() {
   }
 
   // Player end of day accounting
-  current_player->end_of_day(*gs_);
+  current_player->end_of_day(*gs_, cause);
 
   const bool electricity_invoice_due =
       gs_->time().current_date().is_end_of_month() &&
@@ -302,13 +309,13 @@ void TurnOrchestrator::show_next_deferred_staff_event() {
   if (flush_staff_events_then_end_turn_ &&
       (flush_staff_events_remaining_ == 0 || queue_empty)) {
     showing_deferred_staff_event_ = false;
-    end_of_turn();
+    end_of_turn(end_of_day_cause_);
     return;
   }
   if (queue_empty) {
     showing_deferred_staff_event_ = false;
     if (may_auto_end_turn()) {
-      request_end_of_turn();
+      request_end_of_turn(EndOfDayCause::Clock);
     }
     return;
   }
@@ -423,7 +430,7 @@ void TurnOrchestrator::show_next_deferred_inspection() {
   if (next == deferred_mayor_inspections_.end()) {
     showing_deferred_inspection_ = false;
     if (may_auto_end_turn()) {
-      request_end_of_turn();
+      request_end_of_turn(EndOfDayCause::Clock);
     }
     return;
   }
@@ -724,7 +731,7 @@ void TurnOrchestrator::on_player_turn_card_finished() {
 
   if (pending_ai_auto_end_turn_) {
     pending_ai_auto_end_turn_ = false;
-    end_of_turn();
+    end_of_turn(EndOfDayCause::Away);
     return;
   }
 
@@ -735,7 +742,7 @@ void TurnOrchestrator::on_player_turn_card_finished() {
   if (player && player->is_in_jail()) {
     player->decrement_jail_day();
     if (player->is_in_jail()) {
-      end_of_turn();
+      end_of_turn(EndOfDayCause::Away);
     }
     else {
       // Released from prison, just advance to next player
@@ -746,7 +753,7 @@ void TurnOrchestrator::on_player_turn_card_finished() {
   if (player && player->is_on_holiday()) {
     player->decrement_holiday_day();
     if (player->is_on_holiday()) {
-      end_of_turn();
+      end_of_turn(EndOfDayCause::Away);
     }
     else {
       skip_to_next_player();
@@ -773,6 +780,8 @@ void TurnOrchestrator::build_turn_pipeline(
                                         : Restaurant::DEFAULT_OPENING_TIME;
   // A custom start-of-day applies to a single day.
   if (new_player_is_human) {
+    new_player->roll_early_start_drain();
+    new_player->determine_end_of_day();
     new_player->start_of_day_hour(Player::default_start_of_day_hour);
   }
 

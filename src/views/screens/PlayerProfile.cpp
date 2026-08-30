@@ -15,6 +15,7 @@
 #include "core/finance/Money.h"
 #include "core/mission/MissionScoring.h"
 #include "core/mission/MissionTarget.h"
+#include "core/state/EndOfDayCause.h"
 #include "core/state/GameState.h"
 #include "core/status/StatusHub.h"
 #include "core/util/Constants.h"
@@ -169,7 +170,8 @@ void PlayerProfile::render(const RenderContext& ctx) {
                         [this](int value) {
                           state_.player(id_)->holiday(value);
                           state_.ui().pop();
-                          state_.turn().request_end_of_turn();
+                          state_.turn().request_end_of_turn(
+                              EndOfDayCause::PlayerAction);
                         });
                   }
                 });

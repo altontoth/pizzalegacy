@@ -32,6 +32,7 @@
 #include "core/restaurant/Restaurant.h"
 #include "core/restaurant/StaffEventDialogs.h"
 #include "core/restaurant/StaffEvents.h"
+#include "core/state/EndOfDayCause.h"
 #include "core/util/ConfigManager.h"
 #include "core/util/GameContext.h"
 #include "engine/Fatal.h"
@@ -410,7 +411,7 @@ bool GameState::dispatch_interruption() {
   // The player's end of day is checked ahead of the window, so it lands
   // whatever the second counter is doing.
   if (is_past_player_end_of_day()) {
-    turn_.request_end_of_turn();
+    turn_.request_end_of_turn(EndOfDayCause::Clock);
     return false;
   }
 
@@ -528,7 +529,7 @@ void GameState::resume_clock() {
   clock_suspended_ = false;
 
   if (turn_.may_auto_end_turn()) {
-    turn_.request_end_of_turn();
+    turn_.request_end_of_turn(EndOfDayCause::Clock);
   }
 }
 

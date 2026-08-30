@@ -29,6 +29,8 @@ protected:
   void set_up_input_panel() override;
   void navigate_to_restaurant(core::RestaurantId new_id) override;
   Surface create_floor_preview(const FloorPattern&, int, int);
+  virtual void back_out();
+  void alert_no_selection();
   void draw_icon(const RenderContext& ctx);
   virtual SupplierType supplier_type() const;
 

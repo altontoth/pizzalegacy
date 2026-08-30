@@ -36,6 +36,7 @@ private:
   void register_ingredient_row(ViewRect row_rect, size_t i);
   void set_up_input_panel();
   void place_order();
+  void charge_exit();
 
   Money
   calculate_ingredient_price(core::food::IngredientType ingredient_type) const;
