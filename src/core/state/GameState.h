@@ -35,7 +35,6 @@
 #include <deque>
 #include <functional>
 #include <optional>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -334,11 +333,6 @@ public:
     return article_database_;
   }
 
-  // Actor call management (for angry realtors/etc refusing calls)
-  void refuse_calls_from(int actor_id);
-  bool is_refusing_calls(int actor_id) const;
-  void clear_all_refused_calls();
-  std::vector<int> refused_call_actors() const;
   void eliminate_player(core::PlayerId id, GameOverCause cause);
   // Returns false if this player has already won this game.
   bool trigger_win_sequence(core::PlayerId pid);
@@ -523,7 +517,6 @@ private:
   core::food::CustomerTasteProfiles customer_taste_profiles_{
       core::food::default_customer_taste_profiles()};
   WeaponMarket weapon_market_;
-  std::unordered_set<int> actors_refusing_calls_;
   // Context pointer for creating popups from GameState
   GameContext* context_{nullptr};
   // UI-layer callbacks; registered once at startup and preserved across

@@ -709,7 +709,6 @@ json SaveGameManager::state_to_json(const GameState& state,
   j["second_in_block"] = state.second_in_block();
   j["pit_tick_in_second"] = state.pit_tick_in_second();
   j["side_menu_charge_pending"] = state.side_menu_charge_pending();
-  j["refused_call_actors"] = state.refused_call_actors();
 
   json player_cities = json::array();
   for (const auto& city_id : state.player_cities()) {
@@ -1026,9 +1025,13 @@ void SaveGameManager::json_to_state(const json& j, GameState& state,
   state.pit_tick_in_second(j.value("pit_tick_in_second", 0));
   state.side_menu_charge_pending(j.value("side_menu_charge_pending", false));
 
+  // Save format version 3 kept one list for the whole world; it belongs to the
+  // city the player is in.
   if (j.contains("refused_call_actors")) {
-    for (const auto& actor_id : j["refused_call_actors"]) {
-      state.refuse_calls_from(actor_id.get<int>());
+    if (City* city = state.active_city()) {
+      for (const auto& actor_id : j["refused_call_actors"]) {
+        city->refuse_calls_from(actor_id.get<int>());
+      }
     }
   }
 

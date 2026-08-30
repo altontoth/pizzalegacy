@@ -1423,24 +1423,6 @@ const GameOptions& GameState::options() const {
   return config->options();
 }
 
-// Actor call management (for angry realtors/etc refusing calls)
-void GameState::refuse_calls_from(int actor_id) {
-  actors_refusing_calls_.insert(actor_id);
-}
-
-std::vector<int> GameState::refused_call_actors() const {
-  std::vector<int> ids(actors_refusing_calls_.begin(),
-                       actors_refusing_calls_.end());
-  std::ranges::sort(ids);
-  return ids;
-}
-
-bool GameState::is_refusing_calls(int actor_id) const {
-  return actors_refusing_calls_.contains(actor_id);
-}
-
-void GameState::clear_all_refused_calls() { actors_refusing_calls_.clear(); }
-
 void GameState::request_resolution_change(ScreenResolution res) {
   pending_resolution_ = res;
 }

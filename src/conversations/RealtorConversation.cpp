@@ -145,7 +145,7 @@ bool RealtorConversation::advance_line_choice(RealtorLine choice) {
     }
     else {
       current_line(RealtorLine::THATS_NOT_TRUE_IM_NO_CHEAT_GET_OUT);
-      state_.refuse_calls_from(actor_->id());
+      state_.active_city()->refuse_calls_from(actor_->id());
     }
     break;
   case RealtorLine::I_WANT_TO_RENT_THIS_SHOP: {
@@ -263,7 +263,7 @@ bool RealtorConversation::advance_proposal(bool agree) {
     else {
       if (buyer_haggled_already) {
         current_line(RealtorLine::OUTRAGEOUS_STOP_HAGGLING);
-        state_.refuse_calls_from(actor_->id());
+        state_.active_city()->refuse_calls_from(actor_->id());
       }
       else {
         current_line(RealtorLine::IVE_HAD_SECOND_THOUGHTS);
@@ -668,7 +668,7 @@ void RealtorConversation::haggle_sale(int option) {
   sell_haggle_count_++;
   if (sell_haggle_count_ > sell_usable_haggles) {
     current_line(RealtorLine::NO_IVE_HAD_IT_WITH_YOU);
-    state_.refuse_calls_from(actor_->id());
+    state_.active_city()->refuse_calls_from(actor_->id());
     return;
   }
 

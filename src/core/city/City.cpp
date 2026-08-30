@@ -344,6 +344,15 @@ void City::end_of_day(int difficulty) {
   }
 
   job_market_.end_of_day(difficulty);
+
+  clear_refused_calls();
+}
+
+std::vector<int> City::refused_call_actors() const {
+  std::vector<int> ids(actors_refusing_calls_.begin(),
+                       actors_refusing_calls_.end());
+  std::ranges::sort(ids);
+  return ids;
 }
 
 void City::end_of_month() {

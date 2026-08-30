@@ -1272,9 +1272,6 @@ void TurnOrchestrator::end_of_day() {
 
   process_depot_theft();
 
-  // Clear actor refused calls (realtors cool down overnight)
-  gs_->clear_all_refused_calls();
-
   for (auto& player : gs_->players_) {
     if (player && !player->is_human_controlled()) {
       player->decay_competition_willingness();

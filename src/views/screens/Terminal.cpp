@@ -155,7 +155,8 @@ void Terminal::tick() {
       fully_dialed_number_ = false;
 
       // Check if actor is refusing calls (angry from haggling, etc.)
-      if (pending_actor_id_ && state_.is_refusing_calls(*pending_actor_id_)) {
+      if (pending_actor_id_ &&
+          state_.active_city()->is_refusing_calls(*pending_actor_id_)) {
         // Show "no connection" message
         forced_error_index_ = 1; // "no connection" is index 1
         transition_to_phase(DialingPhase::ERROR);
@@ -229,7 +230,7 @@ void Terminal::tick() {
       transition_to_phase(DialingPhase::ERROR);
     }
     else if (pending_actor_id_ &&
-             state_.is_refusing_calls(*pending_actor_id_)) {
+             state_.active_city()->is_refusing_calls(*pending_actor_id_)) {
       forced_error_index_ = 1; // "no connection"
       transition_to_phase(DialingPhase::ERROR);
     }

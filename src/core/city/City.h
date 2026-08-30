@@ -16,6 +16,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 #include "core/city/CentralDepot.h"
 #include "core/city/CityTypes.h"
@@ -291,6 +292,17 @@ public:
     return staff_blacklist_;
   }
 
+  // Actors who hung up and will not take calls until the next time the player
+  // ends the day in this city. Ids are local to the city.
+  void refuse_calls_from(int actor_id) {
+    actors_refusing_calls_.insert(actor_id);
+  }
+  bool is_refusing_calls(int actor_id) const {
+    return actors_refusing_calls_.contains(actor_id);
+  }
+  void clear_refused_calls() { actors_refusing_calls_.clear(); }
+  std::vector<int> refused_call_actors() const;
+
   // Vendor spending tracking (resets weekly, per-player)
   void record_vendor_purchase(core::PlayerId player_id, uint8_t vendor_id,
                               Money amount);
@@ -380,6 +392,7 @@ private:
   int police_id_ = -1;
   int first_bank_id_ = -1;
   std::unordered_map<uint8_t, std::set<core::PlayerId>> staff_blacklist_;
+  std::unordered_set<int> actors_refusing_calls_;
   core::character::JobMarket job_market_;
   // Vendor spending tracking (resets weekly, per-player): vendor_id -> total
   // spent this week

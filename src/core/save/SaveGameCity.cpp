@@ -567,6 +567,7 @@ json city_to_json(const City& city) {
   j["control_map"] = control_map_to_json(city.control_map());
   j["economy_trend"] = economy_trend_to_json(city.economy_trend());
   j["interest_rate"] = city.interest_rate();
+  j["refused_call_actors"] = city.refused_call_actors();
 
   json embargoes = json::array();
   for (auto cat : ALL_INGREDIENT_CATEGORIES) {
@@ -763,6 +764,12 @@ void json_to_city(const json& j, City& city) {
   }
 
   city.interest_rate(j.value("interest_rate", starting_interest_rate));
+
+  if (j.contains("refused_call_actors")) {
+    for (const auto& actor_id : j["refused_call_actors"]) {
+      city.refuse_calls_from(actor_id.get<int>());
+    }
+  }
 
   // Restore known arms dealers per player
   if (j.contains("known_arms_dealers")) {
