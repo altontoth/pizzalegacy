@@ -647,30 +647,35 @@ json SaveGameManager::state_to_json(const GameState& state,
     j["deferred_staff_events"] = staff_array;
   }
 
-  // Save deferred mayor events (queued at EOD, delivered the next day)
+  // The mayor's and police's deferred calls, in the order they go out
   {
-    json insp_array = json::array();
-    for (const auto& ev : state.turn().deferred_mayor_inspections()) {
-      insp_array.push_back({{"restaurant_id", ev.restaurant_id.value},
-                            {"is_first", ev.is_first},
-                            {"display_block", ev.display_block}});
-    }
-    j["deferred_mayor_inspections"] = insp_array;
-
-    json award_array = json::array();
-    for (const auto& d : state.turn().deferred_mayor_awards()) {
-      json entry = {{"type", static_cast<int>(d.event.type)},
-                    {"announces_winner", d.event.announces_winner},
-                    {"player_id", d.player_id.value}};
-      if (d.event.winner_player_id.has_value()) {
-        entry["winner_player_id"] = *d.event.winner_player_id;
+    using Kind = TurnOrchestrator::DeferredCall::Kind;
+    json queued_array = json::array();
+    for (const auto& ev : state.turn().deferred_calls()) {
+      json entry = {{"kind", static_cast<int>(ev.kind)},
+                    {"player_id", ev.player_id.value}};
+      switch (ev.kind) {
+      case Kind::MayorInspection:
+        entry["restaurant_id"] = ev.restaurant_id.value;
+        entry["is_first"] = ev.is_first;
+        entry["display_block"] = ev.display_block;
+        break;
+      case Kind::MayorAward:
+        entry["award_type"] = static_cast<int>(ev.award.type);
+        entry["announces_winner"] = ev.award.announces_winner;
+        if (ev.award.winner_player_id.has_value()) {
+          entry["winner_player_id"] = *ev.award.winner_player_id;
+        }
+        else {
+          entry["winner_player_id"] = nullptr;
+        }
+        break;
+      case Kind::DepotRaid:
+        break;
       }
-      else {
-        entry["winner_player_id"] = nullptr;
-      }
-      award_array.push_back(entry);
+      queued_array.push_back(entry);
     }
-    j["deferred_mayor_awards"] = award_array;
+    j["deferred_calls"] = queued_array;
   }
 
   // Save deferred protection racket offers (rolled at EOD, delivered on the
@@ -683,14 +688,6 @@ json SaveGameManager::state_to_json(const GameState& state,
                               {"first_contact", offer.first_contact}});
     }
     j["deferred_racket_offers"] = racket_array;
-  }
-
-  {
-    json raid_array = json::array();
-    for (const auto& player_id : state.turn().deferred_depot_raids()) {
-      raid_array.push_back(player_id.value);
-    }
-    j["deferred_depot_raids"] = raid_array;
   }
 
   {
@@ -933,30 +930,37 @@ void SaveGameManager::json_to_state(const json& j, GameState& state,
     }
   }
 
-  // Restore deferred mayor events
-  if (j.contains("deferred_mayor_inspections")) {
-    for (const auto& ev : j["deferred_mayor_inspections"]) {
-      core::RestaurantId rid{ev["restaurant_id"].get<int>()};
-      bool is_first = ev["is_first"].get<bool>();
-      int display_block = ev.contains("display_block")
-                              ? ev["display_block"].get<int>()
-                              : TurnOrchestrator::roll_inspection_block();
-      state.turn().restore_deferred_mayor_inspection(rid, is_first,
-                                                     display_block);
-    }
-  }
-  if (j.contains("deferred_mayor_awards")) {
-    for (const auto& ev : j["deferred_mayor_awards"]) {
-      MayorAwardEvent award;
-      award.type = static_cast<MayorAwardType>(ev["type"].get<int>());
-      award.announces_winner =
-          ev.contains("announces_winner") && ev["announces_winner"].get<bool>();
-      if (ev.contains("winner_player_id") &&
-          !ev["winner_player_id"].is_null()) {
-        award.winner_player_id = ev["winner_player_id"].get<int>();
+  // Restore the mayor's and police's deferred calls
+  if (j.contains("deferred_calls")) {
+    using DeferredCall = TurnOrchestrator::DeferredCall;
+    using Kind = DeferredCall::Kind;
+    for (const auto& ev : j["deferred_calls"]) {
+      DeferredCall queued;
+      queued.kind = static_cast<Kind>(ev["kind"].get<int>());
+      queued.player_id = core::PlayerId{ev.value("player_id", 0)};
+      switch (queued.kind) {
+      case Kind::MayorInspection:
+        queued.restaurant_id =
+            core::RestaurantId{ev["restaurant_id"].get<int>()};
+        queued.is_first = ev["is_first"].get<bool>();
+        queued.display_block = ev.contains("display_block")
+                                   ? ev["display_block"].get<int>()
+                                   : TurnOrchestrator::roll_inspection_block();
+        break;
+      case Kind::MayorAward:
+        queued.award.type =
+            static_cast<MayorAwardType>(ev["award_type"].get<int>());
+        queued.award.announces_winner = ev.contains("announces_winner") &&
+                                        ev["announces_winner"].get<bool>();
+        if (ev.contains("winner_player_id") &&
+            !ev["winner_player_id"].is_null()) {
+          queued.award.winner_player_id = ev["winner_player_id"].get<int>();
+        }
+        break;
+      case Kind::DepotRaid:
+        break;
       }
-      state.turn().queue_mayor_award(award,
-                                     core::PlayerId{ev.value("player_id", 0)});
+      state.turn().restore_deferred_call(queued);
     }
   }
 
@@ -967,12 +971,6 @@ void SaveGameManager::json_to_state(const json& j, GameState& state,
           {.player_id = core::PlayerId{ev["player_id"].get<int>()},
            .restaurant_id = core::RestaurantId{ev["restaurant_id"].get<int>()},
            .first_contact = ev["first_contact"].get<bool>()});
-    }
-  }
-
-  if (j.contains("deferred_depot_raids")) {
-    for (const auto& player_id : j["deferred_depot_raids"]) {
-      state.turn().queue_depot_raid_call(core::PlayerId{player_id.get<int>()});
     }
   }
 

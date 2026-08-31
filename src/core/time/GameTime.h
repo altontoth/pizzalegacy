@@ -63,12 +63,6 @@ public:
     blocks_since_start_ = day_blocks + time_blocks;
   }
 
-  bool is_past_time(int hour, int minute) const {
-    int current_block = blocks_since_start_ % BLOCKS_PER_DAY;
-    int target_block = (hour * 6) + (minute / 10);
-    return current_block >= target_block;
-  }
-
   bool is_past_time(core::time::TimeOfDay t) const {
     return current_block_of_day() >= t.to_block();
   }

@@ -45,6 +45,9 @@ namespace {
 constexpr core::time::TimeOfDay staff_events_open{10, 0};
 constexpr core::time::TimeOfDay staff_events_close{21, 0};
 
+constexpr core::time::TimeOfDay deferred_calls_open =
+    Restaurant::DEFAULT_OPENING_TIME;
+
 bool is_autosave_due(AutosaveFrequency frequency, bool is_end_of_week,
                      bool is_end_of_month) {
   switch (frequency) {
@@ -123,13 +126,11 @@ void TurnOrchestrator::end_of_turn(EndOfDayCause cause) {
                      !current_player->is_in_jail() &&
                      !suppress_end_of_turn_reports_;
 
-  // Inspections that were scheduled for today but not seen by the player (day
-  // ended early) are dropped. They have to wait for the next inspection.
+  // Calls the player never received are dropped at the end of the day.
   if (interactive) {
-    std::erase_if(deferred_mayor_inspections_,
-                  [this](const DeferredInspectionEvent& ev) {
-                    return can_deliver_to_active_player(ev.restaurant_id);
-                  });
+    std::erase_if(deferred_calls_, [this](const DeferredCall& call) {
+      return takes_a_slot(call) && can_deliver_to_active_player(call);
+    });
   }
 
   // Ending the turn flushes the staff event dialogs that have not fired yet,
@@ -283,27 +284,74 @@ bool TurnOrchestrator::can_deliver_to_active_player(
   return owner && owner->id() == gs_->active_player()->id();
 }
 
-bool TurnOrchestrator::has_deliverable_staff_event() const {
-  return std::ranges::any_of(
-      deferred_staff_events_, [this](const DeferredStaffEvent& d) {
-        return can_deliver_to_active_player(d.restaurant_id);
-      });
+bool TurnOrchestrator::can_deliver_staff_event(core::RestaurantId rid) const {
+  if (!can_deliver_to_active_player(rid)) {
+    return false;
+  }
+  auto* restaurant = gs_->restaurant(rid);
+  if (!restaurant) {
+    return true;
+  }
+  auto* city = gs_->active_city();
+  return city && restaurant->property().city().id() == city->id();
 }
 
-bool TurnOrchestrator::has_deliverable_inspection() const {
-  int block = gs_->time().current_block_of_day();
-  return std::ranges::any_of(deferred_mayor_inspections_,
-                             [this, block](const DeferredInspectionEvent& d) {
-                               return d.display_block <= block &&
-                                      can_deliver_to_active_player(
-                                          d.restaurant_id);
+bool TurnOrchestrator::has_deliverable_staff_event() const {
+  return std::ranges::any_of(deferred_staff_events_,
+                             [this](const DeferredStaffEvent& d) {
+                               return can_deliver_staff_event(d.restaurant_id);
                              });
+}
+
+bool TurnOrchestrator::takes_a_slot(const DeferredCall& call) {
+  return call.kind != DeferredCall::Kind::MayorAward ||
+         !call.award.announces_winner;
+}
+
+bool TurnOrchestrator::queue_call(const DeferredCall& call) {
+  if (takes_a_slot(call)) {
+    auto taken = std::ranges::count_if(
+        deferred_calls_, [&call](const DeferredCall& queued) {
+          return queued.player_id == call.player_id && takes_a_slot(queued);
+        });
+    if (taken >= call_slots_per_player) {
+      return false;
+    }
+  }
+  deferred_calls_.push_back(call);
+  return true;
+}
+
+bool TurnOrchestrator::can_deliver_to_active_player(
+    const DeferredCall& call) const {
+  if (call.kind == DeferredCall::Kind::MayorInspection) {
+    return can_deliver_to_active_player(call.restaurant_id);
+  }
+  return call.player_id == gs_->active_player()->id();
+}
+
+bool TurnOrchestrator::is_call_due(const DeferredCall& call) const {
+  const auto& time = gs_->time();
+  switch (call.kind) {
+  case DeferredCall::Kind::MayorInspection:
+    return call.display_block <= time.current_block_of_day() &&
+           can_deliver_to_active_player(call);
+  case DeferredCall::Kind::MayorAward:
+    return can_deliver_to_active_player(call) &&
+           !gs_->ui().is_top<MayorState>() &&
+           time.is_past_time(deferred_calls_open);
+  case DeferredCall::Kind::DepotRaid:
+    return can_deliver_to_active_player(call) &&
+           !gs_->ui().is_top<PoliceState>() &&
+           time.is_past_time(deferred_calls_open);
+  }
+  return false;
 }
 
 void TurnOrchestrator::show_next_deferred_staff_event() {
   auto next = std::ranges::find_if(
       deferred_staff_events_, [this](const DeferredStaffEvent& d) {
-        return can_deliver_to_active_player(d.restaurant_id);
+        return can_deliver_staff_event(d.restaurant_id);
       });
   const bool queue_empty = next == deferred_staff_events_.end();
   if (flush_staff_events_then_end_turn_ &&
@@ -367,18 +415,33 @@ void TurnOrchestrator::drop_city_local_events_outside(core::CityId city) {
                 [&](const DeferredManagerAlert& alert) {
                   return is_elsewhere(alert.restaurant_id);
                 });
-  std::erase_if(deferred_staff_events_, [&](const DeferredStaffEvent& ev) {
-    return is_elsewhere(ev.restaurant_id);
+  std::erase_if(deferred_calls_, [&](const DeferredCall& call) {
+    return call.kind == DeferredCall::Kind::MayorInspection &&
+           is_elsewhere(call.restaurant_id);
   });
-  std::erase_if(deferred_mayor_inspections_,
-                [&](const DeferredInspectionEvent& ev) {
-                  return is_elsewhere(ev.restaurant_id);
-                });
 }
 
-void TurnOrchestrator::queue_mayor_award(const MayorAwardEvent& ev,
+bool TurnOrchestrator::queue_mayor_award(const MayorAwardEvent& ev,
                                          core::PlayerId player_id) {
-  deferred_mayor_awards_.push_back({ev, player_id});
+  return queue_call({.kind = DeferredCall::Kind::MayorAward,
+                     .player_id = player_id,
+                     .award = ev});
+}
+
+bool TurnOrchestrator::queue_depot_raid_call(core::PlayerId player_id) {
+  return queue_call(
+      {.kind = DeferredCall::Kind::DepotRaid, .player_id = player_id});
+}
+
+bool TurnOrchestrator::queue_mayor_inspection(core::PlayerId player_id,
+                                              core::RestaurantId rid,
+                                              bool is_first,
+                                              int display_block) {
+  return queue_call({.kind = DeferredCall::Kind::MayorInspection,
+                     .player_id = player_id,
+                     .restaurant_id = rid,
+                     .is_first = is_first,
+                     .display_block = display_block});
 }
 
 bool TurnOrchestrator::show_next_deferred_manager_alert() {
@@ -412,22 +475,28 @@ bool TurnOrchestrator::show_next_deferred_manager_alert() {
 
 void TurnOrchestrator::trigger_mayor_inspection(core::RestaurantId rid,
                                                 bool is_first) {
-  deferred_mayor_inspections_.push_back(
-      {is_first, rid, gs_->time().current_block_of_day()});
+  auto* restaurant = gs_->restaurant(rid);
+  auto* owner = restaurant ? gs_->restaurant_owner(*restaurant) : nullptr;
+  queue_mayor_inspection(owner ? owner->id() : gs_->active_player()->id(), rid,
+                         is_first, gs_->time().current_block_of_day());
   if (!showing_deferred_inspection_) {
     show_next_deferred_inspection();
   }
 }
 
 void TurnOrchestrator::show_next_deferred_inspection() {
-  int block = gs_->time().current_block_of_day();
-  auto next = std::ranges::find_if(
-      deferred_mayor_inspections_,
-      [this, block](const DeferredInspectionEvent& d) {
-        return d.display_block <= block &&
-               can_deliver_to_active_player(d.restaurant_id);
-      });
-  if (next == deferred_mayor_inspections_.end()) {
+  auto is_due_inspection = [this](const DeferredCall& call) {
+    return call.kind == DeferredCall::Kind::MayorInspection &&
+           is_call_due(call);
+  };
+  auto drop_inspections = [this]() {
+    std::erase_if(deferred_calls_, [](const DeferredCall& call) {
+      return call.kind == DeferredCall::Kind::MayorInspection;
+    });
+  };
+
+  auto next = std::ranges::find_if(deferred_calls_, is_due_inspection);
+  if (next == deferred_calls_.end()) {
     showing_deferred_inspection_ = false;
     if (may_auto_end_turn()) {
       request_end_of_turn(EndOfDayCause::Clock);
@@ -437,21 +506,21 @@ void TurnOrchestrator::show_next_deferred_inspection() {
 
   auto* city = gs_->active_city();
   if (!city) {
-    deferred_mayor_inspections_.clear();
+    drop_inspections();
     showing_deferred_inspection_ = false;
     return;
   }
 
   auto mayor_actors = city->actors(ActorType::MAYOR);
   if (mayor_actors.empty()) {
-    deferred_mayor_inspections_.clear();
+    drop_inspections();
     showing_deferred_inspection_ = false;
     return;
   }
   int mayor_id = mayor_actors[0]->id();
 
   auto deferred = *next;
-  deferred_mayor_inspections_.erase(next);
+  deferred_calls_.erase(next);
   showing_deferred_inspection_ = true;
 
   auto* restaurant = gs_->restaurant(deferred.restaurant_id);
@@ -537,8 +606,6 @@ void TurnOrchestrator::show_next_deferred_inspection() {
 
 bool TurnOrchestrator::fire_queued_events() {
   // Only reached on a human player's turn.
-  const auto& time = gs_->time();
-
   if (processing_end_of_turn_) {
     return false;
   }
@@ -564,36 +631,25 @@ bool TurnOrchestrator::fire_queued_events() {
     }
   }
 
-  // Fire deferred mayor inspections, each from its own rolled block.
-  if (!showing_deferred_staff_event_ && !showing_deferred_inspection_ &&
-      has_deliverable_inspection()) {
-    show_next_deferred_inspection();
-    return true;
-  }
-
-  // A raided player is told on their next turn.
-  if (!showing_deferred_staff_event_ && !showing_deferred_inspection_ &&
-      !gs_->ui().is_top<PoliceState>() && time.is_past_time(10, 0)) {
-    auto it =
-        std::ranges::find(deferred_depot_raids_, gs_->active_player()->id());
-    if (it != deferred_depot_raids_.end()) {
-      deferred_depot_raids_.erase(it);
-      gs_->initiate_arrest(ArrestReason::WarehouseWeapons);
-      return true;
-    }
-  }
-
-  // Fire deferred mayor award events at 10:00 (after inspections).
-  if (!showing_deferred_staff_event_ && !showing_deferred_inspection_ &&
-      !gs_->ui().is_top<MayorState>() && time.is_past_time(10, 0)) {
-    auto it = std::ranges::find_if(
-        deferred_mayor_awards_, [&](const DeferredMayorAward& d) {
-          return d.player_id == gs_->active_player()->id();
+  // One queued call goes out per pass.
+  if (!showing_deferred_staff_event_ && !showing_deferred_inspection_) {
+    auto due =
+        std::ranges::find_if(deferred_calls_, [this](const DeferredCall& call) {
+          return is_call_due(call);
         });
-    if (it != deferred_mayor_awards_.end()) {
-      auto ev = it->event;
-      deferred_mayor_awards_.erase(it);
-      gs_->process_mayor_award_event(ev);
+    if (due != deferred_calls_.end()) {
+      if (due->kind == DeferredCall::Kind::MayorInspection) {
+        show_next_deferred_inspection();
+        return true;
+      }
+      auto queued = *due;
+      deferred_calls_.erase(due);
+      if (queued.kind == DeferredCall::Kind::DepotRaid) {
+        gs_->initiate_arrest(ArrestReason::WarehouseWeapons);
+      }
+      else {
+        gs_->process_mayor_award_event(queued.award);
+      }
       return true;
     }
   }
@@ -982,8 +1038,9 @@ TurnOrchestrator::execute_pipeline_step(const turn::Step& step) {
                 restaurant->start_of_day(*gs_);
                 if (is_human) {
                   if (auto insp = restaurant->take_pending_inspection()) {
-                    deferred_mayor_inspections_.push_back(
-                        {*insp, restaurant->id(), roll_inspection_block()});
+                    queue_mayor_inspection(gs_->active_player_,
+                                           restaurant->id(), *insp,
+                                           roll_inspection_block());
                   }
                 }
               }

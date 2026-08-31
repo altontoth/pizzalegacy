@@ -545,8 +545,7 @@ void GameState::leave_realtime_play() {
 }
 
 bool GameState::is_past_player_end_of_day() const {
-  auto end_time = active_player()->end_of_day_time();
-  return time_.is_past_time(end_time.hour, end_time.minute);
+  return time_.is_past_time(active_player()->end_of_day_time());
 }
 
 void GameState::advance_time_blocks(int n) {
@@ -819,8 +818,7 @@ void GameState::on_city_entered(core::CityId city_id, const Player& player) {
     p->mark_city_visited(city_id);
   }
 
-  // Travelling leaves the calls and staff dialogs the restaurants back home
-  // queued for you behind.
+  // Travelling leaves behind the calls queued by the restaurants back home.
   if (status_queue_city_ && *status_queue_city_ != city_id) {
     status_hub_.clear_queue();
     turn_.drop_city_local_events_outside(city_id);

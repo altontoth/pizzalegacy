@@ -939,13 +939,54 @@ play out.
   };
 }
 
+static CommandDef make_game_turn_queue() {
+  return CommandDef{
+      .name = "queue",
+      .description = "List the mayor's and police's queued calls",
+      .help_text = R"(Usage: game turn queue
+
+Lists the mayor's and police's deferred calls in the order they were queued,
+with the player each one belongs to.
+)",
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        using Kind = TurnOrchestrator::DeferredCall::Kind;
+        const auto& queued = ctx.state.turn().deferred_calls();
+        if (queued.empty()) {
+          return CommandResult::success().add_message("Queue empty");
+        }
+        auto result = CommandResult::success();
+        for (const auto& ev : queued) {
+          switch (ev.kind) {
+          case Kind::MayorInspection:
+            result.add_message(compat::format(
+                "player {}: inspection of restaurant {} at block {}",
+                ev.player_id.value, ev.restaurant_id.value, ev.display_block));
+            break;
+          case Kind::MayorAward:
+            result.add_message(compat::format(
+                "player {}: award {} ({})", ev.player_id.value,
+                static_cast<int>(ev.award.type),
+                ev.award.announces_winner ? "winner" : "advance notice"));
+            break;
+          case Kind::DepotRaid:
+            result.add_message(
+                compat::format("player {}: depot raid", ev.player_id.value));
+            break;
+          }
+        }
+        return result;
+      },
+  };
+}
+
 static CommandDef make_game_turn() {
   return CommandDef{
       .name = "turn",
       .description = "Turn control",
       .help_text = "End the active player's turn",
   }
-      .add_subcommand(make_game_turn_end());
+      .add_subcommand(make_game_turn_end())
+      .add_subcommand(make_game_turn_queue());
 }
 
 static CommandDef make_game_tick() {

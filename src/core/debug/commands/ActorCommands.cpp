@@ -672,14 +672,18 @@ Example:
   police raids
 )",
       .handler = [](const CommandContext& ctx) -> CommandResult {
-        const auto& raids = ctx.state.turn().deferred_depot_raids();
-        if (raids.empty()) {
-          return CommandResult::success().add_message("No raids to report");
-        }
         auto result = CommandResult::success();
-        for (auto player_id : raids) {
+        bool any = false;
+        for (const auto& queued : ctx.state.turn().deferred_calls()) {
+          if (queued.kind != TurnOrchestrator::DeferredCall::Kind::DepotRaid) {
+            continue;
+          }
+          any = true;
           result.add_message(
-              compat::format("player {} to be told", player_id.value));
+              compat::format("player {} to be told", queued.player_id.value));
+        }
+        if (!any) {
+          return CommandResult::success().add_message("No raids to report");
         }
         return result;
       },

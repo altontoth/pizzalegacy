@@ -54,6 +54,10 @@ Examples:
       .handler = [](const CommandContext& ctx) -> CommandResult {
         auto city_id = ctx.city_id(0);
         ctx.state.bootstrap_minimal_playable_world(ctx.context);
+        ctx.state.active_city(city_id);
+        if (auto* player = ctx.state.active_player()) {
+          ctx.state.on_city_entered(city_id, *player);
+        }
         ctx.state.ui().replace_top<CityViewState>(CityViewState{city_id.value});
         return CommandResult::success().add_message(
             compat::format("Navigated to city view (city {})", city_id.value));

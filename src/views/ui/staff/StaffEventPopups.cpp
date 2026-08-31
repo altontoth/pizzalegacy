@@ -72,11 +72,7 @@ void show_staff_event_dialog(GameContext& context,
       [ctx = &context, event, restaurant, staff_pic,
        on_done = std::move(on_done)](int outcome) {
         auto result = StaffEvents::apply_outcome(event, outcome, *restaurant);
-        if (!result) {
-          // Staff slot emptied mid-dialog; the chain ends without on_done.
-          return;
-        }
-        if (!result->reply) {
+        if (!result || !result->reply) {
           on_done();
           return;
         }

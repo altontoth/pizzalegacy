@@ -174,10 +174,11 @@ Examples:
         const std::string winner =
             winner_id.has_value() ? std::to_string(*winner_id) : "none";
         if (ctx.args.size() > 2 && ctx.string_arg(2) == "queue") {
-          ctx.state.turn().queue_mayor_award(event,
-                                             ctx.state.active_player()->id());
-          return CommandResult::success().add_message(
-              compat::format("Queued {} award (winner={})", type_str, winner));
+          bool fit = ctx.state.turn().queue_mayor_award(
+              event, ctx.state.active_player()->id());
+          return CommandResult::success().add_message(compat::format(
+              "{} {} award (winner={})", fit ? "Queued" : "Dropped, queue full",
+              type_str, winner));
         }
 
         ctx.state.process_mayor_award_event(event);

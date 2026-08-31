@@ -116,14 +116,6 @@ public:
     return pipeline_activity_;
   }
 
-  // Mayor inspection events deferred from EOD to the next day.
-  struct DeferredInspectionEvent {
-    bool is_first;
-    core::RestaurantId restaurant_id;
-    // Time block the mayor calls at, rolled by roll_inspection_block().
-    int display_block;
-  };
-
   // Rolls the block a queued inspection is delivered at: uniform between
   // 9:00 and 13:50, as in the original.
   static int roll_inspection_block();
@@ -142,19 +134,30 @@ public:
     int display_block;
   };
 
-  struct DeferredMayorAward {
-    MayorAwardEvent event;
-    core::PlayerId player_id;
+  // A queued call from the mayor or the police, held until it is due.
+  struct DeferredCall {
+    enum class Kind { MayorInspection, MayorAward, DepotRaid };
+    Kind kind{Kind::MayorInspection};
+    core::PlayerId player_id{};
+    // MayorInspection: which restaurant, whether it is the first visit, and
+    // the block the mayor calls at.
+    core::RestaurantId restaurant_id{};
+    bool is_first{false};
+    int display_block{0};
+    // MayorAward: the award being announced.
+    MayorAwardEvent award{};
   };
 
-  // The owner is told on their next turn; the seizure happened when the depot
-  // was searched.
-  void queue_depot_raid_call(core::PlayerId player_id) {
-    deferred_depot_raids_.push_back(player_id);
-  }
-  const std::vector<core::PlayerId>& deferred_depot_raids() const {
-    return deferred_depot_raids_;
-  }
+  // Slots one player's queue has. A call arriving when all slots are full is
+  // dropped.
+  static constexpr int call_slots_per_player = 4;
+
+  // The police tell a player their depot was emptied on their next turn; the
+  // seizure itself happened when they searched it.
+  bool queue_depot_raid_call(core::PlayerId player_id);
+
+  bool queue_mayor_inspection(core::PlayerId player_id, core::RestaurantId rid,
+                              bool is_first, int display_block);
 
   // Protection racket offers rolled during the day-end flush, delivered on
   // the owning player's next turn.
@@ -167,7 +170,7 @@ public:
   void queue_manager_alert(core::RestaurantId rid, std::string message,
                            int display_block);
   void drop_city_local_events_outside(core::CityId city);
-  void queue_mayor_award(const MayorAwardEvent& ev, core::PlayerId player_id);
+  bool queue_mayor_award(const MayorAwardEvent& ev, core::PlayerId player_id);
 
   // Queue a mayor inspection and show it immediately (debug use).
   void trigger_mayor_inspection(core::RestaurantId rid, bool is_first);
@@ -180,16 +183,11 @@ public:
                                     core::RestaurantId rid) {
     deferred_staff_events_.push_back({ev, rid});
   }
-  const std::vector<DeferredInspectionEvent>&
-  deferred_mayor_inspections() const {
-    return deferred_mayor_inspections_;
+  const std::vector<DeferredCall>& deferred_calls() const {
+    return deferred_calls_;
   }
-  void restore_deferred_mayor_inspection(core::RestaurantId rid, bool is_first,
-                                         int display_block) {
-    deferred_mayor_inspections_.push_back({is_first, rid, display_block});
-  }
-  const std::vector<DeferredMayorAward>& deferred_mayor_awards() const {
-    return deferred_mayor_awards_;
+  void restore_deferred_call(const DeferredCall& ev) {
+    deferred_calls_.push_back(ev);
   }
   const std::vector<DeferredRacketOffer>& deferred_racket_offers() const {
     return deferred_racket_offers_;
@@ -229,8 +227,17 @@ private:
   void next_player();
   // An event is deliverable when its restaurant belongs to the active player
   bool can_deliver_to_active_player(core::RestaurantId rid) const;
+  bool can_deliver_to_active_player(const DeferredCall& call) const;
+  // A staff event only shows if the player is in its restaurant's city.
+  bool can_deliver_staff_event(core::RestaurantId rid) const;
   bool has_deliverable_staff_event() const;
-  bool has_deliverable_inspection() const;
+
+  // Every queued call takes one of the player's slots except the mayor's
+  // announcement of an award winner.
+  static bool takes_a_slot(const DeferredCall& call);
+  // Appends unless the player's slots are full; returns whether it fit.
+  bool queue_call(const DeferredCall& call);
+  bool is_call_due(const DeferredCall& call) const;
 
   void show_next_deferred_staff_event();
   // Returns whether an alert was shown.
@@ -302,9 +309,8 @@ private:
 
   std::vector<DeferredRacketOffer> deferred_racket_offers_;
 
-  std::vector<DeferredInspectionEvent> deferred_mayor_inspections_;
+  // The mayor's and the police's calls to a player, in the order they were
+  // queued.
+  std::vector<DeferredCall> deferred_calls_;
   bool showing_deferred_inspection_{false};
-
-  std::vector<DeferredMayorAward> deferred_mayor_awards_;
-  std::vector<core::PlayerId> deferred_depot_raids_;
 };
