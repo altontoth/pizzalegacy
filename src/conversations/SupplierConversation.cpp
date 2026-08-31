@@ -10,6 +10,8 @@
 #include <cassert>
 #include <cstddef>
 #include <magic_enum/magic_enum.hpp>
+#include <utility>
+#include <vector>
 
 #include "conversations/SupplierLine.h"
 #include "core/character/Player.h"
@@ -17,6 +19,7 @@
 #include "core/events/MilestoneId.h"
 #include "core/supply/ActiveContract.h"
 #include "core/supply/FoodSupplier.h"
+#include "core/supply/SupplierContract.h"
 #include "core/supply/SupplierRelationship.h"
 #include "engine/FormatCompat.h"
 #include "engine/Logger.h"
@@ -51,35 +54,9 @@ SupplierConversation::SupplierConversation(GameState& state,
   else {
     demand_limit_ = 2;
   }
-  // Initialize contract terms
   const auto& rel = supplier_->relationship(player_id);
-  contract_.total_value = total_order_value_;
-  contract_.delivery_days = std::max<uint8_t>(28, rel.last_delivery_days);
-
-  if (rel.contract_count == 0) {
-    contract_.discount_score = 0;
-    contract_.penalty = total_order_value_ * 5;
-  }
-  else {
-    // Original formula: ((order / min) + spending_rank) * 4 + past_discount) /
-    // 3, max 60
-    int64_t min_cents = supplier_->minimum_contract_amount().cents;
-    int ratio = (min_cents > 0)
-                    ? static_cast<int>(total_order_value_.cents / min_cents)
-                    : 0;
-    int raw = ((ratio + spending_rank_) * 4) + rel.relationship_score;
-    contract_.discount_score = std::min(raw / 3, 60);
-    contract_.penalty = total_order_value_ * 3;
-  }
-
-  // Charge waived
-  if (spending_rank_ > 3) {
-    contract_.charge = Money{0};
-  }
-  else {
-    contract_.charge = Money{static_cast<int64_t>(rel.frustration * 100)} +
-                       total_order_value_ / 30;
-  }
+  contract_ = opening_contract_terms(*supplier_, rel, spending_rank_,
+                                     total_order_value_);
 
   if (current_line_ == SupplierLine::HELLO_SUGGEST_CONTRACT_TERMS) {
     int personality = state_.active_player()->character().personality();
@@ -191,25 +168,15 @@ bool SupplierConversation::advance_proposal(bool agree) {
     auto player_id = state_.active_player()->id();
     auto& rel = supplier_->relationship(player_id);
 
-    // Build the active contract from negotiated terms
-    ActiveContract contract;
-    contract.supplier_id = supplier_->id();
-    contract.category = supplier_->category();
-    contract.city_id = state_.active_city_id();
-    contract.restaurant_id = state_.active_restaurant()->id();
-    contract.discount_pct = contract_.discount_score;
-    contract.remaining_term = contract_.delivery_days;
-    contract.original_term = contract_.delivery_days;
-    contract.daily_sum = contract_.total_value;
-    contract.charge = contract_.charge;
-    contract.cancellation_penalty = contract_.penalty;
+    std::vector<ActiveContract::Item> items;
     for (const auto& batch : order_) {
       if (batch.count > 0) {
-        contract.items.push_back({batch.ingredient_type, batch.count});
+        items.push_back({batch.ingredient_type, batch.count});
       }
     }
-
-    state_.active_player()->add_contract(std::move(contract));
+    sign_contract(*state_.active_player(), *supplier_, rel, contract_,
+                  total_order_value_, state_.active_city_id(),
+                  state_.active_restaurant()->id(), std::move(items));
 
     if (contract_.discount_score >= 50) {
       state_.record_milestone(
@@ -218,14 +185,6 @@ bool SupplierConversation::advance_proposal(bool agree) {
     }
 
     contract_accepted_ = true;
-    rel.contract_count++;
-    rel.last_delivery_days = contract_.delivery_days;
-    rel.last_contract_sum = total_order_value_;
-    rel.relationship_score = contract_.discount_score;
-    if (rel.frustration > 0) {
-      rel.frustration--;
-    }
-
     current_line(SupplierLine::OK_WILL_DO_OUR_BEST_DELIVER_ON_TIME);
   }
   else {

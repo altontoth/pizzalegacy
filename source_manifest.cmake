@@ -86,6 +86,7 @@ set(GAME_PLEGACY_SOURCES
     src/core/status/StatusHub.cpp
     src/core/supply/FoodSupplier.cpp
     src/core/supply/Supplier.cpp
+    src/core/supply/SupplierContract.cpp
     src/core/util/ConfigManager.cpp
     src/core/util/Tools.cpp
     src/conversations/ArmsDealerConversation.cpp

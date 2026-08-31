@@ -17,7 +17,10 @@
 #include "core/restaurant/Restaurant.h"
 #include "core/state/GameState.h"
 #include "core/state/RealEstate.h"
+#include "core/supply/ActiveContract.h"
 #include "core/supply/FoodSupplier.h"
+#include "core/supply/SupplierContract.h"
+#include "core/supply/SupplierRelationship.h"
 #include "core/util/GameContext.h"
 #include "factories/CharacterFactory.h"
 #include "factories/PizzaFactory.h"
@@ -656,6 +659,138 @@ Examples:
   };
 }
 
+static CommandDef make_restaurant_contract() {
+  return CommandDef{
+      .name = "contract",
+      .description = "Sign a supply contract with a supplier",
+      .help_text =
+          R"(Usage: restaurant contract <supplier_id> <ingredient_id> <kg_per_day> [player_id] [restaurant_id]
+
+Signs a contract on the terms the supplier opens with, which is what the
+player gets by accepting the first offer without haggling. The daily sum
+comes from the supplier's own price, and the relationship is updated the way
+signing in the conversation updates it, so deliveries and their penalties
+behave as they would in play. Suppliers turn down an order below their
+minimum, here as in the conversation.
+
+Arguments:
+  supplier_id   - Supplier to buy from; `city suppliers` lists them
+  ingredient_id - Ingredient ID (0-21, 24-40, 48-60, 72-84)
+  kg_per_day    - Kilograms delivered each day
+  player_id     - Player ID (@ for active player)
+  restaurant_id - Restaurant ID (@ for active restaurant)
+
+Examples:
+  restaurant contract 1 0 5      # 5kg of ingredient 0 a day from supplier 1
+  restaurant contract 7 25 20    # 20kg of ingredient 25 a day from supplier 7
+)",
+      .args =
+          {
+              ArgSpec{
+                  .name = "supplier_id",
+                  .type = ArgType::Int,
+                  .optional = false,
+                  .description = "Supplier id, from `city suppliers`",
+                  .min_value = 0,
+                  .max_value = 255,
+              },
+              ArgSpec{
+                  .name = "ingredient_id",
+                  .type = ArgType::Int,
+                  .optional = false,
+                  .description = "Ingredient ID (0-89)",
+                  .min_value = 0,
+                  .max_value = 89,
+              },
+              ArgSpec{
+                  .name = "kg_per_day",
+                  .type = ArgType::Int,
+                  .optional = false,
+                  .description = "Kilograms delivered each day",
+                  .min_value = 1,
+                  .max_value = 650,
+              },
+              active_player_arg(),
+              active_restaurant_arg(),
+          },
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        auto wanted_supplier = static_cast<uint8_t>(ctx.int_arg(0));
+        auto ingredient_id = ctx.int_arg(1);
+        auto kg_per_day = static_cast<int>(ctx.int_arg(2));
+        auto player_id = ctx.player_id(3);
+        auto restaurant_id = ctx.restaurant_id(4);
+
+        auto* player = ctx.state.player(player_id);
+        auto* restaurant = ctx.state.restaurant(restaurant_id);
+
+        auto owner = restaurant->property().owner_or_tenant();
+        if (!owner || *owner != player_id) {
+          return CommandResult::error(
+              compat::format("Restaurant {} is not owned by player {}",
+                             restaurant_id.value, player_id.value));
+        }
+
+        auto category =
+            core::food::CategoryRegistry::from_ingredient_id(ingredient_id);
+        if (!category) {
+          return CommandResult::error(
+              compat::format("{} is not an ingredient id", ingredient_id));
+        }
+        auto ingredient_type =
+            static_cast<core::food::IngredientType>(ingredient_id);
+
+        const auto& city = restaurant->property().city();
+        const FoodSupplier* supplier = nullptr;
+        for (const auto& s : city.suppliers()) {
+          if (s->category() == *category && s->id() == wanted_supplier) {
+            supplier = s.get();
+            break;
+          }
+        }
+        if (!supplier) {
+          return CommandResult::error(
+              compat::format("No supplier {} for that category in {}",
+                             wanted_supplier, city.name()));
+        }
+        if (!supplier->sells(ingredient_type)) {
+          return CommandResult::error(
+              compat::format("{} does not sell ingredient {}", supplier->name(),
+                             ingredient_id));
+        }
+
+        auto price_per_kg = supplier->calculate_price(
+            ingredient_type, city.ingredient_base_price(ingredient_type),
+            FoodSupplier::price_multiplier(ctx.state.difficulty_level()));
+        if (!price_per_kg) {
+          return CommandResult::error(
+              compat::format("{} has no price for ingredient {}",
+                             supplier->name(), ingredient_id));
+        }
+
+        const Money daily_value{price_per_kg->cents * kg_per_day};
+        if (daily_value < supplier->minimum_contract_amount()) {
+          return CommandResult::error(compat::format(
+              "{} contracts start at ${:n} a day; {}kg comes to ${:n}",
+              supplier->name(), supplier->minimum_contract_amount(), kg_per_day,
+              daily_value));
+        }
+
+        auto& rel = supplier->relationship(player_id);
+        const SupplierContract terms = opening_contract_terms(
+            *supplier, rel, supplier->spending_rank(player_id), daily_value);
+
+        sign_contract(*player, *supplier, rel, terms, daily_value, city.id(),
+                      restaurant->id(), {{ingredient_type, kg_per_day}});
+
+        return CommandResult::success().add_message(compat::format(
+            "Signed with {} for {}kg of ingredient {} a day, ${:n} daily at "
+            "{}% off, {} days",
+            supplier->name(), kg_per_day, ingredient_id, terms.total_value,
+            terms.discount_score, terms.delivery_days));
+      },
+  };
+}
+
 static CommandDef make_restaurant_stock() {
   return CommandDef{
       .name = "stock",
@@ -984,6 +1119,7 @@ CommandDef make_restaurant_commands() {
       .add_subcommand(make_restaurant_ai_layout())
       .add_subcommand(make_restaurant_furniture())
       .add_subcommand(make_restaurant_stock())
+      .add_subcommand(make_restaurant_contract())
       .add_subcommand(make_restaurant_create())
       .add_subcommand(make_restaurant_qs())
       .add_subcommand(make_restaurant_inspection_timer());
