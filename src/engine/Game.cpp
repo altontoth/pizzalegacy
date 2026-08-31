@@ -723,7 +723,6 @@ bool Game::init(int display_height, ConfigManager& config_manager) {
   // Set ConfigManager instance for global access (used by Platform and
   // TextEncoding)
   ConfigManager::set_instance(&config_manager);
-  platform::init_asset_format();
 
   bob_manager_ = std::make_unique<BobManager>(BobLoader());
   font_manager_ = std::make_unique<FontManager>(FontLoader());

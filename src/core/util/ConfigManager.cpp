@@ -17,7 +17,6 @@
 #include "core/state/GameState.h"
 #include "engine/Fatal.h"
 #include "resources/util/FileUtils.h"
-#include "resources/util/Platform.h"
 
 ConfigManager* ConfigManager::s_instance_ = nullptr;
 
@@ -213,10 +212,6 @@ void ConfigManager::save_options(const GameOptions& opts) {
       std::string(to_config_value(opts.autosave_frequency));
   config_["autosave_count"] = std::to_string(opts.autosave_count);
 
-  config_["active_asset_format"] =
-      (opts.asset_format == platform::AssetFormat::GERMAN) ? "german"
-                                                           : "english";
-
   config_["resolution"] = std::string(to_config_value(opts.resolution));
 
   save_config();
@@ -286,13 +281,6 @@ GameOptions ConfigManager::load_options() const {
       opts.autosave_count = std::clamp(count, GameOptions::AUTOSAVE_COUNT_MIN,
                                        GameOptions::AUTOSAVE_COUNT_MAX);
     }
-  }
-
-  auto it = config_.find("active_asset_format");
-  if (it != config_.end()) {
-    opts.asset_format = (it->second == "german")
-                            ? platform::AssetFormat::GERMAN
-                            : platform::AssetFormat::ENGLISH;
   }
 
   auto res_it = config_.find("resolution");

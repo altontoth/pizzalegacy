@@ -14,7 +14,6 @@
 #include "core/state/GameState.h"
 #include "engine/Random.h"
 #include "factories/CharacterFactory.h"
-#include "resources/util/Platform.h"
 #include "views/screens/menus/MenuTheme.h"
 #include "views/ui/widgets/ArrowMenuItem.h"
 #include "views/ui/widgets/CharacterPhotoBox.h"

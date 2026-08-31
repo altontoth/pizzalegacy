@@ -260,7 +260,6 @@ set(GAME_PLEGACY_SOURCES
     src/resources/Vga.cpp
     src/resources/VgaLoader.cpp
     src/resources/util/FileUtils.cpp
-    src/resources/util/Platform.cpp
     src/resources/util/TextEncoding.cpp
 )
 
@@ -572,7 +571,6 @@ set(PLEGACY_HEADERS
     src/resources/VgaManager.h
     src/resources/util/ByteReader.h
     src/resources/util/FileUtils.h
-    src/resources/util/Platform.h
     src/resources/util/TextEncoding.h
     src/views/base/BobRenderer.h
     src/views/base/Dirtyable.h
