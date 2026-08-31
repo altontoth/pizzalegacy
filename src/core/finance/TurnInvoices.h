@@ -54,11 +54,12 @@ struct MonthlyCosts {
   };
   Money loan_repayment;
   Money loan_interest;
+  Money insurance_premiums;
   std::vector<Rent> rents;
   std::vector<DepotRent> depot_rents;
   Money total_rent;
   Money investment_returns;
-  Money total; // repayment + interest + rent
+  Money total; // repayment, interest, insurance and rent
 };
 MonthlyCosts collect_monthly_costs(const GameState& gs, const Player& player);
 void apply_monthly_costs(GameState& gs, Player& player,

@@ -203,6 +203,8 @@ public:
   };
   MonthlyLoanCosts monthly_loan_costs() const;
   void apply_monthly_loan_payments(const GameDate& date);
+  Money monthly_insurance_premiums() const;
+  void apply_monthly_insurance_premiums(const GameDate& date);
 
   int score() const { return score_; }
   void add_score(int points);

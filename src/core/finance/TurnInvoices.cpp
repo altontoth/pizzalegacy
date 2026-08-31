@@ -69,6 +69,7 @@ MonthlyCosts collect_monthly_costs(const GameState& gs, const Player& player) {
   auto loan_costs = player.monthly_loan_costs();
   costs.loan_repayment = loan_costs.repayment;
   costs.loan_interest = loan_costs.interest;
+  costs.insurance_premiums = player.monthly_insurance_premiums();
 
   // Collect rent from all rented restaurants
   for (auto* rest : gs.restaurants_for(player.id())) {
@@ -93,7 +94,8 @@ MonthlyCosts collect_monthly_costs(const GameState& gs, const Player& player) {
   }
 
   costs.investment_returns = player.monthly_investment_returns();
-  costs.total = costs.loan_repayment + costs.loan_interest + costs.total_rent;
+  costs.total = costs.loan_repayment + costs.loan_interest +
+                costs.insurance_premiums + costs.total_rent;
   return costs;
 }
 
@@ -101,6 +103,7 @@ void apply_monthly_costs(GameState& gs, Player& player,
                          const MonthlyCosts& costs) {
   const auto& date = gs.time().current_date();
   player.apply_monthly_loan_payments(date);
+  player.apply_monthly_insurance_premiums(date);
   player.apply_monthly_investment_payouts(date, gs.options().fix_legacy_bugs);
   for (const auto& rent : costs.rents) {
     player.financials().transfer(date, Account::Cash, Account::Rents,

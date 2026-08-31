@@ -8,6 +8,7 @@
 
 #include <algorithm>
 
+#include "core/character/InsurancePlayerState.h"
 #include "core/character/Player.h"
 #include "core/character/SocialStatus.h"
 #include "core/city/CentralDepot.h"
@@ -29,6 +30,11 @@ namespace {
 // Visits more than this many days in the future don't qualify, neither do
 // restaurants that have never been visited by the mayor.
 constexpr int mayor_tip_horizon_days = 100;
+
+// Even though the text file says $20K and $80K, the original uses these
+// numbers instead.
+constexpr Money cash_bribe = 10'000_usd;
+constexpr Money sports_car_bribe = 50'000_usd;
 
 } // namespace
 
@@ -194,9 +200,10 @@ bool PoliceConversation::advance_line_choice(PoliceLine choice) {
 
   case PoliceLine::HOW_ABOUT_20K_FOR_YOU: {
     int chance = 70 - (difficulty * 12);
-    if (engine::random::rand_percentage_chance(std::max(chance, 5))) {
+    if (engine::random::rand_percentage_chance(std::max(chance, 5)) &&
+        player->cash_balance() >= cash_bribe) {
       player->financials().transfer(state_.time().current_date(), Account::Cash,
-                                    Account::FinesAndBribes, 20'000_usd,
+                                    Account::FinesAndBribes, cash_bribe,
                                     AccountingScope::Operational);
       current_line(PoliceLine::SURE_BUT_THIS_WILL_REMAIN_OUR_SECRET);
     }
@@ -210,9 +217,10 @@ bool PoliceConversation::advance_line_choice(PoliceLine choice) {
 
   case PoliceLine::COULD_YOU_DO_WITH_A_SPORTS_CAR: {
     int chance = 80 - (difficulty * 10);
-    if (engine::random::rand_percentage_chance(std::max(chance, 5))) {
+    if (engine::random::rand_percentage_chance(std::max(chance, 5)) &&
+        player->cash_balance() >= sports_car_bribe) {
       player->financials().transfer(state_.time().current_date(), Account::Cash,
-                                    Account::FinesAndBribes, 80'000_usd,
+                                    Account::FinesAndBribes, sports_car_bribe,
                                     AccountingScope::Operational);
       current_line(
           PoliceLine::ALRIGHT_ILL_HAVE_ONE_FOR_80K_AND_YOU_CAN_GO_FREE);
@@ -318,6 +326,8 @@ bool PoliceConversation::advance_proposal(bool agree) {
       state_.adjust_social_score(*player, -10 * crime_code);
       state_.record_milestone(
           core::events::MilestoneId::YouReceivedFineFirstTime, player->id());
+      // Liability insurance covers fines you pay.
+      player->make_insurance_claim(InsuranceType::LIABILITY);
       current_line(PoliceLine::PLAYER_PAID_FINE);
     }
     else {

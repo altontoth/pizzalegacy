@@ -523,10 +523,10 @@ bool MafiaConversation::advance_proposal(bool agree) {
     }
     break;
 
-  case MafiaLine::TIP_PRICE_OFFER:
-    if (agree) {
-      player->financials().spend_cash(
-          date, Account::Others, Money{static_cast<int64_t>(tip_price_) * 100});
+  case MafiaLine::TIP_PRICE_OFFER: {
+    Money tip_cost{static_cast<int64_t>(tip_price_) * 100};
+    if (agree && player->cash_balance() >= tip_cost) {
+      player->financials().spend_cash(date, Account::Others, tip_cost);
       if (!tip_reveal_) {
         fatal("Tip reveal line not set");
       }
@@ -536,6 +536,7 @@ bool MafiaConversation::advance_proposal(bool agree) {
       current_line(MafiaLine::LOOKING_FOR_JOB_ON_THE_SIDE);
     }
     break;
+  }
 
   default:
     return advance();

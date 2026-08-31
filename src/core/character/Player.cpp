@@ -7,6 +7,7 @@
 #include "core/character/Player.h"
 
 #include "core/character/Character.h"
+#include "core/character/InsurancePlayerState.h"
 #include "core/city/City.h"
 #include "core/city/CityTypes.h"
 #include "core/city/District.h"
@@ -260,6 +261,9 @@ void Player::end_of_week(GameState& game_state) {
   if (!is_human_controlled()) {
     return;
   }
+
+  // A claim has to be made within the week.
+  insurance_state_.pending_claim.reset();
 
   for (City* city : game_state.initialized_cities()) {
     for (const auto& s_ptr : city->suppliers()) {
@@ -532,6 +536,30 @@ void Player::apply_monthly_loan_payments(const GameDate& date) {
       }
     }
   }
+}
+
+Money Player::monthly_insurance_premiums() const {
+  Money total{0};
+  for (int i = 0; i < static_cast<int>(insurance_state_.policies.size()); ++i) {
+    // The original never charges for Life, and it can never be claimed either.
+    if (static_cast<InsuranceType>(i) == InsuranceType::LIFE) {
+      continue;
+    }
+    const auto& policy = insurance_state_.policies[i];
+    if (policy.is_active()) {
+      total += policy.monthly_premium;
+    }
+  }
+  return total;
+}
+
+void Player::apply_monthly_insurance_premiums(const GameDate& date) {
+  Money total = monthly_insurance_premiums();
+  if (total.cents <= 0) {
+    return;
+  }
+  financials_.transfer(date, Account::Cash, Account::Repayment, total,
+                       AccountingScope::Operational);
 }
 
 void Player::on_supplier_visit() {

@@ -221,21 +221,17 @@ CompetitionCoordinator::finalize_competition_results(
   std::optional<core::events::MilestoneId> winner_message;
 
   // Distribute prize money and update counters
-  // All bets were already deducted upfront in collect_competition_bets().
   GameDate today = gs_->time().current_date();
   if (c.winner_slot >= 0 && !c.all_tied) {
     auto& winner = c.participants[c.winner_slot];
     auto* winner_player = gs_->player(winner.player_id);
 
-    // Winner receives the full pot (all bets, including their own).
-    Money total_bets;
-    for (auto& p : c.participants) {
-      total_bets += p.bet;
-    }
+    // You can only win what you bet.
+    Money winnings = winner.bet * 2;
 
     if (winner_player) {
       winner_player->financials().transfer(today, Account::Sales, Account::Cash,
-                                           total_bets,
+                                           winnings,
                                            AccountingScope::Operational);
       gs_->adjust_social_score(*winner_player, 40);
     }

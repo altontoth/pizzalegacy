@@ -106,6 +106,7 @@ void show_monthly_invoice_popup(GameContext& context, GameState& gs,
   // TODO: Figure out investments and which is which
   cfg.lines.push_back({"LOAN REPAYMENT:", costs.loan_repayment});
   cfg.lines.push_back({"LOAN INTEREST:", costs.loan_interest});
+  cfg.lines.push_back({"INSURANCE:", costs.insurance_premiums});
   cfg.lines.push_back({"RENT:", costs.total_rent});
   cfg.lines.push_back({"INVESTMENT RETURNS:", costs.investment_returns});
   cfg.lines.push_back(empty_line);
