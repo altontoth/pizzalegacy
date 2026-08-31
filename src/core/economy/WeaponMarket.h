@@ -41,7 +41,7 @@ public:
 private:
   struct PriceSlot {
     bool rising;
-    int value;
+    int modifier;
   };
 
   static constexpr std::size_t slot_count =
