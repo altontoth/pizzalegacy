@@ -176,6 +176,7 @@ void GameState::deduct_staff_wages_for_restaurant(
   Logger::info(
       "[Finance] {} - Staff wages deducted for {}: {} (balance now {})",
       p->name(), restaurant->name(), total_wages, p->cash_balance());
+  status().refresh_header();
 
   if (p->cash_balance().cents < 0) {
     Logger::warn("[Finance] {} - BANKRUPT after staff payment! Balance: {}",
