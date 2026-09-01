@@ -18,6 +18,12 @@ public:
               std::unique_ptr<View> inner);
   void tick() override;
   void render(const RenderContext& ctx) override;
+  InterruptionRate interruption_rate() const override {
+    return main_panel_view_->interruption_rate();
+  }
+  ClockRate clock_rate() const override {
+    return main_panel_view_->clock_rate();
+  }
   void status_panel(SharedPanel*);
   void input_panel(SharedPanel*);
   std::vector<LayerInfo> get_layers() override;
