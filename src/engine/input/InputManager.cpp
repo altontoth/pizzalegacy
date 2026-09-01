@@ -201,6 +201,10 @@ void InputManager::process(const SDL_Event& ev) {
     if (k == Key::Unknown) {
       return;
     }
+    // advance_key_repeat repeats held keys.
+    if (down && ev.key.repeat) {
+      break;
+    }
 
     if (down) {
       key_down(k, m);
@@ -220,8 +224,8 @@ void InputManager::process(const SDL_Event& ev) {
       suppress_next_textinput_ = false;
       break;
     }
-    // Text from a key that is already repeating comes from the platform's
-    // own repeat; the repeat timer sets the pace.
+    // Only the first text event for a key is dispatched; advance_key_repeat
+    // produces the rest.
     if (last_key_down_ == repeat_.key && !repeat_.text.empty()) {
       break;
     }
