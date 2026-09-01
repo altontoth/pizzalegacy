@@ -1193,8 +1193,6 @@ void Restaurant::eod_batch_order_fulfillment(class GameState& game_state) {
   int total_fulfilled = 0;
   int lost_to_ingredients = 0;
   int lost_to_capacity = 0;
-  Money total_revenue{0};
-  Money total_ingredient_cost{0};
 
   // The day's menu lines: how many were ordered and what one pizza consumes.
   struct MenuLine {
@@ -1420,9 +1418,6 @@ void Restaurant::eod_batch_order_fulfillment(class GameState& game_state) {
     Money line_cost = Money{cost_each.cents * line.orders};
 
     total_fulfilled += line.orders;
-    total_revenue = total_revenue + line_revenue;
-    total_ingredient_cost = total_ingredient_cost + line_cost;
-
     stats_.today.orders_fulfilled += line.orders;
     stats_.today.revenue = stats_.today.revenue + line_revenue;
     stats_.today.ingredient_costs = stats_.today.ingredient_costs + line_cost;
@@ -1474,17 +1469,6 @@ void Restaurant::eod_batch_order_fulfillment(class GameState& game_state) {
   else {
     fulfillment_rate_ = 100;
   }
-
-  player->financials().transfer(
-      game_state.time().current_date(), Account::Sales, Account::Cash,
-      stats_.today.revenue, restaurant_id_, AccountingScope::Operational);
-  // Do the bookkeeping to remove the used up stock from the stock account
-  player->financials().transfer(
-      game_state.time().current_date(), Account::Stock, Account::ProfitAndLoss,
-      total_ingredient_cost, restaurant_id_, AccountingScope::Operational);
-  // Also feed the per-city turnover accumulator the competitor chart reads, so
-  // it stays consistent with the AI path (which has no ledger).
-  player->add_turnover(property().city().id(), stats_.today.revenue);
 
   stats_.end_of_day(effective_capacity);
   calculate_pizza_quality_rating(recipes);

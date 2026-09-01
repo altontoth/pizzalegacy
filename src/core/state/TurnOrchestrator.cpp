@@ -195,6 +195,7 @@ void TurnOrchestrator::end_of_turn(EndOfDayCause cause) {
   for (std::size_t i = 0; i < in_scope_ids.size(); ++i) {
     turn_pipeline_.emplace_back(
         turn::ProcessRestaurant{in_scope_ids[i], interactive});
+    turn_pipeline_.emplace_back(turn::DailySettlement{in_scope_ids[i]});
     if (interactive && electricity_invoice_due) {
       turn_pipeline_.emplace_back(
           turn::MonthlyRestaurantInvoice{in_scope_ids[i]});
@@ -930,6 +931,13 @@ TurnOrchestrator::execute_pipeline_step(const turn::Step& step) {
       overloaded{
           [&](const turn::ProcessRestaurant& s) {
             return process_restaurant_step(s);
+          },
+
+          [&](const turn::DailySettlement& s) {
+            if (auto* rest = gs_->restaurant(s.id)) {
+              core::finance::apply_daily_sales(*gs_, *rest);
+            }
+            return StepResult::Done;
           },
 
           [&](const turn::Delay& s) {

@@ -30,6 +30,13 @@ struct ProcessRestaurant {
   bool interactive{false};
 };
 
+// Posts one restaurant's sales, after its daily settlement report has been
+// dismissed.
+struct DailySettlement {
+  static constexpr const char* name = "DailySettlement";
+  core::RestaurantId id;
+};
+
 // Lets the status display repaint between restaurants so the player sees
 // the money change per restaurant, like the original.
 struct Delay {
@@ -133,13 +140,13 @@ struct SetActivity {
 };
 
 using Step =
-    std::variant<ProcessRestaurant, Delay, FinishTurn, FloorEditingBonus,
-                 TickCities, EndOfWeekProcessing, EndOfYearProcessing,
-                 EndOfMonthProcessing, AnnualCompetition, MonthlyCompetition,
-                 FadeTransition, AdvanceDate, SetTimeOfDay, PreparePlayerTurn,
-                 ResumeTime, CityStartOfDay, PlayerTurnCard, WeeklyReports,
-                 MonthlyRestaurantInvoice, MonthlyInvoice, Autosave,
-                 SetActivity>;
+    std::variant<ProcessRestaurant, DailySettlement, Delay, FinishTurn,
+                 FloorEditingBonus, TickCities, EndOfWeekProcessing,
+                 EndOfYearProcessing, EndOfMonthProcessing, AnnualCompetition,
+                 MonthlyCompetition, FadeTransition, AdvanceDate, SetTimeOfDay,
+                 PreparePlayerTurn, ResumeTime, CityStartOfDay, PlayerTurnCard,
+                 WeeklyReports, MonthlyRestaurantInvoice, MonthlyInvoice,
+                 Autosave, SetActivity>;
 
 inline const char* step_name(const Step& step) {
   return std::visit([]<typename T>(const T&) { return T::name; }, step);

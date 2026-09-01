@@ -40,6 +40,24 @@ StaffWages collect_staff_wages(const Restaurant& rest) {
   return wages;
 }
 
+void apply_daily_sales(GameState& gs, Restaurant& rest) {
+  Player* owner = gs.restaurant_owner(rest);
+  if (!owner || !owner->is_human_controlled() || !rest.wants_open() ||
+      rest.is_force_closed()) {
+    return;
+  }
+  const auto& day = rest.stats().yesterday;
+  const auto& date = gs.time().current_date();
+  owner->financials().transfer(date, Account::Sales, Account::Cash, day.revenue,
+                               rest.id(), AccountingScope::Operational);
+  // The ingredients that were used during the day leave the stock account.
+  owner->financials().transfer(date, Account::Stock, Account::ProfitAndLoss,
+                               day.ingredient_costs, rest.id(),
+                               AccountingScope::Operational);
+  owner->add_turnover(rest.property().city().id(), day.revenue);
+  gs.status().refresh_header();
+}
+
 ElectricitySlotInvoice
 collect_electricity_slot_invoice(const Restaurant& rest) {
   Money electricity = rest.calculate_electricity_cost();

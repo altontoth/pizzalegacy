@@ -33,6 +33,9 @@ StaffWages collect_staff_wages(const Restaurant& rest);
 // Applying staff wages is GameState::deduct_staff_wages_for_restaurant(),
 // which also handles the bankruptcy consequence.
 
+// Posts the sales revenue and ingredient cost of the day that just ended.
+void apply_daily_sales(GameState& gs, Restaurant& rest);
+
 struct ElectricitySlotInvoice {
   core::RestaurantId restaurant_id;
   Money electricity;
