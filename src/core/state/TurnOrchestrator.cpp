@@ -703,12 +703,14 @@ TurnOrchestrator::finish_end_of_turn(const turn::FinishTurn& step) {
   snapshot_weekly_profits(step.restaurant_ids);
 
   auto* current_player = gs_->active_player();
-  if (current_player && !current_player->is_human_controlled()) {
-    current_player->ai_end_of_day(*gs_);
-  }
-  if (current_player && current_player->is_human_controlled()) {
-    bool is_eow = gs_->time().current_date().is_end_of_week();
-    gs_->milestones().check_milestone_events(*current_player, is_eow);
+  if (current_player) {
+    if (current_player->is_human_controlled()) {
+      bool is_eow = gs_->time().current_date().is_end_of_week();
+      gs_->milestones().check_milestone_events(*current_player, is_eow);
+    }
+    else {
+      current_player->ai_end_of_day(*gs_);
+    }
   }
 
   // The day's restaurant revenue is now booked, so append this player's net for
@@ -1018,9 +1020,6 @@ TurnOrchestrator::execute_pipeline_step(const turn::Step& step) {
           [&](const turn::PreparePlayerTurn&) {
             auto* player = gs_->active_player();
             const bool is_human = player && player->is_human_controlled();
-            // Calls still queued when a turn ends are lost rather than carried
-            // into the next one. Runs before the start_of_day loop below,
-            // which queues the incoming player's alerts.
             gs_->status().clear_queue();
             gs_->status_queue_city_ = gs_->active_city_;
             deferred_manager_alerts_.clear();
@@ -1049,9 +1048,7 @@ TurnOrchestrator::execute_pipeline_step(const turn::Step& step) {
               raid_depots(gs_->active_player_);
             }
             deliver_depot_stock(gs_->active_player_);
-            pending_ai_auto_end_turn_ =
-                !gs_->players_[gs_->active_player_.value]
-                     ->is_human_controlled();
+            pending_ai_auto_end_turn_ = !is_human;
             if (!pending_ai_auto_end_turn_) {
               gs_->status().suppress(false);
               for (auto& msg :
