@@ -14,6 +14,8 @@
 #include "engine/input/TextSession.h"
 
 #include <cstddef>
+#include <cstdint>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -29,6 +31,7 @@ struct ActionState {
   bool pressed = false;  // edge this frame
   bool released = false; // edge this frame
   bool held = false;     // level
+  bool repeat = false;   // this press came from a held key
 };
 
 struct ActionEvent {
@@ -60,6 +63,13 @@ public:
   // Event ingestion & per-frame maintenance
   void process(const SDL_Event& ev);
   void tick();
+  // Auto-repeat is paced by real frame time.
+  void advance_key_repeat(uint32_t dt_ms);
+
+  void key_repeat(int delay_ms, int interval_ms) noexcept {
+    repeat_delay_ms_ = delay_ms;
+    repeat_interval_ms_ = interval_ms;
+  }
 
   void window(SDL_Window* window) noexcept { window_ = window; }
 
@@ -139,6 +149,19 @@ private:
   // Physical key state
   std::unordered_set<Key> keys_down_{};
   Mod mods_down_{Mod::None};
+  Key last_key_down_{Key::Unknown};
+
+  // The one key that auto-repeats: the last one held down that produced text
+  // or a repeatable action.
+  struct KeyRepeat {
+    Key key{Key::Unknown};
+    std::optional<Action> action{};
+    std::string text{};
+    int ms_left{0};
+  };
+  KeyRepeat repeat_{};
+  int repeat_delay_ms_{500};
+  int repeat_interval_ms_{60};
 
   // Action state (held)
   std::unordered_set<Action> actions_down_{};
@@ -180,11 +203,16 @@ private:
   void gamepad_button_down(GamepadButton b);
   void gamepad_button_up(GamepadButton b);
   void update_stick_directions();
-  void press_actions(const std::vector<Action>& actions);
+  void press_actions(const std::vector<Action>& actions, Key trigger);
   void dispatch_action_release(Action a);
+
   // True if the action was delivered to a listener or to the text sink.
   bool dispatch_action(const ActionEvent& ev);
   bool dispatch_text(const std::string& utf8);
+
+  // Auto-repeat while a key is held
+  void arm_action_repeat(Key k, Action a);
+  void arm_text_repeat(Key k, std::string text);
 
   // Axis aggregation
   static float axis_component(bool positive_down, bool negative_down);

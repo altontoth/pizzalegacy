@@ -211,6 +211,9 @@ void ConfigManager::save_options(const GameOptions& opts) {
   config_["autosave_frequency"] =
       std::string(to_config_value(opts.autosave_frequency));
   config_["autosave_count"] = std::to_string(opts.autosave_count);
+  config_["key_repeat_delay_ms"] = std::to_string(opts.key_repeat_delay_ms);
+  config_["key_repeat_interval_ms"] =
+      std::to_string(opts.key_repeat_interval_ms);
 
   config_["resolution"] = std::string(to_config_value(opts.resolution));
 
@@ -231,6 +234,21 @@ GameOptions ConfigManager::load_options() const {
     auto it = config_.find(key);
     if (it != config_.end()) {
       target = std::strtof(it->second.c_str(), nullptr);
+    }
+  };
+
+  auto load_int = [this](const std::string& key, int& target, int lowest,
+                         int highest) {
+    auto it = config_.find(key);
+    if (it == config_.end()) {
+      return;
+    }
+    const std::string& text = it->second;
+    int parsed = 0;
+    auto [ptr, ec] =
+        std::from_chars(text.data(), text.data() + text.size(), parsed);
+    if (ec == std::errc{}) {
+      target = std::clamp(parsed, lowest, highest);
     }
   };
 
@@ -272,16 +290,14 @@ GameOptions ConfigManager::load_options() const {
     }
   }
 
-  auto count_it = config_.find("autosave_count");
-  if (count_it != config_.end()) {
-    const std::string& s = count_it->second;
-    int count = 0;
-    auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), count);
-    if (ec == std::errc{}) {
-      opts.autosave_count = std::clamp(count, GameOptions::AUTOSAVE_COUNT_MIN,
-                                       GameOptions::AUTOSAVE_COUNT_MAX);
-    }
-  }
+  load_int("autosave_count", opts.autosave_count,
+           GameOptions::AUTOSAVE_COUNT_MIN, GameOptions::AUTOSAVE_COUNT_MAX);
+  load_int("key_repeat_delay_ms", opts.key_repeat_delay_ms,
+           GameOptions::KEY_REPEAT_DELAY_MIN,
+           GameOptions::KEY_REPEAT_DELAY_MAX);
+  load_int("key_repeat_interval_ms", opts.key_repeat_interval_ms,
+           GameOptions::KEY_REPEAT_INTERVAL_MIN,
+           GameOptions::KEY_REPEAT_INTERVAL_MAX);
 
   auto res_it = config_.find("resolution");
   if (res_it != config_.end()) {

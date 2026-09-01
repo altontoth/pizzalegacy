@@ -230,7 +230,7 @@ bool SaveFileInputBox::on_text(const input::TextEvent& ev) {
 }
 
 bool SaveFileInputBox::on_action(const input::ActionEvent& ev) {
-  if (!input_active_ || ev.state.pressed) {
+  if (!input_active_ || !ev.state.pressed) {
     return false;
   }
 

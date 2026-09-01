@@ -22,6 +22,7 @@
 #include "engine/DisplayConstants.h"
 #include "engine/FormatCompat.h"
 #include "engine/audio/AudioManager.h"
+#include "engine/input/InputManager.h"
 #include "engine/ui/ICursorManager.h"
 
 #include <charconv>
@@ -313,6 +314,26 @@ static const OptionDef option_defs[] = {
      .apply =
          [](GameState& state, GameContext& context) {
            context.cursor->software_mode(state.options().software_cursor);
+         }},
+    {.name = "key_repeat_delay_ms",
+     .member = &GameOptions::key_repeat_delay_ms,
+     .description = "How long a held key waits before it repeats",
+     .lowest = GameOptions::KEY_REPEAT_DELAY_MIN,
+     .highest = GameOptions::KEY_REPEAT_DELAY_MAX,
+     .apply =
+         [](GameState& state, GameContext& context) {
+           context.input->key_repeat(state.options().key_repeat_delay_ms,
+                                     state.options().key_repeat_interval_ms);
+         }},
+    {.name = "key_repeat_interval_ms",
+     .member = &GameOptions::key_repeat_interval_ms,
+     .description = "The gap between repeats of a held key",
+     .lowest = GameOptions::KEY_REPEAT_INTERVAL_MIN,
+     .highest = GameOptions::KEY_REPEAT_INTERVAL_MAX,
+     .apply =
+         [](GameState& state, GameContext& context) {
+           context.input->key_repeat(state.options().key_repeat_delay_ms,
+                                     state.options().key_repeat_interval_ms);
          }},
 };
 

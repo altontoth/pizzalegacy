@@ -135,7 +135,7 @@ bool NumberInputPopup::on_action(const input::ActionEvent& ev) {
     BasePopup::on_action(ev);
     return true;
   }
-  if (ev.state.pressed) {
+  if (!ev.state.pressed) {
     return true;
   }
 

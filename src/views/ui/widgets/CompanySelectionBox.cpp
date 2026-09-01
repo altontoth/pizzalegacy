@@ -138,7 +138,7 @@ void CompanySelectionBox::mark_dirty() {
 }
 
 bool CompanySelectionBox::on_action(const input::ActionEvent& ev) {
-  if (!company_being_renamed_ || ev.state.pressed) {
+  if (!company_being_renamed_ || !ev.state.pressed) {
     return false;
   }
   switch (ev.action) {

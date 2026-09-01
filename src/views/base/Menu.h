@@ -60,8 +60,9 @@ private:
   // Move keyboard focus to the next focusable item in insertion order
   // (dir is -1 or +1), wrapping at both ends.
   void move_focus(int dir);
-  // Repeat on_adjust on the focused item while an arrow key is held.
-  void tick_adjust_repeat();
+  // Step the focused item, if it takes the step. A repeat reaches only an
+  // item that opted into repeating and that the hold started on.
+  bool step_focused_item(AdjustAxis axis, int delta, bool repeat);
 
   std::vector<std::unique_ptr<MenuItem>> menu_items_;
   ViewPoint origin_in_view_;
@@ -71,7 +72,8 @@ private:
   std::vector<MenuEntry> layout_;
   bool ui_layout_dirty_{false};
   input::ListenerToken listener_;
-  int adjust_hold_ticks_ = 0;
+  // Whether the arrow key being held started out adjusting the focused item.
+  bool hold_adjusting_ = false;
   // See the Hover handling in update_interactions().
   std::optional<ViewPoint> last_hover_pos_;
 };

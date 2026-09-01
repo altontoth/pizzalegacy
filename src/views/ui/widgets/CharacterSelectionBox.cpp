@@ -129,7 +129,7 @@ bool CharacterSelectionBox::on_text(const input::TextEvent& ev) {
 }
 
 bool CharacterSelectionBox::on_action(const input::ActionEvent& ev) {
-  if (!rename_active_ || ev.state.pressed) {
+  if (!rename_active_ || !ev.state.pressed) {
     return false;
   }
   switch (ev.action) {

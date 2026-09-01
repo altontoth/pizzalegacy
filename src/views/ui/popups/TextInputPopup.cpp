@@ -51,7 +51,7 @@ bool TextInputPopup::on_text(const input::TextEvent& ev) {
 }
 
 bool TextInputPopup::on_action(const input::ActionEvent& ev) {
-  if (ev.state.pressed) {
+  if (!ev.state.pressed) {
     return false;
   }
   switch (ev.action) {

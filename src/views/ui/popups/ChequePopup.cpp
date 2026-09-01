@@ -65,7 +65,7 @@ bool ChequePopup::on_text(const input::TextEvent& ev) {
 }
 
 bool ChequePopup::on_action(const input::ActionEvent& ev) {
-  if (ev.state.pressed) {
+  if (!ev.state.pressed) {
     return false;
   }
 

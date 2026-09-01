@@ -338,6 +338,8 @@ int Game::run() {
   Renderer renderer(sdl_, display_height_);
   renderer.set_cursor_manager(cursor_manager_.get());
   cursor_manager_->software_mode(state.options().software_cursor);
+  input_manager_->key_repeat(state.options().key_repeat_delay_ms,
+                             state.options().key_repeat_interval_ms);
   if (!SDL_SetRenderVSync(
           sdl_.renderer.get(),
           state.options().vsync ? 1 : SDL_RENDERER_VSYNC_DISABLED)) {
@@ -395,6 +397,7 @@ int Game::run() {
     }
 
     handle_events(loop_state);
+    input_manager_->advance_key_repeat(context.clock.dt_ms);
 
     // Logic runs independent of FPS
     const int time_scale = state.time_scale();

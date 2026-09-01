@@ -108,6 +108,21 @@ static constexpr StickDir stick_dirs[] = {
 static constexpr float stick_press_threshold = 0.5f;
 static constexpr float stick_release_threshold = 0.35f;
 
+static constexpr bool repeats_while_held(Action a) noexcept {
+  switch (a) {
+  case Action::Backspace:
+  case Action::MoveUp:
+  case Action::MoveDown:
+  case Action::MoveLeft:
+  case Action::MoveRight:
+  case Action::PageUp:
+  case Action::PageDown:
+    return true;
+  default:
+    return false;
+  }
+}
+
 InputManager::InputManager() {}
 
 InputManager::~InputManager() {
@@ -154,6 +169,7 @@ void InputManager::end_text_input() {
   SDL_StopTextInput(window_);
   text_active_ = false;
   text_sink_ = nullptr;
+  repeat_ = {};
 }
 
 bool InputManager::text_input_active() const noexcept { return text_active_; }
@@ -204,9 +220,19 @@ void InputManager::process(const SDL_Event& ev) {
       suppress_next_textinput_ = false;
       break;
     }
+    // Text from a key that is already repeating comes from the platform's
+    // own repeat; the repeat timer sets the pace.
+    if (last_key_down_ == repeat_.key && !repeat_.text.empty()) {
+      break;
+    }
     dispatch_text(ev.text.text);
+    arm_text_repeat(last_key_down_, ev.text.text);
     break;
   }
+
+  case SDL_EVENT_WINDOW_FOCUS_LOST:
+    repeat_ = {};
+    break;
 
   case SDL_EVENT_GAMEPAD_ADDED: {
     // Open the first controller that connects; ignore the rest for now
@@ -258,12 +284,15 @@ void InputManager::process(const SDL_Event& ev) {
 void InputManager::key_down(Key k, Mod mods) {
   keys_down_.insert(k);
   mods_down_ = mods;
+  last_key_down_ = k;
   evaluate_bindings_for_key_down(k, mods);
 }
 
 void InputManager::key_up(Key k, Mod mods) {
   keys_down_.erase(k);
   mods_down_ = mods;
+  // Releasing any key ends the repeat, modifiers included.
+  repeat_ = {};
 
   evaluate_bindings_for_key_up(k);
 }
@@ -277,7 +306,18 @@ void InputManager::evaluate_bindings_for_key_down(Key k, Mod mods) {
       actions.push_back(bound_action);
     }
   }
-  press_actions(actions);
+  // A combination that's not bound to any chord falls back to the key alone,
+  // so holding Shift for speed still scrolls with the arrows. No fallback for
+  // the Meta key, so Cmd+K does not come through as a plain K.
+  if (actions.empty() && b.mods != Mod::None && !has(b.mods, Mod::Meta)) {
+    const Binding plain{Mod::None, k};
+    for (const auto& [bind, bound_action] : button_bindings_) {
+      if (bind == plain) {
+        actions.push_back(bound_action);
+      }
+    }
+  }
+  press_actions(actions, k);
 }
 
 void InputManager::evaluate_bindings_for_key_up(Key k) {
@@ -303,7 +343,7 @@ void InputManager::gamepad_button_down(GamepadButton b) {
       actions.push_back(bound_action);
     }
   }
-  press_actions(actions);
+  press_actions(actions, Key::Unknown);
 }
 
 void InputManager::gamepad_button_up(GamepadButton b) {
@@ -337,7 +377,8 @@ void InputManager::update_stick_directions() {
   }
 }
 
-void InputManager::press_actions(const std::vector<Action>& actions) {
+void InputManager::press_actions(const std::vector<Action>& actions,
+                                 Key trigger) {
   // Record held state for every action up front so polled state (is_pressed,
   // vec2 axes) does not depend on which listener consumed the press event.
   std::vector<Action> newly_down;
@@ -360,6 +401,9 @@ void InputManager::press_actions(const std::vector<Action>& actions) {
       suppress_next_textinput_ = true;
     }
     if (delivered) {
+      if (repeats_while_held(a)) {
+        arm_action_repeat(trigger, a);
+      }
       break;
     }
   }
@@ -394,6 +438,49 @@ bool InputManager::dispatch_action(const ActionEvent& ev) {
     }
   }
   return false;
+}
+
+void InputManager::arm_action_repeat(Key k, Action a) {
+  if (k == Key::Unknown) {
+    return;
+  }
+  repeat_ = KeyRepeat{.key = k, .action = a, .ms_left = repeat_delay_ms_};
+}
+
+void InputManager::arm_text_repeat(Key k, std::string text) {
+  if (k == Key::Unknown) {
+    return;
+  }
+  repeat_ =
+      KeyRepeat{.key = k, .text = std::move(text), .ms_left = repeat_delay_ms_};
+}
+
+void InputManager::advance_key_repeat(uint32_t dt_ms) {
+  if (repeat_.key == Key::Unknown) {
+    return;
+  }
+  if (!keys_down_.contains(repeat_.key)) {
+    repeat_ = {};
+    return;
+  }
+
+  // A long frame yields a single repeat.
+  repeat_.ms_left -= static_cast<int>(dt_ms);
+  if (repeat_.ms_left > 0) {
+    return;
+  }
+  repeat_.ms_left = repeat_interval_ms_;
+
+  if (repeat_.action) {
+    ActionEvent ev{
+        .action = *repeat_.action,
+        .state = ActionState{
+            .pressed = true, .released = false, .held = true, .repeat = true}};
+    dispatch_action(ev);
+  }
+  else {
+    dispatch_text(repeat_.text);
+  }
 }
 
 bool InputManager::dispatch_text(const std::string& utf8) {

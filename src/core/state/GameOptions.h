@@ -134,6 +134,10 @@ win_condition_from_config_value(std::string_view value) {
 struct GameOptions {
   static constexpr int AUTOSAVE_COUNT_MIN = 1;
   static constexpr int AUTOSAVE_COUNT_MAX = 9;
+  static constexpr int KEY_REPEAT_DELAY_MIN = 50;
+  static constexpr int KEY_REPEAT_DELAY_MAX = 2000;
+  static constexpr int KEY_REPEAT_INTERVAL_MIN = 10;
+  static constexpr int KEY_REPEAT_INTERVAL_MAX = 1000;
 
   bool map_fx = true;
   bool restaurant_fx = true;
@@ -159,4 +163,8 @@ struct GameOptions {
   // The mafia shakes down a random restaurant instead of always the first.
   bool mafia_shakedowns_target_all_restaurants = false;
   WinCondition win_condition = WinCondition::AnyCity;
+  // How long a held key waits before it starts repeating, and the gap
+  // between repeats.
+  int key_repeat_delay_ms = 500;
+  int key_repeat_interval_ms = 60;
 };

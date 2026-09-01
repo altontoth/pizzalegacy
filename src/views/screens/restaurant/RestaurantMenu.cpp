@@ -418,7 +418,7 @@ bool RestaurantMenu::on_text(const input::TextEvent& ev) {
 }
 
 bool RestaurantMenu::on_action(const input::ActionEvent& ev) {
-  if (!editable_price_row_ || ev.state.pressed) {
+  if (!editable_price_row_ || !ev.state.pressed) {
     return false;
   }
   switch (ev.action) {

@@ -21,11 +21,6 @@
 using DisplayConstants::SCREEN_HEIGHT;
 using DisplayConstants::SCREEN_WIDTH;
 
-namespace {
-constexpr int ADJUST_REPEAT_DELAY_TICKS = 12;
-constexpr int ADJUST_REPEAT_INTERVAL_TICKS = 3;
-} // namespace
-
 Menu::Menu(GameContext& context, GameState& state, ViewPoint origin,
            int line_spacing)
     : View(context, state), menu_bobs(context_.bob->get("bob/menubobs.bob")),
@@ -150,52 +145,21 @@ void Menu::update_interactions() {
   }
 }
 
-void Menu::tick_adjust_repeat() {
-  int h_dir = 0;
-  if (context_.input->is_pressed(input::Action::MoveLeft)) {
-    h_dir -= 1;
+bool Menu::step_focused_item(AdjustAxis axis, int delta, bool repeat) {
+  if (!selected_option_) {
+    return false;
   }
-  if (context_.input->is_pressed(input::Action::MoveRight)) {
-    h_dir += 1;
+  if (repeat && (!hold_adjusting_ || !selected_option_->adjust_repeats())) {
+    return false;
   }
-  int v_dir = 0;
-  if (context_.input->is_pressed(input::Action::MoveUp)) {
-    v_dir -= 1;
+  if (!selected_option_->on_adjust(axis, delta)) {
+    return false;
   }
-  if (context_.input->is_pressed(input::Action::MoveDown)) {
-    v_dir += 1;
-  }
-  if ((h_dir == 0 && v_dir == 0) || keyboard_receiving_item_ != nullptr ||
-      context_.popup->freezes_view() || !selected_option_ ||
-      !selected_option_->adjust_repeats()) {
-    adjust_hold_ticks_ = 0;
-    return;
-  }
-  // The initial press is handled by on_action; this only handles repeats. A
-  // repeat that hits the end of the item's range does not escape to focus
-  // movement; that requires a fresh key press so it has to be conscious action
-  // by the user.
-  ++adjust_hold_ticks_;
-  if (adjust_hold_ticks_ >= ADJUST_REPEAT_DELAY_TICKS &&
-      (adjust_hold_ticks_ - ADJUST_REPEAT_DELAY_TICKS) %
-              ADJUST_REPEAT_INTERVAL_TICKS ==
-          0) {
-    bool changed = false;
-    if (h_dir != 0) {
-      changed |= selected_option_->on_adjust(AdjustAxis::Horizontal, h_dir);
-    }
-    if (v_dir != 0) {
-      changed |= selected_option_->on_adjust(AdjustAxis::Vertical, v_dir);
-    }
-    if (changed) {
-      mark_dirty();
-    }
-  }
+  mark_dirty();
+  return true;
 }
 
 void Menu::tick() {
-  tick_adjust_repeat();
-
   // Decide which item (if any) should receive keyboard this frame.
   MenuItem* wants = nullptr;
 
@@ -271,24 +235,29 @@ bool Menu::on_action(const input::ActionEvent& ev) {
     case input::Action::MoveUp:
     case input::Action::MoveDown: {
       const int delta = ev.action == input::Action::MoveDown ? +1 : -1;
-      if (selected_option_ &&
-          selected_option_->on_adjust(AdjustAxis::Vertical, delta)) {
-        mark_dirty();
+      const bool adjusted =
+          step_focused_item(AdjustAxis::Vertical, delta, ev.state.repeat);
+      if (!ev.state.repeat) {
+        hold_adjusting_ = adjusted;
+      }
+      // A repeat stays with the item once it reaches the end of its range;
+      // moving on to the next item takes a fresh press.
+      if (adjusted || (ev.state.repeat && hold_adjusting_)) {
         return true;
       }
       move_focus(delta);
       return true;
     }
     case input::Action::MoveLeft:
-    case input::Action::MoveRight:
-      if (selected_option_ &&
-          selected_option_->on_adjust(
-              AdjustAxis::Horizontal,
-              ev.action == input::Action::MoveRight ? +1 : -1)) {
-        mark_dirty();
-        return true;
+    case input::Action::MoveRight: {
+      const int delta = ev.action == input::Action::MoveRight ? +1 : -1;
+      const bool adjusted =
+          step_focused_item(AdjustAxis::Horizontal, delta, ev.state.repeat);
+      if (!ev.state.repeat) {
+        hold_adjusting_ = adjusted;
       }
-      return false;
+      return adjusted;
+    }
     case input::Action::NextMenuItem:
       move_focus(+1);
       return true;
