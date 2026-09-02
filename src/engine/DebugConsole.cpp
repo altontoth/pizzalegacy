@@ -5,6 +5,7 @@
  */
 
 #include "engine/DebugConsole.h"
+#include "core/debug/command/CommandDef.h"
 #include "core/debug/command/CommandRegistry.h"
 #include "core/debug/command/CommandResult.h"
 #include "core/state/GameState.h"
@@ -15,6 +16,12 @@ void DebugConsole::init(debug::command::CommandRegistry& registry,
   registry_ = &registry;
   state_ = &state;
   context_ = &context;
+}
+
+void DebugConsole::add_command(debug::command::CommandDef cmd) {
+  if (registry_) {
+    registry_->register_command(std::move(cmd));
+  }
 }
 
 bool DebugConsole::execute_command(const std::string& line) {

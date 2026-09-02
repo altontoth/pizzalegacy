@@ -256,9 +256,6 @@ ViewFactory::Result ViewFactory::create(GameContext& context, GameState& gs) {
             case K::Newspaper:
               view = std::make_unique<Newspaper>(context, gs);
               break;
-            case K::GlobalStats:
-              view = std::make_unique<GlobalStats>(context, gs);
-              break;
             }
           },
 
@@ -460,6 +457,13 @@ ViewFactory::Result ViewFactory::create(GameContext& context, GameState& gs) {
           [&](const WeeksTakingsState& wts) {
             view = std::make_unique<WeeksTakings>(
                 context, gs, wts.id, wts.end_of_week_mode, wts.on_done);
+          },
+          [&](const GlobalStatsState& gss) {
+            std::optional<GlobalStatsScreen> screen;
+            if (gss.screen_index) {
+              screen = static_cast<GlobalStatsScreen>(*gss.screen_index);
+            }
+            view = std::make_unique<GlobalStats>(context, gs, screen);
           },
           [&](const StatsRestaurantsState& srs) {
             view =

@@ -16,6 +16,7 @@
 
 #include "core/character/Player.h"
 #include "core/debug/DebugCommands.h"
+#include "core/debug/command/CommandDef.h"
 #include "core/mission/MissionFile.h"
 #include "core/restaurant/StaffEventData.h"
 #include "core/save/SaveGameManager.h"
@@ -89,26 +90,37 @@ std::string generate_screenshot_filename() {
   return oss.str();
 }
 
-void save_screenshot(SDL_Surface* surface) {
+// A bare name goes in the screenshots directory; a path with a directory in
+// it is used unchanged.
+std::string resolve_screenshot_path(const std::string& name) {
   namespace fs = std::filesystem;
-  std::string dir = platform_paths::screenshots_dir();
-  if (!fs::exists(dir)) {
+  if (name.empty()) {
+    return platform_paths::screenshots_dir() + generate_screenshot_filename();
+  }
+  if (fs::path(name).has_parent_path()) {
+    return name;
+  }
+  return platform_paths::screenshots_dir() + name;
+}
+
+bool save_screenshot(SDL_Surface* surface, const std::string& path) {
+  namespace fs = std::filesystem;
+  const fs::path dir = fs::path(path).parent_path();
+  if (!dir.empty() && !fs::exists(dir)) {
     fs::create_directories(dir);
   }
-  std::string full_filename = dir + generate_screenshot_filename();
-
   SDL_Surface* tmp = format_for_png_fixed(surface);
   if (!tmp) {
     Logger::warn("Failed to format surface for PNG");
-    return;
+    return false;
   }
   SDL_Surface_unique_ptr png_surface(tmp);
-  if (!SDL_SavePNG(png_surface.get(), full_filename.c_str())) {
+  if (!SDL_SavePNG(png_surface.get(), path.c_str())) {
     Logger::warn("Failed to save PNG: {}", SDL_GetError());
+    return false;
   }
-  else {
-    Logger::info("Screenshot saved as {}", full_filename);
-  }
+  Logger::info("Screenshot saved as {}", path);
+  return true;
 }
 
 } // end namespace
@@ -260,6 +272,43 @@ int Game::run() {
   // Main game loop prep
   DebugConsole debug_console;
   register_debug_commands(debug_console, state, context);
+
+  debug_console.add_command(debug::command::CommandDef{
+      .name = "screenshot",
+      .description = "Write the current screen to a PNG",
+      .help_text = R"(Renders whatever the UI stack has on top and saves it.
+
+A bare filename goes to the screenshots directory; give a path with a
+directory in it to put it somewhere else. Without an argument the name is
+the timestamp.
+
+Examples:
+  screenshot
+  screenshot stats.png
+  screenshot /tmp/stats.png
+)",
+      .args =
+          {
+              debug::command::ArgSpec{
+                  .name = "file",
+                  .type = debug::command::ArgType::String,
+                  .optional = true,
+                  .default_provider =
+                      debug::command::DefaultProvider::EmptyString,
+                  .description = "Where to write the PNG",
+              },
+          },
+      .handler = [this, &state](const debug::command::CommandContext& ctx)
+          -> debug::command::CommandResult {
+        const std::string name = ctx.args.empty() ? "" : ctx.string_arg(0);
+        const std::string path = ::resolve_screenshot_path(name);
+        if (!capture_screenshot(state, path)) {
+          return debug::command::CommandResult::error(
+              "Nothing was written to " + path);
+        }
+        return debug::command::CommandResult::success({"Wrote " + path});
+      },
+  });
 
   // And logger that logs to in-game console
   Logger::add_sink(debug_console.make_sink());
@@ -507,8 +556,9 @@ int Game::run() {
     }
 
     if (loop_state.screenshot_requested) {
-      renderer.with_current_frame(
-          [](SDL_Surface* surface) { ::save_screenshot(surface); });
+      renderer.with_current_frame([](SDL_Surface* surface) {
+        ::save_screenshot(surface, ::resolve_screenshot_path(""));
+      });
       loop_state.screenshot_requested = false;
     }
 
@@ -805,6 +855,33 @@ bool Game::init(int display_height, ConfigManager& config_manager) {
   // context.config is set in run() after ConfigManager is created
 
   return true;
+}
+
+bool Game::capture_screenshot(GameState& gs, const std::string& path) {
+  // Screens draw the status panel from the context; a scripted run has not
+  // made one.
+  std::unique_ptr<StatusDisplay> temporary_status;
+  if (!context.status_panel) {
+    temporary_status =
+        std::make_unique<StatusDisplay>(context, gs, gs.status());
+    context.status_panel = temporary_status.get();
+  }
+
+  auto result = ViewFactory::create(context, gs);
+  bool saved = false;
+  if (result.view) {
+    Renderer renderer(sdl_, display_height_);
+    renderer.add_layers(result.view.get());
+    renderer.render();
+    renderer.with_current_frame([&](SDL_Surface* surface) {
+      saved = ::save_screenshot(surface, path);
+    });
+  }
+
+  if (temporary_status) {
+    context.status_panel = nullptr;
+  }
+  return saved;
 }
 
 Renderable* Game::change_state(GameState& gs) {

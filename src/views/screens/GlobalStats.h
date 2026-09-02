@@ -11,6 +11,8 @@
 #include "resources/Bob.h"
 #include "views/base/MainPanelView.h"
 
+#include <optional>
+
 class Restaurant;
 
 enum class GlobalStatsScreen {
@@ -36,7 +38,8 @@ struct MonthlyPopupState {
 
 class GlobalStats : public MainPanelView {
 public:
-  GlobalStats(GameContext& context, GameState& state);
+  GlobalStats(GameContext& context, GameState& state,
+              std::optional<GlobalStatsScreen> screen = std::nullopt);
   void tick() override;
   void render(const RenderContext& ctx) override;
 

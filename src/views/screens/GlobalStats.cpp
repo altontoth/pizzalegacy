@@ -40,8 +40,10 @@ std::string_view balance_label(Account account) {
 }
 } // namespace
 
-GlobalStats::GlobalStats(GameContext& context, GameState& state)
+GlobalStats::GlobalStats(GameContext& context, GameState& state,
+                         std::optional<GlobalStatsScreen> screen)
     : MainPanelView(context, state),
+      current_screen_(screen.value_or(GlobalStatsScreen::Month_Overview)),
       stanbobs_(context_.bob->get("bob/stanbobs.bob")),
       blitmap2_(context_.blitmap->get<Blitmap2Icon>()) {
 

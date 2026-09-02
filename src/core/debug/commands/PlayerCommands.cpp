@@ -92,6 +92,43 @@ Examples:
   };
 }
 
+static CommandDef make_player_active() {
+  return CommandDef{
+      .name = "active",
+      .description = "Make a player the active one",
+      .help_text = R"(Usage: player active <player_id>
+
+Switches whose turn the screens and commands act on.
+
+Examples:
+  player active 3
+)",
+      .args =
+          {
+              ArgSpec{
+                  .name = "player_id",
+                  .type = ArgType::PlayerId,
+                  .optional = false,
+                  .default_provider = DefaultProvider::None,
+                  .description = "Player ID",
+                  .min_value = 0,
+                  .max_value = NUMBER_OF_PLAYERS - 1,
+              },
+          },
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        auto player_id = ctx.player_id(0);
+        auto* player = ctx.state.player(player_id);
+        if (!player) {
+          return CommandResult::error(
+              compat::format("Player {} not found", player_id.value));
+        }
+        ctx.state.active_player(player_id);
+        return CommandResult::success().add_message(compat::format(
+            "Active player is now {} ({})", player_id.value, player->name()));
+      },
+  };
+}
+
 static CommandDef make_player_money_set() {
   return CommandDef{
       .name = "set",
@@ -927,11 +964,12 @@ CommandDef make_player_commands() {
       .name = "player",
       .aliases = {"p"},
       .description = "Player management commands",
-      .help_text = "Manage player state: info, money, inventory, recipes, "
-                   "weapon_profit, competition, campaigns, balance, "
+      .help_text = "Manage player state: info, active, money, inventory, "
+                   "recipes, weapon_profit, competition, campaigns, balance, "
                    "ad_effectiveness, holiday, startofday, jail",
   }
       .add_subcommand(make_player_info())
+      .add_subcommand(make_player_active())
       .add_subcommand(make_player_money())
       .add_subcommand(make_player_inventory())
       .add_subcommand(make_player_recipes())

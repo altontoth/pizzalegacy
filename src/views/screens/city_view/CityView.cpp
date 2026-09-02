@@ -1208,9 +1208,8 @@ void CityView::create_buttons() {
 
   input_panel_->add_button(
       Icon::GRAPH, ButtonType::Square, ButtonPosition::BottomLeft,
-      "Global stats", side_menu_entry([this] {
-        state_.ui().push<ScreenTag>(ScreenTag::Kind::GlobalStats);
-      }));
+      "Global stats",
+      side_menu_entry([this] { state_.ui().push<GlobalStatsState>(); }));
 
   input_panel_->add_button(Icon::COMPUTER, ButtonType::Square,
                            ButtonPosition::BottomCenter, "Terminal",

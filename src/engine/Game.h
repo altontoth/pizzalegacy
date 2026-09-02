@@ -64,6 +64,7 @@ private:
   };
 
   bool init(int display_height, ConfigManager& config_manager);
+  bool capture_screenshot(GameState& gs, const std::string& path);
   Renderable* change_state(GameState& gs);
   bool enforce_aspect_ratio(SDL_Window*, int, int);
   void create_some_players(GameState&);

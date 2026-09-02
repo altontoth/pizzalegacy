@@ -16,6 +16,7 @@ class GameState;
 class GameContext;
 namespace debug::command {
 class CommandRegistry;
+struct CommandDef;
 struct CommandResult;
 } // namespace debug::command
 
@@ -31,6 +32,9 @@ public:
   // Initialize with registry and context references
   void init(debug::command::CommandRegistry& registry, GameState& state,
             GameContext& context);
+
+  // Add one more command to the registry the console was initialized with.
+  void add_command(debug::command::CommandDef cmd);
 
   // Execute a command line (delegates to registry). False if it failed.
   bool execute_command(const std::string& line);
