@@ -71,7 +71,7 @@ void DepotIngredientCategoryView::draw_ingredient_list(
       state_.total_ingredient_need_for_player(state_.active_player()->id(),
                                               state_.active_city_id());
 
-  const ViewPoint topleft{14, 30};
+  const ViewPoint topleft{16, 30};
   const uint8_t text_color = 8;
   const int col_y = topleft.y;
 
@@ -123,21 +123,21 @@ void DepotIngredientCategoryView::draw_ingredient_list(
     const uint8_t row_color = need > supplies ? dark_red : text_color;
 
     context_.font->render_text_onto(*ctx.surface, std::to_string(quality),
-                                    ViewPoint{176, y}, FontFace::CSTANDAR,
+                                    ViewPoint{176, y}, FontFace::SUPERSMA,
                                     row_color, TextAnchor::End);
     context_.font->render_text_onto(*ctx.surface, std::to_string(supplies),
-                                    ViewPoint{224, y}, FontFace::CSTANDAR,
+                                    ViewPoint{224, y}, FontFace::SUPERSMA,
                                     row_color, TextAnchor::End);
     context_.font->render_text_onto(*ctx.surface, std::to_string(need),
-                                    ViewPoint{260, y}, FontFace::CSTANDAR,
+                                    ViewPoint{260, y}, FontFace::SUPERSMA,
                                     row_color, TextAnchor::End);
     if (stock) {
       context_.font->render_text_onto(
           *ctx.surface, compat::format("{:n}", stock->weighted_avg_cost),
-          ViewPoint{326, y}, FontFace::CSTANDAR, text_color, TextAnchor::End);
+          ViewPoint{308, y}, FontFace::SUPERSMA, text_color, TextAnchor::End);
       context_.font->render_text_onto(
           *ctx.surface, compat::format("{:n}", stock->last_price),
-          ViewPoint{360, y}, FontFace::CSTANDAR, text_color, TextAnchor::End);
+          ViewPoint{360, y}, FontFace::SUPERSMA, text_color, TextAnchor::End);
     }
 
     y += line_height;
