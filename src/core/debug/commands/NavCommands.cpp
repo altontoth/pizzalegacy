@@ -87,6 +87,9 @@ Examples:
       .handler = [](const CommandContext& ctx) -> CommandResult {
         auto rid = ctx.restaurant_id(0);
         ctx.state.bootstrap_minimal_playable_world(ctx.context);
+        // The screen itself does this when it is built, which a run without
+        // the loop never gets to.
+        ctx.state.active_restaurant(rid);
         ctx.state.ui().push<RestaurantViewState>(RestaurantViewState{
             .id = rid, .mode = RestaurantViewMode::PLAYER_DEFAULT});
         return CommandResult::success().add_message(compat::format(
@@ -384,6 +387,11 @@ Examples:
           .args = {ingredient_category_arg()},
           .handler = [](const CommandContext& ctx) -> CommandResult {
             ctx.state.bootstrap_minimal_playable_world(ctx.context);
+            if (!ctx.state.active_restaurant()) {
+              return CommandResult::error(
+                  "No active restaurant",
+                  "Open one first, e.g. nav restaurant 0");
+            }
             const std::string name = ctx.args.empty() ? "" : ctx.string_arg(0);
             if (name.empty()) {
               ctx.state.ui().push<StockMainState>(StockMainState{});
