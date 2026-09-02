@@ -428,6 +428,7 @@ ViewFactory::Result ViewFactory::create(GameContext& context, GameState& gs) {
           },
 
           [&](const GameOverState& gos) {
+            ui_mode = UiMode::Menu;
             view = std::make_unique<GameOver>(context, gs, gos);
           },
           [&](const MaestroMessageState& mms) {

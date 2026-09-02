@@ -6,6 +6,7 @@
 
 #include "engine/DebugLabel.h"
 #include "engine/input/TextSession.h"
+#include "resources/FontTypes.h"
 #include "views/ui/popups/BasePopup.h"
 
 class TextInputPopup : public BasePopup,
@@ -18,7 +19,9 @@ public:
   ~TextInputPopup() = default;
 
   void render(Surface& surface, ViewPoint origin) override;
-  Size popup_size() const override { return {popup_width_, popup_height_}; }
+  Size popup_size() const override {
+    return {popup_width_, popup_height_ + extra_prompt_height_};
+  }
   void add_interactions(views::ui::InteractionContext, ViewPoint) override;
   bool on_text(const input::TextEvent& ev) override;
   bool on_action(const input::ActionEvent& ev) override;
@@ -31,8 +34,15 @@ private:
   std::string input_text_;
   int max_characters_{0};
   callback_t callback_;
+  // Extra height in case the prompt wraps across lines
+  int extra_prompt_height_{0};
   static constexpr int popup_width_ = 362;
   static constexpr int popup_height_ = 136;
+  static constexpr FontFace prompt_face_ = FontFace::ASTANDAR;
+  static constexpr int prompt_y_ = 20;
+  static constexpr int prompt_width_ = 322;
+  static constexpr int input_box_top_ = 60;
+  static constexpr int input_box_height_ = 24;
 
   input::TextSession text_;
 };
