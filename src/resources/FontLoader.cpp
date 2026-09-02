@@ -117,7 +117,7 @@ FontLoader::build_glyph_table(const ParsedFont& pf, int scale) {
   const size_t glyph_count = last - first + 1;
 
   const bool fixed = (pf.header.fixed_width_font_flag == 0x02);
-  const int cell = pf.header.character_width;
+  const uint16_t cell = pf.header.character_width;
 
   int valid_glyphs = 0;
   for (size_t idx = 0; idx < glyph_count; ++idx) {

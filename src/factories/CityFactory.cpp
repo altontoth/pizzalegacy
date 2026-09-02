@@ -291,7 +291,8 @@ void CityFactory::load_suppliers(std::ifstream& is, int supplier_count) {
 
     auto s = std::make_unique<FoodSupplier>(
         *category, supplier_id, quality, supplier_name, head_type,
-        minimum_contract_amount, price_levels.data(), price_levels.size());
+        minimum_contract_amount, price_levels.data(),
+        static_cast<int>(price_levels.size()));
     suppliers_.push_back(std::move(s));
   }
 

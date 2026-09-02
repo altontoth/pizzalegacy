@@ -10,6 +10,7 @@
 #include "magic_enum/magic_enum.hpp"
 #include "resources/FontManager.h"
 
+#include "core/finance/Money.h"
 #include "core/state/GameState.h"
 #include "core/util/LegacyConstants.h"
 #include "gfx/Blit.h"
@@ -450,7 +451,7 @@ void ActorView<LineEnum>::advance_conversation(LineEnum choice) {
       BaseConversation<LineEnum>::PopupRequest::CHEQUE) {
     context_.popup->origin(ViewPoint{LegacyConstants::WOOD_BORDER_WIDTH_LEFT,
                                      LegacyConstants::WOOD_BORDER_HEIGHT_TOP});
-    context_.popup->create<ChequePopup>([this](int amount, int account) {
+    context_.popup->create<ChequePopup>([this](Money amount, int account) {
       conversation_->on_cheque_result(amount, account);
       current_phase_ = ConversationPhase::TALKING;
       actor_->state(ActionState::TALKING);

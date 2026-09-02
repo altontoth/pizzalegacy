@@ -20,7 +20,7 @@ void District::control_screen_alternate_color(bool setting) {
 
 uint8_t District::bez_id() {
   int offset = 0x80 + ((control_screen_alternate_color_ ? 1 : 0) * 0x10);
-  return index_.value + offset;
+  return static_cast<uint8_t>(index_.value + offset);
 }
 
 void District::district_type(DistrictType district_type) {
@@ -50,7 +50,7 @@ int District::average_size() const { return average_size_; }
 void District::average_size(int average_size) { average_size_ = average_size; }
 
 int District::average_square_meters() const {
-  float half_size = (average_size_ / 2.0);
+  float half_size = (average_size_ / 2.0f);
   return static_cast<int>(half_size * half_size);
 }
 

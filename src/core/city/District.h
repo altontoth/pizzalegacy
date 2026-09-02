@@ -117,7 +117,7 @@ private:
   // Raw unnormalized demographic demand values (for customer calculations)
   std::array<float, static_cast<std::size_t>(PopulationType::count)>
       demographic_demand_{};
-  uint16_t average_income_factor_{0};
+  int average_income_factor_{0};
   DistrictType district_type_{DistrictType::unknown};
   int traffic_density_{0};
   int crime_statistics_{0};

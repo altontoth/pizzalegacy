@@ -92,7 +92,8 @@ int RestaurantStats::profit_margin_percent() const {
   if (today.revenue.cents == 0) {
     return 0;
   }
-  return (today.gross_profit.cents * 100) / today.revenue.cents;
+  return static_cast<int>((today.gross_profit.cents * 100) /
+                          today.revenue.cents);
 }
 
 int RestaurantStats::days_in_operation() const {

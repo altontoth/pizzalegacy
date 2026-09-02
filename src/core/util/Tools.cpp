@@ -7,14 +7,15 @@
 #include "core/util/Tools.h"
 
 #include <algorithm>
+#include <cctype>
 #include <cstdlib>
-#include <cwctype>
 #include <iterator>
 
 std::string Tools::to_uppercase(const std::string& input) {
   std::string output;
-  std::ranges::transform(input, std::back_inserter(output),
-                         [](char ch) { return std::towupper(ch); });
+  std::ranges::transform(input, std::back_inserter(output), [](char ch) {
+    return static_cast<char>(std::toupper(static_cast<unsigned char>(ch)));
+  });
   return output;
 }
 

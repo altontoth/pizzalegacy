@@ -120,7 +120,7 @@ int FoodSupplier::spending_rank(core::PlayerId player_id) const {
 
 uint8_t FoodSupplier::chance_of_no_delivery() const {
   // The original uses negative for impossible but I prefer keeping it 0-100.
-  return std::clamp(0x19 - (quality_ >> 2), 0, 100);
+  return static_cast<uint8_t>(std::clamp(0x19 - (quality_ >> 2), 0, 100));
 }
 
 int FoodSupplier::category_index(

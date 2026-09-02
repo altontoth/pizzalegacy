@@ -5,6 +5,8 @@
  */
 
 #include "views/viewers/SoundViewer.h"
+
+#include <cstdint>
 #include <magic_enum/magic_enum.hpp>
 #include "engine/Logger.h"
 #include "engine/audio/AudioManager.h"
@@ -150,8 +152,8 @@ void SoundViewer::tick() {}
 
 void SoundViewer::render(const RenderContext& ctx) {
   ctx.surface->fill(254);
-  constexpr int text_color = 1;
-  constexpr int highlight_color = 4;
+  constexpr uint8_t text_color = 1;
+  constexpr uint8_t highlight_color = 4;
 
   auto* f = context_.font;
 
@@ -259,7 +261,7 @@ void SoundViewer::render(const RenderContext& ctx) {
     auto line = compat::format("{}{} {} - {}{}", prefix, asset_m_notation,
                                asset_type, asset_enum_name, play_marker);
 
-    int color = is_current ? highlight_color : text_color;
+    uint8_t color = is_current ? highlight_color : text_color;
     f->render_text_onto(*ctx.surface, line, ViewPoint{4, y}, FontFace::PIZ_NUMB,
                         color);
     y += 15;

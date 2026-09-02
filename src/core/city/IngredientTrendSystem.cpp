@@ -86,7 +86,7 @@ void IngredientTrendSystem::tick_countdown(int i) {
 
 void IngredientTrendSystem::weekly_seed() {
   for (int i = 0; i < max_ingredient_count; ++i) {
-    if (!core::food::is_valid_ingredient_id(i)) {
+    if (!core::food::is_valid_ingredient_id(static_cast<uint8_t>(i))) {
       continue;
     }
     if (!engine::random::rand_percentage_chance(3)) {

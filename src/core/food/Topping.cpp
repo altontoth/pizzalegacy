@@ -72,14 +72,14 @@ Topping::Topping(const Topping& other) {
 }
 
 void Topping::rotate() {
-  uint8_t chop = state_ >> chop_shift;
+  uint8_t chop = static_cast<uint8_t>(state_ >> chop_shift);
   uint8_t rot = state_ & rotation_mask;
   rot = static_cast<uint8_t>((rot + 1) & rotation_mask); // wrap 0..3
   state_ = static_cast<uint8_t>((chop << chop_shift) | rot);
 }
 
 bool Topping::chop() {
-  uint8_t chop = state_ >> chop_shift;
+  uint8_t chop = static_cast<uint8_t>(state_ >> chop_shift);
   if (chop >= max_chop) {
     return false; // already minced
   }

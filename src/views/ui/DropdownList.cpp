@@ -93,7 +93,7 @@ std::optional<int> DropdownList::entry_index_at(ViewPoint p) const {
 
   const int idx = rel_y / entry_height_;
   if (idx >= 0 && idx < static_cast<int>(entries_.size())) {
-    return static_cast<std::size_t>(idx);
+    return idx;
   }
 
   return std::nullopt;
