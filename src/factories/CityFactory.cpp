@@ -149,8 +149,7 @@ void CityFactory::load_city_data(int city_id) {
   auto number_of_authorities = (uint8_t)is.get();
   auto number_of_others = (uint8_t)is.get();
 
-  uint8_t unknown1 = is.get();
-  // Logger::debug("Unknown byte: {}", unknown1);
+  [[maybe_unused]] uint8_t unknown1 = (uint8_t)is.get();
   is.read((char*)heads_.data(), 50);
 
   is.ignore(10);
@@ -160,8 +159,8 @@ void CityFactory::load_city_data(int city_id) {
   // We're skipping ahead 40 0 bytes here:
   is.ignore(40);
 
-  parse_contacts(is, number_of_realtors_, number_of_banks, number_of_insurance,
-                 number_of_authorities, number_of_others);
+  parse_contacts(is, static_cast<uint8_t>(number_of_realtors_), number_of_banks,
+                 number_of_insurance, number_of_authorities, number_of_others);
 
   read_realtor_data(is, number_of_realtors_);
   read_bank_data(is, number_of_banks);
@@ -178,12 +177,10 @@ void CityFactory::load_city_data(int city_id) {
   is.ignore(57);
   is.ignore(19);
   is.ignore(61);
-  uint8_t unknown_again = is.get();
+  [[maybe_unused]] uint8_t unknown_again = (uint8_t)is.get();
   is.ignore(1);
   is.ignore(168);
   is.ignore(352); // All zero again
-
-  auto pos = is.tellg();
 
   load_districts(is, district_count);
 
@@ -214,8 +211,8 @@ void CityFactory::load_ingredient_prices(std::ifstream& is) {
   is.seekg(2026);
 
   for (int i = 0; i < max_ingredient_count; ++i) {
-    uint8_t low = is.get();
-    uint8_t high = is.get();
+    uint8_t low = static_cast<uint8_t>(is.get());
+    uint8_t high = static_cast<uint8_t>(is.get());
     uint16_t price = endian::u16le(low, high);
     ingredient_base_prices_[i] = Money{static_cast<int64_t>(price)};
     // Logger::debug("base price for ingredient index {} is {}", i, price);
@@ -243,13 +240,13 @@ void CityFactory::load_suppliers(std::ifstream& is, int supplier_count) {
     // Logger::debug("Quality is {}", (int)quality);
 
     uint8_t supplier_id = (uint8_t)is.get();
-    [[maybe_unused]] uint8_t u1 = (uint8_t)is.get(); // Unknown
+    [[maybe_unused]] uint8_t u1 = (uint8_t)is.get();
 
     // Now, the name of the supplier, I'm guessing 26 bytes this time:
     auto supplier_name = text::read_iso8859_1_string(is, 26);
 
-    char c1 = is.get();
-    char c2 = is.get();
+    char c1 = static_cast<char>(is.get());
+    char c2 = static_cast<char>(is.get());
 
     int minimum_contract_amount = endian::u16le(c1, c2);
 
@@ -394,7 +391,7 @@ void CityFactory::parse_contacts(std::ifstream& is, uint8_t number_of_realtors,
         actor_contacts_[i][j] = std::move(name);
         actor_count_[i]++;
         actor_heads_[i][j] =
-            static_cast<int>(heads_[(i * MAX_ACTOR_PER_TYPE) + j] + 1);
+            static_cast<uint8_t>(heads_[(i * MAX_ACTOR_PER_TYPE) + j] + 1);
       }
     }
   }
@@ -548,7 +545,7 @@ void CityFactory::build_city_object(City& city, int id) {
         realtor_index++;
       }
 
-      actor_map[actor_id] = std::move(actor);
+      actor_map[static_cast<uint8_t>(actor_id)] = std::move(actor);
       actor_id++;
     }
   }
@@ -582,7 +579,7 @@ void CityFactory::build_city_object(City& city, int id) {
 void CityFactory::seed_ingredient_trends(City& city) {
   auto& trends = city.ingredient_trend_system();
   for (int i = 0; i < max_ingredient_count; ++i) {
-    if (!core::food::is_valid_ingredient_id(i)) {
+    if (!core::food::is_valid_ingredient_id(static_cast<uint8_t>(i))) {
       continue;
     }
     auto type = static_cast<core::food::IngredientType>(i);
@@ -612,8 +609,8 @@ void CityFactory::populate_types() {
   type_names_[static_cast<int>(MapTileType::TILE_TYPE_OTHER)] = "";
 
   for (int i = 0; i < NUMBER_OF_TYPES; ++i) {
-    uint8_t col = i >> 4;
-    uint8_t row = i & 0x0F;
+    uint8_t col = static_cast<uint8_t>(i >> 4);
+    uint8_t row = static_cast<uint8_t>(i & 0x0F);
 
     MapTileType type;
     switch (col) {
@@ -656,7 +653,7 @@ void CityFactory::populate_types() {
       type = MapTileType::TILE_TYPE_OTHER;
       break;
     }
-    types_[i] = static_cast<int>(type);
+    types_[i] = static_cast<uint8_t>(type);
   }
 }
 
@@ -678,7 +675,8 @@ void CityFactory::populate_properties(City& city) {
       if (type == 0x04) {
         prop_type = PropertyType::DEPOT;
       }
-      auto district_index = City::district_index_by_index(index);
+      auto district_index =
+          City::district_index_by_index(static_cast<int>(index));
       const auto& district = districts_[0x0F & district_bez_[district_index]];
       int average_size = district->average_size();
       int average_size_modifier = district->average_size_modifier();
@@ -718,7 +716,7 @@ void CityFactory::populate_properties(City& city) {
       bp->kitchen_size(Size{kitchen_w, kitchen_h});
       bp->entrance_offset(entrance_offset);
       bp->kitchen_entry_offset(kitchen_entry_offset);
-      properties_[index] = std::move(bp);
+      properties_[static_cast<int>(index)] = std::move(bp);
     }
   }
 }

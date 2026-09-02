@@ -137,10 +137,10 @@ void AudioManager::load_m_container(const std::string& m_file_path) {
       // the right position without shifting the entire sample buffer.
       if (next_sound_slot_ == static_cast<size_t>(SoundId::CHOPPER)) {
         constexpr size_t skip_samples = 500;
-        auto& sound = *sounds_.back();
-        if (sound.samples.size() > skip_samples) {
-          sound.start_offset = skip_samples;
-          sound.playback_position = skip_samples;
+        auto& chopper = *sounds_.back();
+        if (chopper.samples.size() > skip_samples) {
+          chopper.start_offset = skip_samples;
+          chopper.playback_position = skip_samples;
         }
       }
       next_sound_slot_++;

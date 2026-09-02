@@ -47,7 +47,6 @@ void Renderer::render() {
   for (auto& layer : layers_) {
     Renderable* view = layer.view;
     ViewRect r = layer.area;
-    auto& label = layer.label;
     auto width = r.w;
     auto height = r.h;
 

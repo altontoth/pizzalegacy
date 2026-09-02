@@ -25,7 +25,7 @@ void DebugLayer::render(const RenderContext& ctx) {
   const auto& hot = context_.interaction->hot_item_name();
   for (int i = 0; i < static_cast<int>(items.size()); ++i) {
     const auto& item = items[static_cast<std::size_t>(i)];
-    int color = 71;
+    uint8_t color = 71;
     if (item.name == hot) {
       color = 55;
     }

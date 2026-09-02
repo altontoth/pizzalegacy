@@ -118,9 +118,6 @@ bool City::is_property_by_type(uint8_t type) {
   if (is_business_premise_by_type(type) || type == 0x04) {
     return true;
   }
-  char landsym_row = (type & 0x0F);
-  char landsym_col = (type >> 4);
-
   return false;
 }
 
@@ -186,7 +183,7 @@ uint8_t City::type(int index) const {
     auto* const property = property_by_index(index);
     auto owner_id = property->owner_or_tenant();
     if (owner_id) {
-      return ((owner_id->value & 0xF) << 4) | 0xA;
+      return static_cast<uint8_t>(((owner_id->value & 0xF) << 4) | 0xA);
     }
   }
   return data_[index];
@@ -383,8 +380,8 @@ void City::end_of_month() {
   }
 }
 
-Actor* City::actor_by_id(uint8_t actor_id) const {
-  return actors_.at(actor_id).get();
+Actor* City::actor_by_id(ActorId actor_id) const {
+  return actors_.at(static_cast<uint8_t>(actor_id)).get();
 }
 void City::districts(std::vector<std::unique_ptr<District>> d) {
   districts_ = std::move(d);
@@ -495,7 +492,7 @@ core::DistrictIndex City::district_by_index(int index) const {
 uint8_t City::district_index_by_index(int index) {
   int tile_x = index % MAP_TILES_PER_ROW;
   int tile_y = index / MAP_TILES_PER_ROW;
-  return district_index_by_xy_index(tile_x, tile_y);
+  return static_cast<uint8_t>(district_index_by_xy_index(tile_x, tile_y));
 }
 
 std::vector<Property*> City::business_premises() const {
@@ -666,8 +663,7 @@ void City::initialize_known_arms_dealers(core::PlayerId player_id) {
   // (This includes both mafia and arms dealers in actor ID order)
   int num_to_add = std::min(3, static_cast<int>(others_actor_ids.size()));
   for (int i = 0; i < num_to_add && i < 10; ++i) {
-    ActorType type =
-        actor_by_id(static_cast<uint8_t>(others_actor_ids[i]))->type();
+    ActorType type = actor_by_id(others_actor_ids[i])->type();
     // Only track arms dealers (mafia is always visible)
     if (type == ActorType::ARMS_DEALER || type == ActorType::MAFIA) {
       known.known_actor_ids.push_back(others_actor_ids[i]);

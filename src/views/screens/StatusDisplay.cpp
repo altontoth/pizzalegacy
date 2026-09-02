@@ -79,7 +79,6 @@ void StatusDisplay::render(const RenderContext& ctx) {
   render_header_info(ctx);
 
   // Render the dynamic recipe content
-  constexpr int content_start_y = 16;
   render_recipe(recipe_, ctx);
 }
 
@@ -105,10 +104,9 @@ void StatusDisplay::render_recipe(const StatusDisplayRecipe& recipe,
     return {.x = col.x, .anchor = TextAnchor::Start};
   };
   int y = 16;
-  const int color_yellow = 16;
-  const int color_white = 14;
+  const uint8_t color_white = 14;
   for (const auto& item : recipe.items()) {
-    int c = (item.color != 0) ? item.color : color_white;
+    uint8_t c = (item.color != 0) ? item.color : color_white;
     switch (item.kind) {
     case StatusItemKind::Header:
       context_.font->render_text_onto(*ctx.surface, item.col1.text,
@@ -147,7 +145,7 @@ void StatusDisplay::render_header_info(const RenderContext& ctx) {
   constexpr int date_x_offset = 15;
   constexpr int time_x_offset = 110;
   constexpr int date_time_y_offset = 2;
-  constexpr int text_color = 16; // yellow
+  constexpr uint8_t text_color = 16; // yellow
 
   // Frozen header reads the snapshot and the frozen player's live balance;
   // otherwise it tracks GameState and the active player.
@@ -202,11 +200,11 @@ void StatusDisplay::render_attack_bars(const RenderContext& ctx) {
   constexpr int bar_bottom = 160;
   constexpr int attacker_x = 30;
   constexpr int defender_x = 90;
-  constexpr int empty_color = 240;
-  constexpr int attacker_color = 0x15;
-  constexpr int defender_color = 0x1B;
+  constexpr uint8_t empty_color = 240;
+  constexpr uint8_t attacker_color = 21;
+  constexpr uint8_t defender_color = 27;
 
-  const auto draw_bar = [&](int x, int energy, int color) {
+  const auto draw_bar = [&](int x, int energy, uint8_t color) {
     const int fill_h = std::clamp(energy * bar_max_h / 100, 0, bar_max_h);
     ctx.surface->fill_rect(
         ViewRect{x, bar_bottom - bar_max_h, bar_w, bar_max_h}, empty_color);
@@ -225,7 +223,7 @@ void StatusDisplay::render_attack_bars(const RenderContext& ctx) {
 
   if (attack_contamination_) {
     constexpr int contamination_text_y = 162;
-    constexpr int contamination_color = 14; // white
+    constexpr uint8_t contamination_color = 14; // white
     const TextStyle ts{
         .color = contamination_color,
         .align = TextAnchor::Middle,
@@ -238,7 +236,7 @@ void StatusDisplay::render_attack_bars(const RenderContext& ctx) {
   }
 
   if (police_coming_) {
-    constexpr int police_text_color = 18;
+    constexpr uint8_t police_text_color = 18;
     constexpr int police_text_y = 4;
     const TextStyle ts{
         .color = police_text_color,

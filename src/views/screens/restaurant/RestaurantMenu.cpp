@@ -152,7 +152,6 @@ void RestaurantMenu::render_menu_view(const RenderContext& ctx) {
   const ViewPoint text_pos{84, 60};
   const ViewRect list_box{54, 58, 260, 214};
   const ViewPoint price_cents_pos{312, 60};
-  const ViewPoint price_whole_pos{296, 60};
   const uint8_t text_color = 6;
 
   const auto& menu = restaurant_->menu();
@@ -166,7 +165,6 @@ void RestaurantMenu::render_menu_view(const RenderContext& ctx) {
   const int line_h = 14;
 
   // Pagination
-  const int available_h = list_box.h;
   constexpr int page_size = 14;
   const int page_count =
       (static_cast<int>(rows.size()) + page_size - 1) / page_size;

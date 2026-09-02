@@ -33,7 +33,7 @@ void PizzaDesign::draw_ingredients(const RenderContext& ctx) const {
     return;
   }
 
-  constexpr int text_color = 5;
+  constexpr uint8_t text_color = 5;
   context_.font->render_text_onto(*ctx.surface, "recipe " + pizza->name(),
                                   ViewPoint{40, 40}, FontFace::ASTANDAR,
                                   text_color);
@@ -83,7 +83,7 @@ void PizzaDesign::draw_pizza_info(const RenderContext& ctx) const {
     return;
   }
 
-  int text_color = 5;
+  uint8_t text_color = 5;
 
   context_.font->render_text_onto(*ctx.surface, "Info: " + pizza->name(),
                                   ViewPoint{40, 40}, FontFace::ASTANDAR,

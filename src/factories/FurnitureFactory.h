@@ -19,8 +19,7 @@ public:
   static const Furniture* create_furniture(FurnitureType type);
   static std::vector<const Furniture*> all_furniture();
   static std::vector<const Furniture*> all_furniture_by_supplier(SupplierID);
-  static std::optional<FurnitureType>
-  get_furniture_type(const Furniture* furniture);
+  static std::optional<FurnitureType> get_furniture_type(const Furniture* item);
 
 private:
   static std::unordered_map<FurnitureType, std::unique_ptr<const Furniture>>

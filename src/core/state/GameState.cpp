@@ -1382,9 +1382,7 @@ void GameState::load_initial_pizzas(GameContext& context,
     }
 
     // Add to player's recipes
-    auto rid = recipes.create_from_canonical(cid, std::move(*pizza));
-    // Logger::info("Loaded initial pizza {} for player {} into recipe slot {}",
-    // i, player_id.value, rid.value);
+    recipes.create_from_canonical(cid, std::move(*pizza));
   }
 }
 

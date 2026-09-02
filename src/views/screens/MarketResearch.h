@@ -48,7 +48,8 @@ private:
   void render_pizza_charts(const RenderContext& ctx);
   void render_competitors(const RenderContext& ctx);
   void render_market_share(const RenderContext& ctx);
-  void render_paper(const RenderContext& ctx, ViewRect box, int bg_color = 21);
+  void render_paper(const RenderContext& ctx, ViewRect box,
+                    uint8_t bg_color = 21);
   void render_bar_diagram_background(const RenderContext& ctx);
   void render_bar_chart(const RenderContext& ctx, BarChartMode mode,
                         const std::array<float, NUMBER_OF_PLAYERS>& values);

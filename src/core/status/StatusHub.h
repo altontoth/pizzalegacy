@@ -28,7 +28,7 @@ struct StatusMsg {
   StatusSeverity severity = StatusSeverity::Info;
   StatusScope scope = StatusScope::Global;
 
-  int color = 0;
+  uint8_t color = 0;
   std::optional<std::chrono::milliseconds> ttl{6000};
   // For queued messages: wait this many 10-minute blocks before showing.
   // Converted to an absolute not_before_block at enqueue time.

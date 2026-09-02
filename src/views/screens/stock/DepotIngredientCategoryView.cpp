@@ -119,8 +119,8 @@ void DepotIngredientCategoryView::draw_ingredient_list(
                                     ViewPoint{name_x, y}, FontFace::CSTANDAR,
                                     text_color);
 
-    constexpr int dark_red = 20;
-    const int row_color = need > supplies ? dark_red : int{text_color};
+    constexpr uint8_t dark_red = 20;
+    const uint8_t row_color = need > supplies ? dark_red : text_color;
 
     context_.font->render_text_onto(*ctx.surface, std::to_string(quality),
                                     ViewPoint{176, y}, FontFace::CSTANDAR,
@@ -216,7 +216,7 @@ void DepotIngredientCategoryView::draw_priorities(const RenderContext& ctx) {
   gfx::blit::blit_raw_with_palette(*ctx.surface,
                                    context_.vga->get("gfx/back9"));
 
-  constexpr int text_color = 8;
+  constexpr uint8_t text_color = 8;
   context_.font->render_line_onto(*ctx.surface, "delivery priorities",
                                   ViewPoint{116, 18}, FontFace::PIZ_NUMB,
                                   text_color);

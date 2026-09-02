@@ -63,7 +63,6 @@ DepotIngredientSupplierList::DepotIngredientSupplierList(
                                                     mode_);
       },
       [this](Surface& surface, const FoodSupplier* supplier, ViewPoint pos) {
-        auto* city = state_.active_city();
         auto player_id = state_.active_player()->id();
         Money spent = supplier->relationship(player_id).total_spent;
         if (spent > 0_usd) {

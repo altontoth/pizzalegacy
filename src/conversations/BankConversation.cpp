@@ -166,12 +166,7 @@ bool BankConversation::advance_proposal(bool agree) {
   return true;
 }
 
-Emotion BankConversation::emotion() const {
-  switch (current_line_) {
-  default:
-    return Emotion::NEUTRAL;
-  }
-}
+Emotion BankConversation::emotion() const { return Emotion::NEUTRAL; }
 
 std::vector<ConversationLine<BankLine>> BankConversation::lines() const {
   switch (current_line_) {
@@ -408,9 +403,10 @@ Loan BankConversation::propose_loan() const {
   loan_dollars >>= state_.difficulty_level();
   loan_dollars = math::round_up_to_next_power10<3>(loan_dollars);
 
-  int interest_rate = state_.active_city()->interest_rate() +
-                      bank_settings_.interest_rate_modifier;
-  const int months = 12;
+  uint8_t interest_rate =
+      static_cast<uint8_t>(state_.active_city()->interest_rate() +
+                           bank_settings_.interest_rate_modifier);
+  constexpr uint8_t months = 12;
 
   return Loan(core::BankId{actor_->id()}, Money{loan_dollars * 100},
               interest_rate, months);
@@ -419,8 +415,8 @@ Loan BankConversation::propose_loan() const {
 Investment BankConversation::propose_investment() const {
   auto* player = state_.active_player();
   auto cash = player->cash_balance();
-  Money amount =
-      math::round_up_to_next_power10<3>(cash * investment_offer_share);
+  Money amount = math::round_up_to_next_power10<3>(
+      static_cast<int64_t>(cash.cents * investment_offer_share));
   if (cash > investment_flat_offer_threshold) {
     amount = investment_flat_offer;
   }

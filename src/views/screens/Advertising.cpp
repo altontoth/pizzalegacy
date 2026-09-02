@@ -110,13 +110,6 @@ inline constexpr std::array<NewspaperAdStyle, NewspaperAdGame::NUM_AD_SIZES>
          .line_height = NEWSPAPER_PREVIEW_LINE_H_LARGE},
     }};
 
-constexpr std::array advertising_channels = {
-    AdvertisingChannel::FLYERS,
-    AdvertisingChannel::POSTERS,
-    AdvertisingChannel::NEWSPAPER_ADS,
-    AdvertisingChannel::TV_ADS,
-};
-
 Advertising::Advertising(GameContext& context, GameState& state)
     : MainPanelView(context, state), tv_ads_(context.font, context.vga) {
 

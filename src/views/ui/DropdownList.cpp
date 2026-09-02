@@ -23,10 +23,8 @@ void DropdownList::render(Surface& target_surface, FontManager* font) {
     return;
   }
 
-  const int width = header_rect_.w;
   const int start_x = origin_.x;
   const int start_y = origin_.y;
-  const int header_h = header_rect_.h;
 
   uint8_t background_color = 13;
   ViewRect bg_rect = {origin_.x, origin_.y + bar_height_, bar_width_,

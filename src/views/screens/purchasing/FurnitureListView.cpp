@@ -113,8 +113,8 @@ void FurnitureListView::draw_page_screen(const RenderContext& ctx) {
 
 void FurnitureListView::draw_furniture_list(const RenderContext& ctx) {
   interactions_.begin_frame();
-  int this_page_start = page_starts_[current_page_];
-  int next_page_start = page_starts_[current_page_ + 1];
+  int this_page_start = static_cast<int>(page_starts_[current_page_]);
+  int next_page_start = static_cast<int>(page_starts_[current_page_ + 1]);
 
   int y_pos = 58; // top of where we start drawing
 

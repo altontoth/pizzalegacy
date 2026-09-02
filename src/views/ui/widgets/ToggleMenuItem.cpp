@@ -36,7 +36,6 @@ void ToggleMenuItem::draw(Surface& screen, ViewPoint p, bool is_selected) {
   width_ = metrics.width;
   height_ = metrics.height;
 
-  constexpr int value_x_pos = 400;
   metrics = context_.font->render_text_onto(
       screen, value_text, ViewPoint{toggle_behind_label_offset, p.y},
       font_face_, is_selected ? COLOR_HOVER : COLOR_NORMAL, TextAnchor::Start);

@@ -23,7 +23,7 @@ public:
 
   void draw(Surface& screen, ViewPoint p, bool is_selected) override {
     constexpr int value_x_pos = 400;
-    int color = is_selected ? 29 : 240;
+    uint8_t color = is_selected ? 29 : 240;
 
     RenderedTextMetrics metrics = context_.font->render_text_onto(
         screen, text_, p, font_face_, color, TextAnchor::Start);

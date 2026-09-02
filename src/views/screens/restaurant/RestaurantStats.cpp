@@ -19,7 +19,7 @@
 #include "views/base/ViewDefs.h"
 #include "views/ui/PageDecoration.h"
 
-constexpr int text_color = 11;
+#include <algorithm>
 
 RestaurantStats::RestaurantStats(GameContext& context, GameState& state,
                                  core::RestaurantId restaurant_id,
@@ -413,7 +413,8 @@ void RestaurantStats::render_week_review(const RenderContext& ctx) {
     for (int x : col_x_lines) {
       int y = line_start_y;
       // Two lines don't go all the way to the top
-      if (x == 64 || x == 160) {
+      if (std::ranges::find(col_x_without_bump, x) !=
+          col_x_without_bump.end()) {
         y += 20;
       }
 
@@ -519,7 +520,7 @@ void RestaurantStats::render_week_review(const RenderContext& ctx) {
 
 void RestaurantStats::render_month_review(const RenderContext& ctx) {
   render_background(ctx, true);
-  const int text_color = 240;
+  constexpr uint8_t text_color = 240;
 
   // Header
   context_.font->render_line_onto(*ctx.surface, "monthly overview",

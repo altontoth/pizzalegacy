@@ -42,6 +42,7 @@ constexpr std::string_view to_string(GameMode mode) {
   case GameMode::QUICKSTART:
     return "Quick start";
   }
+  return "unknown";
 }
 
 enum class MapMode {

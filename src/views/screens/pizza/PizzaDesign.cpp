@@ -452,8 +452,8 @@ void PizzaDesign::create_input_panel() {
         Icon::ARROW_UP, ButtonType::Square, ButtonPosition::MiddleLeft,
         "Turn page", [this, cycle_selection] {
           if (mode_ == PizzaDesignMode::Recipes) {
-            int total =
-                competing_player()->recipes().size() + 1; // +1 for <NEW>
+            int total = static_cast<int>(competing_player()->recipes().size() +
+                                         1); // +1 for <NEW>
             int max_page = (total - 1) / recipes_per_page_;
             if (page_ < max_page) {
               page_++;
@@ -661,7 +661,6 @@ const Pizza* PizzaDesign::current_pizza() const {
 
 void PizzaDesign::change_active_key(RecipeKey active_key) {
   active_key_ = active_key;
-  const auto& self = *this; // non-const function, but self is const-ref
   const auto& recipes = competing_player()->recipes();
   if (std::holds_alternative<core::RecipeId>(*active_key_)) {
     auto id = std::get<core::RecipeId>(*active_key_);

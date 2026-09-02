@@ -41,6 +41,7 @@ constexpr std::string_view to_string(core::character::JobRole job) noexcept {
   case core::character::JobRole::NONE:
     return "NONE";
   }
+  return "unknown";
 }
 
 struct CharacterData : public RawRenderable {

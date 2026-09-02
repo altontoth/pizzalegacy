@@ -129,7 +129,7 @@ void CategoryOverviewScreen::draw_info_section(
     const RenderContext& ctx, const std::vector<InfoLine>& lines) {
   ViewPoint base{30, 86};
   constexpr int line_height = 20;
-  constexpr int text_black = 8;
+  constexpr uint8_t text_black = 8;
 
   for (const auto& line : lines) {
     ViewPoint pos = base;
@@ -276,7 +276,7 @@ void CategoryOverviewScreen::draw_oven_page(const RenderContext& ctx) {
   int64_t value_dollars = stats.total_value.cents / 100;
 
   auto text_box = Surface(324, 168, PaletteHandle{60});
-  int text_black = 8;
+  uint8_t text_black = 8;
   ViewPoint pos;
 
   /* First the labels */
@@ -430,7 +430,6 @@ void CategoryOverviewScreen::draw_extras_page(const RenderContext& ctx) {
   const auto& layout = restaurant->layout();
   const auto& furniture = layout->placed_furniture();
   for (const auto& item : furniture) {
-    auto category = item->furniture()->category();
     switch (item->furniture()->category()) {
     case FurnitureCategory::DECOR:
       decor_count++;
@@ -697,7 +696,8 @@ void CategoryOverviewScreen::draw_scrollable_text_box(
   int text_y = 0;
   auto text_surface =
       Surface(inner_box_width - (2 * padding),
-              (lines.size() * line_height_) + text_y, PaletteHandle{60});
+              static_cast<int>(lines.size() * line_height_) + text_y,
+              PaletteHandle{60});
 
   for (const auto& line : lines) {
     context_.font->render_text_onto(text_surface, line,

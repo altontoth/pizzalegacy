@@ -13,6 +13,7 @@
 #include "core/character/Player.h"
 #include "core/finance/Ledger.h"
 #include "core/state/GameState.h"
+#include "engine/Fatal.h"
 #include "engine/FormatCompat.h"
 #include "engine/Logger.h"
 #include "engine/Random.h"
@@ -515,6 +516,7 @@ InsuranceLine InsuranceConversation::type_specific_excuse() const {
   case InsuranceType::LIFE:
     return InsuranceLine::LIFE_INSURANCE_ONLY_IF_YOU_ARE_DEAD;
   }
+  fatal("Unhandled type in InsuranceConversation::type_specific_excuse");
 }
 
 InsuranceLine InsuranceConversation::type_specific_counter_arg() const {
@@ -529,6 +531,7 @@ InsuranceLine InsuranceConversation::type_specific_counter_arg() const {
   case InsuranceType::LIFE:
     return InsuranceLine::SO_MUCH_THE_WORSE_YOU_SHOULD_BE_GLAD_TO_BE_ALIVE;
   }
+  fatal("Unhandled type in InsuranceConversation::type_specific_counter_arg");
 }
 
 InsuranceLine InsuranceConversation::type_specific_rebuttal() const {
@@ -544,4 +547,5 @@ InsuranceLine InsuranceConversation::type_specific_rebuttal() const {
   case InsuranceType::LIFE:
     return InsuranceLine::LIFE_CLAIM_REBUTTAL;
   }
+  fatal("Unhandled type in InsuranceConversation::type_specific_rebuttal");
 }

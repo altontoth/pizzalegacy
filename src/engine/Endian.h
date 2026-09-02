@@ -37,21 +37,27 @@ constexpr uint16_t to_le16(uint16_t v) noexcept {
   if constexpr (std::endian::native == std::endian::little) {
     return v;
   }
-  return bswap16(v);
+  else {
+    return bswap16(v);
+  }
 }
 
 constexpr uint32_t to_le32(uint32_t v) noexcept {
   if constexpr (std::endian::native == std::endian::little) {
     return v;
   }
-  return bswap32(v);
+  else {
+    return bswap32(v);
+  }
 }
 
 constexpr uint64_t to_le64(uint64_t v) noexcept {
   if constexpr (std::endian::native == std::endian::little) {
     return v;
   }
-  return bswap64(v);
+  else {
+    return bswap64(v);
+  }
 }
 
 constexpr uint16_t from_le16(uint16_t v) noexcept { return to_le16(v); }

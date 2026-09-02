@@ -878,8 +878,8 @@ Surface StaffView::create_data_card(const Staff& staff) {
   // Use effective capacity (base + skill bonus) so card matches list CAP column
   snapshot.pizzas_per_day = staff.pizzas_per_day();
 
-  return create_data_card_impl(character, snapshot, staff.payment().whole(),
-                               "");
+  return create_data_card_impl(character, snapshot,
+                               static_cast<int>(staff.payment().whole()), "");
 }
 
 Surface StaffView::create_data_card(core::character::CharacterData* character,

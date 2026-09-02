@@ -103,8 +103,9 @@ Examples:
             restaurant->first_inspection_pending() ? ", first one" : ""));
 
         auto& layout = restaurant->layout();
-        int furniture_count = layout->placed_furniture().size() +
-                              layout->placed_kitchen_furniture().size();
+        int furniture_count =
+            static_cast<int>(layout->placed_furniture().size() +
+                             layout->placed_kitchen_furniture().size());
         lines.push_back(compat::format("Furniture count: {}", furniture_count));
         lines.push_back(compat::format("Furniture value: ${:n}",
                                        layout->furniture_value()));
@@ -386,8 +387,9 @@ Examples:
         }
 
         auto& layout = restaurant->layout();
-        int furniture_count = layout->placed_furniture().size() +
-                              layout->placed_kitchen_furniture().size();
+        int furniture_count =
+            static_cast<int>(layout->placed_furniture().size() +
+                             layout->placed_kitchen_furniture().size());
         std::vector<std::string> lines;
         lines.push_back(
             compat::format("Furniture in restaurant {}:", restaurant_id.value));
@@ -481,8 +483,8 @@ Examples:
                              restaurant_id.value, player_id.value));
         }
 
-        auto category =
-            core::food::CategoryRegistry::from_ingredient_id(ingredient_id);
+        auto category = core::food::CategoryRegistry::from_ingredient_id(
+            static_cast<int>(ingredient_id));
         if (!category) {
           return CommandResult::error(
               compat::format("{} is not an ingredient id", ingredient_id));
@@ -730,8 +732,8 @@ Examples:
                              restaurant_id.value, player_id.value));
         }
 
-        auto category =
-            core::food::CategoryRegistry::from_ingredient_id(ingredient_id);
+        auto category = core::food::CategoryRegistry::from_ingredient_id(
+            static_cast<int>(ingredient_id));
         if (!category) {
           return CommandResult::error(
               compat::format("{} is not an ingredient id", ingredient_id));

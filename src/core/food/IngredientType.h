@@ -254,6 +254,7 @@ constexpr std::string_view to_string(IngredientType type) {
   case IngredientType::OREGANO:
     return "Oregano";
   }
-};
+  return "unknown";
+}
 
 } // namespace core::food

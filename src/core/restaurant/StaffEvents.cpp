@@ -58,7 +58,7 @@ int calculate_fair_salary(const Staff& staff) {
   base += c.trustworthiness();
 
   int pay = (base * (100 + c.intelligence() / 2)) / 100;
-  return math::round_up_to_next_power10<1>(pay);
+  return static_cast<int>(math::round_up_to_next_power10<1>(pay));
 }
 } // namespace
 

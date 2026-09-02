@@ -1050,7 +1050,6 @@ int Restaurant::calculate_block_throughput() const {
 void Restaurant::end_of_day(GameState& game_state) {
   auto* player = game_state.active_player();
   assert(player);
-  const auto& date = game_state.time().current_date();
 
   // AI players use a simplified pipeline: range, reputation, competition,
   // revenue. They skip full order fulfillment and ingredient consumption.
@@ -1942,8 +1941,6 @@ void Restaurant::calculate_popularity(const Player& player, const City& city,
   service_time_minutes_ = service_data.service_time_minutes;
 
   popularity_ = RestaurantPopularity{};
-  int pizzas_on_menu = static_cast<int>(menu_.entries().size());
-  int empty_slots = core::restaurant::Menu::MAXIMUM_PIZZAS - pizzas_on_menu;
 
   // WaitingTime: (18 - service_time) * district_factor / 50
   if (service_time_minutes_ > 0 && district.service_quality_factor() > 0) {

@@ -133,7 +133,7 @@ void DepotExportScreen::draw_ingredient_list(const RenderContext& ctx) {
           switch (ie.type) {
           case views::ui::InteractionEvent::Type::Enter:
             if (button_held_index_ < 0) {
-              hovered_index_ = i;
+              hovered_index_ = static_cast<int>(i);
               mark_dirty();
             }
             break;
@@ -291,7 +291,7 @@ void DepotExportScreen::handle_button_press(size_t ingredient_index,
   }
 
   if (button_held_index_ < 0) {
-    button_held_index_ = ingredient_index;
+    button_held_index_ = static_cast<int>(ingredient_index);
     increment_direction_ = !is_left_button;
     button_held_frames_ = 0;
   }

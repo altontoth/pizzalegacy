@@ -34,8 +34,6 @@
 
 namespace {
 
-constexpr int award_count = 6;
-
 // Atlas layout (orden.vga)
 constexpr int sprite_width = 41 * 2;
 constexpr int sprite_height = 51 * 2;
@@ -598,14 +596,14 @@ Surface PlayerProfile::create_awards(const Player* player) {
       continue;
     }
     // Source: column = award type, row = level (1=bronze, 2=silver, 3=gold)
-    const int src_x = i * sprite_width;
+    const int src_x = static_cast<int>(i) * sprite_width;
     const int src_y = (static_cast<int>(level) - 1) * sprite_height;
 
     ViewRect src_rect{src_x, src_y, sprite_width, sprite_height};
 
     // Destination position on screen
     const int col = i % grid_columns;
-    const int row = i / grid_columns;
+    const int row = static_cast<int>(i) / grid_columns;
 
     const int dst_x =
         (base_x + col * step_x) * 2 - LegacyConstants::WOOD_BORDER_WIDTH_LEFT;

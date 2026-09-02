@@ -28,7 +28,7 @@
 #include <cstdlib>
 #include <span>
 
-constexpr int text_color = 10;
+constexpr uint8_t text_color = 10;
 
 void MarketResearch::render_bar_chart(
     const RenderContext& ctx, BarChartMode mode,
@@ -81,7 +81,7 @@ void MarketResearch::render_bar_chart(
       FontFace::ASTANDAR, text_color, TextAnchor::Middle);
 
   // Graph area
-  constexpr int grid_color = 14;
+  constexpr uint8_t grid_color = 14;
   constexpr ViewRect graph_box{28, 52, 324, 244};
   gfx::draw::grid(*ctx.surface, graph_box, grid_color, 14);
 
@@ -142,7 +142,7 @@ void MarketResearch::render_bar_chart(
     int icon_x = center_x - (icon_size / 2);
     int icon_y = graph_bottom + 6;
     ctx.surface->fill_rect(ViewRect{icon_x, icon_y, icon_size, icon_size}, 240);
-    uint8_t tile_type = ((i & 0xF) << 4) | icon_row;
+    uint8_t tile_type = static_cast<uint8_t>(((i & 0xF) << 4) | icon_row);
     ViewRect src = landsym_source_rect(tile_type, BASE_MAP_ZOOM_MULTIPLIER);
     ctx.surface->blit(landsym, src, ViewPoint{icon_x, icon_y});
 
@@ -504,9 +504,9 @@ void MarketResearch::render_economy(const RenderContext& ctx) {
   views::ui::render_cork_background(*ctx.surface,
                                     context_.vga->get("gfx/permap"));
 
-  constexpr int grid_color = 27;
-  constexpr int axis_color = 240;
-  constexpr int graph_color = 23;
+  constexpr uint8_t grid_color = 27;
+  constexpr uint8_t axis_color = 240;
+  constexpr uint8_t graph_color = 23;
   constexpr int baseline_y = 118;
 
   const ViewRect graph_box{10, 12, 360, 214};
@@ -581,7 +581,6 @@ void MarketResearch::render_customer_taste(const RenderContext& ctx) {
                         views::base::MAIN_PANEL_HEIGHT},
                21);
 
-  const int text_color = 10;
   context_.font->render_line_onto(
       *ctx.surface, "taste", ViewPoint{views::base::MAIN_PANEL_WIDTH / 2, 4},
       FontFace::RUBY, text_color, TextAnchor::Middle);
@@ -643,15 +642,15 @@ void MarketResearch::render_customer_taste(const RenderContext& ctx) {
 void MarketResearch::render_trends(const RenderContext& ctx) {
   render_paper(ctx, ViewRect{0, 0, views::base::MAIN_PANEL_WIDTH,
                              views::base::MAIN_PANEL_HEIGHT});
-  const int text_color = 240;
+  constexpr uint8_t paper_text_color = 240;
   const ViewPoint trend_infos_pos{views::base::MAIN_PANEL_WIDTH / 2, 22};
   context_.font->render_line_onto(*ctx.surface, "--- Trend Infos ---",
                                   trend_infos_pos, FontFace::PIZ_NUMB,
-                                  text_color, TextAnchor::Middle);
+                                  paper_text_color, TextAnchor::Middle);
 
   const ViewPoint latest_thing_pos{views::base::MAIN_PANEL_WIDTH / 2, 54};
   TextStyle ts{
-      .color = text_color,
+      .color = paper_text_color,
       .align = TextAnchor::Middle,
       .shadow = std::nullopt,
       .character_spacing = 4,
@@ -720,10 +719,10 @@ void MarketResearch::render_trends(const RenderContext& ctx) {
         core::food::to_string(static_cast<core::food::IngredientType>(slot)));
     context_.font->render_line_onto(
         *ctx.surface, name, ViewPoint{up_row1_label.x, y}, FontFace::PIZ_NUMB,
-        text_color, TextAnchor::Start);
+        paper_text_color, TextAnchor::Start);
     context_.font->render_line_onto(
         *ctx.surface, std::to_string(val), ViewPoint{up_row1_value.x, y},
-        FontFace::PIZ_NUMB, text_color, TextAnchor::End);
+        FontFace::PIZ_NUMB, paper_text_color, TextAnchor::End);
   }
 
   for (int row = 0; row < negative_rows; ++row) {
@@ -733,10 +732,10 @@ void MarketResearch::render_trends(const RenderContext& ctx) {
         core::food::to_string(static_cast<core::food::IngredientType>(slot)));
     context_.font->render_line_onto(
         *ctx.surface, name, ViewPoint{down_row1_label.x, y}, FontFace::PIZ_NUMB,
-        text_color, TextAnchor::Start);
+        paper_text_color, TextAnchor::Start);
     context_.font->render_line_onto(
         *ctx.surface, std::to_string(val), ViewPoint{down_row1_value.x, y},
-        FontFace::PIZ_NUMB, text_color, TextAnchor::End);
+        FontFace::PIZ_NUMB, paper_text_color, TextAnchor::End);
   }
 }
 
@@ -746,8 +745,8 @@ void MarketResearch::render_pizza_charts(const RenderContext& ctx) {
 
   const ViewPoint first_row{38, 76};
   const int line_height = 22;
-  constexpr int text_color = 240;
-  constexpr int last_week_color = 12;
+  constexpr uint8_t paper_text_color = 240;
+  constexpr uint8_t last_week_color = 12;
 
   const auto& chart = state_.active_city()->pizza_charts().entries();
 
@@ -767,8 +766,8 @@ void MarketResearch::render_pizza_charts(const RenderContext& ctx) {
     ViewPoint player_name_pos{x + 186, y};
 
     context_.font->render_line_onto(*ctx.surface, std::to_string(i + 1),
-                                    row_nr_pos, FontFace::PIZ_NUMB, text_color,
-                                    TextAnchor::End);
+                                    row_nr_pos, FontFace::PIZ_NUMB,
+                                    paper_text_color, TextAnchor::End);
 
     const Player* owner = i < static_cast<int>(chart.size())
                               ? state_.player(chart[i].player_id)
@@ -815,7 +814,7 @@ void MarketResearch::render_market_share(const RenderContext& ctx) {
 }
 
 void MarketResearch::render_paper(const RenderContext& ctx, ViewRect box,
-                                  int bg_color) {
+                                  uint8_t bg_color) {
   ctx.surface->fill_rect(box, bg_color);
   views::ui::render_corner_decorations(
       *ctx.surface, context_.blitmap->get<Blitmap2Icon>(), box);

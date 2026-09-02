@@ -686,7 +686,7 @@ void json_to_city(const json& j, City& city) {
   // Restore blacklist
   if (j.contains("blacklist")) {
     for (const auto& [key, value] : j["blacklist"].items()) {
-      uint8_t char_id = std::stoi(key);
+      uint8_t char_id = static_cast<uint8_t>(std::stoi(key));
       for (const auto& player : value) {
         city.blacklist_staff(char_id, core::PlayerId{player.get<int>()});
       }

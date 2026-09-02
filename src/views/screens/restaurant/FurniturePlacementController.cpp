@@ -235,7 +235,6 @@ bool FurniturePlacementController::intersects_any_blocking_furniture(
 
     const auto* other_f = pf->furniture();
     const auto other_cat = other_f->category();
-    const auto other_layer = other_f->placement_layer();
 
     // Allowed overlaps
 

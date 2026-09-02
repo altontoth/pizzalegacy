@@ -63,18 +63,18 @@ using namespace views::ui::menu;
 MenuHighScores::MenuHighScores(GameContext& context, GameState& state)
     : Menu(context, state, ViewPoint{120, 140}, 3) {
 
-  const FontFace face = FontFace::PIZ_NUMB;
+  const FontFace score_face = FontFace::PIZ_NUMB;
 
   auto entries = save::SaveGameManager::load_high_scores();
 
   if (entries.empty()) {
     add_menu_item(std::make_unique<TextMenuItem>(
-        context, "No high scores yet.", []() {}, face));
+        context, "No high scores yet.", []() {}, score_face));
   }
   else {
     for (int i = 0; i < static_cast<int>(entries.size()); ++i) {
-      add_menu_item(
-          std::make_unique<HighScoreRowItem>(context, i + 1, entries[i], face));
+      add_menu_item(std::make_unique<HighScoreRowItem>(context, i + 1,
+                                                       entries[i], score_face));
     }
   }
 

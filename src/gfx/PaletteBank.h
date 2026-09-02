@@ -150,7 +150,8 @@ inline void PaletteBank::load_dos_palette() {
 
   // Convert 6-bit RGB to 8-bit and store in raw_
   for (std::size_t i = 0; i < dos_raw.size(); ++i) {
-    raw_[i] = dos_raw[i] << 2; // 6-bit to 8-bit: shift left by 2
+    // 6-bit to 8-bit: shift left by 2
+    raw_[i] = static_cast<uint8_t>(dos_raw[i] << 2);
   }
 }
 

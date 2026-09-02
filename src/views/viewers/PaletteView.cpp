@@ -81,7 +81,7 @@ void PaletteView::render(const RenderContext& ctx) {
       dot.x = col * dot.w;
       dot.y = row * dot.h;
 
-      ctx.surface->fill_rect(dot, index);
+      ctx.surface->fill_rect(dot, static_cast<uint8_t>(index));
       if (show_numbers_) {
         uint8_t color = 1;
         if (color == index) {

@@ -688,7 +688,7 @@ Examples:
         ns.cooldown = NewspaperState::EVENT_COOLDOWN;
 
         // Derive polarity from whichever value is nonzero
-        int sign_source = initial != 0 ? initial : target;
+        int sign_source = static_cast<int>(initial != 0 ? initial : target);
         ns.polarity = static_cast<int8_t>(sign_source >= 0 ? 1 : -1);
 
         // Derive category from duration type

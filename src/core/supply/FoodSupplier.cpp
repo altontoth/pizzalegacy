@@ -12,6 +12,7 @@
 #include <optional>
 #include "core/food/Ingredient.h"
 #include "core/food/IngredientCategory.h"
+#include "engine/Fatal.h"
 
 FoodSupplier::FoodSupplier(IngredientCategory category, uint8_t supplier_id,
                            uint8_t quality, std::string name, uint8_t head_id,
@@ -44,6 +45,7 @@ int FoodSupplier::number_of_products() const {
   case IngredientCategory::CHEESE:
     return CHEESE_COUNT;
   }
+  fatal("Unhandled category in FoodSupplier::number_of_products");
 }
 
 ActorType FoodSupplier::actor_type() const { return actor_type_; }

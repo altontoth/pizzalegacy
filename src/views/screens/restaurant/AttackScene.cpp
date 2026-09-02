@@ -139,8 +139,8 @@ constexpr std::array<int, ORIENTATION_COUNT> BAZOOKA_PROJ_OFF_Y = {0, 13, 2,
 constexpr int ATTACK_SCROLL_MARGIN_TILES = 4;
 
 // Explosion sprite Y nudge per frame
-constexpr std::array<int, 11> BOMB_EXPLODE_DY = {0,   0,   0,   -1,  -8, -17,
-                                                 -22, -28, -31, -31, 0};
+[[maybe_unused]] constexpr std::array<int, 11> BOMB_EXPLODE_DY = {
+    0, 0, 0, -1, -8, -17, -22, -28, -31, -31, 0};
 
 constexpr int BOMB_BLAST = 60;
 // A bomb blast runs the contact roll this many times against every fighter in

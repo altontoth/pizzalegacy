@@ -361,8 +361,6 @@ int Pizza::calculate_refinement() const {
 }
 
 int Pizza::calculate_normality() const {
-  // Logger::debug("=== NORMALITY CALCULATION ===");
-
   // Start at 100%
   int normality = 100;
 
@@ -375,18 +373,11 @@ int Pizza::calculate_normality() const {
       continue;
     }
     const auto* ingredient = topping->ingredient();
-    int category = static_cast<int>(ingredient->category());
-    const char* cat_name[] = {"vegetables", "meat", "fruit", "cheese/herbs"};
-    // Logger::debug("    {} -> category {} ({})", ingredient->name(), category,
-    //               category < 4 ? cat_name[category] : "unknown");
     ingredient_types.insert(ingredient->name());
     total_weight += topping->weight();
   }
 
   int ingredient_type_count = static_cast<int>(ingredient_types.size());
-  // Logger::debug("  Unique ingredient categories: {}", ingredient_type_count);
-  // Logger::debug("  Topping weight: {}g", total_weight);
-  // Logger::debug("  Starting normality: {}", normality);
 
   // If ingredient type count < NORMALITY_MIN_CATEGORIES: reduce by percentage
   // Original: reduceField52ByPercentage(pizza, 70 - count*10)
@@ -394,35 +385,20 @@ int Pizza::calculate_normality() const {
   if (ingredient_type_count < NORMALITY_MIN_CATEGORIES) {
     int penalty = NORMALITY_CATEGORY_BASE -
                   (NORMALITY_CATEGORY_STEP * ingredient_type_count);
-    int old_normality = normality;
     normality = (normality * (100 - penalty)) / 100;
-    // Logger::debug("  < {} categories penalty: {} * (100 - {}) / 100 = {} (was
-    // {})",
-    //               NORMALITY_MIN_CATEGORIES, old_normality, penalty,
-    //               normality, old_normality);
   }
 
   // If weight < WEIGHT_THRESHOLD_LIGHT: reduce by 20%
   if (total_weight < WEIGHT_THRESHOLD_LIGHT) {
-    int old_normality = normality;
     normality = (normality * 80) / 100;
-    // Logger::debug("  < {}g penalty: {} * 80 / 100 = {} (was {})",
-    //               WEIGHT_THRESHOLD_LIGHT, old_normality, normality,
-    //               old_normality);
   }
 
   // If weight < WEIGHT_THRESHOLD_VERY_LIGHT: reduce by 50% (additional)
   if (total_weight < WEIGHT_THRESHOLD_VERY_LIGHT) {
-    int old_normality = normality;
     normality = (normality * 50) / 100;
-    // Logger::debug("  < {}g penalty: {} * 50 / 100 = {} (was {})",
-    //               WEIGHT_THRESHOLD_VERY_LIGHT, old_normality, normality,
-    //               old_normality);
   }
 
-  int final = std::clamp(normality, 0, 100);
-  // Logger::debug("  Final normality: {}", final);
-  return final;
+  return std::clamp(normality, 0, 100);
 }
 
 int Pizza::calculate_herb_score() const {

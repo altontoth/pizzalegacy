@@ -2164,11 +2164,11 @@ FurnitureFactory::all_furniture_by_supplier(SupplierID supplier) {
 }
 
 std::optional<FurnitureType>
-FurnitureFactory::get_furniture_type(const Furniture* furniture) {
-  if (!furniture) {
+FurnitureFactory::get_furniture_type(const Furniture* item) {
+  if (!item) {
     return std::nullopt;
   }
-  return furniture->type();
+  return item->type();
 }
 
 const Furniture*

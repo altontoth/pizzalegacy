@@ -185,15 +185,15 @@ CharacterFactory::create_double(int id, core::character::JobRole role) {
   }
 
   // Salary tweak
-  int delta = (static_cast<unsigned char>(c->last_name[0]) * 2) - 156;
+  int salary_delta = (static_cast<unsigned char>(c->last_name[0]) * 2) - 156;
   int salary = static_cast<int>(c->starting_money.whole());
-  salary = std::clamp(salary + delta, 50, 350);
+  salary = std::clamp(salary + salary_delta, 50, 350);
   c->starting_money = Money{static_cast<int64_t>(salary) * 100};
 
   // Age tweak: c = clamp(last_name[1], 'a', 'l'); age += (c - 'a') / 4
-  int ch = std::clamp(static_cast<int>(c->last_name[1]), static_cast<int>('a'),
-                      static_cast<int>('l'));
-  c->age = static_cast<uint8_t>(c->age + ((ch - 'a') / 4));
+  int age_char = std::clamp(static_cast<int>(c->last_name[1]),
+                            static_cast<int>('a'), static_cast<int>('l'));
+  c->age = static_cast<uint8_t>(c->age + ((age_char - 'a') / 4));
 
   // 13-stat tweaks derived from first name: cycle through chars 1..(len-1)
   // delta = (clamp(c, 'a', 's') - 'k') * 2;

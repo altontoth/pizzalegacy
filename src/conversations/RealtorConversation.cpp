@@ -115,7 +115,7 @@ bool RealtorConversation::advance_line_choice(RealtorLine choice) {
         price_ = Money(static_cast<int64_t>(base.cents * renter_discount));
       }
       else if (ripoff_) {
-        price_ = base * rip_off_markup;
+        price_ = Money(static_cast<int64_t>(base.cents * rip_off_markup));
       }
       else {
         price_ = base;
@@ -130,11 +130,11 @@ bool RealtorConversation::advance_line_choice(RealtorLine choice) {
   case RealtorLine::PRICE_IS_TOO_HIGH:
     buyer_haggled_already = true;
     if (engine::random::rand_percentage_chance(charisma)) {
-      price_ = price_ * negotiate_minus;
+      price_ = Money(static_cast<int64_t>(price_.cents * negotiate_minus));
       current_line(RealtorLine::ALRIGHT_AT_THAT_PRICE_I_CAN_DO_FAVOUR);
     }
     else {
-      price_ = price_ * negotiate_plus;
+      price_ = Money(static_cast<int64_t>(price_.cents * negotiate_plus));
       property->purchase_price(price_);
       current_line(RealtorLine::SORRY_BUT_AT_THAT_PRICE_NO_FAVOR);
     }
@@ -387,7 +387,6 @@ Emotion RealtorConversation::emotion() const {
 }
 
 std::vector<ConversationLine<RealtorLine>> RealtorConversation::lines() const {
-  const auto property = active_property();
   switch (current_line_) {
   case RealtorLine::REALTORS_MAY_I_HELP_YOU: {
     std::string custom_line =

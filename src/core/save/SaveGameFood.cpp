@@ -143,7 +143,6 @@ json_to_recipe(const json& j,
   using namespace core::food;
 
   core::RecipeId id{j["id"].get<int>()};
-  Origin origin = static_cast<Origin>(j["origin"].get<int>());
   std::string display_name = j["display_name"].get<std::string>();
   Pizza pizza = json_to_pizza(j["pizza"], taste_profiles);
 

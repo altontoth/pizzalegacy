@@ -57,7 +57,6 @@ void PlacedFurniture::change_to_ashes() {
   if (is_ashes()) {
     return;
   }
-  const auto type = furniture_->type();
   FurnitureType ashes = FurnitureType::ASHES_LARGE;
   if (furniture_->category() == FurnitureCategory::KITCHENWARE) {
     ashes = FurnitureType::ASHES_KITCHEN;

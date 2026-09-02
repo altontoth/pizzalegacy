@@ -76,12 +76,12 @@ MenuGameLoad::MenuGameLoad(GameContext& context, GameState& state)
   info_box_ = info.get();
   add_menu_item(std::move(info));
 
-  constexpr TextStyle style{
+  constexpr TextStyle button_style{
       .color = 1,
       .align = TextAnchor::Start,
       .shadow = std::nullopt,
   };
-  constexpr TextStyle sel_style{
+  constexpr TextStyle sel_button_style{
       .color = 29,
       .align = TextAnchor::Start,
       .shadow = std::nullopt,
@@ -90,14 +90,14 @@ MenuGameLoad::MenuGameLoad(GameContext& context, GameState& state)
   // Load button
   add_menu_item(std::make_unique<PositionMarkerMenuItem>(context, 260, 160));
   add_menu_item(std::make_unique<TextMenuItem>(
-      context, "Load", [this] { load_selected_file(); }, face, style,
-      sel_style));
+      context, "Load", [this] { load_selected_file(); }, face, button_style,
+      sel_button_style));
 
   // Delete button
   add_menu_item(std::make_unique<PositionMarkerMenuItem>(context, 440, 160));
   add_menu_item(std::make_unique<TextMenuItem>(
-      context, "Delete", [this] { delete_selected_file(); }, face, style,
-      sel_style));
+      context, "Delete", [this] { delete_selected_file(); }, face, button_style,
+      sel_button_style));
 
   // Sort toggle
   add_menu_item(std::make_unique<PositionMarkerMenuItem>(context, 244, 244));

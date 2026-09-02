@@ -128,8 +128,6 @@ private:
   int rent_level_{0};
   int price_level_{0};
   City* city_{nullptr};
-  int customer_counts_[6];
-  int total_population_{0};
 
   // Demand calculation fields
   uint8_t demographic_factor_{0};

@@ -140,8 +140,8 @@ bool SupplierConversation::advance_line_choice(SupplierLine choice) {
     if (engine::random::rand_percentage_chance(30) &&
         contract_.discount_score < 50) {
       int bonus = (spending_rank_ > 6) ? 8 : 5;
-      contract_.discount_score =
-          std::min<int>(contract_.discount_score + bonus, 60);
+      contract_.discount_score = static_cast<uint8_t>(
+          std::min<int>(contract_.discount_score + bonus, 60));
       current_line(SupplierLine::INCREASE_DISCOUNT_A_LITTLE);
     }
     else {
@@ -216,7 +216,8 @@ void SupplierConversation::handle_demand(SupplierLine demand) {
   if (repeat_count >= 3) {
     auto player_id = state_.active_player()->id();
     auto& rel = supplier_->relationship(player_id);
-    rel.frustration = std::min<int>(rel.frustration + 3, 255);
+    rel.frustration =
+        static_cast<uint8_t>(std::min<int>(rel.frustration + 3, 255));
     current_line(SupplierLine::KEEP_REPEATING_TAKE_ME_FOR_A_RIDE);
     return;
   }
@@ -241,7 +242,8 @@ void SupplierConversation::handle_demand(SupplierLine demand) {
     if (demand_count * 2 > spending_rank_) {
       auto player_id = state_.active_player()->id();
       auto& rel = supplier_->relationship(player_id);
-      rel.frustration = std::min<int>(rel.frustration + 1, 255);
+      rel.frustration =
+          static_cast<uint8_t>(std::min<int>(rel.frustration + 1, 255));
       current_line(SupplierLine::NO_REASON_FOR_SPECIAL_CONDITIONS);
       return;
     }
@@ -256,7 +258,7 @@ void SupplierConversation::handle_demand(SupplierLine demand) {
     if (engine::random::rand_percentage_chance(
             std::max(0, negotiation_skill_ - 20))) {
       contract_.discount_score =
-          std::min<int>(contract_.discount_score + 5, 60);
+          static_cast<uint8_t>(std::min<int>(contract_.discount_score + 5, 60));
       current_line(SupplierLine::I_THINK_I_CAN_HELP);
       return;
     }
@@ -303,7 +305,8 @@ void SupplierConversation::handle_demand(SupplierLine demand) {
     if (contract_.charge == 0_usd) {
       auto player_id = state_.active_player()->id();
       auto& rel = supplier_->relationship(player_id);
-      rel.frustration = std::min<int>(rel.frustration + 5, 255);
+      rel.frustration =
+          static_cast<uint8_t>(std::min<int>(rel.frustration + 5, 255));
       contract_.charge = 100_usd;
       current_line(SupplierLine::THERE_WERE_NO_FEES_INCLUDED_BUT_IF_YOU_WANT);
       return;
@@ -345,7 +348,8 @@ void SupplierConversation::handle_demand(SupplierLine demand) {
       current_line(SupplierLine::OTOH_YOU_WERE_BEHIND_ON_PAYMENTS);
       return;
     }
-    contract_.discount_score = std::min<int>(contract_.discount_score + 5, 60);
+    contract_.discount_score =
+        static_cast<uint8_t>(std::min<int>(contract_.discount_score + 5, 60));
     current_line(SupplierLine::ADMIT_SHORTAGES_MORE_DISCOUNT);
     break;
   }
@@ -386,7 +390,8 @@ void SupplierConversation::trigger_justify_demands(JustifyContext ctx) {
     pool[i] = static_cast<SupplierLine>(7 + i);
   }
   for (size_t i = 0; i < 4; i++) {
-    size_t j = i + engine::random::rand_max_n(pool.size() - i);
+    size_t j =
+        i + engine::random::rand_max_n(static_cast<int>(pool.size() - i));
     std::swap(pool[i], pool[j]);
   }
   active_argument_options_.assign(pool.begin(), pool.begin() + 4);
@@ -405,8 +410,8 @@ void SupplierConversation::handle_argument_pick(SupplierLine choice) {
     if (success) {
       int bonus =
           engine::random::rand_percentage_chance(negotiation_skill_) ? 10 : 5;
-      contract_.discount_score =
-          std::min<int>(contract_.discount_score + bonus, 60);
+      contract_.discount_score = static_cast<uint8_t>(
+          std::min<int>(contract_.discount_score + bonus, 60));
       current_line(SupplierLine::OK_GOOD_CUSTOMER_LETS_TALK);
     }
     else {
@@ -450,7 +455,8 @@ void SupplierConversation::pick_demand_options() {
   };
   auto shuffled = all_demands;
   for (size_t i = 0; i < 4; i++) {
-    size_t j = i + (engine::random::rand_max_n(shuffled.size() - i));
+    size_t j =
+        i + engine::random::rand_max_n(static_cast<int>(shuffled.size() - i));
     std::swap(shuffled[i], shuffled[j]);
   }
   active_demand_options_.assign(shuffled.begin(), shuffled.begin() + 4);

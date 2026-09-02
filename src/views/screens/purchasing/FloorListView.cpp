@@ -26,8 +26,6 @@ constexpr int SPACING_BETWEEN_ITEMS = 22;
 constexpr int MAX_HEIGHT = 284;
 
 constexpr int COLOR_BLACK = 8;
-constexpr int BORDER_COLOR = 13;
-constexpr int BG_COLOR = 14;
 constexpr int GREEN_MARK_BOB_INDEX = 325;
 } // namespace
 

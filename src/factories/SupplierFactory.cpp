@@ -335,14 +335,13 @@ std::vector<const Supplier*> SupplierFactory::all_suppliers() {
 
 std::vector<const Supplier*>
 SupplierFactory::all_suppliers_by_type(SupplierType type, int current_year) {
-  auto suppliers = all_suppliers();
-  auto filtered =
-      suppliers |
-      std::ranges::views::filter([type, current_year](const Supplier*& s) {
-        return s && s->type() == type &&
-               current_year >= s->introduction_year() &&
-               current_year <= s->withdrawal_year();
-      });
+  auto list = all_suppliers();
+  auto filtered = list | std::ranges::views::filter(
+                             [type, current_year](const Supplier*& s) {
+                               return s && s->type() == type &&
+                                      current_year >= s->introduction_year() &&
+                                      current_year <= s->withdrawal_year();
+                             });
   return std::vector<const Supplier*>(filtered.begin(), filtered.end());
 }
 

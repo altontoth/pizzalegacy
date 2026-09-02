@@ -24,13 +24,14 @@ struct StatusItem {
   StatusColumn col2; // TwoColumn: right column
   StatusAlignment align = StatusAlignment::Left; // for Header/Single (legacy)
   int lines = 1;                                 // for Spacer
-  int color = 0;                                 // 0 = default color
+  uint8_t color = 0;                             // 0 = default color
 };
 
 class StatusDisplayRecipe {
 public:
   void add_header(std::string_view text,
-                  StatusAlignment a = StatusAlignment::Left, int color = 0) {
+                  StatusAlignment a = StatusAlignment::Left,
+                  uint8_t color = 0) {
     items_.push_back(
         {StatusItemKind::Header, {std::string(text), 0, a}, {}, a, 1, color});
   }
@@ -44,7 +45,8 @@ public:
         {StatusItemKind::TwoColumn, std::move(col1), std::move(col2)});
   }
   void add_single(std::string_view text,
-                  StatusAlignment a = StatusAlignment::Left, int color = 0) {
+                  StatusAlignment a = StatusAlignment::Left,
+                  uint8_t color = 0) {
     items_.push_back(
         {StatusItemKind::Single, {std::string(text), 0, a}, {}, a, 1, color});
   }

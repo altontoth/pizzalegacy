@@ -88,9 +88,8 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     add_compile_options(
         -Wall
         -Wextra
-        -Wno-shadow
+        -Wshadow
         -Wno-unused-parameter
-        -Wno-unused-variable
         -Wnull-dereference
         -Wimplicit-fallthrough
         -Wno-missing-designated-field-initializers
@@ -121,6 +120,9 @@ elseif(MSVC)
         /wd4189
         /permissive-
         /MP
+        # MSVC deprecates the standard C functions that we use in favor
+        # of its non-portable _s variants.
+        -D_CRT_SECURE_NO_WARNINGS
         $<$<CONFIG:Debug>:/Od>     # Disable optimizations in Debug
         $<$<CONFIG:Debug>:/Zi>     # Debug info
         $<$<CONFIG:Debug>:/RTC1>   # Runtime checks

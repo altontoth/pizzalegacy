@@ -304,7 +304,7 @@ bool NewspaperEventSystem::execute_named_event(NewspaperEvent event,
   }
 
   // Housekeeping
-  ns.article_id = event_id + NewspaperState::EVENT_OFFSET;
+  ns.article_id = static_cast<uint8_t>(event_id + NewspaperState::EVENT_OFFSET);
   ns.cooldown = NewspaperState::EVENT_COOLDOWN;
   return true;
 }
@@ -316,7 +316,7 @@ bool NewspaperEventSystem::try_generate_ingredient_event(NewspaperState& ns,
 
   // Pick random ingredient slot (0-95)
   auto slot_id = engine::random::rand_max_n(max_ingredient_count);
-  if (!food::is_valid_ingredient_id(slot_id)) {
+  if (!food::is_valid_ingredient_id(static_cast<uint8_t>(slot_id))) {
     return false;
   }
   auto type = static_cast<IngredientType>(slot_id);
@@ -326,7 +326,7 @@ bool NewspaperEventSystem::try_generate_ingredient_event(NewspaperState& ns,
     return false;
   }
 
-  int category = engine::random::rand_max_n(4);
+  uint8_t category = static_cast<uint8_t>(engine::random::rand_max_n(4));
   int8_t polarity = engine::random::coin_flip() ? 1 : -1;
 
   // Draw order from the original.

@@ -94,7 +94,6 @@ void Terminal::draw_main_menu(const RenderContext& ctx) {
 
   // TODO: Some less hardcoded way of figuring out the positions, make it more
   // centered too
-  ViewRect location(blitmap_offset_x, blitmap_offset_y, 218, 42);
   int x = ctx.surface->rect().center().x - 6;
   int y = 68;
   int y_offset = 45;
@@ -684,7 +683,7 @@ void Terminal::setup_waiting_animation() {
   prompt_animator_->set_char_delay(1);
   prompt_animator_->start();
 
-  phase_timer_ = text.length() + 15;
+  phase_timer_ = static_cast<int>(text.length()) + 15;
 }
 
 void Terminal::setup_connected_animation() {
@@ -695,7 +694,7 @@ void Terminal::setup_connected_animation() {
   prompt_animator_->set_char_delay(1);
   prompt_animator_->start();
 
-  phase_timer_ = text.length() + 15;
+  phase_timer_ = static_cast<int>(text.length()) + 15;
 }
 
 void Terminal::setup_error_animation() {
@@ -736,5 +735,5 @@ void Terminal::setup_error_animation() {
   prompt_animator_->set_char_delay(1);
   prompt_animator_->start();
 
-  phase_timer_ = text.length() + 10;
+  phase_timer_ = static_cast<int>(text.length()) + 10;
 }

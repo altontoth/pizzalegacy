@@ -42,10 +42,6 @@
 #include "views/screens/city_view/ZoomConfig.h"
 #include "views/ui/popups/ConfirmPopup.h"
 
-constexpr int DEV_RES_W = 18;
-constexpr int DEV_RES_H = 18;
-constexpr int DEV_KTCH_H = 21;
-constexpr int DEV_KTCH_W = 21;
 constexpr int DISTRICT_COLORS_INDEX = 0;
 
 // When zooming in from FAR to MEDIUM or MEDIUM to CLOSE you always zoom_ this
@@ -303,10 +299,8 @@ ViewPoint CityView::local_to_viewport_coords(ViewPoint local_pos) const {
 }
 
 void CityView::zoom_in(ViewPoint p_view_local) {
-  const auto from = ZoomConfig::for_zoom_level(zoom_);
   const ZoomLevel new_zoom =
       (zoom_ == ZoomLevel::MEDIUM) ? ZoomLevel::CLOSE : ZoomLevel::MEDIUM;
-  const auto to = ZoomConfig::for_zoom_level(new_zoom);
 
   // Anchor: the world point under the cursor *before* zoom change
   const WorldPoint anchor_world = camera_.view_to_world(p_view_local);
@@ -387,7 +381,6 @@ void CityView::enable_zoom_cursor(ViewPoint p) {
 }
 
 void CityView::zoom_out(ViewPoint p_view_local) {
-  const auto from = ZoomConfig::for_zoom_level(zoom_);
   const ZoomLevel new_zoom =
       (zoom_ == ZoomLevel::CLOSE) ? ZoomLevel::MEDIUM : ZoomLevel::FAR;
   const auto to = ZoomConfig::for_zoom_level(new_zoom);
@@ -686,10 +679,6 @@ void CityView::render_map_zoom_close(const RenderContext& ctx) {
   const int first_ty =
       std::clamp(visible.y / tile_h, 0, MAP_TILES_PER_COLUMN - 1);
 
-  // pixel offset inside the first tile
-  const int off_x = -(visible.x % tile_w);
-  const int off_y = -(visible.y % tile_h);
-
   // how many tiles to cover the panel (+2 to cover partials on right/bottom)
   const int tiles_x = (visible.w / tile_w) + 2;
   const int tiles_y = (visible.h / tile_h) + 2;
@@ -734,7 +723,7 @@ void CityView::render_map_zoom_close(const RenderContext& ctx) {
         char road_type_str[3];
         snprintf(road_type_str, 3, "%02x", type);
         auto roadTypeOpt = magic_enum::enum_cast<RoadType>(type);
-        auto color = roadTypeOpt.has_value() ? 255 : 32;
+        uint8_t color = roadTypeOpt.has_value() ? 255 : 32;
         context_.font->render_text_onto(*ctx.surface, road_type_str,
                                         {dest_pos.x + 3, dest_pos.y + 12},
                                         FontFace::MINI, color);
@@ -816,7 +805,6 @@ void CityView::render_map_zoom_far(const RenderContext& ctx) {
 }
 
 void CityView::render_map_data(const RenderContext& ctx) {
-  const auto z = ZoomConfig::for_zoom_level(zoom_);
   switch (zoom_) {
   case ZoomLevel::CLOSE:
     render_map_zoom_close(ctx);
@@ -879,7 +867,7 @@ void CityView::render_with_color(
   for (int i = 0; i < NUMBER_OF_CELL_ROWS * NUMBER_OF_CELL_COLUMNS; ++i) {
     // Decide color for this cell
     auto district_index = city_->district_by_district_index(i);
-    uint8_t color = color_fn(district_index);
+    uint8_t color = static_cast<uint8_t>(color_fn(district_index));
 
     // Figure out row/col in the district grid
     int row = i / NUMBER_OF_CELL_COLUMNS;
@@ -1339,8 +1327,8 @@ void CityView::render_highlights(const RenderContext& ctx) {
   for (std::size_t i = 0; i < highlighted_cells_.size(); ++i) {
     if (highlighted_cells_[i] == HighlightType::DOT) {
       // Get world position of this tile (always in CLOSE scale: 32-pixel tiles)
-      const int tx = City::index_to_x(i);
-      const int ty = City::index_to_y(i);
+      const int tx = City::index_to_x(static_cast<int>(i));
+      const int ty = City::index_to_y(static_cast<int>(i));
       const WorldPoint world_pos{
           tx * BASE_MAP_TILE_WIDTH * BASE_MAP_ZOOM_MULTIPLIER,
           ty * BASE_MAP_TILE_HEIGHT * BASE_MAP_ZOOM_MULTIPLIER};
@@ -1385,8 +1373,8 @@ void CityView::render_highlights(const RenderContext& ctx) {
       ctx.surface->fill_rect(*clipped_opt, yellow_idx);
     }
     else if (highlighted_cells_[i] == HighlightType::RANGE) {
-      const int tx = City::index_to_x(i);
-      const int ty = City::index_to_y(i);
+      const int tx = City::index_to_x(static_cast<int>(i));
+      const int ty = City::index_to_y(static_cast<int>(i));
       const WorldPoint world_pos{
           tx * BASE_MAP_TILE_WIDTH * BASE_MAP_ZOOM_MULTIPLIER,
           ty * BASE_MAP_TILE_HEIGHT * BASE_MAP_ZOOM_MULTIPLIER};

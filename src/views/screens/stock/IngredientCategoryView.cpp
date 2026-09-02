@@ -61,7 +61,6 @@ void IngredientCategoryView::draw_ingredient_list(const RenderContext& ctx) {
   auto* restaurant = state_.active_restaurant();
   const auto& inventory = restaurant->inventory();
 
-  auto* player = state_.active_player();
   const core::food::IngredientDemand& demand_grams =
       restaurant->daily_ingredient_demand_cache();
 
@@ -86,7 +85,7 @@ void IngredientCategoryView::draw_ingredient_list(const RenderContext& ctx) {
                                   TextAnchor::End);
 
   // Vertical separators between columns
-  constexpr int line_color = 15;
+  constexpr uint8_t line_color = 15;
   constexpr int line_width = 2;
   const ViewPoint line_top_base{168, 44};
   const ViewPoint line_bottom_base{168, 324};
@@ -123,8 +122,8 @@ void IngredientCategoryView::draw_ingredient_list(const RenderContext& ctx) {
                                     ViewPoint{name_x, y}, FontFace::CSTANDAR,
                                     text_color);
 
-    constexpr int dark_red = 20;
-    const int row_color = need > supplies ? dark_red : int{text_color};
+    constexpr uint8_t dark_red = 20;
+    const uint8_t row_color = need > supplies ? dark_red : text_color;
 
     if (supplies || need || usage > 0) {
       context_.font->render_text_onto(*ctx.surface, std::to_string(quality),

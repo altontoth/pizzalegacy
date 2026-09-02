@@ -238,7 +238,6 @@ bool PizzaDesign::handle_left_mouse_click(ViewPoint vp) {
   const auto p = camera_.view_to_world(vp);
 
   if (active_topping_ && is_inside_pizza(vp)) {
-    auto& surface = renderer_.image(*active_topping_);
     context_.cursor->clear_custom_cursor();
 
     // Store CENTER in pizza-space:

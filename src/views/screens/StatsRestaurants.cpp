@@ -93,7 +93,6 @@ void StatsRestaurants::draw_restaurant_overview(const RenderContext& ctx,
                                                 ViewPoint pos, Restaurant* r) {
   const City& city = r->property().city();
   constexpr uint8_t label_color = 13;
-  constexpr uint8_t header_color = 240;
   constexpr int title_y = 12;
 
   // Restaurant name

@@ -276,7 +276,8 @@ Examples:
         auto& depot = city->central_depot(player_id);
         auto ingredient_type =
             static_cast<core::food::IngredientType>(ingredient_id);
-        depot.add_ingredient(ingredient_type, quantity, quality, Money{100});
+        depot.add_ingredient(ingredient_type, static_cast<int>(quantity),
+                             static_cast<int>(quality), Money{100});
 
         return CommandResult::success().add_message(compat::format(
             "Added {}g of ingredient {} at quality {} to {}'s depot in {}",

@@ -35,8 +35,8 @@ struct CommandDef {
 
   // Fluent builder methods for constructing command trees
   CommandDef& add_subcommand(CommandDef subcmd) {
-    std::string name = subcmd.name;
-    subcommands[name] = std::move(subcmd);
+    std::string key = subcmd.name;
+    subcommands[key] = std::move(subcmd);
     return *this;
   }
 

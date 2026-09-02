@@ -15,9 +15,6 @@
 #include "resources/FontManager.h"
 #include "views/base/ViewDefs.h"
 
-constexpr int camctrl_amount_px_x = 10;
-constexpr int camctrl_amount_px_y = 10;
-
 VgaViewer::VgaViewer(GameContext& context, GameState& state,
                      std::string filename)
     : View(context, state), filename_(filename),

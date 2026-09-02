@@ -20,7 +20,6 @@ void CharacterSelectionBox::draw(Surface& screen, ViewPoint p,
   auto block = Surface(CHAR_BOX_W, CHAR_BOX_H, PaletteHandle{38}, 15);
 
   ViewRect r = ViewRect{2, 0, block.width() - 2, block.height()};
-  uint8_t light_gray = 14;
   uint8_t white = 15;
   block.fill_rect(r, white);
 

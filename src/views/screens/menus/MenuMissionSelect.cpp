@@ -221,9 +221,9 @@ Surface MenuMissionSelect::background() const {
       std::pair{GOALS_BOX_OFFSET_X + NAMES_BOX_X, NAMES_BOX_W},
   };
   for (const auto& [x, w] : boxes) {
-    ViewRect shadow(x - 2, GOALS_BOX_OFFSET_Y + 4, w,
-                    GOALS_BOX_H + (BOX_ARROW_H * 2) + 2);
-    background.fill_rect(shadow, 14);
+    ViewRect shadow_box(x - 2, GOALS_BOX_OFFSET_Y + 4, w,
+                        GOALS_BOX_H + (BOX_ARROW_H * 2) + 2);
+    background.fill_rect(shadow_box, 14);
 
     ViewRect box(x, GOALS_BOX_OFFSET_Y, w + 2, GOALS_BOX_H + (BOX_ARROW_H * 2));
     background.fill_rect(box, 13);

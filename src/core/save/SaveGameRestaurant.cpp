@@ -177,19 +177,19 @@ json floor_pattern_to_json(const FloorPattern& pattern) {
 
 FloorPattern json_to_floor_pattern(const json& j) {
   FloorPattern pattern;
-  pattern.vendor_id = j["vendor_id"].get<int>();
+  pattern.vendor_id = j["vendor_id"].get<uint8_t>();
 
   for (size_t i = 0; i < 4 && i < j["tile_indices"].size(); ++i) {
-    pattern.tile_indices[i] = j["tile_indices"][i].get<int>();
+    pattern.tile_indices[i] = j["tile_indices"][i].get<uint8_t>();
   }
 
   for (size_t i = 0;
        i < pattern.popularity.size() && i < j["popularity"].size(); ++i) {
-    pattern.popularity[i] = j["popularity"][i].get<int>();
+    pattern.popularity[i] = j["popularity"][i].get<int8_t>();
   }
 
-  pattern.popularity_factor = j["popularity_factor"].get<int>();
-  pattern.quality = j.value("quality", 0);
+  pattern.popularity_factor = j["popularity_factor"].get<uint8_t>();
+  pattern.quality = j.value("quality", uint8_t{0});
   pattern.price_per_tile = Money{j.value("price_per_tile", int64_t{0})};
   return pattern;
 }
@@ -993,7 +993,7 @@ json_to_restaurant_inventory(const json& j) {
   auto& stocks = inventory.all_stocks();
 
   for (size_t i = 0; i < j["stocks"].size() && i < stocks.size(); ++i) {
-    stocks[i] = json_to_ingredient_stock(j["stocks"][i]);
+    stocks[static_cast<int>(i)] = json_to_ingredient_stock(j["stocks"][i]);
   }
 
   if (j.contains("average_stock_quality")) {

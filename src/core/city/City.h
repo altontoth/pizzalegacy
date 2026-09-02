@@ -156,11 +156,9 @@ public:
   const FoodSupplier* supplier_for(IngredientCategory category,
                                    std::optional<int> preferred_id) const;
 
-  Actor* actor_by_id(uint8_t actor_id) const;
-  Actor* mayor() const { return actor_by_id(static_cast<uint8_t>(mayor_id_)); }
-  Actor* police() const {
-    return actor_by_id(static_cast<uint8_t>(police_id_));
-  }
+  Actor* actor_by_id(ActorId actor_id) const;
+  Actor* mayor() const { return actor_by_id(mayor_id_); }
+  Actor* police() const { return actor_by_id(police_id_); }
   void mayor_id(int id) { mayor_id_ = id; }
   void police_id(int id) { police_id_ = id; }
   void first_bank_id(int id) { first_bank_id_ = id; }

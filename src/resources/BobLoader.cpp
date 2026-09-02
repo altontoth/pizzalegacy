@@ -40,11 +40,11 @@ std::unique_ptr<Bob> BobLoader::load(const std::string& filename) {
     std::size_t idx = file_header_size + (s * frame_header_size);
     uint8_t w = raw_data[idx + 0];
     uint8_t h = raw_data[idx + 1];
-    uint8_t padding1 = raw_data[idx + 2];
-    uint8_t u2 = raw_data[idx + 3];
-    uint8_t u3 = raw_data[idx + 4];
-    uint8_t u4 = raw_data[idx + 5];
-    uint8_t padding2 = raw_data[idx + 6];
+    [[maybe_unused]] uint8_t padding1 = raw_data[idx + 2];
+    [[maybe_unused]] uint8_t u2 = raw_data[idx + 3];
+    [[maybe_unused]] uint8_t u3 = raw_data[idx + 4];
+    [[maybe_unused]] uint8_t u4 = raw_data[idx + 5];
+    [[maybe_unused]] uint8_t padding2 = raw_data[idx + 6];
 
     // offset for pixel data:
     // pixel data starts after the last frame's data

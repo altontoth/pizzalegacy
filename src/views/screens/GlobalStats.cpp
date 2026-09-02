@@ -21,8 +21,6 @@
 #include "views/ui/PageDecoration.h"
 #include "views/ui/finance/FinanceComponents.h"
 
-constexpr int text_color = 11;
-
 namespace {
 // The Balance page labels four accounts differently from the rest of the game,
 // following the original's wording.
@@ -197,7 +195,7 @@ void GlobalStats::render_month_overview(const RenderContext& ctx) {
   views::ui::finance::render_month_header(*ctx.surface, *context_.font, date,
                                           "monthly overview");
 
-  int line_color = 13;
+  uint8_t line_color = 13;
   int line_width = 2;
 
   // Horizontal divider lines
@@ -406,7 +404,6 @@ void GlobalStats::render_month_overview_popup(
 
   // Draw scroll indicator if there are more restaurants
   if (total_restaurants > MonthlyPopupState::max_visible) {
-    int max_scroll = total_restaurants - MonthlyPopupState::max_visible;
     std::string scroll_info = compat::format(
         "{}-{} of {}", popup_state_.scroll_offset + 1,
         popup_state_.scroll_offset + visible_count, total_restaurants);
@@ -514,11 +511,11 @@ void GlobalStats::render_bar_chart(
   constexpr int x_start = 48;
   constexpr int column_spacing = 6;
 
-  constexpr std::array<int, 6> bar_colors = {9, 26, 28, 30, 31, 24};
+  constexpr std::array<uint8_t, 6> bar_colors = {9, 26, 28, 30, 31, 24};
   constexpr std::array<int, 7> thresholds = {
       0, 10'000, 100'000, 500'000, 1'000'000, 5'000'000, 10'000'000};
 
-  constexpr int loss_color = 23;
+  constexpr uint8_t loss_color = 23;
   constexpr int max_loss_height = 20 * pixels_per_scaled_unit;
   auto scaled_px = [&](int64_t v) {
     return static_cast<int>(v / scale) * pixels_per_scaled_unit;
@@ -643,8 +640,7 @@ void GlobalStats::render_loans(const RenderContext& ctx) {
     if (city_id == active_city_id) {
       const auto* city = state_.city(city_id);
       const Actor* bank =
-          city ? city->actor_by_id(static_cast<uint8_t>(loan->bank_id().value))
-               : nullptr;
+          city ? city->actor_by_id(loan->bank_id().value) : nullptr;
       std::string label = bank ? bank->name() : "Unknown bank";
       constexpr size_t max_len = 16;
       if (label.size() > max_len) {
@@ -678,7 +674,7 @@ void GlobalStats::render_loans(const RenderContext& ctx) {
 
   constexpr int sep_y = 168;
 
-  context_.font->render_text_onto(*ctx.surface, "investments", {12, 168},
+  context_.font->render_text_onto(*ctx.surface, "investments", {12, sep_y},
                                   FontFace::ASTANDAR);
 
   const auto& investments = player->investments();
@@ -695,8 +691,7 @@ void GlobalStats::render_loans(const RenderContext& ctx) {
     if (inv->city_id() == active_city_id) {
       const auto* city = state_.city(inv->city_id());
       const Actor* bank =
-          city ? city->actor_by_id(static_cast<uint8_t>(inv->bank_id().value))
-               : nullptr;
+          city ? city->actor_by_id(inv->bank_id().value) : nullptr;
       std::string label = bank ? bank->name() : "Unknown bank";
       context_.font->render_text_onto(*ctx.surface, label, {col_city, y},
                                       FontFace::PIZ_NUMB, 240);
@@ -931,7 +926,7 @@ void GlobalStats::render_balance(const RenderContext& ctx) {
   }
   // loss sits one extra line below the regular assets, drawn in red
   if (has_loss) {
-    const int text_color = 22;
+    constexpr uint8_t text_color = 22;
     label_pos.y = 276;
     context_.font->render_text_onto(*ctx.surface, "loss", label_pos,
                                     FontFace::PIZ_NUMB, text_color);
@@ -958,7 +953,7 @@ void GlobalStats::render_balance(const RenderContext& ctx) {
 }
 
 void GlobalStats::render_balance_lines(const RenderContext& ctx) {
-  int line_color = 240;
+  uint8_t line_color = 240;
   int line_width = 2;
   // Main vertical line
   gfx::draw::line(*ctx.surface, {184, 90}, {184, 340}, line_color, line_width);

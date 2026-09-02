@@ -505,13 +505,13 @@ json_to_player(const json& j, GameContext& context,
   if (j.contains("contracts")) {
     for (const auto& cj : j["contracts"]) {
       ActiveContract c;
-      c.supplier_id = cj.value("supplier_id", 0);
+      c.supplier_id = cj.value("supplier_id", uint8_t{0});
       c.category = static_cast<IngredientCategory>(cj.value("category", 0));
       c.city_id = core::CityId{cj.value("city_id", -1)};
       c.restaurant_id = core::RestaurantId{cj.value("restaurant_id", -1)};
-      c.discount_pct = cj.value("discount_pct", 0);
-      c.remaining_term = cj.value("remaining_term", 0);
-      c.original_term = cj.value("original_term", 0);
+      c.discount_pct = cj.value("discount_pct", uint8_t{0});
+      c.remaining_term = cj.value("remaining_term", uint8_t{0});
+      c.original_term = cj.value("original_term", uint8_t{0});
       c.daily_sum = Money{cj.value("daily_sum", int64_t{0})};
       c.charge = Money{cj.value("charge", int64_t{0})};
       c.cancellation_penalty =

@@ -119,8 +119,6 @@ void CharacterRenderer::render_front_half(const RenderContext& ctx,
 void CharacterRenderer::load_seeds() {
   std::array<int8_t, 4> x_torso = {-12, -22, -18, -2};
   std::array<int8_t, 4> y_torso = {0, -14, -16, -20};
-  std::array<int8_t, 4> x_head = {0, 0, 0, 0};
-  std::array<int8_t, 4> y_head = {0, 0, 0, 0};
   std::array<int8_t, 4> x_legs = {-12, -42, -12, 16};
   std::array<int8_t, 4> y_legs = {18, -14, -32, -12};
   std::array<int8_t, 4> x_arm1 = {-18, -4, 14, 0};

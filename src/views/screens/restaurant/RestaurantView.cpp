@@ -789,9 +789,6 @@ void RestaurantView::render_scene_passes() {
 
 void RestaurantView::render_placement_layer(PlacementLayer placement) {
   const auto& pf_list = current_furniture_list();
-  const Point wall_offsets =
-      Point{RESTAURANT_TILE_WIDTH, RESTAURANT_TILE_HEIGHT};
-
   // Panel (view) rect for clipping
   const Size vsz = camera_.view_size();
   const ViewRect panel{0, 0, vsz.w, vsz.h};
@@ -819,7 +816,6 @@ void RestaurantView::render_placement_layer(PlacementLayer placement) {
     if (auto clipped = intersect_rect(furniture_box, panel)) {
       const ViewRect hit = *clipped;
       const auto fid = pf->id();
-      const auto category = pf->furniture()->category();
       const std::string token_id =
           compat::format("furn_{}_{}", kitchen_view_ ? 'K' : 'R', fid.value);
 
@@ -1377,7 +1373,6 @@ void RestaurantView::update_status_display(const PlacedFurniture* pf) {
     const auto& layout = restaurant_->layout();
     if (category == FurnitureCategory::TABLE) {
       int count = layout->linked_furniture_count(pf->id());
-      auto linked = pf->linked_furniture_id();
       recipe.add_single(
           compat::format("room for {} people", furniture->capacity()));
       recipe.add_single(compat::format("with {} chairs", count));
