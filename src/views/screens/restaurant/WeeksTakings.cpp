@@ -6,6 +6,9 @@
 
 #include "views/screens/restaurant/WeeksTakings.h"
 
+#include <array>
+#include <utility>
+
 #include "core/city/Property.h"
 #include "core/restaurant/PizzaSalesAggregator.h"
 #include "core/restaurant/Restaurant.h"
@@ -177,16 +180,27 @@ void WeeksTakings::render_pizza_sales_page(const RenderContext& ctx,
                                   FontFace::ASTANDAR, 11, TextAnchor::Start);
 
   // Column headers
-  context_.font->render_text_onto(*ctx.surface, "ITEMS SALES COSTS PROFIT",
-                                  ViewPoint{168, 64}, FontFace::SUPERSMA,
-                                  text_color, TextAnchor::Start);
+  const int header_row_y = 64;
+  const std::array<std::pair<const char*, int>, 4> headers{
+      {{"ITEMS", 192}, {"SALES", 240}, {"COSTS", 292}, {"PROFIT", 346}}};
+  for (const auto& [label, x] : headers) {
+    context_.font->render_text_onto(
+        *ctx.surface, label,
+        ViewPoint{x - LegacyConstants::WOOD_BORDER_WIDTH_LEFT, header_row_y},
+        FontFace::SUPERSMA, text_color, TextAnchor::Start);
+  }
 
-  // Column x positions
+  // Pizza names are left-aligned, the numbers right-aligned.
   const int name_x = 42 - LegacyConstants::WOOD_BORDER_WIDTH_LEFT;
   const int items_x = 222 - LegacyConstants::WOOD_BORDER_WIDTH_LEFT;
-  const int sales_x = 268 - LegacyConstants::WOOD_BORDER_WIDTH_LEFT;
-  const int costs_x = 320 - LegacyConstants::WOOD_BORDER_WIDTH_LEFT;
-  const int profit_x = 380 - LegacyConstants::WOOD_BORDER_WIDTH_LEFT;
+  const int sales_x = 284 - LegacyConstants::WOOD_BORDER_WIDTH_LEFT;
+  const int costs_x = 336 - LegacyConstants::WOOD_BORDER_WIDTH_LEFT;
+  const int profit_x = 396 - LegacyConstants::WOOD_BORDER_WIDTH_LEFT;
+
+  const int total_items_x = 210 - LegacyConstants::WOOD_BORDER_WIDTH_LEFT;
+  const int total_sales_x = 280 - LegacyConstants::WOOD_BORDER_WIDTH_LEFT;
+  const int total_costs_x = 336 - LegacyConstants::WOOD_BORDER_WIDTH_LEFT;
+  const int total_profit_x = 394 - LegacyConstants::WOOD_BORDER_WIDTH_LEFT;
 
   int y = 106 - LegacyConstants::WOOD_BORDER_HEIGHT_TOP;
   const int line_spacing = 14;
@@ -247,26 +261,31 @@ void WeeksTakings::render_pizza_sales_page(const RenderContext& ctx,
   }
 
   // Total
-  const int total_y = 308;
+  const int total_y = 305;
+  context_.font->render_text_onto(
+      *ctx.surface, "TOTAL:",
+      ViewPoint{50 - LegacyConstants::WOOD_BORDER_WIDTH_LEFT, total_y},
+      FontFace::SUPERSMA, 11, TextAnchor::Start);
+
   context_.font->render_text_onto(*ctx.surface,
-                                  "TOTAL:", ViewPoint{20, total_y},
-                                  FontFace::SUPERSMA, 11, TextAnchor::Start);
+                                  compat::format("{}", page_items),
+                                  ViewPoint{total_items_x, total_y},
+                                  FontFace::SUPERSMA, 11, TextAnchor::End);
 
-  context_.font->render_text_onto(
-      *ctx.surface, compat::format("{}", page_items),
-      ViewPoint{items_x, total_y}, FontFace::SUPERSMA, 11, TextAnchor::End);
+  context_.font->render_text_onto(*ctx.surface,
+                                  compat::format("{}", page_revenue),
+                                  ViewPoint{total_sales_x, total_y},
+                                  FontFace::SUPERSMA, 11, TextAnchor::End);
 
-  context_.font->render_text_onto(
-      *ctx.surface, compat::format("{}", page_revenue),
-      ViewPoint{sales_x, total_y}, FontFace::SUPERSMA, 11, TextAnchor::End);
+  context_.font->render_text_onto(*ctx.surface,
+                                  compat::format("{}", page_costs),
+                                  ViewPoint{total_costs_x, total_y},
+                                  FontFace::SUPERSMA, 11, TextAnchor::End);
 
-  context_.font->render_text_onto(
-      *ctx.surface, compat::format("{}", page_costs),
-      ViewPoint{costs_x, total_y}, FontFace::SUPERSMA, 11, TextAnchor::End);
-
-  context_.font->render_text_onto(
-      *ctx.surface, compat::format("{}", page_profit),
-      ViewPoint{profit_x, total_y}, FontFace::SUPERSMA, 11, TextAnchor::End);
+  context_.font->render_text_onto(*ctx.surface,
+                                  compat::format("{}", page_profit),
+                                  ViewPoint{total_profit_x, total_y},
+                                  FontFace::SUPERSMA, 11, TextAnchor::End);
 }
 
 void WeeksTakings::render_expenses_page(const RenderContext& ctx,

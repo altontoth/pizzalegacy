@@ -98,6 +98,9 @@ Examples:
   };
 }
 
+// Index of the week's takings button among the statistics screens.
+constexpr int weeks_takings_screen_index = 3;
+
 static CommandDef make_nav_stats() {
   return CommandDef{
       .name = "stats",
@@ -132,8 +135,15 @@ Examples:
           screen = static_cast<int>(ctx.int_arg(1));
         }
         ctx.state.bootstrap_minimal_playable_world(ctx.context);
-        ctx.state.ui().push<RestaurantStatsState>(
-            RestaurantStatsState{.id = rid, .screen_index = screen});
+        // The takings report is its own view, opened by a button on the
+        // stats screen rather than shown as one of its screens.
+        if (screen == weeks_takings_screen_index) {
+          ctx.state.ui().push<WeeksTakingsState>(WeeksTakingsState{.id = rid});
+        }
+        else {
+          ctx.state.ui().push<RestaurantStatsState>(
+              RestaurantStatsState{.id = rid, .screen_index = screen});
+        }
         return CommandResult::success().add_message(compat::format(
             "Navigated to statistics (restaurant {}, screen {})", rid.value,
             screen ? std::to_string(*screen) : "default"));
