@@ -30,7 +30,7 @@ private:
   void save_career_as_mission(const std::string& raw_name);
   void finish_flow();
 
-  Player* player_;
+  Player& player_;
   GameOverCause cause_;
   GameOverScreen screen_;
   bool popup_pending_{true};

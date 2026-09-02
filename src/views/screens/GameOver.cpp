@@ -6,6 +6,7 @@
 
 #include "views/screens/GameOver.h"
 
+#include "core/character/Character.h"
 #include "core/character/Player.h"
 #include "core/events/CareerLog.h"
 #include "core/mission/MissionFile.h"
@@ -34,18 +35,17 @@ bool is_left_click(const views::ui::InteractionEvent& ie) {
 } // namespace
 
 GameOver::GameOver(GameContext& context, GameState& state, GameOverState gos)
-    : View(context, state), player_(state.player(gos.player_id)),
-      cause_(gos.cause),
-      screen_(player_ && player_->score() >= high_score_threshold
-                  ? GameOverScreen::HighScore
-                  : GameOverScreen::NoHighScore) {
+    : View(context, state), player_(*state.player(gos.player_id)),
+      cause_(gos.cause), screen_(player_.score() >= high_score_threshold
+                                     ? GameOverScreen::HighScore
+                                     : GameOverScreen::NoHighScore) {
 
-  if (cause_ == GameOverCause::MissionComplete && player_) {
+  if (cause_ == GameOverCause::MissionComplete) {
     // The CV is frozen at this point, so computing the overall match here
     // gives the same result as at the moment the final milestone fired.
     mission_score_ = core::mission::overall_score(
         *state.mission_target(),
-        state.career_log().get_cv_entries_for(player_->id()));
+        state.career_log().get_cv_entries_for(player_.id()));
   }
 
   interactions_.create_persistent_item(
@@ -64,12 +64,12 @@ void GameOver::start_flow() {
     context_.popup->create<TextInputPopup>(
         "Enter name for the high score table:", name_max_characters,
         [this](std::string name) {
-          if (name.empty() && player_) {
-            name = player_->name();
+          if (name.empty()) {
+            name = player_.character().name();
           }
           save::SaveGameManager::add_high_score(save::HighScoreEntry{
               .name = std::move(name),
-              .score = player_ ? player_->score() : 0,
+              .score = player_.score(),
           });
           after_high_score();
         });
@@ -82,8 +82,7 @@ void GameOver::start_flow() {
 void GameOver::after_high_score() { offer_save_career(); }
 
 void GameOver::offer_save_career() {
-  if (!player_ ||
-      state_.career_log().get_cv_entries_for(player_->id()).empty()) {
+  if (state_.career_log().get_cv_entries_for(player_.id()).empty()) {
     finish_flow();
     return;
   }
@@ -106,14 +105,14 @@ void GameOver::offer_save_career() {
 
 void GameOver::save_career_as_mission(const std::string& raw_name) {
   std::string name = core::mission::sanitize_mission_name(raw_name);
-  if (name.empty() && player_) {
-    name = core::mission::sanitize_mission_name(player_->name());
+  if (name.empty()) {
+    name = core::mission::sanitize_mission_name(player_.name());
   }
   if (name.empty()) {
     name = "career";
   }
 
-  const auto entries = state_.career_log().get_cv_entries_for(player_->id());
+  const auto entries = state_.career_log().get_cv_entries_for(player_.id());
   if (!core::mission::save_career_mission(name, entries)) {
     context_.popup->create<AlertPopup>("Failed to save the mission file.");
   }
@@ -137,9 +136,7 @@ void GameOver::finish_flow() {
 }
 
 void GameOver::continue_playing() {
-  if (player_) {
-    player_->restore_active();
-  }
+  player_.restore_active();
   state_.ui().pop();
 }
 
@@ -177,12 +174,12 @@ void GameOver::render(const RenderContext& ctx) {
                           *mission_score_);
     if (screen_ == GameOverScreen::HighScore) {
       text += compat::format(" {}, you have achieved a high score!",
-                             player_ ? player_->name() : "Player");
+                             player_.character().name());
     }
   }
   else if (screen_ == GameOverScreen::HighScore) {
     text = compat::format("{}, you have achieved a high score!",
-                          player_ ? player_->name() : "Player");
+                          player_.character().name());
   }
   else {
     text = "Game over! Sorry, it was not good enough to go in the high "
