@@ -270,6 +270,79 @@ Examples:
   };
 }
 
+static CommandDef make_nav_order() {
+  return CommandDef{
+      .name = "order",
+      .description = "Navigate to an ingredient order screen",
+      .help_text = R"(Usage: nav order <category> <supplier_id> [depot]
+
+Opens the order screen for one of a category's suppliers. Add depot for the
+central depot's version of it rather than the active restaurant's.
+
+Examples:
+  nav order cheese 3
+  nav order cheese 3 depot
+)",
+      .args =
+          {
+              ArgSpec{
+                  .name = "category",
+                  .type = ArgType::String,
+                  .optional = false,
+                  .default_provider = DefaultProvider::None,
+                  .description = "vegetables, meat, fruit or cheese",
+                  .allowed_values =
+                      std::vector<std::string>{"vegetables", "meat", "fruit",
+                                               "cheese"},
+              },
+              ArgSpec{
+                  .name = "supplier_id",
+                  .type = ArgType::Int,
+                  .optional = false,
+                  .default_provider = DefaultProvider::None,
+                  .description = "Which supplier of that category",
+                  .min_value = 0,
+                  .max_value = 255,
+              },
+              ArgSpec{
+                  .name = "depot",
+                  .type = ArgType::String,
+                  .optional = true,
+                  .default_provider = DefaultProvider::EmptyString,
+                  .description =
+                      R"(Say "depot" for the central depot's screen)",
+              },
+          },
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        ctx.state.bootstrap_minimal_playable_world(ctx.context);
+        auto category = parse_ingredient_category(ctx.string_arg(0));
+        if (!category) {
+          return CommandResult::error(compat::format(
+              "No such ingredient category: {}", ctx.string_arg(0)));
+        }
+        const auto supplier_id = static_cast<uint8_t>(ctx.int_arg(1));
+        const bool depot = ctx.args.size() > 2 && ctx.string_arg(2) == "depot";
+        if (depot) {
+          ctx.state.ui().push<DepotIngredientOrderState>(
+              DepotIngredientOrderState{.supplier_id = supplier_id,
+                                        .category = *category});
+        }
+        else {
+          if (!ctx.state.active_restaurant()) {
+            return CommandResult::error(
+                "No active restaurant",
+                "Open one first, e.g. nav restaurant 0");
+          }
+          ctx.state.ui().push<IngredientOrderState>(IngredientOrderState{
+              .supplier_id = supplier_id, .category = *category});
+        }
+        return CommandResult::success().add_message(
+            compat::format("Navigated to the {}order screen (supplier {})",
+                           depot ? "depot " : "", supplier_id));
+      },
+  };
+}
+
 CommandDef make_nav_commands() {
   return CommandDef{
       .name = "nav",
@@ -409,7 +482,8 @@ Examples:
                 compat::format("Navigated to stock ({})", name));
           },
       })
-      .add_subcommand(make_nav_depot());
+      .add_subcommand(make_nav_depot())
+      .add_subcommand(make_nav_order());
 }
 
 } // namespace debug::commands
