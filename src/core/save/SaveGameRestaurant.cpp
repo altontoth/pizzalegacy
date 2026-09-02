@@ -60,7 +60,7 @@ Staff json_to_staff(const json& j) {
   else if (j.contains("payment")) {
     // Legacy format: payment in dollars, convert to cents
     int dollars = j["payment"].get<int>();
-    staff.payment(Money{dollars * 100});
+    staff.payment(Money::from_dollars(dollars));
   }
 
   if (j.contains("course")) {

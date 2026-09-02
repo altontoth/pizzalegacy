@@ -248,7 +248,7 @@ void CityFactory::load_suppliers(std::ifstream& is, int supplier_count) {
     char c1 = static_cast<char>(is.get());
     char c2 = static_cast<char>(is.get());
 
-    int minimum_contract_amount = endian::u16le(c1, c2);
+    Money minimum_contract_amount = Money::from_dollars(endian::u16le(c1, c2));
 
     is.seekg(201, std::ios_base::cur);
 

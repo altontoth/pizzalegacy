@@ -243,7 +243,6 @@ void CategoryOverviewScreen::cycle_floor_tile(int quadrant) {
 void CategoryOverviewScreen::draw_furniture_page(const RenderContext& ctx) {
   auto* restaurant = state_.active_restaurant();
   auto stats = restaurant->calculate_furniture_stats();
-  int64_t value_dollars = stats.total_value.cents / 100;
 
   // Build all lines as data
   std::vector<InfoLine> lines = {
@@ -252,8 +251,8 @@ void CategoryOverviewScreen::draw_furniture_page(const RenderContext& ctx) {
                           .right_inset = 180},
        .post_fix = InfoPostFix{.text = "%", .x = 226}},
       {.label = "value:",
-       .value =
-           InfoValue{.text = std::to_string(value_dollars), .right_inset = 180},
+       .value = InfoValue{.text = compat::format("{:i}", stats.total_value),
+                          .right_inset = 180},
        .post_fix = std::nullopt},
       {.label = "quality:",
        .value = InfoValue{.text = std::to_string(stats.avg_quality),
@@ -273,7 +272,6 @@ void CategoryOverviewScreen::draw_furniture_page(const RenderContext& ctx) {
 void CategoryOverviewScreen::draw_oven_page(const RenderContext& ctx) {
   auto* restaurant = state_.active_restaurant();
   auto stats = restaurant->calculate_kitchen_equipment_stats();
-  int64_t value_dollars = stats.total_value.cents / 100;
 
   auto text_box = Surface(324, 168, PaletteHandle{60});
   uint8_t text_black = 8;
@@ -321,9 +319,9 @@ void CategoryOverviewScreen::draw_oven_page(const RenderContext& ctx) {
   pos.y += 20;
 
   // value
-  context_.font->render_text_onto(text_box, std::to_string(value_dollars), pos,
-                                  FontFace::PIZ_NUMB, text_black,
-                                  TextAnchor::End);
+  context_.font->render_text_onto(
+      text_box, compat::format("{:i}", stats.total_value), pos,
+      FontFace::PIZ_NUMB, text_black, TextAnchor::End);
   pos.y += 20;
 
   // quality

@@ -32,7 +32,7 @@ class DepotExportScreen : public views::screens::stock::StockMain {
 public:
   DepotExportScreen(GameContext& context, GameState& state,
                     IngredientCategory category, core::CityId target_city_id,
-                    int transport_cost);
+                    Money transport_cost);
   void tick() override;
   void render(const RenderContext& ctx) override;
 
@@ -51,7 +51,7 @@ private:
 
   IngredientCategory category_;
   core::CityId target_city_id_;
-  int transport_cost_;
+  Money transport_cost_;
   City* source_city_;
   City* target_city_;
   std::vector<ExportItem> items_;

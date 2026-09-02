@@ -13,6 +13,7 @@
 
 #include "core/common/Ids.h"
 #include "core/events/MilestoneId.h"
+#include "core/finance/Money.h"
 #include "core/state/AnnualCompetitionFlow.h"
 #include "core/state/CompetitionSession.h"
 
@@ -21,7 +22,7 @@ class GameState;
 // A player's accepted entry into the monthly pizza competition, collected by
 // the UI layer's entry popups.
 struct MonthlyCompetitionEntry {
-  int bet_dollars{0};
+  Money bet;
   // Set when this entry also chose the competition speed (first accepter).
   std::optional<int> speed_level;
 };

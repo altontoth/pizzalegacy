@@ -82,8 +82,8 @@ void process_restaurant_revenue(Restaurant& restaurant, Player& player) {
   }
 
   int per_customer = restaurant.ai_revenue_per_customer();
-  int64_t revenue_cents =
-      static_cast<int64_t>(per_customer) * total_customers * 100;
+  Money revenue =
+      Money::from_dollars(static_cast<int64_t>(per_customer) * total_customers);
 
   int tier = restaurant.ai_tier();
   const auto& menu = restaurant.economy().menu_factor();
@@ -92,17 +92,17 @@ void process_restaurant_revenue(Restaurant& restaurant, Player& player) {
     menu_sum += menu[ct];
   }
   int avg_menu = menu_sum / static_cast<int>(ALL_CONSUMER_TYPES.size());
-  int64_t cost_cents = (static_cast<int64_t>(tier) * 50 +
-                        static_cast<int64_t>(avg_menu) / 20 * total_customers) *
-                       100;
+  Money cost = Money::from_dollars(static_cast<int64_t>(tier) * 50 +
+                                   static_cast<int64_t>(avg_menu) / 20 *
+                                       total_customers);
 
   // AI receipts never reach a ledger, so accumulate gross turnover here for the
   // competitor "turnover in $" chart (the human path books this in Restaurant).
-  player.add_turnover(restaurant.property().city().id(), Money{revenue_cents});
+  player.add_turnover(restaurant.property().city().id(), revenue);
 
   Logger::info("[AI] {} ({}) - Revenue: {}, Costs: {}, Customers: {}",
-               player.name(), restaurant.name(), Money{revenue_cents},
-               Money{cost_cents}, total_customers);
+               player.name(), restaurant.name(), revenue, cost,
+               total_customers);
 }
 
 bool consider_closing(Restaurant& restaurant, Player& player,

@@ -143,5 +143,5 @@ int NewspaperAdGame::effectiveness() const {
 Money NewspaperAdGame::cost() const {
   const int dollars =
       (static_cast<int>(ad_format_) + 1) * AD_SIZE_COST_STEP_DOLLARS;
-  return Money{static_cast<int64_t>(dollars) * 100};
+  return Money::from_dollars(dollars);
 }

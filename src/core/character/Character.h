@@ -88,7 +88,7 @@ struct CharacterData : public RawRenderable {
     picture_height_ = height;
   };
   uint8_t palette_index() const override { return 38; };
-  int starting_payment(JobRole role) const {
+  Money starting_payment(JobRole role) const {
     // This is the implementation as the original does it
     int base = serving;
 
@@ -114,9 +114,7 @@ struct CharacterData : public RawRenderable {
 
     /* scale and round */
     int pay = (base * factor) / 100;
-    pay = static_cast<int>(math::round_up_to_next_power10<1>(pay));
-
-    return pay;
+    return Money::from_dollars(math::round_up_to_next_power10<1>(pay));
   }
 
 private:

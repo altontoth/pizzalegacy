@@ -984,9 +984,8 @@ Examples:
         auto* chef_data = CharacterFactory::create_character(0);
         core::character::Character chef_character(chef_data);
         Staff chef(core::character::JobRole::CHEF, chef_character);
-        chef.payment(Money{static_cast<int64_t>(chef_data->starting_payment(
-                               core::character::JobRole::CHEF)) *
-                           100});
+        chef.payment(
+            chef_data->starting_payment(core::character::JobRole::CHEF));
 
         HiringResult chef_result = restaurant->add_staff(chef);
         if (chef_result == HiringResult::Success) {
@@ -1002,9 +1001,8 @@ Examples:
         auto* waiter_data = CharacterFactory::create_character(1);
         core::character::Character waiter_character(waiter_data);
         Staff waiter(core::character::JobRole::WAITER, waiter_character);
-        waiter.payment(Money{static_cast<int64_t>(waiter_data->starting_payment(
-                                 core::character::JobRole::WAITER)) *
-                             100});
+        waiter.payment(
+            waiter_data->starting_payment(core::character::JobRole::WAITER));
 
         HiringResult waiter_result = restaurant->add_staff(waiter);
         if (waiter_result == HiringResult::Success) {

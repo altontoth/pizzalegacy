@@ -67,7 +67,8 @@ void ask_monthly_entry(
             [ctx, ask_speed,
              reply = std::move(reply)](int bet_dollars) mutable {
               if (!ask_speed) {
-                reply(MonthlyCompetitionEntry{.bet_dollars = bet_dollars});
+                reply(MonthlyCompetitionEntry{
+                    .bet = Money::from_dollars(bet_dollars)});
                 return;
               }
               // The first accepting player also picks the speed.
@@ -75,8 +76,9 @@ void ask_monthly_entry(
                   "Speed:", "", 3, 1, 5, 1,
                   [reply = std::move(reply),
                    bet_dollars](int speed_level) mutable {
-                    reply(MonthlyCompetitionEntry{.bet_dollars = bet_dollars,
-                                                  .speed_level = speed_level});
+                    reply(MonthlyCompetitionEntry{
+                        .bet = Money::from_dollars(bet_dollars),
+                        .speed_level = speed_level});
                   });
             });
       });

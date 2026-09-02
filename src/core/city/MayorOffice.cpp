@@ -38,14 +38,6 @@ void MayorOffice::add_favor(int player_id, Money amount) {
   favor_score_[player_id] = std::min(max_favor, favor_score_[player_id] + gain);
 }
 
-void MayorOffice::add_investment(int player_id, int32_t amount) {
-  investment_activity_[player_id] += amount;
-}
-
-void MayorOffice::add_trade(int player_id, int32_t amount) {
-  trade_activity_[player_id] += amount;
-}
-
 void MayorOffice::fee_paid(int player_id, bool paid) {
   fee_paid_[player_id] = paid;
 }

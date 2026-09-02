@@ -274,14 +274,15 @@ Money Property::get_monthly_rent() const {
   auto district_index = city_.district_by_index(index_);
   const auto& district_ptr = city_.district(district_index);
 
-  int base_rent = district_ptr.rent_level() * static_cast<int>(size_.w) *
-                  static_cast<int>(size_.h) * 100;
+  Money base_rent = Money::from_dollars(district_ptr.rent_level() *
+                                        static_cast<int>(size_.w) *
+                                        static_cast<int>(size_.h));
 
   if (type_ != PropertyType::BUSINESS_PREMISE) {
     base_rent *= depot_price_multiplier;
   }
 
-  return Money{base_rent};
+  return base_rent;
 }
 
 void Property::restaurant_id(core::RestaurantId r_id) { restaurant_id_ = r_id; }

@@ -16,11 +16,11 @@
 
 FoodSupplier::FoodSupplier(IngredientCategory category, uint8_t supplier_id,
                            uint8_t quality, std::string name, uint8_t head_id,
-                           int min_contract, const uint8_t* price_level,
+                           Money min_contract, const uint8_t* price_level,
                            int price_level_count)
     : category_(category), supplier_id_(supplier_id), quality_(quality),
       name_(std::move(name)), head_id_(head_id),
-      min_contract_amount_(Money{static_cast<int64_t>(min_contract * 100)}) {
+      min_contract_amount_(min_contract) {
   auto meta = core::food::CategoryRegistry::get(category_);
   actor_type_ = meta.supplier_type;
   // Copy price levels into owned array

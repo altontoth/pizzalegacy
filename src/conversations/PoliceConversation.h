@@ -14,6 +14,7 @@
 
 #include "conversations/BaseConversation.h"
 #include "conversations/PoliceLine.h"
+#include "core/finance/Money.h"
 #include "core/state/GameState.h"
 
 class Restaurant;
@@ -56,9 +57,8 @@ private:
 
   std::optional<ArrestReason> arrest_reason_;
   int sentence_days_ = 0;
-  // TODO: Change these to Money objects
-  int bribe_or_fine_cost_ = 0;
-  int donation_amount_ = 0;
+  Money bribe_or_fine_cost_;
+  Money donation_amount_;
   std::array<bool, 4> random_flags_{};
   std::optional<MayorTip> mayor_tip_;
 };

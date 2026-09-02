@@ -75,8 +75,6 @@ void CompetitionCoordinator::run_monthly_competition_chain(
           return;
         }
 
-        Money bet{static_cast<int64_t>(entry->bet_dollars) * 100};
-
         if (!session->canonical_pizza) {
           int speed_level = entry->speed_level.value_or(3);
           int pizza_index = std::min(competition_count_, 40) +
@@ -104,7 +102,7 @@ void CompetitionCoordinator::run_monthly_competition_chain(
         session->participants.push_back(CompetitionParticipant{
             .player_id = pid,
             .is_human = true,
-            .bet = bet,
+            .bet = entry->bet,
         });
         run_monthly_competition_chain(std::move(remaining), std::move(session));
       });

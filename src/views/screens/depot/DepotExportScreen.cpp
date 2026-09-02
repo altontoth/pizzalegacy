@@ -24,7 +24,7 @@
 DepotExportScreen::DepotExportScreen(GameContext& context, GameState& state,
                                      IngredientCategory category,
                                      core::CityId target_city_id,
-                                     int transport_cost)
+                                     Money transport_cost)
     : StockMain(context, state), category_(category),
       target_city_id_(target_city_id), transport_cost_(transport_cost) {
 
@@ -247,8 +247,8 @@ void DepotExportScreen::execute_export() {
   }
 
   // Pay transport costs
-  if (transport_cost_ > 0 &&
-      !state_.spend_cash(Account::Stock, Money{transport_cost_ * 100})) {
+  if (transport_cost_ > 0_usd &&
+      !state_.spend_cash(Account::Stock, transport_cost_)) {
     return;
   }
 

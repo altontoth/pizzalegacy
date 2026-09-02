@@ -114,13 +114,13 @@ void ChequePopup::confirm_amount() {
 }
 
 void ChequePopup::submit() {
-  int amount = 0;
+  int64_t dollars = 0;
   if (!amount_buffer_.empty()) {
-    amount = std::stoi(amount_buffer_);
+    dollars = std::stoi(amount_buffer_);
   }
   int account = Tools::string_to_int(account_buffer_);
   if (callback_) {
-    callback_(amount, account);
+    callback_(Money::from_dollars(dollars), account);
   }
   finished();
 }

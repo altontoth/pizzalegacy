@@ -56,9 +56,8 @@ PoliceConversation::PoliceConversation(GameState& state, const Actor* actor,
 
     int raw_bribe = (engine::random::rand_max_n(500) + 500) *
                     (sentence_days_ + player->criminal_record());
-    bribe_or_fine_cost_ =
-        static_cast<int>(std::max(math::round_up_to_next_power10<3>(raw_bribe),
-                                  static_cast<int64_t>(4000)));
+    bribe_or_fine_cost_ = Money::from_dollars(
+        std::max(math::round_up_to_next_power10<3>(raw_bribe), int64_t{4000}));
 
     player->increment_criminal_record();
     apply_confiscation();
@@ -81,7 +80,8 @@ PoliceConversation::PoliceConversation(GameState& state, const Actor* actor,
     // TODO: Find depot inspection date
 
     // Compute donation amount
-    donation_amount_ = (random_flags_[3] ? 2 : 1) * 2000 * business_rank;
+    donation_amount_ =
+        Money::from_dollars((random_flags_[3] ? 2 : 1) * 2000 * business_rank);
   }
 }
 
@@ -285,10 +285,9 @@ bool PoliceConversation::advance_line_choice(PoliceLine choice) {
 
   case PoliceLine::DID_YOU_LOSE_THIS_WALLET:
   case PoliceLine::NEED_A_DONATION_TO_THE_LOCAL_POLICE: {
-    Money donation{static_cast<int64_t>(donation_amount_) * 100};
-    if (player->cash_balance() >= donation) {
+    if (player->cash_balance() >= donation_amount_) {
       player->financials().transfer(state_.time().current_date(), Account::Cash,
-                                    Account::FinesAndBribes, donation,
+                                    Account::FinesAndBribes, donation_amount_,
                                     AccountingScope::Operational);
       state_.record_milestone(core::events::MilestoneId::FirstBribery,
                               player->id());
@@ -314,11 +313,10 @@ bool PoliceConversation::advance_proposal(bool agree) {
   switch (current_line_) {
   case PoliceLine::
       YOU_HAVE_BEEN_SENTENCED_TO_X_DAYS_IN_JAIL_OR_WOULD_YOU_RATHER: {
-    Money fine{static_cast<int64_t>(bribe_or_fine_cost_) * 100};
-    if (agree && player->cash_balance() >= fine) {
-      player->financials().transfer(state_.time().current_date(), Account::Cash,
-                                    Account::FinesAndBribes, fine,
-                                    AccountingScope::Operational);
+    if (agree && player->cash_balance() >= bribe_or_fine_cost_) {
+      player->financials().transfer(
+          state_.time().current_date(), Account::Cash, Account::FinesAndBribes,
+          bribe_or_fine_cost_, AccountingScope::Operational);
       if (!arrest_reason_) {
         fatal("Don't have an arrest reason when I do expect one.");
       }
@@ -442,7 +440,7 @@ std::vector<ConversationLine<PoliceLine>> PoliceConversation::lines() const {
     return {make_terminal_line(
         PoliceLine::YES_THANKS_WHAT_WOULD_I_HAVE_DONE_WITHOUT,
         compat::format(
-            " ${}! {}", donation_amount_,
+            " {:w}! {}", donation_amount_,
             lines_.at(static_cast<int>(
                 PoliceLine::
                     THAT_WILL_COME_IN_HANDY_I_WONT_FORGET_YOUR_GENEROSITY))))};
@@ -460,7 +458,7 @@ std::vector<ConversationLine<PoliceLine>> PoliceConversation::lines() const {
         PoliceLine::
             YOU_HAVE_BEEN_SENTENCED_TO_X_DAYS_IN_JAIL_OR_WOULD_YOU_RATHER,
         compat::format("You have been sentenced to {} days in jail! Or would "
-                       "you rather pay a fine of ${}?",
+                       "you rather pay a fine of {:w}?",
                        sentence_days_, bribe_or_fine_cost_))};
 
   case PoliceLine::SO_ILL_GO_TO_JAIL_SO_WHAT:

@@ -187,8 +187,7 @@ bool InsuranceConversation::advance_line_choice(InsuranceLine choice) {
         break;
       }
       // Charge cancellation fee and clear slot
-      player->financials().spend_cash(date, Account::Others,
-                                      Money{static_cast<int64_t>(2000) * 100});
+      player->financials().spend_cash(date, Account::Others, 2000_usd);
       policy = InsurancePolicy{};
       current_line(InsuranceLine::ALL_THAT_REMAINS_IS_2K_REDUNDANCY_PROVISION);
     }
@@ -217,8 +216,7 @@ bool InsuranceConversation::advance_line_choice(InsuranceLine choice) {
   case InsuranceLine::HOW_ABOUT_10_BIG_ONES_FOR_YOU: {
     int personality = player->character().personality();
     if (rand_percentage_chance(personality)) {
-      player->financials().spend_cash(date, Account::FinesAndBribes,
-                                      Money{static_cast<int64_t>(10000) * 100});
+      player->financials().spend_cash(date, Account::FinesAndBribes, 10000_usd);
       auto increased = execute_payout(true);
       current_line(increased ? InsuranceLine::AH_YES_PREMIUM_WILL_INCREASE
                              : InsuranceLine::AH_YES_YOU_ARE_RIGHT_WE_WILL_PAY);
@@ -283,8 +281,7 @@ bool InsuranceConversation::advance_proposal(bool agree) {
 
   case InsuranceLine::DONT_WORRY_ILL_TAKE_CARE_FOR_20_BIG_ONES:
     if (agree) {
-      player->financials().spend_cash(date, Account::FinesAndBribes,
-                                      Money{static_cast<int64_t>(20000) * 100});
+      player->financials().spend_cash(date, Account::FinesAndBribes, 20000_usd);
       auto increased = execute_payout(true);
       current_line(increased ? InsuranceLine::AH_YES_PREMIUM_WILL_INCREASE
                              : InsuranceLine::AH_YES_YOU_ARE_RIGHT_WE_WILL_PAY);

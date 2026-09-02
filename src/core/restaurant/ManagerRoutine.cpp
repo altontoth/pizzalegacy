@@ -330,28 +330,26 @@ void ManagerRoutine::do_price_adjustment() {
 
     // pizza[+1] * pizza[+2] = cost estimate.
     // pizza[+1] is unknown, appears always 0 in the original game.
-    int cost_estimate = 0;
+    Money cost_estimate;
 
-    int price_cents = static_cast<int>(entry.price.cents);
-    int revenue_estimate = demand_figure * price_cents;
+    Money revenue_estimate = entry.price * demand_figure;
 
     if (management > 60 && it != traded.pizza_sales.end() && sold > 0) {
       // High-management: factor in per-portion costs for a more accurate
       // profit signal. Dampens the revenue estimate.
-      int cost_per_portion =
-          static_cast<int>(it->second.ingredient_cost.cents) / sold;
-      cost_estimate -= sold * cost_per_portion;
+      Money cost_per_portion = it->second.ingredient_cost / sold;
+      cost_estimate -= cost_per_portion * sold;
       revenue_estimate -= cost_per_portion * demand_figure;
     }
 
-    int profit = revenue_estimate - cost_estimate;
+    Money profit = revenue_estimate - cost_estimate;
 
     if (settings.change_prices) {
-      if (profit < -5000) {
+      if (profit < -50_usd) {
         entry.price =
             std::max(entry.price - price_adjust_down, Menu::min_price);
       }
-      else if (profit > 2000) {
+      else if (profit > 20_usd) {
         entry.price = std::min(entry.price + price_adjust_up, Menu::max_price);
       }
     }

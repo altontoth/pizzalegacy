@@ -37,7 +37,7 @@ namespace {
 
 // Calculates the staff member's fair wage based on dominant skill, which
 // informs whether or not they lose motivation or not.
-int calculate_fair_salary(const Staff& staff) {
+Money calculate_fair_salary(const Staff& staff) {
   const auto& c = staff.character();
   int cook = c.cooking();
   int waiter = c.serving();
@@ -58,7 +58,7 @@ int calculate_fair_salary(const Staff& staff) {
   base += c.trustworthiness();
 
   int pay = (base * (100 + c.intelligence() / 2)) / 100;
-  return static_cast<int>(math::round_up_to_next_power10<1>(pay));
+  return Money::from_dollars(math::round_up_to_next_power10<1>(pay));
 }
 } // namespace
 
@@ -395,14 +395,17 @@ bool StaffEvents::check_salary(Staff& staff) {
     return false;
   }
 
-  auto salary = staff.payment().whole();
-  int calculated = calculate_fair_salary(staff);
+  const Money salary = staff.payment();
+  const Money calculated = calculate_fair_salary(staff);
+
+  constexpr int severe_underpay_fair_pct_of_wage = 140;
+  constexpr int severe_overpay_wage_pct_of_fair = 150;
 
   if (calculated > salary) {
     // Underpaid
     staff.adjust_motivation(-2);
-    // Significantly underpaid
-    if (salary * 1.4 < calculated) {
+    if (salary.whole() * severe_underpay_fair_pct_of_wage <
+        calculated.whole() * 100) {
       staff.adjust_motivation(-2);
     }
     // Extra penalty if staff recently demanded a raise and was refused
@@ -416,8 +419,8 @@ bool StaffEvents::check_salary(Staff& staff) {
       staff.adjust_motivation(1);
     }
   }
-  // Very overpaid
-  if (salary > calculated * 1.5) {
+  if (salary.whole() * 100 >
+      calculated.whole() * severe_overpay_wage_pct_of_fair) {
     if (staff.character().motivation() < 90) {
       staff.adjust_motivation(1);
     }

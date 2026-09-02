@@ -84,7 +84,7 @@ private:
     core::PlayerId human_pid;
     core::PlayerId opp_pid;
     int max_bet{0};
-    int bet_dollars{0};
+    Money bet;
     int speed_level{1};
   };
 

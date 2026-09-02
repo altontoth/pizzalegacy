@@ -17,6 +17,7 @@
 #include "core/GameTypes.h"
 #include "core/common/Ids.h"
 #include "core/events/MilestoneId.h"
+#include "core/finance/Money.h"
 #include "core/food/BakeSession.h"
 #include "core/food/IngredientCategoryType.h"
 #include "core/food/Pizza.h"
@@ -227,7 +228,7 @@ struct DepotMainState {
 struct DepotExportState {
   IngredientCategory category;
   core::CityId target_city_id;
-  int transport_cost;
+  Money transport_cost;
 };
 struct DepotWeaponInterfaceState {
   Property* property;

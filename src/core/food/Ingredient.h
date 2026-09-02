@@ -68,7 +68,6 @@ private:
   int sweet_{0};
   int salty_{0};
   int hot_{0};
-  int price_{0};
   int popularity_{0};
   IngredientCategory category_;
   int count_whole_{0};

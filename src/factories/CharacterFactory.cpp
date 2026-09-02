@@ -188,7 +188,7 @@ CharacterFactory::create_double(int id, core::character::JobRole role) {
   int salary_delta = (static_cast<unsigned char>(c->last_name[0]) * 2) - 156;
   int salary = static_cast<int>(c->starting_money.whole());
   salary = std::clamp(salary + salary_delta, 50, 350);
-  c->starting_money = Money{static_cast<int64_t>(salary) * 100};
+  c->starting_money = Money::from_dollars(salary);
 
   // Age tweak: c = clamp(last_name[1], 'a', 'l'); age += (c - 'a') / 4
   int age_char = std::clamp(static_cast<int>(c->last_name[1]),

@@ -130,7 +130,7 @@ MafiaConversation::MafiaConversation(
     if (first_contact) {
       amount /= 2;
     }
-    protection_price_ = std::max(amount, 100);
+    protection_price_ = Money::from_dollars(std::max(amount, 100));
   }
   else {
     // Mafia contacting you does not count, only when you call them do you get
@@ -302,8 +302,11 @@ bool MafiaConversation::advance_line_choice(MafiaLine choice) {
       current_line(MafiaLine::WE_NEED_TO_GET_TO_KNOW_YOU_BETTER);
       break;
     }
-    loan_amount_ = std::max(uw_score * 50, 500);
-    loan_repayment_ = loan_amount_ * (clan_danger_ + 100) / 100;
+    int loan_dollars = std::max(uw_score * 50, 500);
+    loan_amount_ = Money::from_dollars(loan_dollars);
+    // The repayment truncates to whole dollars like in the original.
+    loan_repayment_ =
+        Money::from_dollars(loan_dollars * (clan_danger_ + 100) / 100);
     current_line(MafiaLine::LOAN_OFFER);
     break;
   }
@@ -332,7 +335,7 @@ bool MafiaConversation::advance_line_choice(MafiaLine choice) {
     const int variant = rand_max_n(4);
     switch (tip_type) {
     case MafiaTips::SupportPhoneNumber: {
-      tip_price_ = (rand_max_n(500) + 50) * (variant + 5);
+      tip_price_ = Money::from_dollars((rand_max_n(500) + 50) * (variant + 5));
       int base = static_cast<int>(MafiaLine::I_KNOW_A_REALLY_HOT_PHONE_NUMBER);
       auto opener = static_cast<MafiaLine>(base + (variant * 2));
       tip_reveal_ = static_cast<MafiaLine>(static_cast<int>(opener) + 1);
@@ -340,7 +343,7 @@ bool MafiaConversation::advance_line_choice(MafiaLine choice) {
       break;
     }
     case MafiaTips::WeaponsPrices: {
-      tip_price_ = (rand_max_n(5) + 2) * 250;
+      tip_price_ = Money::from_dollars((rand_max_n(5) + 2) * 250);
       using core::item::Item;
       constexpr Item weapons[] = {Item::FlameThrower, Item::Chemicals,
                                   Item::Bazooka, Item::Bomb};
@@ -361,7 +364,7 @@ bool MafiaConversation::advance_line_choice(MafiaLine choice) {
       break;
     }
     case MafiaTips::ArmsDealerPhoneNumber: {
-      tip_price_ = (rand_max_n(10) + 2) * 250;
+      tip_price_ = Money::from_dollars((rand_max_n(10) + 2) * 250);
       auto* city = state_.active_city();
       auto dealers = city->all_arms_dealers();
       if (!dealers.empty()) {
@@ -412,9 +415,8 @@ bool MafiaConversation::advance_proposal(bool agree) {
         state_.difficulty_level());
 
     if (agree) {
-      player->financials().spend_cash(
-          date, Account::Protection,
-          Money{static_cast<int64_t>(protection_price_) * 100});
+      player->financials().spend_cash(date, Account::Protection,
+                                      protection_price_);
       if (restaurant) {
         restaurant->protection_timer(rand_max_n(20) + district_factor);
       }
@@ -472,14 +474,11 @@ bool MafiaConversation::advance_proposal(bool agree) {
   case MafiaLine::LOAN_OFFER:
     if (agree) {
       // Player receives the loan amount
-      player->financials().spend_cash(
-          date, Account::Loan,
-          Money{static_cast<int64_t>(-loan_amount_) * 100});
+      player->financials().spend_cash(date, Account::Loan, -loan_amount_);
       // Must repay the repayment amount (loan + interest) in 90 days
-      player->mafia_state().loan = MafiaLoan{
-          .amount = Money{static_cast<int64_t>(loan_repayment_) * 100},
-          .due_date = date.add_days(90),
-          .clan = clan_};
+      player->mafia_state().loan = MafiaLoan{.amount = loan_repayment_,
+                                             .due_date = date.add_days(90),
+                                             .clan = clan_};
       state_.adjust_underworld_score(*player, 40);
       current_line(MafiaLine::DONT_FORGET_IF_YOU_CANT_PAY_IN_THREE_MONTHS);
     }
@@ -524,9 +523,8 @@ bool MafiaConversation::advance_proposal(bool agree) {
     break;
 
   case MafiaLine::TIP_PRICE_OFFER: {
-    Money tip_cost{static_cast<int64_t>(tip_price_) * 100};
-    if (agree && player->cash_balance() >= tip_cost) {
-      player->financials().spend_cash(date, Account::Others, tip_cost);
+    if (agree && player->cash_balance() >= tip_price_) {
+      player->financials().spend_cash(date, Account::Others, tip_price_);
       if (!tip_reveal_) {
         fatal("Tip reveal line not set");
       }
@@ -553,7 +551,7 @@ std::string MafiaConversation::protection_offer_text() const {
     }
   }
   return compat::format(
-      " For just ${} we will offer you protection of restaurant {}! OK?",
+      " For just {:w} we will offer you protection of restaurant {}! OK?",
       protection_price_, rest_name);
 }
 
@@ -739,7 +737,7 @@ std::vector<ConversationLine<MafiaLine>> MafiaConversation::lines() const {
     const auto& pay_text =
         lines_.at(static_cast<int>(MafiaLine::IF_YOU_PAY_US_THE_SUM));
     auto text =
-        compat::format(" ${}{} ${}", loan_amount_, pay_text, loan_repayment_);
+        compat::format(" {:w}{} {:w}", loan_amount_, pay_text, loan_repayment_);
     return {make_line(
         MafiaLine::OK_I_THINK_WE_AN_GIVE_YOU_LOAN,
         {.is_proposal = true, .easy_accept = false, .custom_text = text})};
@@ -794,7 +792,7 @@ std::vector<ConversationLine<MafiaLine>> MafiaConversation::lines() const {
     return {make_line(MafiaLine::WITH_DR_YMMY_NITRO_GLICERINE_DIET)};
 
   case MafiaLine::TIP_PRICE_OFFER: {
-    auto text = compat::format(" ${}. Interested?", tip_price_);
+    auto text = compat::format(" {:w}. Interested?", tip_price_);
     return {make_proposal(MafiaLine::THIS_TRIP_WILL_ONLY_COST_YOU, text)};
   }
 
@@ -950,7 +948,7 @@ std::optional<MafiaMission> MafiaConversation::generate_mission(int rank) {
     mission.dropoff.minute = delivery_minute;
 
     int reward_raw = (rand_max_n(60) + 60) * (mission.risk_pct + 5);
-    mission.reward = Money{static_cast<int64_t>(reward_raw) * 100};
+    mission.reward = Money::from_dollars(reward_raw);
 
     mission.active = true;
     mission.deadline = delivery_date;
@@ -990,7 +988,7 @@ std::optional<MafiaMission> MafiaConversation::generate_mission(int rank) {
     mission.mission_type = MafiaMissionType::Laundering;
     int amount_10k = rand_max_n(120) + 30;
     mission.cash_amount =
-        Money{static_cast<int64_t>(amount_10k) * 10'000 * 100};
+        Money::from_dollars(static_cast<int64_t>(amount_10k) * 10'000);
 
     for (int i = 0; i < 4; i++) {
       mission.bank_accounts[i] = rand_max_n(900'000) + 100'000;
@@ -1005,7 +1003,7 @@ std::optional<MafiaMission> MafiaConversation::generate_mission(int rank) {
         static_cast<int>((static_cast<int64_t>(amount_10k) * 10'000 *
                           (mission.risk_pct + rand_max_n(10))) /
                          100);
-    mission.reward = Money{static_cast<int64_t>(reward_raw) * 100};
+    mission.reward = Money::from_dollars(reward_raw);
 
     mission.active = true;
     break;

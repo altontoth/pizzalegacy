@@ -20,7 +20,7 @@ constexpr std::array<Money, item_count> base_price = [] {
   for (std::size_t i = 0; i < item_count; ++i) {
     const int64_t dollars = (i < 4) ? (static_cast<int64_t>(i) + 1) * 400
                                     : (static_cast<int64_t>(i) - 2) * 1800;
-    f[i] = Money{dollars * 100};
+    f[i] = Money::from_dollars(dollars);
   }
   return f;
 }();
@@ -62,7 +62,7 @@ Money WeaponMarket::purchase_price(core::CityId city, Item id) const noexcept {
   auto dollars =
       base * (slots_[index(city, column)].modifier + modifier_offset) / 100;
 
-  return Money{dollars * 100};
+  return Money::from_dollars(dollars);
 }
 
 Money WeaponMarket::sell_price(core::CityId city, Item id) const noexcept {
@@ -72,7 +72,7 @@ Money WeaponMarket::sell_price(core::CityId city, Item id) const noexcept {
 
   int64_t dollars = purchase_price(city, id).whole() * percent / 100;
 
-  return Money{dollars * 100};
+  return Money::from_dollars(dollars);
 }
 
 int WeaponMarket::modifier(core::CityId city, int column) const {

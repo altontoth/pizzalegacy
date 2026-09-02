@@ -422,8 +422,7 @@ Examples:
         }
 
         Staff staff(role, core::character::Character(data));
-        staff.payment(
-            Money{static_cast<int64_t>(data->starting_payment(role)) * 100});
+        staff.payment(data->starting_payment(role));
 
         switch (restaurant->add_staff(staff)) {
         case HiringResult::NoSlotsAvailable:

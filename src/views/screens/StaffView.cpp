@@ -878,8 +878,7 @@ Surface StaffView::create_data_card(const Staff& staff) {
   // Use effective capacity (base + skill bonus) so card matches list CAP column
   snapshot.pizzas_per_day = staff.pizzas_per_day();
 
-  return create_data_card_impl(character, snapshot,
-                               static_cast<int>(staff.payment().whole()), "");
+  return create_data_card_impl(character, snapshot, staff.payment(), "");
 }
 
 Surface StaffView::create_data_card(core::character::CharacterData* character,
@@ -889,9 +888,10 @@ Surface StaffView::create_data_card(core::character::CharacterData* character,
                                to_string(role));
 }
 
-Surface StaffView::create_data_card_impl(
-    const RawRenderable& portrait, const core::character::CharacterData& data,
-    int payment_dollars, std::string_view tab_label) {
+Surface
+StaffView::create_data_card_impl(const RawRenderable& portrait,
+                                 const core::character::CharacterData& data,
+                                 Money payment, std::string_view tab_label) {
   auto card = create_empty_card(tab_label);
 
   views::helpers::draw_framed_portrait(card, portrait, {8, 30});
@@ -910,7 +910,7 @@ Surface StaffView::create_data_card_impl(
                                   FontFace::CSTANDAR, TEXT_COLOR_BLACK);
 
   context_.font->render_text_onto(
-      card, std::to_string(payment_dollars), ViewPoint{card.width() - 32, 120},
+      card, compat::format("{:i}", payment), ViewPoint{card.width() - 32, 120},
       FontFace::CSTANDAR, TEXT_COLOR_BLACK, TextAnchor::End);
 
   context_.font->render_text_onto(card, "PIZZAS/DAY",
@@ -1364,12 +1364,13 @@ void StaffView::add_common_buttons() {
                            });
 }
 
-void StaffView::apply_wage_change(Staff& staff, int new_wage_dollars) {
-  int old_wage_dollars = static_cast<int>(staff.payment().whole());
-  if (old_wage_dollars <= 0) {
+void StaffView::apply_wage_change(Staff& staff, Money new_wage) {
+  const Money old_wage = staff.payment();
+  if (old_wage.whole() <= 0) {
     return;
   }
-  int wage_pct = (new_wage_dollars * 100) / old_wage_dollars;
+  // The original compares whole dollars.
+  int wage_pct = static_cast<int>((new_wage.whole() * 100) / old_wage.whole());
 
   // raise_motivation_factor scales the raise (increase) response by difficulty
   int difficulty_divisor = (state_.difficulty_level() / 2) + 1;
@@ -1383,7 +1384,7 @@ void StaffView::apply_wage_change(Staff& staff, int new_wage_dollars) {
   int motivation_change =
       ((old_motivation * motivation_factor) / 100) - old_motivation;
 
-  staff.payment(Money{new_wage_dollars * 100});
+  staff.payment(new_wage);
   staff.adjust_motivation(motivation_change); // clamps to 0-100
 
   // Only a raise changes throughput; cuts and no-change leave ppd alone.
@@ -1396,8 +1397,8 @@ void StaffView::apply_wage_change(Staff& staff, int new_wage_dollars) {
     staff.pizzas_per_day(new_ppd);
   }
 
-  Logger::info("[Staff] Wage ${} -> ${} ({}%), motivation: {:+d}, ppd {}",
-               old_wage_dollars, new_wage_dollars, wage_pct, motivation_change,
+  Logger::info("[Staff] Wage {:w} -> {:w} ({}%), motivation: {:+d}, ppd {}",
+               old_wage, new_wage, wage_pct, motivation_change,
                wage_pct > 100 ? "updated" : "unchanged");
 }
 
@@ -1482,7 +1483,7 @@ void StaffView::add_overview_buttons() {
             "Change payment", "$", current_wage, min_wage, max_wage, step,
             [this](int new_wage_dollars) {
               if (Staff* s = selected_staff()) {
-                apply_wage_change(*s, new_wage_dollars);
+                apply_wage_change(*s, Money::from_dollars(new_wage_dollars));
                 card_slider_.dismiss();
                 mark_dirty();
               }
@@ -1603,10 +1604,8 @@ void StaffView::add_applicant_buttons() {
 
                 core::character::Character new_character(char_data);
 
-                int starting_pay_dollars = char_data->starting_payment(job_);
-
                 Staff new_staff(job_, new_character);
-                new_staff.payment(Money{starting_pay_dollars * 100});
+                new_staff.payment(char_data->starting_payment(job_));
 
                 // Add to restaurant
                 auto* restaurant = state_.active_restaurant();

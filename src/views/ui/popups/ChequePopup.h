@@ -11,13 +11,14 @@
 #include <string>
 #include <string_view>
 
+#include "core/finance/Money.h"
 #include "engine/input/TextSession.h"
 #include "gfx/PaletteHandle.h"
 #include "views/ui/popups/BasePopup.h"
 
 class ChequePopup : public BasePopup {
 public:
-  using callback_t = std::function<void(int amount, int account)>;
+  using callback_t = std::function<void(Money amount, int account)>;
 
   ChequePopup(const GameContext& context, callback_t cb);
 

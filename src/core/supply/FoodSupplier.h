@@ -26,7 +26,7 @@ class FoodSupplier {
 public:
   FoodSupplier(IngredientCategory category, uint8_t supplier_id,
                uint8_t quality, std::string name, uint8_t head_id,
-               int min_contract, const uint8_t* price_level,
+               Money min_contract, const uint8_t* price_level,
                int price_level_count);
   Money minimum_contract_amount() const;
   int number_of_products() const;

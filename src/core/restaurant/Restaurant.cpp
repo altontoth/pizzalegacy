@@ -423,7 +423,7 @@ Money Restaurant::calculate_slot_machine_income() const {
     }
     int rand1 = young_adults > 0 ? engine::random::rand_max_n(young_adults) : 0;
     int rand2 = engine::random::rand_max_n(20);
-    income += Money{static_cast<int64_t>(mult * (rand1 + rand2)) * 100};
+    income += Money::from_dollars(static_cast<int64_t>(mult * (rand1 + rand2)));
   }
   return income;
 }

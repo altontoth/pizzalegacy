@@ -154,7 +154,7 @@ void EuroMap::render(const RenderContext& ctx) {
         create_popup(ctx, small_popup_box_.w, small_popup_box_.h);
     const int center_x = popup_surface.rect().center().x;
     auto target = *last_clicked_city_;
-    int cost = calculate_cost(state_.active_city_id(), target);
+    Money cost = calculate_cost(state_.active_city_id(), target);
 
     if (map_mode_ == MapMode::DEPOT) {
       auto* dest_city = state_.city(target);
@@ -186,9 +186,8 @@ void EuroMap::render(const RenderContext& ctx) {
           popup_surface, "Export will cost", ViewPoint{center_x, 12},
           FontFace::ASTANDAR, dark_text_color, TextAnchor::Middle);
       context_.font->render_text_onto(
-          popup_surface, "$" + std::to_string(cost) + ".",
-          ViewPoint{center_x, 36}, FontFace::ASTANDAR, dark_text_color,
-          TextAnchor::Middle);
+          popup_surface, compat::format("{:w}.", cost), ViewPoint{center_x, 36},
+          FontFace::ASTANDAR, dark_text_color, TextAnchor::Middle);
       interactions_.create_frame_item(
           ViewRect{0, 0, DisplayConstants::SCREEN_WIDTH,
                    DisplayConstants::SCREEN_HEIGHT},
@@ -201,14 +200,13 @@ void EuroMap::render(const RenderContext& ctx) {
           });
     }
     else {
-      Money amount{static_cast<int64_t>(cost) * 100};
-      bool can_afford = state_.active_player()->cash_balance() >= amount;
+      bool can_afford = state_.active_player()->cash_balance() >= cost;
       if (can_afford) {
         context_.font->render_text_onto(
             popup_surface, "The flight costs", ViewPoint{center_x, 12},
             FontFace::ASTANDAR, dark_text_color, TextAnchor::Middle);
         context_.font->render_text_onto(
-            popup_surface, "$" + std::to_string(cost) + ".",
+            popup_surface, compat::format("{:w}.", cost),
             ViewPoint{center_x, 36}, FontFace::ASTANDAR, dark_text_color,
             TextAnchor::Middle);
         interactions_.create_frame_item(
@@ -257,13 +255,13 @@ Surface EuroMap::create_popup(const RenderContext& ctx, int w, int h) {
   return box;
 }
 
-int EuroMap::calculate_cost(core::CityId from, core::CityId to) {
+Money EuroMap::calculate_cost(core::CityId from, core::CityId to) {
   int dx = std::abs(city_coords[from.value].x - city_coords[to.value].x);
   int dy = std::abs(city_coords[from.value].y - city_coords[to.value].y);
   int manhattan = dx + dy;
 
   // Original used difficulty 1-5 with multiplier (difficulty + 1).
-  return manhattan * (state_.difficulty_level() + 1);
+  return Money::from_dollars(manhattan * (state_.difficulty_level() + 1));
 }
 
 void EuroMap::on_city_click(core::CityId city, views::ui::MouseButton btn) {
@@ -340,9 +338,8 @@ void EuroMap::on_city_leave(core::CityId city) {
 
 void EuroMap::attempt_flight() {
   auto target = *last_clicked_city_;
-  int cost = calculate_cost(state_.active_city_id(), target);
-  Money amount{static_cast<int64_t>(cost) * 100};
-  if (!state_.spend_cash(Account::Others, amount)) {
+  Money cost = calculate_cost(state_.active_city_id(), target);
+  if (!state_.spend_cash(Account::Others, cost)) {
     return;
   }
 

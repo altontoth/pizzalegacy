@@ -56,8 +56,6 @@ public:
   }
 
   // Per-player investment and trade activity totals (used in award scoring).
-  void add_investment(int player_id, int32_t amount);
-  void add_trade(int player_id, int32_t amount);
   int32_t investment_activity(int player_id) const {
     return investment_activity_[player_id];
   }

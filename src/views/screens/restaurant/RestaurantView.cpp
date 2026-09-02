@@ -1542,7 +1542,7 @@ void RestaurantView::challenge_ask_bet(CompetitionFlow flow) {
   context_.popup->create<NumberInputPopup>(
       "How much do you stake?", "$", 500, 500, flow.max_bet, 500,
       [this, flow](int bet_dollars) mutable {
-        flow.bet_dollars = bet_dollars;
+        flow.bet = Money::from_dollars(bet_dollars);
         challenge_ask_speed(flow);
       });
 }
@@ -1571,7 +1571,6 @@ void RestaurantView::challenge_start(CompetitionFlow flow) {
     return;
   }
 
-  Money bet{static_cast<int64_t>(flow.bet_dollars) * 100};
   auto session = std::make_shared<CompetitionSession>();
   session->pizza_index = pizza_index;
   session->speed_level = flow.speed_level;
@@ -1584,12 +1583,12 @@ void RestaurantView::challenge_start(CompetitionFlow flow) {
   session->participants.push_back(CompetitionParticipant{
       .player_id = flow.human_pid,
       .is_human = true,
-      .bet = bet,
+      .bet = flow.bet,
   });
   session->participants.push_back(CompetitionParticipant{
       .player_id = flow.opp_pid,
       .is_human = false,
-      .bet = bet,
+      .bet = flow.bet,
   });
 
   state_.competitions().collect_competition_bets(*session);

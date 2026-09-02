@@ -408,7 +408,7 @@ Loan BankConversation::propose_loan() const {
                            bank_settings_.interest_rate_modifier);
   constexpr uint8_t months = 12;
 
-  return Loan(core::BankId{actor_->id()}, Money{loan_dollars * 100},
+  return Loan(core::BankId{actor_->id()}, Money::from_dollars(loan_dollars),
               interest_rate, months);
 }
 
@@ -442,11 +442,10 @@ BankConversation::PopupRequest BankConversation::popup_request() const {
   return wants_cheque_ ? PopupRequest::CHEQUE : PopupRequest::NONE;
 }
 
-void BankConversation::on_cheque_result(int amount, int account) {
+void BankConversation::on_cheque_result(Money amount, int account) {
   wants_cheque_ = false;
 
-  bool ok = amount > 0 && account > 0 &&
-            state_.bank_transfer(account, Money{amount * 100},
-                                 *state_.active_player());
+  bool ok = amount > 0_usd && account > 0 &&
+            state_.bank_transfer(account, amount, *state_.active_player());
   current_line(ok ? BankLine::TRANSFER_SUCCEEDED : BankLine::TRANSFER_FAILED);
 }

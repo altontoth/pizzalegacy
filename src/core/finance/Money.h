@@ -16,6 +16,11 @@ struct Money {
   Money() = default;
   constexpr Money(int64_t c) : cents(c) {}
 
+  // The original mostly uses whole dollars.
+  [[nodiscard]] static constexpr Money from_dollars(int64_t dollars) {
+    return Money{dollars * 100};
+  }
+
   constexpr Money operator+(Money other) const {
     return Money{cents + other.cents};
   }

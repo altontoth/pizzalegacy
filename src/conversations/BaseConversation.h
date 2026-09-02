@@ -107,7 +107,7 @@ public:
 
   enum class PopupRequest { NONE, CHEQUE };
   virtual PopupRequest popup_request() const { return PopupRequest::NONE; }
-  virtual void on_cheque_result(int amount, int account) {}
+  virtual void on_cheque_result(Money amount, int account) {}
 
   virtual Emotion emotion() const = 0;
   virtual bool has_ended() const = 0;

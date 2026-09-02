@@ -25,7 +25,7 @@ public:
   bool advance_proposal(bool) override;
   bool has_ended() const override;
   PopupRequest popup_request() const override;
-  void on_cheque_result(int amount, int account) override;
+  void on_cheque_result(Money amount, int account) override;
 
 private:
   Loan propose_loan() const;

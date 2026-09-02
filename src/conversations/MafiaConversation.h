@@ -13,6 +13,7 @@
 #include "conversations/MafiaLine.h"
 #include "core/character/MafiaPlayerState.h"
 #include "core/common/Ids.h"
+#include "core/finance/Money.h"
 #include "core/state/GameState.h"
 
 class MafiaConversation : public BaseConversation<MafiaLine> {
@@ -42,10 +43,10 @@ private:
   std::optional<core::RestaurantId> restaurant_id_;
   int clan_danger_ = 0;
   int clan_ = 0;
-  int protection_price_ = 0;
-  int loan_amount_ = 0;
-  int loan_repayment_ = 0;
-  int tip_price_ = 0;
+  Money protection_price_;
+  Money loan_amount_;
+  Money loan_repayment_;
+  Money tip_price_;
   int mission_risk_ = 0;
   std::optional<MafiaMission> pending_mission_;
   std::optional<MafiaLine> tip_reveal_;

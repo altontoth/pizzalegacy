@@ -86,7 +86,7 @@ public:
   int quality() const { return quality_; }
   int supplier() const { return supplier_; }
   const std::string& name() const { return name_; }
-  Money price() const { return Money{price_ * 100}; }
+  Money price() const { return Money::from_dollars(price_); }
   const std::vector<int>& bobs() const { return bobs_; }
   FurnitureCategory category() const { return category_; }
   int u2() const { return u2_; }

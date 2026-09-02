@@ -55,7 +55,7 @@ private:
   void draw_green_rows(Surface& dst, int y, int count);
   void draw_card_name(Surface& card, std::string_view first,
                       std::string_view last);
-  void apply_wage_change(Staff& staff, int new_wage_dollars);
+  void apply_wage_change(Staff& staff, Money new_wage);
   Surface create_top_bar(const std::string& title = "");
   Surface create_manager_settings_panel(Restaurant* r);
   void draw_manager_settings_interactions();
@@ -75,8 +75,7 @@ private:
   Surface create_data_card(const Staff& staff);
   Surface create_data_card_impl(const RawRenderable& portrait,
                                 const core::character::CharacterData& data,
-                                int payment_dollars,
-                                std::string_view tab_label = "");
+                                Money payment, std::string_view tab_label = "");
   Surface create_application_card(uint8_t character_id);
   std::pair<std::string, std::string>
   load_application_text(uint8_t character_id);

@@ -9,6 +9,7 @@
 #include <optional>
 #include "core/GameTypes.h"
 #include "core/common/Ids.h"
+#include "core/finance/Money.h"
 #include "core/food/IngredientCategoryType.h"
 #include "engine/DebugLabel.h"
 #include "engine/geom/Spaces.h"
@@ -38,7 +39,7 @@ public:
 private:
   ViewRect dest_box(ViewPoint p);
   Surface create_popup(const RenderContext& ctx, int, int);
-  int calculate_cost(core::CityId from, core::CityId to);
+  Money calculate_cost(core::CityId from, core::CityId to);
   void on_city_click(core::CityId city, views::ui::MouseButton btn);
   void on_city_hover(core::CityId city);
   void on_city_leave(core::CityId city);

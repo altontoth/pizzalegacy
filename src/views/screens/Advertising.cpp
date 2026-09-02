@@ -732,7 +732,7 @@ void Advertising::finalize_purchase() {
     }
     int count_index = (*flyer_count_ / FLYERS_STEP_SIZE) - 1; // 0-4
     campaign.rate.effectiveness = (count_index + 1) * 2;
-    campaign.rate.cost = Money{(count_index + 1) * 50 * 100};
+    campaign.rate.cost = Money::from_dollars((count_index + 1) * 50);
     campaign.flyer_count = flyer_count_;
     break;
   }
