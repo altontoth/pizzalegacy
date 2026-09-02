@@ -67,7 +67,6 @@
 #include "views/screens/menus/MenuSaveAsMission.h"
 #include "views/screens/pizza/PizzaDesign.h"
 #include "views/screens/purchasing/CategoryOverviewScreen.h"
-#include "views/screens/purchasing/Demographics.h"
 #include "views/screens/purchasing/FloorListView.h"
 #include "views/screens/purchasing/FurnitureListView.h"
 #include "views/screens/purchasing/PurchasingMain.h"
@@ -282,8 +281,8 @@ ViewFactory::Result ViewFactory::create(GameContext& context, GameState& gs) {
                 context, gs, pj.scores, pj.on_complete, pj.judging_mode);
           },
           [&](const CategoryOverviewState& os) {
-            view =
-                std::make_unique<CategoryOverviewScreen>(context, gs, os.type);
+            view = std::make_unique<CategoryOverviewScreen>(
+                context, gs, os.type, os.demographics);
           },
           [&](const IngredientCategoryViewState& is) {
             view = std::make_unique<IngredientCategoryView>(context, gs,
@@ -372,10 +371,6 @@ ViewFactory::Result ViewFactory::create(GameContext& context, GameState& gs) {
           },
           [&](const SupplierListState& ss) {
             view = std::make_unique<SupplierList>(context, gs, ss.supplier);
-          },
-          [&](const PurchasingDemographicState& /*ps*/) {
-            view = std::make_unique<views::screens::purchasing::Demographics>(
-                context, gs);
           },
           [&](const BankState& bs) {
             const auto& city = gs.active_city();

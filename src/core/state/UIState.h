@@ -148,15 +148,14 @@ struct PurchasingState {
 struct SupplierListState {
   SupplierType supplier;
 };
-struct PurchasingDemographicState {
-  SupplierType supplier;
-};
 struct ViewerState {
   std::filesystem::path filename;
   ViewerType type = ViewerType::Auto;
 };
 struct CategoryOverviewState {
   SupplierType type;
+  // Show the customer ratings page instead of the category's own page.
+  bool demographics{false};
 };
 struct FurnitureListState {
   SupplierID supplier_id;
@@ -269,20 +268,21 @@ struct MayorState {
   std::function<void()> on_complete;
 };
 
-using UIState = std::variant<
-    ScreenTag, EuroMapState, PizzaJudgesState, CityViewState, PurchasingState,
-    PurchasingDemographicState, ActorTerminalState, BankState, PoliceState,
-    MafiaState, MayorState, RestaurantViewState, ViewerState, FloorListState,
-    FurnitureListState, CategoryOverviewState, SupplierListState,
-    PizzaDesignState, RestaurantMenuState, RestaurantStatsState,
-    WeeksTakingsState, AnimatedStatsState, IngredientCategoryViewState,
-    DepotIngredientCategoryViewState, StockMainState, ContractsViewState,
-    DepotMainState, DepotExportState, IngredientSupplierListState,
-    DepotIngredientSupplierListState, IngredientOrderState,
-    DepotIngredientOrderState, DepotWeaponInterfaceState, TerminalState,
-    SupplierContractState, PlayerTurnCardState, FullscreenStatusState,
-    WinSequenceState, MafiaMissionViewState, MarketResearchState,
-    StatsRestaurantsState, PlayerProfileState, GameOverState,
-    MaestroMessageState, OptionsMenuState,
-    // nothing on screen:
-    std::monostate>;
+using UIState =
+    std::variant<ScreenTag, EuroMapState, PizzaJudgesState, CityViewState,
+                 PurchasingState, ActorTerminalState, BankState, PoliceState,
+                 MafiaState, MayorState, RestaurantViewState, ViewerState,
+                 FloorListState, FurnitureListState, CategoryOverviewState,
+                 SupplierListState, PizzaDesignState, RestaurantMenuState,
+                 RestaurantStatsState, WeeksTakingsState, AnimatedStatsState,
+                 IngredientCategoryViewState, DepotIngredientCategoryViewState,
+                 StockMainState, ContractsViewState, DepotMainState,
+                 DepotExportState, IngredientSupplierListState,
+                 DepotIngredientSupplierListState, IngredientOrderState,
+                 DepotIngredientOrderState, DepotWeaponInterfaceState,
+                 TerminalState, SupplierContractState, PlayerTurnCardState,
+                 FullscreenStatusState, WinSequenceState, MafiaMissionViewState,
+                 MarketResearchState, StatsRestaurantsState, PlayerProfileState,
+                 GameOverState, MaestroMessageState, OptionsMenuState,
+                 // nothing on screen:
+                 std::monostate>;

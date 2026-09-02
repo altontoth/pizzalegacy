@@ -19,7 +19,7 @@
 class CategoryOverviewScreen : public PurchasingMain {
 public:
   CategoryOverviewScreen(GameContext& context, GameState& state,
-                         SupplierType stype);
+                         SupplierType stype, bool demographics = false);
   void tick() override;
   void render(const RenderContext& ctx) override;
 
@@ -58,6 +58,7 @@ private:
   };
 
   virtual void draw_flooring_page(const RenderContext& ctx);
+  void draw_demographics_page(const RenderContext& ctx);
   // Steps one quadrant of the active restaurant's floor pattern to the next
   // tile of its set.
   void cycle_floor_tile(int quadrant);
@@ -71,6 +72,7 @@ private:
   void draw_info_section(const RenderContext& ctx,
                          const std::vector<InfoLine>& lines);
 
+  bool showing_demographics_{false};
   int scroll_offset_{0};
   bool scroll_active_{false};
   int scroll_speed_{0};

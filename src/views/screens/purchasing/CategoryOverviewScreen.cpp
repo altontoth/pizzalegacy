@@ -7,6 +7,7 @@
 #include "views/screens/purchasing/CategoryOverviewScreen.h"
 
 #include "core/character/Player.h"
+#include "core/city/Property.h"
 #include "core/finance/Money.h"
 #include "core/restaurant/Furniture.h"
 #include "core/restaurant/PlacedFurniture.h"
@@ -20,6 +21,7 @@
 #include "gfx/Blit.h"
 #include "resources/BlitmapManager.h"
 #include "resources/FontManager.h"
+#include "views/ui/DemographicRenderer.h"
 #include "views/ui/PopupManager.h"
 #include "views/ui/popups/AlertPopup.h"
 
@@ -30,9 +32,10 @@
 
 CategoryOverviewScreen::CategoryOverviewScreen(GameContext& context,
                                                GameState& state,
-                                               SupplierType stype)
+                                               SupplierType stype,
+                                               bool demographics)
     : PurchasingMain(context, state), supplier_type_(stype),
-      status_controller_(state.status()) {
+      showing_demographics_(demographics), status_controller_(state.status()) {
 
   category_offsets[SupplierType::FURNITURE] = {132, 168, 52, 44};
   category_offsets[SupplierType::KITCHENWARE] = {132 + 52, 168, 58, 44};
@@ -65,9 +68,25 @@ void CategoryOverviewScreen::tick() {
 
 void CategoryOverviewScreen::render(const RenderContext& ctx) {
   interactions_.begin_frame();
+  if (showing_demographics_) {
+    draw_demographics_page(ctx);
+    return;
+  }
   ctx.surface->palette({60});
   draw_page_header(ctx);
   draw_page_screen(ctx);
+}
+
+void CategoryOverviewScreen::draw_demographics_page(const RenderContext& ctx) {
+  auto* restaurant = state_.active_restaurant();
+  ctx.surface->blit_raw(context_.vga->get("gfx/back9"));
+  ctx.surface->palette({7});
+
+  restaurant->property().calculate_demographics(restaurant);
+
+  views::ui::render_demographics(
+      *ctx.surface, *context_.font, context_.blitmap->get2(),
+      restaurant->calculate_furniture_appeal_popularity(), "Furniture");
 }
 
 void CategoryOverviewScreen::draw_icon(const RenderContext& ctx) {
@@ -487,24 +506,28 @@ void CategoryOverviewScreen::set_up_input_panel() {
   input_panel_->add_button(Icon::CHAIR, ButtonType::Square,
                            ButtonPosition::TopLeft, "Furniture", [this]() {
                              supplier_type_ = SupplierType::FURNITURE;
+                             showing_demographics_ = false;
                              mark_dirty();
                            });
 
   input_panel_->add_button(Icon::OVEN, ButtonType::Square,
                            ButtonPosition::TopCenter, "Kitchenware", [this]() {
                              supplier_type_ = SupplierType::KITCHENWARE;
+                             showing_demographics_ = false;
                              mark_dirty();
                            });
 
   input_panel_->add_button(Icon::PLANT, ButtonType::Square,
                            ButtonPosition::MiddleLeft, "Extras", [this]() {
                              supplier_type_ = SupplierType::EXTRAS;
+                             showing_demographics_ = false;
                              mark_dirty();
                            });
 
   input_panel_->add_button(Icon::FOOT, ButtonType::Square,
                            ButtonPosition::MiddleCenter, "Flooring", [this]() {
                              supplier_type_ = SupplierType::FLOORING;
+                             showing_demographics_ = false;
                              mark_dirty();
                            });
 
@@ -514,6 +537,9 @@ void CategoryOverviewScreen::set_up_input_panel() {
 
   input_panel_->add_button(Icon::SHOPPING_CART, ButtonType::Horizontal,
                            ButtonPosition::BottomLeft, "Shop", [this]() {
+                             if (showing_demographics_) {
+                               return;
+                             }
                              // The visit costs energy whether or
                              // not anything is bought.
                              if (auto* player = state_.active_player()) {
@@ -524,12 +550,12 @@ void CategoryOverviewScreen::set_up_input_panel() {
                              mark_dirty();
                            });
 
-  input_panel_->add_button(
-      Icon::GRAPH, ButtonType::Vertical, ButtonPosition::TopRight,
-      "Customer ratings", [this]() {
-        state_.ui().replace_top<PurchasingDemographicState>(supplier_type_);
-        mark_dirty();
-      });
+  input_panel_->add_button(Icon::GRAPH, ButtonType::Vertical,
+                           ButtonPosition::TopRight, "Customer ratings",
+                           [this]() {
+                             showing_demographics_ = true;
+                             mark_dirty();
+                           });
 }
 
 Surface CategoryOverviewScreen::create_floor_preview(
@@ -727,5 +753,6 @@ SupplierType CategoryOverviewScreen::supplier_type() const {
 
 void CategoryOverviewScreen::navigate_to_restaurant(core::RestaurantId new_id) {
   state_.active_restaurant(new_id);
-  state_.ui().replace_top<CategoryOverviewState>(supplier_type_);
+  state_.ui().replace_top<CategoryOverviewState>(supplier_type_,
+                                                 showing_demographics_);
 }

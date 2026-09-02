@@ -172,7 +172,6 @@ set(GAME_PLEGACY_SOURCES
     src/views/screens/pizza/PizzaDesignInfo.cpp
     src/views/screens/pizza/PizzaDesignRecipes.cpp
     src/views/screens/purchasing/CategoryOverviewScreen.cpp
-    src/views/screens/purchasing/Demographics.cpp
     src/views/screens/purchasing/FloorListView.cpp
     src/views/screens/purchasing/FurnitureListView.cpp
     src/views/screens/purchasing/PurchasingMain.cpp
@@ -649,7 +648,6 @@ set(PLEGACY_HEADERS
     src/views/screens/pizza/PizzaDesign.h
     src/views/screens/pizza/PizzaDesignHelpers.h
     src/views/screens/purchasing/CategoryOverviewScreen.h
-    src/views/screens/purchasing/Demographics.h
     src/views/screens/purchasing/FloorListView.h
     src/views/screens/purchasing/FurnitureListView.h
     src/views/screens/purchasing/PurchasingMain.h
