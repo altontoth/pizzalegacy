@@ -30,7 +30,7 @@ constexpr int depot_price_multiplier = 5;
 
 class Property {
 public:
-  Property(int index, PropertyType type, Size size, int realtor_id,
+  Property(int index, PropertyType type, Size size, core::ActorId realtor_id,
            PremiseStatus, City& city);
   Size size() const;
   void size(Size size);
@@ -41,8 +41,8 @@ public:
   void entrance_offset(int offset);
   int kitchen_entry_offset() const;
   void kitchen_entry_offset(int offset);
-  int realtor_id() const;
-  void realtor_id(int realtor_id);
+  core::ActorId realtor_id() const;
+  void realtor_id(core::ActorId realtor_id);
   PremiseStatus status() const;
   void status(PremiseStatus);
   City& city();
@@ -98,7 +98,7 @@ private:
   Size kitchen_size_{};
   int entrance_offset_{1};
   int kitchen_entry_offset_{1};
-  int realtor_id_;
+  core::ActorId realtor_id_;
   PremiseStatus status_;
   City& city_;
   std::optional<core::PlayerId> owner_tenant_;

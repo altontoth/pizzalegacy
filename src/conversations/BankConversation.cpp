@@ -66,7 +66,7 @@ bool BankConversation::advance_line_choice(BankLine choice) {
       current_line(BankLine::TOO_MANY_LOANS);
     }
     else if (state_.active_player()->has_loan_with_bank(
-                 state_.active_city_id(), core::BankId{actor_->id()})) {
+                 state_.active_city_id(), core::BankId{actor_->id().value})) {
       current_line(BankLine::SORRY_ALREADY_HAVE_LOAN);
     }
     else {
@@ -79,7 +79,7 @@ bool BankConversation::advance_line_choice(BankLine choice) {
     break;
   case BankLine::I_WANT_TO_REPAY:
     if (!state_.active_player()->has_loan_with_bank(
-            state_.active_city_id(), core::BankId{actor_->id()})) {
+            state_.active_city_id(), core::BankId{actor_->id().value})) {
       current_line(BankLine::YOU_DONT_HAVE_LOAN_WITH_US);
     }
     else {
@@ -87,7 +87,7 @@ bool BankConversation::advance_line_choice(BankLine choice) {
       auto& loans =
           state_.active_player()->loans_in_city(state_.active_city_id());
       auto it = std::ranges::find_if(loans, [this](const Loan& l) {
-        return l.bank_id() == core::BankId{actor_->id()};
+        return l.bank_id() == core::BankId{actor_->id().value};
       });
       repaying_loan_ = &(*it);
 
@@ -408,8 +408,8 @@ Loan BankConversation::propose_loan() const {
                            bank_settings_.interest_rate_modifier);
   constexpr uint8_t months = 12;
 
-  return Loan(core::BankId{actor_->id()}, Money::from_dollars(loan_dollars),
-              interest_rate, months);
+  return Loan(core::BankId{actor_->id().value},
+              Money::from_dollars(loan_dollars), interest_rate, months);
 }
 
 Investment BankConversation::propose_investment() const {
@@ -420,7 +420,7 @@ Investment BankConversation::propose_investment() const {
   if (cash > investment_flat_offer_threshold) {
     amount = investment_flat_offer;
   }
-  return {core::BankId{actor_->id()}, state_.active_city_id(), amount,
+  return {core::BankId{actor_->id().value}, state_.active_city_id(), amount,
           investment_return_rate, investment_months};
 }
 

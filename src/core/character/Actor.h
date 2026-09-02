@@ -10,6 +10,7 @@
 #include <map>
 #include <string>
 #include <vector>
+#include "core/common/Ids.h"
 
 enum class ActionState {
   TALKING,
@@ -36,13 +37,11 @@ enum class ActorType {
 
 constexpr uint8_t BLINKING_EYE_STATE = 5;
 
-using ActorId = int;
-
 class Actor {
 public:
   // Todo: get background_id from actor_type.
-  Actor(ActorType type, ActorId id);
-  ActorId id() const;
+  Actor(ActorType type, core::ActorId id);
+  core::ActorId id() const;
   std::string name() const;
   void name(std::string name);
   ActorType type() const;
@@ -63,7 +62,7 @@ public:
 private:
   ActorType type_;
   // How do we identify this user:
-  ActorId id_{-1};
+  core::ActorId id_{-1};
   // What is the BOB id of this actors head?
   int head_id_{-1};
   std::string name_;

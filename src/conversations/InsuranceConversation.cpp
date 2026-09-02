@@ -41,7 +41,7 @@ constexpr int type_index(InsuranceType t) { return static_cast<int>(t); }
 InsuranceConversation::InsuranceConversation(GameState& state,
                                              const Actor* actor,
                                              const InsuranceSettings& is,
-                                             ActorId actor_id)
+                                             core::ActorId actor_id)
     : BaseConversation(compute_start_line(state, actor), state, "t/versich.e",
                        actor),
       insurance_settings_(is), actor_id_(actor_id) {}

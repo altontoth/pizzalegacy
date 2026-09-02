@@ -737,7 +737,7 @@ void GameState::process_mayor_award_event(const MayorAwardEvent& award_event) {
   if (mayor_actors.empty()) {
     return;
   }
-  int mayor_id = mayor_actors[0]->id();
+  core::ActorId mayor_id = mayor_actors[0]->id();
 
   std::optional<int> award_winner = award_event.winner_player_id;
 

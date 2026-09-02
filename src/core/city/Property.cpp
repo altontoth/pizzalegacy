@@ -23,7 +23,7 @@ using namespace core;
 std::ostream& operator<<(std::ostream& os, const Property& premise) {
   os << "Property(width: " << static_cast<int>(premise.size().w)
      << ", height: " << static_cast<int>(premise.size().h)
-     << ", realtor_id: " << static_cast<int>(premise.realtor_id())
+     << ", realtor_id: " << premise.realtor_id().value
      << ", status: " << static_cast<int>(premise.status())
      << ", city: " << premise.city().name() << ")";
   return os;
@@ -47,8 +47,8 @@ const uint8_t residential_pop_table[8][6] = {
     // Hotel
     {1, 1, 2, 5, 25, 6}};
 
-Property::Property(int index, PropertyType type, Size size, int realtor_id,
-                   PremiseStatus status, City& city)
+Property::Property(int index, PropertyType type, Size size,
+                   core::ActorId realtor_id, PremiseStatus status, City& city)
     : index_(index), type_(type), size_(size), realtor_id_(realtor_id),
       status_(status), city_(city) {}
 
@@ -62,8 +62,10 @@ int Property::kitchen_entry_offset() const { return kitchen_entry_offset_; }
 void Property::kitchen_entry_offset(int offset) {
   kitchen_entry_offset_ = offset;
 }
-int Property::realtor_id() const { return realtor_id_; }
-void Property::realtor_id(int realtor_id) { realtor_id_ = realtor_id; }
+core::ActorId Property::realtor_id() const { return realtor_id_; }
+void Property::realtor_id(core::ActorId realtor_id) {
+  realtor_id_ = realtor_id;
+}
 PremiseStatus Property::status() const { return status_; }
 void Property::status(PremiseStatus status) { status_ = status; }
 

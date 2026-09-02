@@ -90,7 +90,7 @@ Examples:
         if (mafia_actors.empty()) {
           return CommandResult::error("No mafia actor in this city");
         }
-        int mafia_id = mafia_actors[0]->id();
+        core::ActorId mafia_id = mafia_actors[0]->id();
 
         auto rid = ctx.restaurant_id(0);
         Restaurant* restaurant = ctx.state.restaurant(rid);

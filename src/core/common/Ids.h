@@ -46,6 +46,7 @@ struct RecipeTag {};
 struct AiPizzaTag {};
 struct FurnitureTag {};
 struct DistrictIndexTag {};
+struct ActorTag {};
 
 namespace core {
 using PlayerId = StrongId<PlayerTag>;
@@ -57,6 +58,7 @@ using RecipeId = StrongId<RecipeTag>;
 using AiPizzaId = StrongId<AiPizzaTag>;
 using FurnitureId = StrongId<FurnitureTag>;
 using DistrictIndex = StrongId<DistrictIndexTag>;
+using ActorId = StrongId<ActorTag>;
 } // namespace core
 
 template <class Tag, class Under>

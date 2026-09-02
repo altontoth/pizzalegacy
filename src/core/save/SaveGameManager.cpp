@@ -1028,7 +1028,7 @@ void SaveGameManager::json_to_state(const json& j, GameState& state,
   if (j.contains("refused_call_actors")) {
     if (City* city = state.active_city()) {
       for (const auto& actor_id : j["refused_call_actors"]) {
-        city->refuse_calls_from(actor_id.get<int>());
+        city->refuse_calls_from(core::ActorId{actor_id.get<int>()});
       }
     }
   }

@@ -518,7 +518,7 @@ void TurnOrchestrator::show_next_deferred_inspection() {
     showing_deferred_inspection_ = false;
     return;
   }
-  int mayor_id = mayor_actors[0]->id();
+  core::ActorId mayor_id = mayor_actors[0]->id();
 
   auto deferred = *next;
   deferred_calls_.erase(next);

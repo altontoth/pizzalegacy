@@ -34,8 +34,8 @@ SupplierConversation::SupplierConversation(GameState& state,
       supplier_(supplier), order_(std::move(order)),
       total_order_value_(total_order_value) {
 
-  owned_actor_ =
-      std::make_unique<Actor>(supplier->actor_type(), supplier->id());
+  owned_actor_ = std::make_unique<Actor>(supplier->actor_type(),
+                                         core::ActorId{supplier->id()});
   owned_actor_->head_id(supplier->head_id());
   owned_actor_->name(supplier->name());
   actor_ = owned_actor_.get();

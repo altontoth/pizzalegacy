@@ -118,7 +118,7 @@ public:
   void named_buildings(const std::map<int, std::string>& nb);
   void building_names(const std::array<std::array<std::string, 24>, 8>& bn,
                       const std::array<int, 8>& counts);
-  void actors(std::map<uint8_t, std::unique_ptr<Actor>> actors);
+  void actors(std::map<core::ActorId, std::unique_ptr<Actor>> actors);
   void properties(std::map<int, std::unique_ptr<Property>> bm);
   std::vector<Property*> business_premises() const;
   std::vector<Property*> properties() const;
@@ -129,18 +129,20 @@ public:
   void
   type_names(const std::array<std::string, /*NUMBER_OF_TYPES*/ 10>& type_names);
   void district_bez(std::array<uint8_t, 300>);
-  void bank_settings(std::unordered_map<int, BankSettings> bank_settings) {
+  void
+  bank_settings(std::unordered_map<core::ActorId, BankSettings> bank_settings) {
     bank_settings_ = std::move(bank_settings);
   };
-  void
-  realtor_settings(std::unordered_map<int, RealtorSettings> realtor_settings) {
+  void realtor_settings(
+      std::unordered_map<core::ActorId, RealtorSettings> realtor_settings) {
     realtor_settings_ = std::move(realtor_settings);
   };
   void insurance_settings(
-      std::unordered_map<int, InsuranceSettings> insurance_settings) {
+      std::unordered_map<core::ActorId, InsuranceSettings> insurance_settings) {
     insurance_settings_ = std::move(insurance_settings);
   };
-  void mafia_settings(std::unordered_map<int, MafiaSettings> mafia_settings) {
+  void mafia_settings(
+      std::unordered_map<core::ActorId, MafiaSettings> mafia_settings) {
     mafia_settings_ = std::move(mafia_settings);
   };
 
@@ -156,13 +158,13 @@ public:
   const FoodSupplier* supplier_for(IngredientCategory category,
                                    std::optional<int> preferred_id) const;
 
-  Actor* actor_by_id(ActorId actor_id) const;
+  Actor* actor_by_id(core::ActorId actor_id) const;
   Actor* mayor() const { return actor_by_id(mayor_id_); }
   Actor* police() const { return actor_by_id(police_id_); }
-  void mayor_id(int id) { mayor_id_ = id; }
-  void police_id(int id) { police_id_ = id; }
-  void first_bank_id(int id) { first_bank_id_ = id; }
-  int first_bank_id() const { return first_bank_id_; }
+  void mayor_id(core::ActorId id) { mayor_id_ = id; }
+  void police_id(core::ActorId id) { police_id_ = id; }
+  void first_bank_id(core::ActorId id) { first_bank_id_ = id; }
+  core::ActorId first_bank_id() const { return first_bank_id_; }
   static BuildingType building_type(uint8_t type);
   BuildingType building_type_by_index(int index) const;
 
@@ -227,41 +229,44 @@ public:
   const AdvertisingRate& tv_ad_option(int index) const {
     return tv_ad_rates_.at(index);
   }
-  const std::unordered_map<int, BankSettings>& bank_settings() const {
+  const std::unordered_map<core::ActorId, BankSettings>& bank_settings() const {
     return bank_settings_;
   }
 
-  const std::unordered_map<int, RealtorSettings>& realtor_settings() const {
+  const std::unordered_map<core::ActorId, RealtorSettings>&
+  realtor_settings() const {
     return realtor_settings_;
   }
 
-  const BankSettings& bank_settings(int actor_id) const {
+  const BankSettings& bank_settings(core::ActorId actor_id) const {
     auto it = bank_settings_.find(actor_id);
     assert(it != bank_settings_.end() && "Invalid bank actor_id");
     return it->second;
   }
 
-  const RealtorSettings& realtor_settings(int actor_id) const {
+  const RealtorSettings& realtor_settings(core::ActorId actor_id) const {
     auto it = realtor_settings_.find(actor_id);
     assert(it != realtor_settings_.end() && "Invalid realtor actor_id");
     return it->second;
   }
 
-  const std::unordered_map<int, InsuranceSettings>& insurance_settings() const {
+  const std::unordered_map<core::ActorId, InsuranceSettings>&
+  insurance_settings() const {
     return insurance_settings_;
   }
 
-  const InsuranceSettings& insurance_settings(int actor_id) const {
+  const InsuranceSettings& insurance_settings(core::ActorId actor_id) const {
     auto it = insurance_settings_.find(actor_id);
     assert(it != insurance_settings_.end() && "Invalid insurance actor_id");
     return it->second;
   }
 
-  const std::unordered_map<int, MafiaSettings>& mafia_settings() const {
+  const std::unordered_map<core::ActorId, MafiaSettings>&
+  mafia_settings() const {
     return mafia_settings_;
   }
 
-  const MafiaSettings& mafia_settings(int actor_id) const {
+  const MafiaSettings& mafia_settings(core::ActorId actor_id) const {
     auto it = mafia_settings_.find(actor_id);
     assert(it != mafia_settings_.end() && "Invalid mafia actor_id");
     return it->second;
@@ -292,14 +297,14 @@ public:
 
   // Actors who hung up and will not take calls until the next time the player
   // ends the day in this city. Ids are local to the city.
-  void refuse_calls_from(int actor_id) {
+  void refuse_calls_from(core::ActorId actor_id) {
     actors_refusing_calls_.insert(actor_id);
   }
-  bool is_refusing_calls(int actor_id) const {
+  bool is_refusing_calls(core::ActorId actor_id) const {
     return actors_refusing_calls_.contains(actor_id);
   }
   void clear_refused_calls() { actors_refusing_calls_.clear(); }
-  std::vector<int> refused_call_actors() const;
+  std::vector<core::ActorId> refused_call_actors() const;
 
   // Vendor spending tracking (resets weekly, per-player)
   void record_vendor_purchase(core::PlayerId player_id, uint8_t vendor_id,
@@ -315,11 +320,11 @@ public:
 
   // Arms dealer visibility tracking (per-player)
   // Used to hide/reveal arms dealers in terminal OTHERS category
-  const std::vector<ActorId>&
+  const std::vector<core::ActorId>&
   known_arms_dealers(core::PlayerId player_id) const;
   uint8_t known_arms_dealer_count(core::PlayerId player_id) const;
-  bool is_arms_dealer_known(core::PlayerId player_id, ActorId id) const;
-  void add_known_arms_dealer(core::PlayerId player_id, ActorId id);
+  bool is_arms_dealer_known(core::PlayerId player_id, core::ActorId id) const;
+  void add_known_arms_dealer(core::PlayerId player_id, core::ActorId id);
   void clear_known_arms_dealers(core::PlayerId player_id);
   void initialize_known_arms_dealers(core::PlayerId player_id);
   std::vector<const Actor*> all_arms_dealers() const;
@@ -366,7 +371,7 @@ private:
   std::vector<uint8_t> data_;
 
   // Actor lists: 5 categories, each a vector of unique_ptr<Actor>
-  std::map<uint8_t, std::unique_ptr<Actor>> actors_;
+  std::map<core::ActorId, std::unique_ptr<Actor>> actors_;
 
   // Suppliers:
   std::vector<std::unique_ptr<FoodSupplier>> suppliers_;
@@ -382,15 +387,15 @@ private:
   std::vector<std::unique_ptr<District>> districts_;
   std::map<int, std::unique_ptr<Property>> properties_;
   std::array<uint8_t, 300> district_bez_{};
-  std::unordered_map<int, BankSettings> bank_settings_;
-  std::unordered_map<int, InsuranceSettings> insurance_settings_;
-  std::unordered_map<int, MafiaSettings> mafia_settings_;
-  std::unordered_map<int, RealtorSettings> realtor_settings_;
-  int mayor_id_ = -1;
-  int police_id_ = -1;
-  int first_bank_id_ = -1;
+  std::unordered_map<core::ActorId, BankSettings> bank_settings_;
+  std::unordered_map<core::ActorId, InsuranceSettings> insurance_settings_;
+  std::unordered_map<core::ActorId, MafiaSettings> mafia_settings_;
+  std::unordered_map<core::ActorId, RealtorSettings> realtor_settings_;
+  core::ActorId mayor_id_{-1};
+  core::ActorId police_id_{-1};
+  core::ActorId first_bank_id_{-1};
   std::unordered_map<uint8_t, std::set<core::PlayerId>> staff_blacklist_;
-  std::unordered_set<int> actors_refusing_calls_;
+  std::unordered_set<core::ActorId> actors_refusing_calls_;
   core::character::JobMarket job_market_;
   // Vendor spending tracking (resets weekly, per-player): vendor_id -> total
   // spent this week
@@ -414,7 +419,7 @@ private:
   // category
   struct KnownArmsDealer {
     uint8_t known_count{0};
-    std::vector<ActorId> known_actor_ids; // Max 10 in original
+    std::vector<core::ActorId> known_actor_ids; // Max 10 in original
   };
 
   std::array<KnownArmsDealer, NUMBER_OF_PLAYERS> known_arms_dealers_;

@@ -238,9 +238,9 @@ StatusDisplayRecipe StatusController::build_city_property_info(const CityCtx& c,
           .align = StatusAlignment::Left,
       });
 
-  auto actors = c.city->actors(ActorType::REALTOR);
+  const Actor* realtor = c.city->actor_by_id(property->realtor_id());
   r.add_header("Realtor:");
-  r.add_single(actors[property->realtor_id()]->name());
+  r.add_single(realtor->name());
   return r;
 }
 

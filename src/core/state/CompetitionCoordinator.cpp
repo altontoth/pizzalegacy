@@ -290,7 +290,7 @@ bool CompetitionCoordinator::run_annual_pizza_competition() {
   if (mayor_actors.empty()) {
     return false;
   }
-  int mayor_id = mayor_actors[0]->id();
+  core::ActorId mayor_id = mayor_actors[0]->id();
 
   auto session = std::make_shared<CompetitionSession>();
 
@@ -411,7 +411,7 @@ void CompetitionCoordinator::advance_annual_competition() {
       ac.phase = Phase::Inactive;
       break;
     }
-    int mayor_id = mayor_actors[0]->id();
+    core::ActorId mayor_id = mayor_actors[0]->id();
 
     int best = -1;
     int winner_slot = -1;

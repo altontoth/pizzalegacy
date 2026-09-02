@@ -75,7 +75,7 @@ private:
   int phase_timer_{0};
   std::string pending_phone_number_;
   ActorType pending_actor_type_{ActorType::NONE};
-  std::optional<int> pending_actor_id_;
+  std::optional<core::ActorId> pending_actor_id_;
 
   size_t auto_dial_index_{0}; // Current digit being auto-dialed
   int auto_dial_timer_{0};    // Delay between auto-dialed digits

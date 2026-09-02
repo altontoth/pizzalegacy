@@ -124,7 +124,7 @@ static json insurance_state_to_json(const InsurancePlayerState& state) {
   json policies_array = json::array();
   for (const auto& policy : state.policies) {
     json p;
-    p["actor_id"] = policy.actor_id;
+    p["actor_id"] = policy.actor_id.value;
     p["company_name"] = policy.company_name;
     p["monthly_premium"] = policy.monthly_premium.cents;
     p["max_coverage"] = policy.max_coverage.cents;
@@ -145,7 +145,7 @@ static InsurancePlayerState json_to_insurance_state(const json& j) {
       if (i >= static_cast<int>(state.policies.size())) {
         break;
       }
-      state.policies[i].actor_id = p.value("actor_id", -1);
+      state.policies[i].actor_id = core::ActorId{p.value("actor_id", -1)};
       state.policies[i].company_name = p.value("company_name", "");
       state.policies[i].monthly_premium =
           Money{p.value("monthly_premium", int64_t{0})};

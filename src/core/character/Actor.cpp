@@ -8,9 +8,9 @@
 
 #include <cassert>
 
-Actor::Actor(ActorType type, int id)
+Actor::Actor(ActorType type, core::ActorId id)
     : type_(type), id_(id), background_id_(static_cast<int>(type)) {
-  assert(id >= 0);
+  assert(id.value >= 0);
 
   actions_ = {
       {ActionState::TALKING, {0, 1, 2, 1}}, // Talking animation sequence
@@ -21,7 +21,7 @@ Actor::Actor(ActorType type, int id)
   };
 }
 
-ActorId Actor::id() const { return id_; }
+core::ActorId Actor::id() const { return id_; }
 
 std::string Actor::name() const { return name_; }
 

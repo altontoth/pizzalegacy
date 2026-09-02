@@ -642,7 +642,8 @@ void GlobalStats::render_loans(const RenderContext& ctx) {
     if (city_id == active_city_id) {
       const auto* city = state_.city(city_id);
       const Actor* bank =
-          city ? city->actor_by_id(loan->bank_id().value) : nullptr;
+          city ? city->actor_by_id(core::ActorId{loan->bank_id().value})
+               : nullptr;
       std::string label = bank ? bank->name() : "Unknown bank";
       constexpr size_t max_len = 16;
       if (label.size() > max_len) {
@@ -693,7 +694,8 @@ void GlobalStats::render_loans(const RenderContext& ctx) {
     if (inv->city_id() == active_city_id) {
       const auto* city = state_.city(inv->city_id());
       const Actor* bank =
-          city ? city->actor_by_id(inv->bank_id().value) : nullptr;
+          city ? city->actor_by_id(core::ActorId{inv->bank_id().value})
+               : nullptr;
       std::string label = bank ? bank->name() : "Unknown bank";
       context_.font->render_text_onto(*ctx.surface, label, {col_city, y},
                                       FontFace::PIZ_NUMB, 240);

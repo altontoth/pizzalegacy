@@ -345,10 +345,10 @@ void City::end_of_day(int difficulty) {
   clear_refused_calls();
 }
 
-std::vector<int> City::refused_call_actors() const {
-  std::vector<int> ids(actors_refusing_calls_.begin(),
-                       actors_refusing_calls_.end());
-  std::ranges::sort(ids);
+std::vector<core::ActorId> City::refused_call_actors() const {
+  std::vector<core::ActorId> ids(actors_refusing_calls_.begin(),
+                                 actors_refusing_calls_.end());
+  std::ranges::sort(ids, {}, &core::ActorId::value);
   return ids;
 }
 
@@ -380,8 +380,8 @@ void City::end_of_month() {
   }
 }
 
-Actor* City::actor_by_id(ActorId actor_id) const {
-  return actors_.at(static_cast<uint8_t>(actor_id)).get();
+Actor* City::actor_by_id(core::ActorId actor_id) const {
+  return actors_.at(actor_id).get();
 }
 void City::districts(std::vector<std::unique_ptr<District>> d) {
   districts_ = std::move(d);
@@ -444,7 +444,7 @@ void City::building_names(const std::array<std::array<std::string, 24>, 8>& bn,
   building_names_ = bn;
 }
 
-void City::actors(std::map<uint8_t, std::unique_ptr<Actor>> actors) {
+void City::actors(std::map<core::ActorId, std::unique_ptr<Actor>> actors) {
   actors_ = std::move(actors);
 }
 
@@ -600,7 +600,7 @@ City::central_depot(core::PlayerId player_id) const {
 }
 
 // Arms dealer visibility tracking implementation
-const std::vector<ActorId>&
+const std::vector<core::ActorId>&
 City::known_arms_dealers(core::PlayerId player_id) const {
   assert(player_id.value >= 0 && player_id.value < NUMBER_OF_PLAYERS);
   return known_arms_dealers_[static_cast<size_t>(player_id.value)]
@@ -612,12 +612,13 @@ uint8_t City::known_arms_dealer_count(core::PlayerId player_id) const {
   return known_arms_dealers_[static_cast<size_t>(player_id.value)].known_count;
 }
 
-bool City::is_arms_dealer_known(core::PlayerId player_id, ActorId id) const {
+bool City::is_arms_dealer_known(core::PlayerId player_id,
+                                core::ActorId id) const {
   const auto& known_ids = known_arms_dealers(player_id);
   return std::find(known_ids.begin(), known_ids.end(), id) != known_ids.end();
 }
 
-void City::add_known_arms_dealer(core::PlayerId player_id, ActorId id) {
+void City::add_known_arms_dealer(core::PlayerId player_id, core::ActorId id) {
   assert(player_id.value >= 0 && player_id.value < NUMBER_OF_PLAYERS);
 
   auto& known = known_arms_dealers_[static_cast<size_t>(player_id.value)];
@@ -651,7 +652,7 @@ void City::initialize_known_arms_dealers(core::PlayerId player_id) {
   known.known_count = 0;
 
   // Find all actors in OTHERS category (mafia + arms dealers)
-  std::vector<ActorId> others_actor_ids;
+  std::vector<core::ActorId> others_actor_ids;
   for (const auto& [actor_id, actor_ptr] : actors_) {
     ActorType type = actor_ptr->type();
     if (type == ActorType::MAFIA || type == ActorType::ARMS_DEALER) {

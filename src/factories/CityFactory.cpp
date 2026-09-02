@@ -480,14 +480,14 @@ void CityFactory::build_city_object(City& city, int id) {
       ActorType::REALTOR, ActorType::BANK,  ActorType::INSURANCE,
       ActorType::MAYOR,   ActorType::MAFIA,
   };
-  std::map<uint8_t, std::unique_ptr<Actor>> actor_map;
-  std::unordered_map<int, BankSettings> bank_settings_map;
-  std::unordered_map<int, InsuranceSettings> insurance_settings_map;
-  std::unordered_map<int, MafiaSettings> mafia_settings_map;
-  std::unordered_map<int, RealtorSettings> realtor_settings_map;
-  int actor_id = 0;
-  std::optional<int> mayor_id;
-  std::optional<int> police_id;
+  std::map<core::ActorId, std::unique_ptr<Actor>> actor_map;
+  std::unordered_map<core::ActorId, BankSettings> bank_settings_map;
+  std::unordered_map<core::ActorId, InsuranceSettings> insurance_settings_map;
+  std::unordered_map<core::ActorId, MafiaSettings> mafia_settings_map;
+  std::unordered_map<core::ActorId, RealtorSettings> realtor_settings_map;
+  core::ActorId actor_id{0};
+  std::optional<core::ActorId> mayor_id;
+  std::optional<core::ActorId> police_id;
   int bank_index = 0;
   int insurance_index = 0;
   int mafia_index = 0;
@@ -545,7 +545,7 @@ void CityFactory::build_city_object(City& city, int id) {
         realtor_index++;
       }
 
-      actor_map[static_cast<uint8_t>(actor_id)] = std::move(actor);
+      actor_map[actor_id] = std::move(actor);
       actor_id++;
     }
   }
@@ -698,7 +698,7 @@ void CityFactory::populate_properties(City& city) {
       int entrance_offset = engine::random::rand_max_n(h - 4) + 1;
       int kitchen_entry_offset = engine::random::rand_max_n(kitchen_h - 6);
       assert(number_of_realtors_ >= 0);
-      int r_id = engine::random::rand_max_n(number_of_realtors_);
+      core::ActorId r_id{engine::random::rand_max_n(number_of_realtors_)};
       auto status = PremiseStatus::NOT_AVAILABLE;
       if (engine::random::rand_percentage_chance(
               district->premises_availability())) {

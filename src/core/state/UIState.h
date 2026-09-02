@@ -61,7 +61,6 @@ enum class MapMode;
 enum class SupplierID;
 enum class ActorType;
 enum class RestaurantViewMode;
-using ActorId = int;
 
 enum class OptionsScreen { Audio, Graphics, Controls, Gameplay };
 
@@ -173,22 +172,22 @@ struct TerminalState {
 };
 struct ActorTerminalState {
   ActorType type{};
-  ActorId id{};
+  core::ActorId id{};
 };
 // This used to have an extra argument but it refactored out, so maybe
 // it could go back into ActorTerminalState. But maybe we give everyone
 // their own one anyway. For now leave it.
 struct BankState {
-  ActorId id{};
+  core::ActorId id{};
 };
 struct MafiaState {
-  ActorId id;
+  core::ActorId id;
   std::optional<MafiaMode> mode;
   std::optional<core::RestaurantId> restaurant_id;
   bool first_contact{false};
 };
 struct PoliceState {
-  ActorId id;
+  core::ActorId id;
   std::optional<ArrestReason> reason;
   std::function<void()> on_complete;
 };
@@ -260,7 +259,7 @@ struct MafiaMissionViewState {
   MafiaLine line;
 };
 struct MayorState {
-  ActorId id{};
+  core::ActorId id{};
   MayorConversationType type{MayorConversationType::PhoneCall};
   std::optional<core::RestaurantId> restaurant_id;
   std::optional<bool> is_first_inspection; // true=first, false=regular

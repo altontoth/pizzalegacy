@@ -9,16 +9,17 @@
 #include <array>
 #include <optional>
 #include <string>
+#include "core/common/Ids.h"
 #include "core/finance/Money.h"
 
 enum class InsuranceType { THEFT = 0, WAREHOUSE, FIRE, LIABILITY, LIFE };
 
 struct InsurancePolicy {
-  int actor_id = -1;
+  core::ActorId actor_id{-1};
   std::string company_name;
   Money monthly_premium{0};
   Money max_coverage{0};
-  bool is_active() const { return actor_id >= 0; }
+  bool is_active() const { return actor_id.value >= 0; }
 };
 
 struct InsurancePlayerState {

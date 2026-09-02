@@ -518,7 +518,7 @@ void Terminal::start_dialing_sequence(const std::string& phone_number) {
   // Store phone number and look up actor
   pending_phone_number_ = phone_number;
   pending_actor_type_ = ActorType::NONE;
-  pending_actor_id_ = -1;
+  pending_actor_id_.reset();
 
   // Find which actor matches this phone number
   uint32_t phone_num = static_cast<uint32_t>(std::atoi(phone_number.c_str()));
@@ -531,7 +531,7 @@ void Terminal::start_dialing_sequence(const std::string& phone_number) {
         break;
       }
     }
-    if (pending_actor_id_ != -1) {
+    if (pending_actor_id_) {
       break;
     }
   }

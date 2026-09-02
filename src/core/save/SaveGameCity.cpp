@@ -35,7 +35,7 @@ json property_to_json(const Property& property) {
                        {"h", property.kitchen_size().h}};
   j["entrance_offset"] = property.entrance_offset();
   j["kitchen_entry_offset"] = property.kitchen_entry_offset();
-  j["realtor_id"] = property.realtor_id();
+  j["realtor_id"] = property.realtor_id().value;
   j["purchase_price"] = property.purchase_price().cents;
   j["status"] = static_cast<int>(property.status());
 
@@ -84,7 +84,7 @@ void json_to_property(const json& j, Property& property) {
 
   // Restore realtor_id (important to preserve randomly assigned realtors)
   if (j.contains("realtor_id")) {
-    property.realtor_id(j["realtor_id"].get<int>());
+    property.realtor_id(core::ActorId{j["realtor_id"].get<int>()});
   }
 
   if (j.contains("purchase_price")) {
@@ -567,7 +567,11 @@ json city_to_json(const City& city) {
   j["control_map"] = control_map_to_json(city.control_map());
   j["economy_trend"] = economy_trend_to_json(city.economy_trend());
   j["interest_rate"] = city.interest_rate();
-  j["refused_call_actors"] = city.refused_call_actors();
+  json refused_calls = json::array();
+  for (core::ActorId actor_id : city.refused_call_actors()) {
+    refused_calls.push_back(actor_id.value);
+  }
+  j["refused_call_actors"] = refused_calls;
 
   json embargoes = json::array();
   for (auto cat : ALL_INGREDIENT_CATEGORIES) {
@@ -612,8 +616,8 @@ json city_to_json(const City& city) {
     player_data["known_count"] = city.known_arms_dealer_count(player_id);
 
     json actor_ids_array = json::array();
-    for (ActorId actor_id : city.known_arms_dealers(player_id)) {
-      actor_ids_array.push_back(actor_id);
+    for (core::ActorId actor_id : city.known_arms_dealers(player_id)) {
+      actor_ids_array.push_back(actor_id.value);
     }
     player_data["known_actor_ids"] = actor_ids_array;
 
@@ -767,7 +771,7 @@ void json_to_city(const json& j, City& city) {
 
   if (j.contains("refused_call_actors")) {
     for (const auto& actor_id : j["refused_call_actors"]) {
-      city.refuse_calls_from(actor_id.get<int>());
+      city.refuse_calls_from(core::ActorId{actor_id.get<int>()});
     }
   }
 
@@ -787,7 +791,7 @@ void json_to_city(const json& j, City& city) {
       // Restore saved known arms dealers
       if (player_data.contains("known_actor_ids")) {
         for (const auto& actor_id_json : player_data["known_actor_ids"]) {
-          ActorId actor_id = actor_id_json.get<int>();
+          core::ActorId actor_id{actor_id_json.get<int>()};
           city.add_known_arms_dealer(player_id, actor_id);
         }
       }

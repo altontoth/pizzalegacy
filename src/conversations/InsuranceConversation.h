@@ -18,7 +18,7 @@
 class InsuranceConversation : public BaseConversation<InsuranceLine> {
 public:
   InsuranceConversation(GameState&, const Actor*, const InsuranceSettings& is,
-                        ActorId actor_id);
+                        core::ActorId actor_id);
   Emotion emotion() const override;
   std::vector<ConversationLine<InsuranceLine>> lines() const override;
   bool advance() override;
@@ -35,7 +35,7 @@ private:
   InsuranceLine type_specific_rebuttal() const;
 
   const InsuranceSettings& insurance_settings_;
-  ActorId actor_id_;
+  core::ActorId actor_id_;
   InsuranceType selected_type_{InsuranceType::THEFT};
   Money pending_premium_{0};
   Money pending_max_coverage_{0};

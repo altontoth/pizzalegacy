@@ -282,7 +282,7 @@ Examples:
               "customers {} {} {} {} {} {}",
               property->index(), property->size().w, property->size().h,
               property->purchase_price(), property->get_monthly_rent(),
-              property->realtor_id(), realtor ? realtor->name() : "none",
+              property->realtor_id().value, realtor ? realtor->name() : "none",
               pool[0], pool[1], pool[2], pool[3], pool[4], pool[5]));
         }
         return result;
