@@ -6,8 +6,10 @@
 
 #include "core/newspaper/ArticleDatabase.h"
 #include <cstring>
+#include <string_view>
 #include "engine/Fatal.h"
 #include "engine/FormatCompat.h"
+#include "engine/StringUtil.h"
 #include "resources/util/FileUtils.h"
 
 namespace core::newspaper {
@@ -149,13 +151,8 @@ bool ArticleDatabase::extract_article(const char* data, size_t data_size,
     return false;
   }
 
-  // Copy title (and trim)
-  const char* title_end = ptr;
-  while (title_end > title_start &&
-         (*(title_end - 1) == ' ' || *(title_end - 1) == '\t')) {
-    title_end--;
-  }
-  title.assign(title_start, title_end);
+  title = util::trim_back(std::string_view(
+      title_start, static_cast<std::size_t>(ptr - title_start)));
 
   // Skip past ! and find $ marker
   ptr++;
@@ -180,24 +177,18 @@ bool ArticleDatabase::extract_article(const char* data, size_t data_size,
     ptr++;
   }
 
-  // Copy body, converting newlines to spaces and trimming
-  const char* body_end = ptr;
-  while (body_end > body_start &&
-         (*(body_end - 1) == ' ' || *(body_end - 1) == '\n' ||
-          *(body_end - 1) == '\r')) {
-    body_end--;
-  }
-
-  // Build body string, replacing newlines with spaces
+  const std::string_view raw_body = util::trim_back(
+      std::string_view(body_start, static_cast<std::size_t>(ptr - body_start)));
   body.clear();
-  for (const char* p = body_start; p < body_end; ++p) {
-    if (*p == '\n' || *p == '\r') {
+  // The body runs over several lines in the file but reads as one paragraph.
+  for (char c : raw_body) {
+    if (c == '\n' || c == '\r') {
       if (!body.empty() && body.back() != ' ') {
         body += ' ';
       }
     }
     else {
-      body += *p;
+      body += c;
     }
   }
 

@@ -7,22 +7,19 @@
 #include "Font.h"
 
 #include <algorithm>
-#include <set>
+#include <cctype>
+#include <cstddef>
+#include <cstdint>
+#include <optional>
 #include <string>
+#include <string_view>
 #include <utfcpp/utf8.h>
+#include <vector>
 #include "engine/Fatal.h"
 #include "engine/ui/TextAnchor.h"
 #include "resources/FontTypes.h"
 
 constexpr int SPACE_BETWEEN_CHARACTERS = 2;
-static constexpr uint8_t TRANSPARENT_INDEX = 0;
-
-const std::set<uint32_t> unicode_whitespace = {
-    0x0009, // Tab
-    0x0020, // Space
-    0x00A0, // No-Break Space
-};
-
 namespace {
 
 // Decodes the codepoint starting at `pos` and advances it. Malformed bytes
@@ -37,6 +34,41 @@ uint32_t next_codepoint(std::string_view text, std::size_t& pos) {
   }
   pos = static_cast<std::size_t>(it - text.data());
   return static_cast<uint32_t>(cp);
+}
+
+// One whitespace-delimited word and the whitespace that follows it.
+struct ScannedWord {
+  std::string_view word;
+  std::string_view trailing_ws;
+};
+
+bool is_space(char c) {
+  return std::isspace(static_cast<unsigned char>(c)) != 0;
+}
+
+void skip_whitespace(std::string_view line, std::size_t& i) {
+  while (i < line.size() && is_space(line[i])) {
+    ++i;
+  }
+}
+
+// Reads the word at index `i` and leaves `i` on the next word, or at the end.
+ScannedWord next_word(std::string_view line, std::size_t& i) {
+  const std::size_t word_begin = i;
+  while (i < line.size() && !is_space(line[i])) {
+    ++i;
+  }
+  const std::size_t word_end = i;
+  skip_whitespace(line, i);
+  return {line.substr(word_begin, word_end - word_begin),
+          line.substr(word_end, i - word_end)};
+}
+
+// Wrapping measures the text itself.
+TextStyle without_shadow(const TextStyle& style) {
+  TextStyle stripped = style;
+  stripped.shadow = std::nullopt;
+  return stripped;
 }
 
 } // namespace
@@ -76,27 +108,12 @@ RenderedTextMetrics Font::render_text_onto(Surface& surface,
     return {};
   }
 
-  // Flow text path: variable width wrapping
+  // Flow text path: variable width wrapping, which never breaks at a soft
+  // hyphen.
   if (flow.has_value()) {
-    std::string cleaned_text;
-    if (style.soft_hyphens) {
-      cleaned_text.reserve(text.size());
-      for (size_t i = 0; i < text.size(); ++i) {
-        char ch = text[i];
-        if (ch == '-' && i > 0 && i < text.size() - 1) {
-          char before = text[i - 1];
-          char after = text[i + 1];
-          if (std::isalpha(static_cast<unsigned char>(before)) &&
-              std::isalpha(static_cast<unsigned char>(after))) {
-            continue;
-          }
-        }
-        cleaned_text += ch;
-      }
-    }
-    else {
-      cleaned_text = std::string(text);
-    }
+    const std::string cleaned_text = style.soft_hyphens
+                                         ? analyze_word_breaks(text).clean_text
+                                         : std::string(text);
 
     // Get lines with their Y positions
     auto flow_lines =
@@ -162,24 +179,15 @@ RenderedTextMetrics Font::size_text(std::string_view text,
 
   std::size_t pos = 0;
   while (pos < text.size()) {
-    uint32_t cp = remap_character(next_codepoint(text, pos));
-    auto glyph_it = data_.glyphs.find(cp);
-    if (glyph_it == data_.glyphs.end()) {
-      uint32_t substitute_codepoint = substitute_character(cp);
-      glyph_it = data_.glyphs.find(substitute_codepoint);
-    }
-    if (glyph_it != data_.glyphs.end()) {
-      // Use fixed character width for monospace fonts, otherwise use actual
-      // glyph width
-      int char_width = data_.fixed_char_width.value_or(glyph_it->second.width);
-
+    const Glyph* glyph = find_glyph(next_codepoint(text, pos));
+    if (glyph != nullptr) {
       // We need one fewer space between characters than number of
       // characters in our string (3 chars == 2 spaces, etc):
       if (pos < text.size()) {
         metrics.width += get_character_spacing(style);
       }
-      metrics.width += char_width;
-      metrics.height = std::max(metrics.height, (int)glyph_it->second.height);
+      metrics.width += advance_width(*glyph);
+      metrics.height = std::max(metrics.height, (int)glyph->height);
     }
   }
 
@@ -244,35 +252,18 @@ RenderedTextMetrics Font::render_line_onto(Surface& target,
 
     std::size_t offset = 0;
     while (offset < text.size()) {
-      uint32_t cp = remap_character(next_codepoint(text, offset));
-      auto g_it = data_.glyphs.find(cp);
-      if (g_it == data_.glyphs.end()) {
-        cp = substitute_character(cp);
-        g_it = data_.glyphs.find(cp);
-      }
-      if (g_it != data_.glyphs.end()) {
-        const Glyph& g = g_it->second;
+      const Glyph* glyph = find_glyph(next_codepoint(text, offset));
+      if (glyph != nullptr) {
+        const Glyph& g = *glyph;
 
-        // skip blit if this glyph has no pixels
-        if (g.start_position_x != 0 || cp != U' ') {
-          // Create temp surface for this glyph to avoid replacing color index 1
-          // in the target surface (which may have index 1 pixels from the
-          // background)
-          gfx::Surface temp_glyph(g.width, g.height, data_.surface.palette());
-
-          ViewRect src{g.start_position_x, g.start_position_y, g.width,
-                       g.height};
-          temp_glyph.blit(data_.surface, src, {0, 0}, TRANSPARENT_INDEX);
-          temp_glyph.replace_colors({1}, color);
-
-          target.blit(temp_glyph, {{0, 0}, temp_glyph.size()}, {cur.x, pos.y},
-                      TRANSPARENT_INDEX);
+        const bool has_pixels = g.start_position_x != 0 || g.character != U' ';
+        if (has_pixels && color != gfx::TRANSPARENT) {
+          const ViewRect src{g.start_position_x, g.start_position_y, g.width,
+                             g.height};
+          target.blit_stencil(data_.surface, src, {cur.x, pos.y}, color);
         }
 
-        // Use fixed character width for monospace fonts, otherwise use actual
-        // glyph width
-        int advance_width = data_.fixed_char_width.value_or(g.width);
-        cur.x += advance_width;
+        cur.x += advance_width(g);
 
         // Only add spacing if NOT the last character
         if (offset < text.size()) {
@@ -296,7 +287,7 @@ RenderedTextMetrics Font::render_line_onto(Surface& target,
   return out;
 }
 
-uint32_t Font::remap_character(uint32_t codepoint) {
+uint32_t Font::remap_character(uint32_t codepoint) const {
   if (face_ == FontFace::SUPERSMA || face_ == FontFace::MINI) {
     if (codepoint == '\\') {
       return '/';
@@ -305,7 +296,7 @@ uint32_t Font::remap_character(uint32_t codepoint) {
   return codepoint;
 }
 
-uint32_t Font::substitute_character(uint32_t codepoint) {
+uint32_t Font::substitute_character(uint32_t codepoint) const {
   if (codepoint == 0) {
     return '\0';
   }
@@ -383,16 +374,10 @@ std::vector<std::string> Font::word_wrap_line(std::string_view input_line,
 
   const auto n = input_line.size();
   std::size_t i = 0;
-
-  while (i < n &&
-         (std::isspace(static_cast<unsigned char>(input_line[i])) != 0)) {
-    ++i;
-  }
+  skip_whitespace(input_line, i);
 
   const int boundary = get_character_spacing(style);
-
-  TextStyle wrap_style = style;
-  wrap_style.shadow = std::nullopt;
+  const TextStyle wrap_style = without_shadow(style);
 
   std::string current_line;
   int current_w = 0;
@@ -402,24 +387,7 @@ std::vector<std::string> Font::word_wrap_line(std::string_view input_line,
   std::string pending_ws;
 
   while (i < n) {
-    // Find next whitespace-delimited word
-    const std::size_t w_begin = i;
-    while (i < n &&
-           (std::isspace(static_cast<unsigned char>(input_line[i])) == 0)) {
-      ++i;
-    }
-    const std::size_t w_end = i;
-
-    // Grab trailing whitespace
-    const std::size_t ws_begin = w_end;
-    while (i < n &&
-           (std::isspace(static_cast<unsigned char>(input_line[i])) != 0)) {
-      ++i;
-    }
-    const std::size_t ws_end = i;
-
-    auto raw_word = input_line.substr(w_begin, w_end - w_begin);
-    auto ws = input_line.substr(ws_begin, ws_end - ws_begin);
+    const auto [raw_word, ws] = next_word(input_line, i);
     BreakableWord bw;
     if (style.soft_hyphens) {
       bw = analyze_word_breaks(raw_word);
@@ -454,13 +422,11 @@ std::vector<std::string> Font::word_wrap_line(std::string_view input_line,
       }
 
       // find the best break that fits (with trailing dash)
-      std::string dash_str("-");
-      int dash_w = size_text(dash_str, wrap_style).width;
       int best_break = -1;
 
       for (auto pos : bw.break_positions) {
-        auto fragment = bw.clean_text.substr(0, pos);
-        int frag_w = size_text(fragment, wrap_style).width + dash_w;
+        const std::string fragment = bw.clean_text.substr(0, pos) + '-';
+        const int frag_w = size_text(fragment, wrap_style).width;
         if (frag_w <= avail) {
           best_break = static_cast<int>(pos);
         }
@@ -536,18 +502,10 @@ std::vector<FlowLine> Font::word_wrap_with_flow(std::string_view input_line,
 
   const auto n = input_line.size();
   std::size_t i = 0;
+  skip_whitespace(input_line, i);
 
-  // Skip leading whitespace
-  while (i < n &&
-         (std::isspace(static_cast<unsigned char>(input_line[i])) != 0)) {
-    ++i;
-  }
-
-  // See comment in word_wrap_line: boundary spacing for joining fragments
   const int boundary = get_character_spacing(style);
-
-  TextStyle wrap_style = style;
-  wrap_style.shadow = std::nullopt;
+  const TextStyle wrap_style = without_shadow(style);
 
   std::size_t line_start = i;
   std::size_t last_word_end = i;
@@ -561,26 +519,10 @@ std::vector<FlowLine> Font::word_wrap_with_flow(std::string_view input_line,
                                                   : flow.left_margin_below;
     int max_width = flow.right_margin - left_margin;
 
-    // Find next word [w_begin, w_end)
-    const std::size_t w_begin = i;
-    while (i < n &&
-           (std::isspace(static_cast<unsigned char>(input_line[i])) == 0)) {
-      ++i;
-    }
-    const std::size_t w_end = i;
-
-    // Measure word
-    const auto word_view = input_line.substr(w_begin, w_end - w_begin);
+    const std::size_t word_begin = i;
+    const auto [word_view, ws_view] = next_word(input_line, i);
+    const std::size_t word_end = word_begin + word_view.size();
     const int w_width = size_text(word_view, wrap_style).width;
-
-    // Measure trailing whitespace
-    const std::size_t ws_begin = i;
-    while (i < n &&
-           (std::isspace(static_cast<unsigned char>(input_line[i])) != 0)) {
-      ++i;
-    }
-    const std::size_t ws_end = i;
-    const auto ws_view = input_line.substr(ws_begin, ws_end - ws_begin);
     const int ws_width =
         ws_view.empty() ? 0 : size_text(ws_view, wrap_style).width;
 
@@ -592,7 +534,7 @@ std::vector<FlowLine> Font::word_wrap_with_flow(std::string_view input_line,
              current_y});
       }
       current_y += vert_spacing;
-      line_start = w_begin;
+      line_start = word_begin;
       current_w = 0;
     }
 
@@ -601,7 +543,7 @@ std::vector<FlowLine> Font::word_wrap_with_flow(std::string_view input_line,
     if (ws_width > 0) {
       current_w += boundary + ws_width;
     }
-    last_word_end = w_end;
+    last_word_end = word_end;
   }
 
   // Emit the final line if any
@@ -660,6 +602,19 @@ int Font::line_spacing() const {
   default:
     fatal("unknown font, don't know line size");
   }
+}
+
+const Glyph* Font::find_glyph(uint32_t codepoint) const {
+  const uint32_t cp = remap_character(codepoint);
+  auto it = data_.glyphs.find(cp);
+  if (it == data_.glyphs.end()) {
+    it = data_.glyphs.find(substitute_character(cp));
+  }
+  return it == data_.glyphs.end() ? nullptr : &it->second;
+}
+
+int Font::advance_width(const Glyph& glyph) const {
+  return data_.fixed_char_width.value_or(glyph.width);
 }
 
 int Font::get_character_spacing(const TextStyle& style) const {

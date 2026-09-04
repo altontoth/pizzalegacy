@@ -19,9 +19,11 @@
 #include "engine/ui/InteractionEvent.h"
 #include "factories/CharacterFactory.h"
 #include "factories/TrainingFactory.h"
+#include "gfx/ColorIndex.h"
 #include "gfx/SurfaceBuilder.h"
 #include "magic_enum/magic_enum.hpp"
 #include "resources/BlitmapIcons.h"
+#include "resources/FontTypes.h"
 #include "views/base/ViewDefs.h"
 #include "views/helpers/CardGfx.h"
 #include "views/ui/PopupManager.h"
@@ -1160,7 +1162,6 @@ Surface StaffView::create_application_card(uint8_t character_id) {
                                   ViewPoint{label_x, 90}, FontFace::CSTANDAR,
                                   TEXT_COLOR_BLACK);
 
-  // Load the application text (with soft hyphens)
   auto [line1, line2] = load_application_text(character_id);
   std::string full_text = line1;
   if (!line2.empty()) {
@@ -1186,10 +1187,12 @@ Surface StaffView::create_application_card(uint8_t character_id) {
       .left_margin_below = text_left_margin,       // Full width below picture
       .right_margin = text_right_margin};
 
-  // Render the flowing text with soft hyphen support
-  context_.font->render_text_onto(
-      card, full_text, ViewPoint{text_start_x, text_start_y},
-      FontFace::CSTANDAR, 5, TextAnchor::Start, flow);
+  // bewerb*.e marks split points with a dash between two letters.
+  constexpr TextStyle application_style{.color = gfx::ColorIndex{5},
+                                        .soft_hyphens = true};
+  context_.font->render_text_onto(card, full_text,
+                                  ViewPoint{text_start_x, text_start_y},
+                                  FontFace::CSTANDAR, application_style, flow);
 
   return card;
 }

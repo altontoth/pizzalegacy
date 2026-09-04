@@ -141,10 +141,8 @@ void Surface::blit_raw(const Surface& src, ViewPoint dst) {
 }
 
 /* Full blit with support for transparency, source and destination rects */
-void Surface::blit(const Surface& src, ViewRect s, ViewPoint d,
-                   uint8_t transparent) {
-  // Logger::debug("Surface::blit");
-  //  Clip src_rect to src surface
+bool Surface::clip_blit(const Surface& src, ViewRect& s, ViewPoint& d) const {
+  // Clip src_rect to src surface
   if (s.x < 0) {
     d.x -= s.x;
     s.w += s.x;
@@ -162,7 +160,7 @@ void Surface::blit(const Surface& src, ViewRect s, ViewPoint d,
     s.h = src.height_ - s.y;
   }
   if (s.w <= 0 || s.h <= 0) {
-    return;
+    return false;
   }
 
   // Clip against *this* surface
@@ -182,7 +180,12 @@ void Surface::blit(const Surface& src, ViewRect s, ViewPoint d,
   if (d.y + s.h > height_) {
     s.h = height_ - d.y;
   }
-  if (s.w <= 0 || s.h <= 0) {
+  return s.w > 0 && s.h > 0;
+}
+
+void Surface::blit(const Surface& src, ViewRect s, ViewPoint d,
+                   uint8_t transparent) {
+  if (!clip_blit(src, s, d)) {
     return;
   }
 
@@ -195,6 +198,24 @@ void Surface::blit(const Surface& src, ViewRect s, ViewPoint d,
       uint8_t pix = src_row[col];
       if (pix != transparent) {
         dst_row[col] = pix;
+      }
+    }
+  }
+}
+
+void Surface::blit_stencil(const Surface& src, ViewRect s, ViewPoint d,
+                           uint8_t color, uint8_t transparent) {
+  if (!clip_blit(src, s, d)) {
+    return;
+  }
+
+  for (int row = 0; row < s.h; ++row) {
+    const uint8_t* src_row = &src.pixels_[(s.y + row) * src.pitch_ + s.x];
+    uint8_t* dst_row = &pixels_[(d.y + row) * pitch_ + d.x];
+
+    for (int col = 0; col < s.w; ++col) {
+      if (src_row[col] != transparent) {
+        dst_row[col] = color;
       }
     }
   }

@@ -65,8 +65,6 @@ public:
                                 const TextStyle& style = {});
   int count_wrapped_lines(std::string_view text, int max_width,
                           const TextStyle& style = {});
-  uint32_t substitute_character(uint32_t codepoint);
-  uint32_t remap_character(uint32_t codepoint);
 
   // Expose text wrapping for pre-computing line breaks
   std::vector<std::string> split_and_wrap_text(std::string_view text,
@@ -83,6 +81,13 @@ public:
 private:
   [[nodiscard]] int line_spacing() const;
   [[nodiscard]] int get_character_spacing(const TextStyle& style) const;
+  uint32_t substitute_character(uint32_t codepoint) const;
+  uint32_t remap_character(uint32_t codepoint) const;
+  // The glyph for a codepoint, falling back to its substitute. Null when
+  // neither is in the font.
+  [[nodiscard]] const Glyph* find_glyph(uint32_t codepoint) const;
+  // Excludes inter-character spacing.
+  [[nodiscard]] int advance_width(const Glyph& glyph) const;
   RenderedTextMetrics render_fixed_width(Surface& surface,
                                          std::string_view text, ViewPoint pos,
                                          int max_width, const TextStyle& style);

@@ -497,6 +497,7 @@ set(PLEGACY_HEADERS
     src/engine/SDLSession.h
     src/engine/SDL_include.h
     src/engine/Size.h
+    src/engine/StringUtil.h
     src/engine/TypedPoint.h
     src/engine/adapters/SDLRectAdapter.h
     src/engine/audio/AudioManager.h

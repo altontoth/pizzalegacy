@@ -58,6 +58,11 @@ public:
   void blit(const Surface& src, ViewRect src_rect,
             ViewPoint dst = ViewPoint{0, 0}, uint8_t transparent = TRANSPARENT);
 
+  // Draws src_rect as a single-color shape: every non-transparent source
+  // pixel becomes `color`, whatever index it was.
+  void blit_stencil(const Surface& src, ViewRect src_rect, ViewPoint dst,
+                    uint8_t color, uint8_t transparent = TRANSPARENT);
+
   // Fast path: full-width copy, no transparency, no clipping
   void blit_raw(const Surface& src, ViewPoint dst = ViewPoint{0, 0});
 
@@ -105,5 +110,8 @@ private:
   bool disable_palette_translation_{false};
 
   [[nodiscard]] bool in_bounds(ViewPoint p) const noexcept;
+  // Clips src_rect against both surfaces, moving dst to match. False when
+  // nothing is left to draw.
+  bool clip_blit(const Surface& src, ViewRect& src_rect, ViewPoint& dst) const;
 };
 } // namespace gfx

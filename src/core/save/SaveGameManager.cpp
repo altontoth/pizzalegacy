@@ -43,6 +43,7 @@
 #include "engine/FormatCompat.h"
 #include "engine/Logger.h"
 #include "engine/Random.h"
+#include "engine/StringUtil.h"
 
 namespace save {
 
@@ -521,13 +522,8 @@ json SaveGameManager::state_to_json(const GameState& state,
   // Save RNG state so a loaded game resumes with the same random sequence
   j["rng_state"] = engine::random::get_state();
 
-  // Save timestamp (ctime includes a trailing newline, so we need to trim it)
   std::time_t now = std::time(nullptr);
-  std::string timestamp = std::ctime(&now);
-  if (!timestamp.empty() && timestamp.back() == '\n') {
-    timestamp.pop_back();
-  }
-  j["saved_at"] = timestamp;
+  j["saved_at"] = std::string(util::trim(std::ctime(&now)));
 
   // Save game time
   j["time"] = time_to_json(state.time());

@@ -15,6 +15,7 @@
 #include <string_view>
 
 #include "engine/Logger.h"
+#include "engine/StringUtil.h"
 #include "engine/input/Action.h"
 #include "engine/input/Gamepad.h"
 #include "engine/input/InputManager.h"
@@ -23,16 +24,6 @@
 
 namespace input {
 namespace { // anonymous
-
-std::string_view trim(std::string_view sv) {
-  while (!sv.empty() && std::isspace(static_cast<unsigned char>(sv.front()))) {
-    sv.remove_prefix(1);
-  }
-  while (!sv.empty() && std::isspace(static_cast<unsigned char>(sv.back()))) {
-    sv.remove_suffix(1);
-  }
-  return sv;
-}
 
 std::string lower(std::string_view sv) {
   std::string s(sv);
@@ -81,7 +72,7 @@ void apply_bindings_file(InputManager& in, const std::string& path) {
   int line_no = 0;
   while (std::getline(file, line)) {
     ++line_no;
-    const std::string_view stripped = trim(line);
+    const std::string_view stripped = util::trim(line);
     if (stripped.empty() || stripped.starts_with('#')) {
       continue;
     }
@@ -93,7 +84,7 @@ void apply_bindings_file(InputManager& in, const std::string& path) {
       continue;
     }
 
-    const std::string_view action_name = trim(stripped.substr(0, eq));
+    const std::string_view action_name = util::trim(stripped.substr(0, eq));
     const auto action = magic_enum::enum_cast<Action>(
         action_name, magic_enum::case_insensitive);
     if (!action) {
@@ -109,12 +100,13 @@ void apply_bindings_file(InputManager& in, const std::string& path) {
 
     in.remove_bindings(*action);
 
-    std::string_view rest = trim(stripped.substr(eq + 1));
+    std::string_view rest = util::trim(stripped.substr(eq + 1));
     while (!rest.empty()) {
       const auto comma = rest.find(',');
-      const std::string_view token = trim(rest.substr(0, comma));
-      rest = (comma == std::string_view::npos) ? std::string_view{}
-                                               : trim(rest.substr(comma + 1));
+      const std::string_view token = util::trim(rest.substr(0, comma));
+      rest = (comma == std::string_view::npos)
+                 ? std::string_view{}
+                 : util::trim(rest.substr(comma + 1));
       if (!token.empty()) {
         bind_token(in, *action, token, path, line_no);
       }
