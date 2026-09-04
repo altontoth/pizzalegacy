@@ -62,6 +62,20 @@ bool is_autosave_due(AutosaveFrequency frequency, bool is_end_of_week,
   }
   return false;
 }
+
+bool all_human_players_away(const GameState& state) {
+  bool found_human = false;
+  for (const Player* player : state.players()) {
+    if (!player || !player->is_human_controlled()) {
+      continue;
+    }
+    found_human = true;
+    if (!player->is_on_holiday() && !player->is_in_jail()) {
+      return false;
+    }
+  }
+  return found_human;
+}
 } // namespace
 
 int TurnOrchestrator::roll_inspection_block() {
@@ -851,9 +865,12 @@ void TurnOrchestrator::build_turn_pipeline(
   turn_pipeline_.clear();
   pipeline_activity_ = {};
 
-  const bool autosave_due =
-      wrapped && is_autosave_due(gs_->options().autosave_frequency,
-                                 is_end_of_week, is_end_of_month);
+  // Skip it on a day no human player could act, so a holiday or a jail
+  // sentence doesn't push a real save out of the rotation.
+  const bool autosave_due = wrapped &&
+                            is_autosave_due(gs_->options().autosave_frequency,
+                                            is_end_of_week, is_end_of_month) &&
+                            !all_human_players_away(*gs_);
 
   // You get this even when you're in prison or on holiday
   const bool one_year_played_reached =

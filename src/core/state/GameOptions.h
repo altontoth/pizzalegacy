@@ -159,6 +159,9 @@ struct GameOptions {
   FpsOption render_fps = FpsOption::Fps60;
   bool vsync = true;
 
+  bool load_list_sort_by_date = true;
+  bool load_list_show_autosaves = false;
+
   // Config file only, with no entry in the options screen.
   // The mafia shakes down a random restaurant instead of always the first.
   bool mafia_shakedowns_target_all_restaurants = false;

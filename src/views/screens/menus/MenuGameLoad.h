@@ -24,6 +24,8 @@ public:
 private:
   Surface background() const override;
   void load_save_files();
+  void reload_file_list();
+  void remember_list_options();
   void select_file(const std::string& filename);
   void load_selected_file();
   void delete_selected_file();
@@ -33,5 +35,4 @@ private:
   int scroll_offset_ = 0;
   std::string selected_file_;
   SaveFileInfoBox* info_box_ = nullptr;
-  bool sort_by_date_ = true;
 };

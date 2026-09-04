@@ -12,6 +12,7 @@
 #include "core/save/SaveGameManager.h"
 #include "core/state/GameState.h"
 #include "core/state/UIState.h"
+#include "core/util/ConfigManager.h"
 #include "engine/Logger.h"
 #include "resources/FontTypes.h"
 #include "resources/util/FileUtils.h"
@@ -20,6 +21,7 @@
 #include "views/ui/popups/AlertPopup.h"
 #include "views/ui/popups/ConfirmPopup.h"
 #include "views/ui/widgets/ArrowMenuItem.h"
+#include "views/ui/widgets/CheckboxMenuItem.h"
 #include "views/ui/widgets/PositionMarkerMenuItem.h"
 #include "views/ui/widgets/SaveFileInfoBox.h"
 #include "views/ui/widgets/SaveFileListBox.h"
@@ -99,16 +101,25 @@ MenuGameLoad::MenuGameLoad(GameContext& context, GameState& state)
       context, "Delete", [this] { delete_selected_file(); }, face, button_style,
       sel_button_style));
 
-  // Sort toggle
-  add_menu_item(std::make_unique<PositionMarkerMenuItem>(context, 244, 244));
-  add_menu_item(std::make_unique<TextMenuItem>(
-      context, compat::format("Sort: Name / Date"),
+  add_menu_item(std::make_unique<PositionMarkerMenuItem>(context, 244, 230));
+  add_menu_item(std::make_unique<CheckboxMenuItem>(
+      context, "Sort by date", state.options().load_list_sort_by_date, [this] {
+        bool& sort_by_date = state_.options().load_list_sort_by_date;
+        sort_by_date = !sort_by_date;
+        remember_list_options();
+        reload_file_list();
+      }));
+
+  add_menu_item(std::make_unique<PositionMarkerMenuItem>(context, 244, 252));
+  add_menu_item(std::make_unique<CheckboxMenuItem>(
+      context, "Show auto saves", state.options().load_list_show_autosaves,
       [this] {
-        sort_by_date_ = !sort_by_date_;
-        load_save_files();
-        mark_dirty();
-      },
-      FontFace::SUPERSMA, style, sel_style));
+        bool& show_autosaves = state_.options().load_list_show_autosaves;
+        show_autosaves = !show_autosaves;
+        remember_list_options();
+        reload_file_list();
+      }));
+
   // Back button
   add_menu_item(std::make_unique<PositionMarkerMenuItem>(context, 510, 244));
   add_menu_item(std::make_unique<TextMenuItem>(
@@ -122,9 +133,32 @@ void MenuGameLoad::tick() {
 }
 
 void MenuGameLoad::load_save_files() {
-  auto sort = sort_by_date_ ? fileutils::FileSortOrder::LastModified
-                            : fileutils::FileSortOrder::Alphabetical;
+  auto sort = state_.options().load_list_sort_by_date
+                  ? fileutils::FileSortOrder::LastModified
+                  : fileutils::FileSortOrder::Alphabetical;
   save_files_ = fileutils::list_files("saves", ".plsave", sort);
+  if (!state_.options().load_list_show_autosaves) {
+    std::erase_if(save_files_, [](const fileutils::FileEntry& entry) {
+      return save::SaveGameManager::is_autosave_filename(entry.filename);
+    });
+  }
+}
+
+// Update options on disk as soon as a setting changes.
+void MenuGameLoad::remember_list_options() {
+  context_.config->save_options(state_.options());
+}
+
+// Rebuild the list after a change to what it shows, and reset scroll position
+// and selection since they may no longer point at anything in the new list.
+void MenuGameLoad::reload_file_list() {
+  load_save_files();
+  scroll_offset_ = 0;
+  selected_file_.clear();
+  if (info_box_) {
+    info_box_->clear();
+  }
+  mark_dirty();
 }
 
 void MenuGameLoad::select_file(const std::string& filename) {
@@ -190,13 +224,7 @@ void MenuGameLoad::delete_selected_file() {
           Logger::warn("Failed to delete: {}", e.what());
         }
 
-        selected_file_.clear();
-        if (info_box_) {
-          info_box_->clear();
-        }
-        load_save_files();
-        scroll_offset_ = 0;
-        mark_dirty();
+        reload_file_list();
       });
 }
 

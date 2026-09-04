@@ -10,6 +10,7 @@
 #include <nlohmann/json.hpp>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "core/util/Constants.h"
@@ -26,6 +27,8 @@ constexpr int SAVE_FORMAT_VERSION = 3;
 
 // The oldest version a save can have and still be loaded.
 constexpr int OLDEST_LOADABLE_SAVE_VERSION = 1;
+
+constexpr std::string_view autosave_prefix = "AUTOSAV";
 
 struct SaveMetadata {
   std::string display_name;
@@ -59,6 +62,7 @@ public:
   static bool load(GameState& state, GameContext& context,
                    const std::string& filename);
   static bool is_valid_save(const std::string& filename);
+  static bool is_autosave_filename(const std::string& filename);
   static int get_save_version(const std::string& filename);
 
   // Read metadata from a save file without loading the full game state.

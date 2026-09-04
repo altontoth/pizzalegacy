@@ -196,6 +196,8 @@ void ConfigManager::save_options(const GameOptions& opts) {
   save_bool("automatic_report", opts.automatic_report);
   save_bool("crt_aspect_ratio", opts.crt_aspect_ratio);
   save_bool("fix_legacy_bugs", opts.fix_legacy_bugs);
+  save_bool("load_list_show_autosaves", opts.load_list_show_autosaves);
+  save_bool("load_list_sort_by_date", opts.load_list_sort_by_date);
   save_bool("qol_improvements", opts.qol_improvements);
   save_bool("mafia_shakedowns_target_all_restaurants",
             opts.mafia_shakedowns_target_all_restaurants);
@@ -252,6 +254,8 @@ GameOptions ConfigManager::load_options() const {
     }
   };
 
+  load_bool("load_list_show_autosaves", opts.load_list_show_autosaves);
+  load_bool("load_list_sort_by_date", opts.load_list_sort_by_date);
   load_bool("map_fx", opts.map_fx);
   load_bool("restaurant_fx", opts.restaurant_fx);
   load_bool("music", opts.music);

@@ -228,6 +228,7 @@ set(GAME_PLEGACY_SOURCES
     src/views/ui/widgets/Button.cpp
     src/views/ui/widgets/CharacterPhotoBox.cpp
     src/views/ui/widgets/CharacterSelectionBox.cpp
+    src/views/ui/widgets/CheckboxMenuItem.cpp
     src/views/ui/widgets/CompanySelectionBox.cpp
     src/views/ui/widgets/IntSliderMenuItem.cpp
     src/views/ui/widgets/MissionTypeBox.cpp
@@ -711,6 +712,7 @@ set(PLEGACY_HEADERS
     src/views/ui/widgets/Button.h
     src/views/ui/widgets/CharacterPhotoBox.h
     src/views/ui/widgets/CharacterSelectionBox.h
+    src/views/ui/widgets/CheckboxMenuItem.h
     src/views/ui/widgets/CompanySelectionBox.h
     src/views/ui/widgets/EnumMenuItem.h
     src/views/ui/widgets/IAddsInteractions.h

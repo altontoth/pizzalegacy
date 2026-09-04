@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cctype>
 #include <cstdint>
 #include <ctime>
 #include <filesystem>
@@ -194,7 +195,7 @@ bool SaveGameManager::save(const GameState& state, const GameContext& context,
 namespace {
 
 std::string autosave_slot_filename(int slot) {
-  return "AUTOSAV" + std::to_string(slot) + ".plsave";
+  return std::string(autosave_prefix) + std::to_string(slot) + ".plsave";
 }
 
 std::string next_autosave_filename(int slot_count) {
@@ -223,6 +224,17 @@ std::string next_autosave_filename(int slot_count) {
 }
 
 } // namespace
+
+bool SaveGameManager::is_autosave_filename(const std::string& filename) {
+  if (filename.size() < autosave_prefix.size()) {
+    return false;
+  }
+  return std::equal(autosave_prefix.begin(), autosave_prefix.end(),
+                    filename.begin(), [](char a, char b) {
+                      return std::tolower(static_cast<unsigned char>(a)) ==
+                             std::tolower(static_cast<unsigned char>(b));
+                    });
+}
 
 bool SaveGameManager::autosave(const GameState& state,
                                const GameContext& context) {

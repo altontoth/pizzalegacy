@@ -370,6 +370,8 @@ CommandDef make_nav_commands() {
                                       ScreenTag::Kind::MenuOptions))
       .add_subcommand(make_screen_nav("disk", {"dm"}, "disk menu",
                                       ScreenTag::Kind::DiskMenu))
+      .add_subcommand(make_screen_nav("load", {}, "game load menu",
+                                      ScreenTag::Kind::MenuGameLoad))
 
       // Screens
       .add_subcommand(make_screen_nav("advertising", {"ad"}, "advertising",
