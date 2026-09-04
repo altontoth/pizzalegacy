@@ -109,6 +109,10 @@ Examples:
         lines.push_back(compat::format("Furniture count: {}", furniture_count));
         lines.push_back(compat::format("Furniture value: ${:n}",
                                        layout->furniture_value()));
+        lines.push_back(compat::format(
+            "Ever opened: {}", restaurant->ever_opened() ? "yes" : "no"));
+        lines.push_back(
+            compat::format("Popularity: {}", restaurant->total_popularity()));
 
         return CommandResult::success(lines);
       },

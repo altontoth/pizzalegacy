@@ -1942,6 +1942,10 @@ void Restaurant::calculate_popularity(const Player& player, const City& city,
 
   popularity_ = RestaurantPopularity{};
 
+  if (!ever_opened_) {
+    return;
+  }
+
   // WaitingTime: (18 - service_time) * district_factor / 50
   if (service_time_minutes_ > 0 && district.service_quality_factor() > 0) {
     int raw_bonus =
