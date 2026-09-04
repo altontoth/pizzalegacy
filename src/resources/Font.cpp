@@ -11,11 +11,13 @@
 #include <cstddef>
 #include <cstdint>
 #include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 #include <utfcpp/utf8.h>
 #include <vector>
 #include "engine/Fatal.h"
+#include "engine/StringUtil.h"
 #include "engine/ui/TextAnchor.h"
 #include "resources/FontTypes.h"
 
@@ -69,6 +71,23 @@ TextStyle without_shadow(const TextStyle& style) {
   TextStyle stripped = style;
   stripped.shadow = std::nullopt;
   return stripped;
+}
+
+// Rejoins pipe-split segments into one line, with a single space where each
+// '|' was.
+std::string join_pipe_lines(std::span<const std::string_view> lines) {
+  std::string joined;
+  for (std::string_view line : lines) {
+    line = util::trim(line);
+    if (line.empty()) {
+      continue;
+    }
+    if (!joined.empty()) {
+      joined += ' ';
+    }
+    joined += line;
+  }
+  return joined;
 }
 
 } // namespace
@@ -480,16 +499,27 @@ std::vector<std::string> Font::word_wrap_line(std::string_view input_line,
 std::vector<std::string> Font::split_and_wrap_text(std::string_view text,
                                                    int max_width,
                                                    const TextStyle& style) {
-  auto pipe_lines = split_by_pipe(text);
-  std::vector<std::string> final_lines;
+  const auto pipe_lines = split_by_pipe(text);
 
+  std::vector<std::string> wrapped_pipe_lines;
+  bool pipe_break_overflowed = false;
   for (std::string_view line : pipe_lines) {
     auto wrapped = word_wrap_line(line, max_width, style);
+    if (wrapped.size() > 1) {
+      pipe_break_overflowed = true;
+    }
     for (auto& w : wrapped) {
-      final_lines.push_back(std::move(w));
+      wrapped_pipe_lines.push_back(std::move(w));
     }
   }
-  return final_lines;
+
+  // Keep the '|' breaks only while the wrapping it produces fits. If not,
+  // remove them and do the rewrapping ourselves.
+  if (style.reflow_pipe_lines && pipe_lines.size() > 1 &&
+      pipe_break_overflowed) {
+    return word_wrap_line(join_pipe_lines(pipe_lines), max_width, style);
+  }
+  return wrapped_pipe_lines;
 }
 
 // Word wrap with variable width based on Y position (for text flowing around

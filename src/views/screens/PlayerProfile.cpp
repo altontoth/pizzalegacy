@@ -5,6 +5,10 @@
  */
 
 #include "views/screens/PlayerProfile.h"
+
+#include <algorithm>
+#include <cstddef>
+
 #include "core/GameTypes.h"
 #include "core/character/Awards.h"
 #include "core/character/Character.h"
@@ -23,6 +27,7 @@
 #include "engine/FormatCompat.h"
 #include "engine/ui/InteractionEvent.h"
 #include "gfx/Blit.h"
+#include "gfx/ColorIndex.h"
 #include "resources/FontManager.h"
 #include "resources/FontTypes.h"
 #include "resources/util/FileUtils.h"
@@ -38,13 +43,17 @@ namespace {
 constexpr int sprite_width = 41 * 2;
 constexpr int sprite_height = 51 * 2;
 
-constexpr int cv_events_per_page = 6;
+// Card rows are fixed-height slots on the paper; an entry can span more
+// than one.
+constexpr int cv_rows_per_page = 6;
+constexpr int cv_row_height = 40;
+constexpr int cv_lines_per_row = 2;
+constexpr int cv_date_x = 72;
+constexpr int cv_text_x = 160;
+constexpr int cv_text_width = 208;
+constexpr int cv_first_row_y = 80;
 
-int cv_total_pages(std::size_t entry_count) {
-  return std::max<int>(
-      1, (static_cast<int>(entry_count) + cv_events_per_page - 1) /
-             cv_events_per_page);
-}
+constexpr TextStyle cv_label_style{.reflow_pipe_lines = true};
 
 // Screen layout (measured from original)
 constexpr int grid_columns = 3;
@@ -67,6 +76,90 @@ PlayerProfile::PlayerProfile(GameContext& context, GameState& state,
   if (const auto* player = state_.player(id_)) {
     start_of_day_ = player->start_of_day_hour();
   }
+}
+
+std::vector<std::string> PlayerProfile::cv_labels() const {
+  const auto& log = state_.career_log();
+  std::vector<std::string> labels;
+
+  if (mode_ == PlayerProfileMode::TargetCV) {
+    if (!state_.is_mission_active()) {
+      return labels;
+    }
+    const auto& milestones = state_.mission_target()->milestones;
+    labels.reserve(milestones.size());
+    for (const auto& milestone : milestones) {
+      labels.push_back(log.cv_label(milestone.message_id));
+    }
+    return labels;
+  }
+
+  const auto entries = log.get_cv_entries_for(id_);
+  labels.reserve(entries.size());
+  for (const auto& entry : entries) {
+    labels.push_back(log.cv_label(entry.message_id));
+  }
+  return labels;
+}
+
+int PlayerProfile::cv_rows_for(const std::string& label) const {
+  const int lines = context_.font->count_wrapped_lines(
+      label, FontFace::PIZ_NUMB, cv_text_width, cv_label_style);
+  int rows = lines / cv_lines_per_row;
+  if (lines % cv_lines_per_row != 0) {
+    ++rows;
+  }
+  return std::max(rows, 1);
+}
+
+int PlayerProfile::draw_cv_label(Surface& cv, const std::string& label, int y,
+                                 uint8_t color) const {
+  TextStyle style = cv_label_style;
+  style.color = gfx::ColorIndex{color};
+
+  const int rows = cv_rows_for(label);
+  context_.font->render_into_rect(
+      cv, label, {cv_text_x, y, cv_text_width, rows * cv_row_height},
+      FontFace::PIZ_NUMB, style);
+  return rows;
+}
+
+PlayerProfile::CvPageRange
+PlayerProfile::cv_page_range(const std::vector<std::string>& labels,
+                             int page) const {
+  std::vector<int> page_starts{0};
+  int rows_used = 0;
+  for (std::size_t i = 0; i < labels.size(); ++i) {
+    const int rows = cv_rows_for(labels[i]);
+    if (rows_used > 0 && rows_used + rows > cv_rows_per_page) {
+      page_starts.push_back(static_cast<int>(i));
+      rows_used = 0;
+    }
+    rows_used += rows;
+  }
+
+  CvPageRange range;
+  range.total_pages = static_cast<int>(page_starts.size());
+  const int index = std::clamp(page, 0, range.total_pages - 1);
+  range.start = page_starts[index];
+  range.end = (index + 1 < range.total_pages) ? page_starts[index + 1]
+                                              : static_cast<int>(labels.size());
+  return range;
+}
+
+void PlayerProfile::show_cv_page(int page) {
+  const int last_page = cv_page_range(cv_labels(), 0).total_pages - 1;
+  const int clamped = std::clamp(page, 0, last_page);
+  if (clamped == cv_page_) {
+    return;
+  }
+  cv_page_ = clamped;
+
+  const auto* player = state_.player(id_);
+  card_slider_.set_current(mode_ == PlayerProfileMode::TargetCV
+                               ? create_target_cv(player, cv_page_)
+                               : create_curriculum_vitae(player, cv_page_));
+  mark_dirty();
 }
 
 void PlayerProfile::set_up_buttons() {
@@ -336,29 +429,7 @@ void PlayerProfile::handle_arrow(PageAction action) {
   // CV and Target CV modes: page through CV pages
   if (mode_ == PlayerProfileMode::CurriculumVitae ||
       mode_ == PlayerProfileMode::TargetCV) {
-    const auto* player = state_.player(id_);
-    const bool target_mode = mode_ == PlayerProfileMode::TargetCV;
-    std::size_t entry_count = 0;
-    if (target_mode) {
-      if (state_.is_mission_active()) {
-        entry_count = state_.mission_target()->milestones.size();
-      }
-    }
-    else {
-      entry_count = state_.career_log().get_cv_entries_for(player->id()).size();
-    }
-    int total_pages = cv_total_pages(entry_count);
-
-    int new_page = (action == PageAction::Next)
-                       ? std::min(cv_page_ + 1, total_pages - 1)
-                       : std::max(cv_page_ - 1, 0);
-    if (new_page != cv_page_) {
-      cv_page_ = new_page;
-      card_slider_.set_current(target_mode
-                                   ? create_target_cv(player, cv_page_)
-                                   : create_curriculum_vitae(player, cv_page_));
-      mark_dirty();
-    }
+    show_cv_page(cv_page_ + (action == PageAction::Next ? 1 : -1));
     return;
   }
 
@@ -498,28 +569,19 @@ Surface PlayerProfile::create_curriculum_vitae(const Player* player, int page) {
   font->render_text_onto(cv, name, {192, 48}, FontFace::PIZ_NUMB, text_color,
                          TextAnchor::Middle);
 
-  constexpr int date_x = 72;
-  constexpr int text_x = 160;
-  int y = 80;
-  constexpr int row_height = 40;
+  const auto entries = state_.career_log().get_cv_entries_for(player->id());
+  const auto labels = cv_labels();
+  const CvPageRange range = cv_page_range(labels, page);
 
-  auto entries = state_.career_log().get_cv_entries_for(player->id());
-  int start = page * cv_events_per_page;
-  int end =
-      std::min(start + cv_events_per_page, static_cast<int>(entries.size()));
-
-  for (int i = start; i < end; ++i) {
-    const auto& entry = entries[i];
-    font->render_line_onto(cv, entry.date.cv_date_string(), {date_x, y},
+  int y = cv_first_row_y;
+  for (int i = range.start; i < range.end; ++i) {
+    font->render_line_onto(cv, entries[i].date.cv_date_string(), {cv_date_x, y},
                            FontFace::PIZ_NUMB, text_color);
-    font->render_text_onto(cv, state_.career_log().cv_label(entry.message_id),
-                           {text_x, y}, FontFace::PIZ_NUMB, text_color);
-    y += row_height;
+    y += draw_cv_label(cv, labels[i], y, text_color) * cv_row_height;
   }
 
-  int total_pages = cv_total_pages(entries.size());
   font->render_line_onto(
-      cv, compat::format(" - {}/{} -", page + 1, total_pages), {192, 330},
+      cv, compat::format(" - {}/{} -", page + 1, range.total_pages), {192, 330},
       FontFace::PIZ_NUMB, text_color, TextAnchor::Middle);
 
   return cv;
@@ -639,33 +701,24 @@ Surface PlayerProfile::create_target_cv(const Player* player, int page) {
   const auto scores = core::mission::per_milestone_scores(
       target, state_.career_log().get_cv_entries_for(player->id()));
 
-  constexpr int date_x = 72;
-  constexpr int text_x = 160;
   constexpr int percent_x = 132;
-  int y = 80;
-  constexpr int row_height = 40;
 
   const auto& milestones = target.milestones;
-  int start = page * cv_events_per_page;
-  int end =
-      std::min(start + cv_events_per_page, static_cast<int>(milestones.size()));
+  const auto labels = cv_labels();
+  const CvPageRange range = cv_page_range(labels, page);
 
-  for (int i = start; i < end; ++i) {
-    const auto& milestone = milestones[i];
-    font->render_line_onto(cv, milestone.date.cv_date_string(), {date_x, y},
-                           FontFace::PIZ_NUMB, text_color);
-    font->render_text_onto(cv,
-                           state_.career_log().cv_label(milestone.message_id),
-                           {text_x, y}, FontFace::PIZ_NUMB, text_color);
+  int y = cv_first_row_y;
+  for (int i = range.start; i < range.end; ++i) {
+    font->render_line_onto(cv, milestones[i].date.cv_date_string(),
+                           {cv_date_x, y}, FontFace::PIZ_NUMB, text_color);
     font->render_line_onto(cv, compat::format("{}%", scores[i]),
-                           {percent_x, y + (row_height / 2)},
+                           {percent_x, y + (cv_row_height / 2)},
                            FontFace::PIZ_NUMB, text_color, TextAnchor::End);
-    y += row_height;
+    y += draw_cv_label(cv, labels[i], y, text_color) * cv_row_height;
   }
 
-  int total_pages = cv_total_pages(milestones.size());
   font->render_line_onto(
-      cv, compat::format(" - {}/{} -", page + 1, total_pages), {192, 330},
+      cv, compat::format(" - {}/{} -", page + 1, range.total_pages), {192, 330},
       FontFace::PIZ_NUMB, text_color, TextAnchor::Middle);
 
   return cv;

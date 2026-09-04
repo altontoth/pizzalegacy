@@ -73,7 +73,8 @@ public:
   RenderedTextMetrics size_text(std::string_view text, FontFace face,
                                 int max_width, const TextStyle& style = {});
 
-  int count_wrapped_lines(std::string_view text, FontFace face, int max_width);
+  int count_wrapped_lines(std::string_view text, FontFace face, int max_width,
+                          const TextStyle& style = {});
 
   static std::vector<FontFace> font_list();
   static FontFace string_to_fontface(std::string_view file);

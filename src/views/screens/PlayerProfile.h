@@ -6,6 +6,11 @@
 
 #pragma once
 
+#include <cstdint>
+#include <optional>
+#include <string>
+#include <vector>
+
 #include "core/common/Ids.h"
 #include "views/base/MainPanelView.h"
 #include "views/ui/CardSlider.h"
@@ -32,6 +37,19 @@ private:
   void set_up_buttons();
   void change_mode(PlayerProfileMode);
   void handle_arrow(PageAction);
+  struct CvPageRange {
+    int start;
+    int end;
+    int total_pages;
+  };
+  std::vector<std::string> cv_labels() const;
+  int cv_rows_for(const std::string& label) const;
+  // Draws one entry's label into its rows and returns how many it took.
+  int draw_cv_label(Surface& cv, const std::string& label, int y,
+                    uint8_t color) const;
+  CvPageRange cv_page_range(const std::vector<std::string>& labels,
+                            int page) const;
+  void show_cv_page(int page);
   bool switch_to_player(core::PlayerId new_id);
   Surface create_character_values(const Player*);
   Surface create_company(const Player*);

@@ -7,6 +7,8 @@
 #include "views/screens/menus/MenuMissionSelect.h"
 
 #include <array>
+#include <string>
+#include <string_view>
 #include <utility>
 #include "core/events/CareerLog.h"
 #include "core/mission/MissionFile.h"
@@ -14,6 +16,7 @@
 #include "core/state/UIState.h"
 #include "engine/FormatCompat.h"
 #include "engine/Logger.h"
+#include "resources/Font.h"
 #include "resources/FontTypes.h"
 #include "resources/util/FileUtils.h"
 #include "views/screens/menus/MenuTheme.h"
@@ -162,16 +165,10 @@ void MenuMissionSelect::show_goals() {
   if (selected_) {
     for (const auto& milestone : selected_->milestones) {
       lines.push_back(milestone.date.cv_date_string());
-      // LEBEN.E CV texts use '|' as a line break
-      std::string text = state_.career_log().cv_label(milestone.message_id);
-      size_t start = 0;
-      while (true) {
-        size_t pipe = text.find('|', start);
-        lines.push_back(text.substr(start, pipe - start));
-        if (pipe == std::string::npos) {
-          break;
-        }
-        start = pipe + 1;
+      const std::string text =
+          state_.career_log().cv_label(milestone.message_id);
+      for (std::string_view line : Font::split_by_pipe(text)) {
+        lines.emplace_back(line);
       }
       lines.emplace_back();
     }

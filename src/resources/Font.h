@@ -71,6 +71,9 @@ public:
                                                int max_width,
                                                const TextStyle& style = {});
 
+  // The original's text files mark their line breaks with '|'.
+  static std::vector<std::string_view> split_by_pipe(std::string_view text);
+
   // Soft hyphen analysis: dashes between letters mark allowed break points
   struct BreakableWord {
     std::string clean_text;              // text without soft hyphens
@@ -95,7 +98,6 @@ private:
   FontData data_;
 
   // Fixed-width wrapping
-  static std::vector<std::string_view> split_by_pipe(std::string_view text);
   std::vector<std::string> word_wrap_line(std::string_view input_line,
                                           int max_width,
                                           const TextStyle& style = {});
