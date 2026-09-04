@@ -169,12 +169,6 @@ Trade embargoes were announced in the newspaper but did not actually prevent
 trading. If bug fixes are enabled it now prevents you from trading with
 embargoed cities.
 
-### Investments repay sooner
-In the original when you make a two month investment, you get interest paid
-at the end of month one, then again at the end of month two and then you get
-your principal back on the end of month three. That's weird, with bug fixes
-active you get the interest plus the principal back at the end of month two.
-
 ### Newspaper event to ingredient mapping
 The original had various bugs in the newspaper event system, e.g. when telling
 you pineapple was super out it would affect raspberries instead.

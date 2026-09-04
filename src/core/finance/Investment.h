@@ -20,10 +20,6 @@
 // payout is N to N+1 months depending on when in the month you invested.
 // Investing on day 1 of the month means your money is tied up longer than if
 // you invest on the 30th of the month.
-//
-// With fix_legacy_bugs: final interest + principal are paid together in step 3
-// when months_left hits 0, and the slot is cleared immediately. No extra month
-// of waiting for the principal.
 
 // Every bank in every city offers the same investment, and unlike a loan it
 // does not track the city's interest rate.

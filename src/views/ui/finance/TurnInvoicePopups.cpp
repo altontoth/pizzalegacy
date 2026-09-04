@@ -103,12 +103,18 @@ void show_monthly_invoice_popup(GameContext& context, GameState& gs,
   cfg.lines.push_back({"costs per month", std::nullopt});
   cfg.lines.push_back(empty_line);
 
-  // TODO: Figure out investments and which is which
   cfg.lines.push_back({"LOAN REPAYMENT:", costs.loan_repayment});
   cfg.lines.push_back({"LOAN INTEREST:", costs.loan_interest});
   cfg.lines.push_back({"INSURANCE:", costs.insurance_premiums});
   cfg.lines.push_back({"RENT:", costs.total_rent});
-  cfg.lines.push_back({"INVESTMENT RETURNS:", costs.investment_returns});
+  if (gs.options().fix_legacy_bugs) {
+    cfg.lines.push_back({"INVESTMENT RETURN:", costs.investment_returns});
+    cfg.lines.push_back({"INVESTMENT PAYOUT:", costs.investment_payout});
+  }
+  else {
+    cfg.lines.push_back({"LOAN INTEREST:", costs.investment_returns});
+    cfg.lines.push_back({"REPAYMENT:", costs.investment_payout});
+  }
   cfg.lines.push_back(empty_line);
   cfg.lines.push_back({"TOTAL:", costs.total});
 

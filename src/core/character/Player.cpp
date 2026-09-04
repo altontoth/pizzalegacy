@@ -351,14 +351,13 @@ int Player::number_of_investments() const {
   return total;
 }
 
-void Player::apply_monthly_investment_payouts(const GameDate& date,
-                                              bool fix_legacy_bugs) {
+void Player::apply_monthly_investment_payouts(const GameDate& date) {
   for (auto& slot : investments_) {
     if (!slot.has_value()) {
       continue;
     }
     if (slot->is_matured()) {
-      // Legacy: principal returned the month after the last interest payment
+      // Principal is returned the month after the last interest payment.
       financials_.transfer(date, Account::Investments, Account::Cash,
                            slot->amount(), AccountingScope::Operational);
       Logger::info("[Finance] {} - Investment matured, principal returned: {}",
@@ -370,15 +369,6 @@ void Player::apply_monthly_investment_payouts(const GameDate& date,
                            slot->monthly_return(),
                            AccountingScope::Operational);
       slot->end_of_month();
-      // Fixed: if this was the final month, pay principal now too
-      if (fix_legacy_bugs && slot->is_matured()) {
-        financials_.transfer(date, Account::Investments, Account::Cash,
-                             slot->amount(), AccountingScope::Operational);
-        Logger::info(
-            "[Finance] {} - Investment matured, principal returned: {}", name_,
-            slot->amount());
-        slot.reset();
-      }
     }
   }
 }
@@ -388,6 +378,16 @@ Money Player::monthly_investment_returns() const {
   for (const auto& slot : investments_) {
     if (slot.has_value() && !slot->is_matured()) {
       total += slot->monthly_return();
+    }
+  }
+  return total;
+}
+
+Money Player::monthly_investment_payout() const {
+  Money total{0};
+  for (const auto& slot : investments_) {
+    if (slot.has_value() && slot->is_matured()) {
+      total += slot->amount();
     }
   }
   return total;

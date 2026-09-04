@@ -101,9 +101,9 @@ public:
   const std::array<std::optional<Investment>, max_investment_count>&
   investments() const;
   int number_of_investments() const;
-  void apply_monthly_investment_payouts(const GameDate& date,
-                                        bool fix_legacy_bugs);
+  void apply_monthly_investment_payouts(const GameDate& date);
   Money monthly_investment_returns() const;
+  Money monthly_investment_payout() const;
   core::character::Character& character() { return character_; }
   const core::character::Character& character() const { return character_; }
   PlayerFinancials& financials() { return financials_; }

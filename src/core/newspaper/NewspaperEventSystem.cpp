@@ -101,7 +101,7 @@ bool NewspaperEventSystem::execute_named_event(NewspaperEvent event,
         IngredientType::TOMATOES,
         {.initial_value = 0, .control = -50, .duration = Exponential});
     // Schedule follow-up: decontamination in 10-19 days
-    schedule_event(0, TomatoesDecontaminated,
+    schedule_event(event_id - 1, TomatoesDecontaminated,
                    engine::random::rand_max_n(10) + 10);
     break;
   case CucumbersPoisoned:
@@ -156,7 +156,7 @@ bool NewspaperEventSystem::execute_named_event(NewspaperEvent event,
     city.trade_embargo_counter(IngredientCategory::CHEESE, 12 * 7);
     break;
 
-  // --- Interest rate events ---
+  // Interest rate events
   case InterestRatesRising: {
     const int delta = engine::random::rand_max_n(5) + 2;
     city.interest_rate(city.interest_rate() + delta);
@@ -168,10 +168,10 @@ bool NewspaperEventSystem::execute_named_event(NewspaperEvent event,
     break;
   }
   case LandPricesRising:
-    // TODO: Set something related to land prices to (2, 30) but doesn't seem to
-    // have effect in game.
+    // Original sets something related to land prices to (2, 30) but this
+    // doesn't have effect in game (only written, never read).
   case LandPricesFalling:
-    // TODO: set the same things but to (255, 30) but again no effect
+    // Sets the same things but to (255, 30) but again no effect
   case PizzeriaBlownUp:
   case NetherlandsStopTrade:
   case NetherlandsResumeTrade:
