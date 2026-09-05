@@ -149,6 +149,12 @@ bool SliderMenuItemBase::on_interaction(views::ui::InteractionEvent ie) {
     dragging_ = false;
     armed_ = false;
     return true;
+  case Type::Scroll:
+    if (ie.scroll_delta == 0) {
+      return false;
+    }
+    step(ie.scroll_delta > 0 ? 1 : -1);
+    return true;
   default:
     return false;
   }
