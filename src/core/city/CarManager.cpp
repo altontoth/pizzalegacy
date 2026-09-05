@@ -279,65 +279,42 @@ CarManager::calculate_newly_visible_regions(const WorldRect& prev_view,
                                             const WorldRect& curr_view) const {
   std::vector<WorldRect> regions;
 
-  // Check if viewports are identical
-  if (prev_view.x == curr_view.x && prev_view.y == curr_view.y &&
-      prev_view.w == curr_view.w && prev_view.h == curr_view.h) {
-    return regions; // No change, return empty
+  if (prev_view == curr_view) {
+    return regions;
   }
 
-  // Calculate bounds
-  const int prev_left = prev_view.x;
-  const int prev_right = prev_view.x + prev_view.w;
-  const int prev_top = prev_view.y;
-  const int prev_bottom = prev_view.y + prev_view.h;
-
-  const int curr_left = curr_view.x;
-  const int curr_right = curr_view.x + curr_view.w;
-  const int curr_top = curr_view.y;
-  const int curr_bottom = curr_view.y + curr_view.h;
-
-  // Check for completely non-overlapping viewports (jumped to different
-  // location)
-  if (curr_right <= prev_left || curr_left >= prev_right ||
-      curr_bottom <= prev_top || curr_top >= prev_bottom) {
+  if (!curr_view.intersects(prev_view)) {
     // No overlap - entire current view is new
     regions.push_back(curr_view);
     return regions;
   }
 
-  // Calculate newly visible strips
   // Left strip (scrolled left)
-  if (curr_left < prev_left) {
-    regions.emplace_back(curr_left, curr_top, prev_left - curr_left,
+  if (curr_view.x < prev_view.x) {
+    regions.emplace_back(curr_view.x, curr_view.y, prev_view.x - curr_view.x,
                          curr_view.h);
   }
 
   // Right strip (scrolled right)
-  if (curr_right > prev_right) {
-    regions.emplace_back(prev_right, curr_top, curr_right - prev_right,
-                         curr_view.h);
+  if (curr_view.right() > prev_view.right()) {
+    regions.emplace_back(prev_view.right(), curr_view.y,
+                         curr_view.right() - prev_view.right(), curr_view.h);
   }
 
+  // Top and bottom strips only need the x-range the left/right strips
+  // skipped: where prev_view and curr_view overlap horizontally.
+  const WorldRect overlap = intersect(prev_view, curr_view);
+
   // Top strip (scrolled up)
-  // Only the part not already covered by left/right strips
-  if (curr_top < prev_top) {
-    const int strip_left = std::max(curr_left, prev_left);
-    const int strip_right = std::min(curr_right, prev_right);
-    if (strip_right > strip_left) {
-      regions.emplace_back(strip_left, curr_top, strip_right - strip_left,
-                           prev_top - curr_top);
-    }
+  if (curr_view.y < prev_view.y) {
+    regions.emplace_back(overlap.x, curr_view.y, overlap.w,
+                         prev_view.y - curr_view.y);
   }
 
   // Bottom strip (scrolled down)
-  // Only the part not already covered by left/right strips
-  if (curr_bottom > prev_bottom) {
-    const int strip_left = std::max(curr_left, prev_left);
-    const int strip_right = std::min(curr_right, prev_right);
-    if (strip_right > strip_left) {
-      regions.emplace_back(strip_left, prev_bottom, strip_right - strip_left,
-                           curr_bottom - prev_bottom);
-    }
+  if (curr_view.bottom() > prev_view.bottom()) {
+    regions.emplace_back(overlap.x, prev_view.bottom(), overlap.w,
+                         curr_view.bottom() - prev_view.bottom());
   }
 
   return regions;
