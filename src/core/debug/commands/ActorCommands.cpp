@@ -6,7 +6,6 @@
 
 #include "core/debug/commands/ActorCommands.h"
 
-#include "conversations/PoliceConversation.h"
 #include "core/GameTypes.h"
 #include "core/character/Actor.h"
 #include "core/character/MafiaPlayerState.h"
@@ -14,6 +13,7 @@
 #include "core/character/SocialStatus.h"
 #include "core/city/City.h"
 #include "core/city/CityNames.h"
+#include "core/conversations/PoliceConversation.h"
 #include "core/debug/command/CommonArgs.h"
 #include "core/item/Item.h"
 #include "core/restaurant/Restaurant.h"

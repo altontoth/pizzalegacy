@@ -11,6 +11,7 @@
 #include "core/common/Ids.h"
 #include "core/debug/command/CommonArgs.h"
 #include "core/economy/WeaponMarket.h"
+#include "core/factories/PizzaFactory.h"
 #include "core/finance/BalanceSheet.h"
 #include "core/finance/Ledger.h"
 #include "core/finance/Money.h"
@@ -22,7 +23,6 @@
 #include "core/time/TimeOfDay.h"
 #include "core/util/GameContext.h"
 #include "engine/FormatCompat.h"
-#include "factories/PizzaFactory.h"
 #include "resources/BobSizeFn.h"
 
 #include <array>

@@ -12,14 +12,15 @@
 #include <variant>
 #include <vector>
 
-#include "conversations/MayorConversation.h"
 #include "core/Demographics.h"
 #include "core/character/Actor.h"
 #include "core/character/Player.h"
 #include "core/city/City.h"
 #include "core/city/District.h"
 #include "core/city/Property.h"
+#include "core/conversations/MayorConversation.h"
 #include "core/events/MilestoneId.h"
+#include "core/factories/CharacterFactory.h"
 #include "core/finance/TurnInvoices.h"
 #include "core/food/IngredientType.h"
 #include "core/inventory/Inventory.h"
@@ -38,7 +39,6 @@
 #include "core/time/TimeOfDay.h"
 #include "engine/Logger.h"
 #include "engine/Random.h"
-#include "factories/CharacterFactory.h"
 
 namespace {
 // Staff events only fire during business hours.

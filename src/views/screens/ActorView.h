@@ -8,8 +8,8 @@
 
 #include <cstdlib>
 
-#include "conversations/BaseConversation.h"
 #include "core/character/Actor.h"
+#include "core/conversations/BaseConversation.h"
 #include "views/base/MainPanelView.h"
 
 enum class ConversationPhase {

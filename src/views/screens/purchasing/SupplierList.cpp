@@ -5,9 +5,9 @@
  */
 
 #include "views/screens/purchasing/SupplierList.h"
+#include "core/factories/SupplierFactory.h"
 #include "core/state/GameState.h"
 #include "core/supply/Supplier.h"
-#include "factories/SupplierFactory.h"
 
 SupplierList::SupplierList(GameContext& context, GameState& state,
                            SupplierType type)

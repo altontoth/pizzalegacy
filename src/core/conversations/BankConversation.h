@@ -10,8 +10,8 @@
 #include <string>
 #include <vector>
 
-#include "conversations/BankLine.h"
-#include "conversations/BaseConversation.h"
+#include "core/conversations/BankLine.h"
+#include "core/conversations/BaseConversation.h"
 #include "core/finance/Loan.h"
 #include "core/state/GameState.h"
 

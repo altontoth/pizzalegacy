@@ -4,13 +4,13 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "conversations/InsuranceConversation.h"
+#include "core/conversations/InsuranceConversation.h"
 
 #include <magic_enum/magic_enum.hpp>
 
-#include "conversations/InsuranceLine.h"
 #include "core/character/Character.h"
 #include "core/character/Player.h"
+#include "core/conversations/InsuranceLine.h"
 #include "core/finance/Ledger.h"
 #include "core/state/GameState.h"
 #include "engine/Fatal.h"

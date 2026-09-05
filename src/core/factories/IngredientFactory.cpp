@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "factories/IngredientFactory.h"
+#include "core/factories/IngredientFactory.h"
 
 #include <array>
 

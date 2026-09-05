@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "conversations/PoliceConversation.h"
+#include "core/conversations/PoliceConversation.h"
 
 #include <algorithm>
 

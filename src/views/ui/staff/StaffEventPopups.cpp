@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "core/character/Staff.h"
+#include "core/factories/CharacterFactory.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/restaurant/StaffEventDialogs.h"
 #include "core/restaurant/StaffEvents.h"
@@ -19,7 +20,6 @@
 #include "engine/FormatCompat.h"
 #include "engine/Logger.h"
 #include "engine/geom/Spaces.h"
-#include "factories/CharacterFactory.h"
 #include "views/ui/PopupManager.h"
 #include "views/ui/popups/AlertPopup.h"
 #include "views/ui/popups/OptionsPopup.h"

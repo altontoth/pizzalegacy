@@ -8,12 +8,12 @@
 // post-judging bookkeeping.
 
 #include "core/events/MilestoneId.h"
+#include "core/factories/PizzaFactory.h"
 #include "core/food/CanonicalPizza.h"
 #include "core/state/GameState.h"
 #include "engine/FormatCompat.h"
 #include "engine/Logger.h"
 #include "engine/ui/ICursorManager.h"
-#include "factories/PizzaFactory.h"
 #include "resources/BobSizeFn.h"
 #include "views/screens/pizza/PizzaDesign.h"
 #include "views/screens/pizza/PizzaDesignHelpers.h"

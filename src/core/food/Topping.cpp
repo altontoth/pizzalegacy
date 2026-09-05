@@ -6,9 +6,9 @@
 
 #include "core/food/Topping.h"
 #include <iostream>
+#include "core/factories/IngredientFactory.h"
 #include "engine/Logger.h"
 #include "engine/geom/Spaces.h"
-#include "factories/IngredientFactory.h"
 
 static constexpr uint8_t rotation_mask = 0x03; // 0b0011
 static constexpr uint8_t chop_shift = 2;       // top bits encode chop

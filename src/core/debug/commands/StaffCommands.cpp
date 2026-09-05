@@ -11,12 +11,12 @@
 #include "core/character/Training.h"
 #include "core/city/Property.h"
 #include "core/debug/command/CommonArgs.h"
+#include "core/factories/CharacterFactory.h"
+#include "core/factories/TrainingFactory.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/restaurant/StaffEventData.h"
 #include "core/state/GameState.h"
 #include "engine/FormatCompat.h"
-#include "factories/CharacterFactory.h"
-#include "factories/TrainingFactory.h"
 
 #include <algorithm>
 #include <array>

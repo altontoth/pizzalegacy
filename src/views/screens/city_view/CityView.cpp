@@ -15,7 +15,6 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
-#include "conversations/MafiaLine.h"
 #include "core/GameTypes.h"
 #include "core/character/MafiaPlayerState.h"
 #include "core/character/Player.h"
@@ -25,6 +24,7 @@
 #include "core/city/CityViewMapState.h"
 #include "core/city/District.h"
 #include "core/city/Property.h"
+#include "core/conversations/MafiaLine.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/restaurant/RestaurantTypes.h"
 #include "core/state/EndOfDayCause.h"

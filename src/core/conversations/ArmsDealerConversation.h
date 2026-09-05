@@ -8,8 +8,8 @@
 
 #include <vector>
 
-#include "conversations/ArmsDealerLine.h"
-#include "conversations/BaseConversation.h"
+#include "core/conversations/ArmsDealerLine.h"
+#include "core/conversations/BaseConversation.h"
 #include "core/state/GameState.h"
 
 class ArmsDealerConversation : public BaseConversation<ArmsDealerLine> {

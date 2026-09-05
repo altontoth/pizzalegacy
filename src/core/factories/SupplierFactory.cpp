@@ -3,7 +3,7 @@
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
-#include "factories/SupplierFactory.h"
+#include "core/factories/SupplierFactory.h"
 
 #include <algorithm>
 #include <array>

@@ -12,8 +12,8 @@
 #include <string>
 #include <vector>
 
-#include "conversations/BaseConversation.h"
-#include "conversations/PoliceLine.h"
+#include "core/conversations/BaseConversation.h"
+#include "core/conversations/PoliceLine.h"
 #include "core/finance/Money.h"
 #include "core/state/GameState.h"
 

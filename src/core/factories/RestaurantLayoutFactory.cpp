@@ -4,15 +4,15 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "factories/RestaurantLayoutFactory.h"
+#include "core/factories/RestaurantLayoutFactory.h"
+#include "core/factories/FloorPatternFactory.h"
+#include "core/factories/FurnitureFactory.h"
 #include "core/restaurant/FloorPattern.h"
 #include "core/util/LegacyConstants.h"
 #include "engine/FormatCompat.h"
 #include "engine/Logger.h"
 #include "engine/Size.h"
 #include "engine/geom/Spaces.h"
-#include "factories/FloorPatternFactory.h"
-#include "factories/FurnitureFactory.h"
 #include "resources/util/ByteReader.h"
 #include "resources/util/FileUtils.h"
 

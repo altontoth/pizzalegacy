@@ -13,12 +13,12 @@
 #include <utility>
 #include <variant>
 
-#include "conversations/BankConversation.h"
-#include "conversations/MafiaConversation.h"
-#include "conversations/MafiaLine.h"
-#include "conversations/MayorConversation.h"
-#include "conversations/PoliceConversation.h"
-#include "conversations/SupplierConversation.h"
+#include "core/conversations/BankConversation.h"
+#include "core/conversations/MafiaConversation.h"
+#include "core/conversations/MafiaLine.h"
+#include "core/conversations/MayorConversation.h"
+#include "core/conversations/PoliceConversation.h"
+#include "core/conversations/SupplierConversation.h"
 #include "core/food/IngredientCategory.h"
 #include "core/state/GameState.h"
 #include "core/state/Overloaded.h"

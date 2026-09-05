@@ -4,15 +4,15 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "conversations/BankConversation.h"
+#include "core/conversations/BankConversation.h"
 
 #include <cmath>
 #include <magic_enum/magic_enum.hpp>
 
-#include "conversations/BankLine.h"
 #include "core/character/Actor.h"
 #include "core/character/Player.h"
 #include "core/city/City.h"
+#include "core/conversations/BankLine.h"
 #include "core/events/MilestoneId.h"
 #include "core/finance/Investment.h"
 #include "core/finance/Ledger.h"

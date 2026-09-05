@@ -28,8 +28,6 @@ rm -f "$OUTFILE"
 # All game modules, plus other things not dependent on SDL
 echo "set(GAME_PLEGACY_SOURCES" >> "$OUTFILE"
 find src/core -type f \( -name '*.cpp' \) | sort | sed "s|^|    |" >> "$OUTFILE"
-find src/conversations -type f \( -name '*.cpp' \) | sort | sed "s|^|    |" >> "$OUTFILE"
-find src/factories -type f \( -name '*.cpp' \) | sort | sed "s|^|    |" >> "$OUTFILE"
 find src/views -type f \( -name '*.cpp' \) | sort | sed "s|^|    |" >> "$OUTFILE"
 find src/gfx -type f \( -name '*.cpp' \) | sort | sed "s|^|    |" >> "$OUTFILE"
 find src/resources -type f \( -name '*.cpp' -o -name '*.c' \) | sort | sed "s|^|    |" >> "$OUTFILE"

@@ -4,14 +4,14 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "conversations/MayorConversation.h"
+#include "core/conversations/MayorConversation.h"
 
 #include <magic_enum/magic_enum.hpp>
 
-#include "conversations/MayorLine.h"
 #include "core/character/Actor.h"
 #include "core/character/Player.h"
 #include "core/character/SocialStatus.h"
+#include "core/conversations/MayorLine.h"
 #include "engine/FormatCompat.h"
 
 MayorConversation::MayorConversation(GameState& state, const Actor* actor,

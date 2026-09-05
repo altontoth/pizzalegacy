@@ -14,6 +14,7 @@
 #include "core/character/Player.h"
 #include "core/city/City.h"
 #include "core/events/MilestoneId.h"
+#include "core/factories/PizzaFactory.h"
 #include "core/finance/Ledger.h"
 #include "core/finance/Money.h"
 #include "core/food/Pizza.h"
@@ -23,7 +24,6 @@
 #include "core/util/GameContext.h"
 #include "engine/Logger.h"
 #include "engine/Random.h"
-#include "factories/PizzaFactory.h"
 #include "resources/BobSizeFn.h"
 
 void CompetitionCoordinator::run_monthly_competition() {

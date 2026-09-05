@@ -22,6 +22,7 @@
 #include "core/city/District.h"
 #include "core/city/Property.h"
 #include "core/events/MilestoneId.h"
+#include "core/factories/RestaurantLayoutFactory.h"
 #include "core/finance/Money.h"
 #include "core/food/IngredientCategory.h"
 #include "core/food/IngredientType.h"
@@ -40,7 +41,6 @@
 #include "engine/FormatCompat.h"
 #include "engine/Logger.h"
 #include "engine/Random.h"
-#include "factories/RestaurantLayoutFactory.h"
 
 Restaurant::Restaurant(Property& property, Size kitchen_size,
                        core::RestaurantId id, std::string name)

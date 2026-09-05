@@ -7,7 +7,7 @@
 #pragma once
 
 #include <memory>
-#include "conversations/BaseConversation.h"
+#include "core/conversations/BaseConversation.h"
 #include "core/state/UIState.h"
 #include "core/util/GameContext.h"
 #include "views/screens/ActorView.h"

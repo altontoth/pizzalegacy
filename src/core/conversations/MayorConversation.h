@@ -9,9 +9,9 @@
 #include <optional>
 #include <string>
 
-#include "conversations/BaseConversation.h"
-#include "conversations/MayorLine.h"
 #include "core/city/MayorOffice.h"
+#include "core/conversations/BaseConversation.h"
+#include "core/conversations/MayorLine.h"
 #include "core/state/GameState.h"
 
 class MayorConversation : public BaseConversation<MayorLine> {

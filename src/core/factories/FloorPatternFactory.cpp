@@ -4,10 +4,10 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "factories/FloorPatternFactory.h"
+#include "core/factories/FloorPatternFactory.h"
+#include "core/factories/SupplierFactory.h"
 #include "core/supply/Supplier.h"
 #include "engine/Fatal.h"
-#include "factories/SupplierFactory.h"
 #include "resources/util/FileUtils.h"
 
 std::unordered_map<SupplierID, std::vector<FloorPattern>>

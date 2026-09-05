@@ -15,6 +15,7 @@
 #include "core/character/InsurancePlayerState.h"
 #include "core/character/Player.h"
 #include "core/common/Ids.h"
+#include "core/factories/CharacterFactory.h"
 #include "core/food/IngredientCategoryType.h"
 #include "core/marketing/NewspaperAdFormat.h"
 #include "core/save/SaveGameDate.h"
@@ -22,7 +23,6 @@
 #include "core/status/StatusHub.h"
 #include "core/supply/ActiveContract.h"
 #include "core/util/GameContext.h"
-#include "factories/CharacterFactory.h"
 
 namespace save {
 

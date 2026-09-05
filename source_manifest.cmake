@@ -19,6 +19,14 @@ set(GAME_PLEGACY_SOURCES
     src/core/city/MayorOffice.cpp
     src/core/city/PizzaCharts.cpp
     src/core/city/Property.cpp
+    src/core/conversations/ArmsDealerConversation.cpp
+    src/core/conversations/BankConversation.cpp
+    src/core/conversations/InsuranceConversation.cpp
+    src/core/conversations/MafiaConversation.cpp
+    src/core/conversations/MayorConversation.cpp
+    src/core/conversations/PoliceConversation.cpp
+    src/core/conversations/RealtorConversation.cpp
+    src/core/conversations/SupplierConversation.cpp
     src/core/debug/DebugCommands.cpp
     src/core/debug/DebugConsole.cpp
     src/core/debug/command/CommandContext.cpp
@@ -42,6 +50,16 @@ set(GAME_PLEGACY_SOURCES
     src/core/debug/commands/StaffCommands.cpp
     src/core/economy/WeaponMarket.cpp
     src/core/events/CareerLog.cpp
+    src/core/factories/CharacterFactory.cpp
+    src/core/factories/CityFactory.cpp
+    src/core/factories/CommercialFactory.cpp
+    src/core/factories/FloorPatternFactory.cpp
+    src/core/factories/FurnitureFactory.cpp
+    src/core/factories/IngredientFactory.cpp
+    src/core/factories/PizzaFactory.cpp
+    src/core/factories/RestaurantLayoutFactory.cpp
+    src/core/factories/SupplierFactory.cpp
+    src/core/factories/TrainingFactory.cpp
     src/core/finance/BalanceSheet.cpp
     src/core/finance/Ledger.cpp
     src/core/finance/Loan.cpp
@@ -90,24 +108,6 @@ set(GAME_PLEGACY_SOURCES
     src/core/supply/SupplierContract.cpp
     src/core/util/ConfigManager.cpp
     src/core/util/Tools.cpp
-    src/conversations/ArmsDealerConversation.cpp
-    src/conversations/BankConversation.cpp
-    src/conversations/InsuranceConversation.cpp
-    src/conversations/MafiaConversation.cpp
-    src/conversations/MayorConversation.cpp
-    src/conversations/PoliceConversation.cpp
-    src/conversations/RealtorConversation.cpp
-    src/conversations/SupplierConversation.cpp
-    src/factories/CharacterFactory.cpp
-    src/factories/CityFactory.cpp
-    src/factories/CommercialFactory.cpp
-    src/factories/FloorPatternFactory.cpp
-    src/factories/FurnitureFactory.cpp
-    src/factories/IngredientFactory.cpp
-    src/factories/PizzaFactory.cpp
-    src/factories/RestaurantLayoutFactory.cpp
-    src/factories/SupplierFactory.cpp
-    src/factories/TrainingFactory.cpp
     src/views/base/BobRenderer.cpp
     src/views/base/MainPanelView.cpp
     src/views/base/Menu.cpp
@@ -293,23 +293,6 @@ set(ENGINE_PLEGACY_SOURCES
 )
 set(PLEGACY_HEADERS
     src/CoreTypes.h
-    src/conversations/ArmsDealerConversation.h
-    src/conversations/ArmsDealerLine.h
-    src/conversations/BankConversation.h
-    src/conversations/BankLine.h
-    src/conversations/BaseConversation.h
-    src/conversations/InsuranceConversation.h
-    src/conversations/InsuranceLine.h
-    src/conversations/MafiaConversation.h
-    src/conversations/MafiaLine.h
-    src/conversations/MayorConversation.h
-    src/conversations/MayorLine.h
-    src/conversations/PoliceConversation.h
-    src/conversations/PoliceLine.h
-    src/conversations/RealtorConversation.h
-    src/conversations/RealtorLine.h
-    src/conversations/SupplierConversation.h
-    src/conversations/SupplierLine.h
     src/core/Demographics.h
     src/core/GameTypes.h
     src/core/character/Actor.h
@@ -339,6 +322,23 @@ set(PLEGACY_HEADERS
     src/core/city/PizzaCharts.h
     src/core/city/Property.h
     src/core/common/Ids.h
+    src/core/conversations/ArmsDealerConversation.h
+    src/core/conversations/ArmsDealerLine.h
+    src/core/conversations/BankConversation.h
+    src/core/conversations/BankLine.h
+    src/core/conversations/BaseConversation.h
+    src/core/conversations/InsuranceConversation.h
+    src/core/conversations/InsuranceLine.h
+    src/core/conversations/MafiaConversation.h
+    src/core/conversations/MafiaLine.h
+    src/core/conversations/MayorConversation.h
+    src/core/conversations/MayorLine.h
+    src/core/conversations/PoliceConversation.h
+    src/core/conversations/PoliceLine.h
+    src/core/conversations/RealtorConversation.h
+    src/core/conversations/RealtorLine.h
+    src/core/conversations/SupplierConversation.h
+    src/core/conversations/SupplierLine.h
     src/core/debug/DebugCommands.h
     src/core/debug/DebugConsole.h
     src/core/debug/command/ArgSpec.h
@@ -368,6 +368,16 @@ set(PLEGACY_HEADERS
     src/core/economy/WeaponMarket.h
     src/core/events/CareerLog.h
     src/core/events/MilestoneId.h
+    src/core/factories/CharacterFactory.h
+    src/core/factories/CityFactory.h
+    src/core/factories/CommercialFactory.h
+    src/core/factories/FloorPatternFactory.h
+    src/core/factories/FurnitureFactory.h
+    src/core/factories/IngredientFactory.h
+    src/core/factories/PizzaFactory.h
+    src/core/factories/RestaurantLayoutFactory.h
+    src/core/factories/SupplierFactory.h
+    src/core/factories/TrainingFactory.h
     src/core/finance/BalanceSheet.h
     src/core/finance/Investment.h
     src/core/finance/Ledger.h
@@ -532,16 +542,6 @@ set(PLEGACY_HEADERS
     src/engine/ui/TooltipManager.h
     src/engine/ui/TooltipRequest.h
     src/engine/ui/UiMode.h
-    src/factories/CharacterFactory.h
-    src/factories/CityFactory.h
-    src/factories/CommercialFactory.h
-    src/factories/FloorPatternFactory.h
-    src/factories/FurnitureFactory.h
-    src/factories/IngredientFactory.h
-    src/factories/PizzaFactory.h
-    src/factories/RestaurantLayoutFactory.h
-    src/factories/SupplierFactory.h
-    src/factories/TrainingFactory.h
     src/gfx/Blit.h
     src/gfx/Color.h
     src/gfx/ColorIndex.h

@@ -5,7 +5,7 @@ if(NOT DEFINED CHECK_ROOT)
   message(FATAL_ERROR "CHECK_ROOT is not set")
 endif()
 
-set(guarded_dirs core gfx resources factories conversations)
+set(guarded_dirs core gfx resources)
 
 set(violations "")
 foreach(dir IN LISTS guarded_dirs)

@@ -8,10 +8,10 @@
 
 #include <vector>
 
-#include "conversations/BaseConversation.h"
-#include "conversations/InsuranceLine.h"
 #include "core/character/Actor.h"
 #include "core/character/InsurancePlayerState.h"
+#include "core/conversations/BaseConversation.h"
+#include "core/conversations/InsuranceLine.h"
 #include "core/finance/Money.h"
 #include "core/state/GameState.h"
 

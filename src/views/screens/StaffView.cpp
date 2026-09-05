@@ -10,6 +10,8 @@
 
 #include "core/character/Character.h"
 #include "core/city/JobMarket.h"
+#include "core/factories/CharacterFactory.h"
+#include "core/factories/TrainingFactory.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/restaurant/RestaurantStats.h"
 #include "core/state/GameState.h"
@@ -17,8 +19,6 @@
 #include "core/util/LegacyConstants.h"
 #include "engine/geom/Spaces.h"
 #include "engine/ui/InteractionEvent.h"
-#include "factories/CharacterFactory.h"
-#include "factories/TrainingFactory.h"
 #include "gfx/ColorIndex.h"
 #include "gfx/SurfaceBuilder.h"
 #include "magic_enum/magic_enum.hpp"

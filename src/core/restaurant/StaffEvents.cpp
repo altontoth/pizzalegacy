@@ -8,6 +8,7 @@
 #include "core/character/Player.h"
 #include "core/character/Staff.h"
 #include "core/city/Property.h"
+#include "core/factories/FurnitureFactory.h"
 #include "core/finance/Ledger.h"
 #include "core/finance/PlayerFinancials.h"
 #include "core/food/IngredientType.h"
@@ -24,7 +25,6 @@
 #include "engine/Logger.h"
 #include "engine/Math.h"
 #include "engine/Random.h"
-#include "factories/FurnitureFactory.h"
 
 using namespace core::restaurant;
 using core::character::JobRole;

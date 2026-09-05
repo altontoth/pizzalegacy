@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "factories/CharacterFactory.h"
+#include "core/factories/CharacterFactory.h"
 
 #include <algorithm>
 #include <array>

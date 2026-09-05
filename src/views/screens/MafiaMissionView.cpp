@@ -6,8 +6,8 @@
 
 #include "views/screens/MafiaMissionView.h"
 
-#include "conversations/MafiaLine.h"
 #include "core/character/Player.h"
+#include "core/conversations/MafiaLine.h"
 #include "core/state/GameState.h"
 #include "engine/ui/InteractionEvent.h"
 #include "gfx/Blit.h"

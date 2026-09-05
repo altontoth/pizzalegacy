@@ -8,7 +8,7 @@
 
 #include <string>
 
-#include "conversations/MafiaLine.h"
+#include "core/conversations/MafiaLine.h"
 #include "views/base/MainPanelView.h"
 
 class MafiaMissionView : public MainPanelView {

@@ -8,6 +8,7 @@
 
 #include "core/city/CentralDepot.h"
 #include "core/city/City.h"
+#include "core/factories/IngredientFactory.h"
 #include "core/finance/Money.h"
 #include "core/food/IngredientCategory.h"
 #include "core/state/GameState.h"
@@ -16,7 +17,6 @@
 #include "engine/geom/Spaces.h"
 #include "engine/ui/InteractionEvent.h"
 #include "engine/ui/TextAnchor.h"
-#include "factories/IngredientFactory.h"
 #include "gfx/Blit.h"
 #include "resources/BlitmapManager.h"
 #include "resources/FontManager.h"

@@ -14,6 +14,7 @@
 #include "core/character/Player.h"
 #include "core/city/City.h"
 #include "core/city/Property.h"
+#include "core/factories/RestaurantLayoutFactory.h"
 #include "core/finance/Ledger.h"
 #include "core/finance/PlayerFinancials.h"
 #include "core/restaurant/AIEconomy.h"
@@ -22,7 +23,6 @@
 #include "core/state/GameState.h"
 #include "engine/FormatCompat.h"
 #include "engine/Random.h"
-#include "factories/RestaurantLayoutFactory.h"
 
 namespace {
 

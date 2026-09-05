@@ -4,9 +4,9 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "conversations/ArmsDealerConversation.h"
-#include "conversations/ArmsDealerLine.h"
+#include "core/conversations/ArmsDealerConversation.h"
 #include "core/character/Player.h"
+#include "core/conversations/ArmsDealerLine.h"
 #include "core/events/MilestoneId.h"
 #include "core/inventory/Inventory.h"
 #include "core/item/Item.h"

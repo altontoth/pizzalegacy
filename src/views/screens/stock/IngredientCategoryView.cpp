@@ -8,12 +8,12 @@
 
 #include "core/state/UIState.h"
 
+#include "core/factories/IngredientFactory.h"
 #include "core/food/IngredientCategory.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/state/GameState.h"
 #include "engine/geom/Spaces.h"
 #include "engine/ui/TextAnchor.h"
-#include "factories/IngredientFactory.h"
 #include "gfx/Blit.h"
 #include "gfx/Draw.h"
 #include "resources/BlitmapManager.h"

@@ -4,12 +4,11 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "conversations/RealtorConversation.h"
+#include "core/conversations/RealtorConversation.h"
 
 #include <algorithm>
 #include <magic_enum/magic_enum.hpp>
 
-#include "conversations/RealtorLine.h"
 #include "core/character/Actor.h"
 #include "core/character/Player.h"
 #include "core/character/SocialStatus.h"
@@ -17,6 +16,7 @@
 #include "core/city/City.h"
 #include "core/city/CityTypes.h"
 #include "core/city/Property.h"
+#include "core/conversations/RealtorLine.h"
 #include "core/finance/Ledger.h"
 #include "core/finance/Money.h"
 #include "core/restaurant/Restaurant.h"

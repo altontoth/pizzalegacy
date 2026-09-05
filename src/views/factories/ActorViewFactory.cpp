@@ -6,15 +6,15 @@
 
 #include "views/factories/ActorViewFactory.h"
 
-#include "conversations/ArmsDealerConversation.h"
-#include "conversations/BankConversation.h"
-#include "conversations/InsuranceConversation.h"
-#include "conversations/MafiaConversation.h"
-#include "conversations/MayorConversation.h"
-#include "conversations/PoliceConversation.h"
-#include "conversations/RealtorConversation.h"
 #include "core/character/Actor.h"
 #include "core/city/City.h"
+#include "core/conversations/ArmsDealerConversation.h"
+#include "core/conversations/BankConversation.h"
+#include "core/conversations/InsuranceConversation.h"
+#include "core/conversations/MafiaConversation.h"
+#include "core/conversations/MayorConversation.h"
+#include "core/conversations/PoliceConversation.h"
+#include "core/conversations/RealtorConversation.h"
 #include "engine/Fatal.h"
 #include "engine/FormatCompat.h"
 

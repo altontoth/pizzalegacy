@@ -6,13 +6,13 @@
 
 #include "views/screens/purchasing/FloorListView.h"
 
+#include "core/factories/FloorPatternFactory.h"
+#include "core/factories/SupplierFactory.h"
 #include "core/restaurant/RestaurantTypes.h"
 #include "core/state/GameState.h"
 #include "core/util/LegacyConstants.h"
 #include "engine/Fatal.h"
 #include "engine/FormatCompat.h"
-#include "factories/FloorPatternFactory.h"
-#include "factories/SupplierFactory.h"
 #include "gfx/Blit.h"
 #include "magic_enum/magic_enum.hpp"
 #include "resources/FontManager.h"

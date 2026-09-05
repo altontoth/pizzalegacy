@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "factories/CommercialFactory.h"
+#include "core/factories/CommercialFactory.h"
 #include <string>
 #include "engine/Fatal.h"
 

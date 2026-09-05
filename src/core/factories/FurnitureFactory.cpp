@@ -3,7 +3,7 @@
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
-#include "factories/FurnitureFactory.h"
+#include "core/factories/FurnitureFactory.h"
 
 #include "core/supply/Supplier.h"
 

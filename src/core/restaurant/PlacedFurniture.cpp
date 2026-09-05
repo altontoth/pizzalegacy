@@ -5,9 +5,9 @@
  */
 
 #include "core/restaurant/PlacedFurniture.h"
+#include "core/factories/FurnitureFactory.h"
 #include "core/restaurant/Furniture.h"
 #include "engine/geom/Spaces.h"
-#include "factories/FurnitureFactory.h"
 
 #include <algorithm>
 

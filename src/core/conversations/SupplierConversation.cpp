@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "conversations/SupplierConversation.h"
+#include "core/conversations/SupplierConversation.h"
 
 #include <algorithm>
 #include <cassert>
@@ -13,9 +13,9 @@
 #include <utility>
 #include <vector>
 
-#include "conversations/SupplierLine.h"
 #include "core/character/Player.h"
 #include "core/city/City.h"
+#include "core/conversations/SupplierLine.h"
 #include "core/events/MilestoneId.h"
 #include "core/supply/ActiveContract.h"
 #include "core/supply/FoodSupplier.h"

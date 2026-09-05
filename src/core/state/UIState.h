@@ -12,10 +12,10 @@
 #include <string>
 #include <variant>
 #include <vector>
-#include "conversations/MafiaLine.h"
-#include "conversations/MayorLine.h"
 #include "core/GameTypes.h"
 #include "core/common/Ids.h"
+#include "core/conversations/MafiaLine.h"
+#include "core/conversations/MayorLine.h"
 #include "core/events/MilestoneId.h"
 #include "core/finance/Money.h"
 #include "core/food/BakeSession.h"

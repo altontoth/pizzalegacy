@@ -4,13 +4,12 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "conversations/MafiaConversation.h"
+#include "core/conversations/MafiaConversation.h"
 
 #include <algorithm>
 #include <cstddef>
 #include <magic_enum/magic_enum.hpp>
 
-#include "conversations/MafiaLine.h"
 #include "core/GameTypes.h"
 #include "core/character/Actor.h"
 #include "core/character/Player.h"
@@ -19,6 +18,7 @@
 #include "core/city/District.h"
 #include "core/city/Property.h"
 #include "core/common/Ids.h"
+#include "core/conversations/MafiaLine.h"
 #include "core/finance/Ledger.h"
 #include "core/item/Item.h"
 #include "core/restaurant/Restaurant.h"

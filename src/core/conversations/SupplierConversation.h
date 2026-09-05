@@ -11,9 +11,9 @@
 #include <optional>
 #include <vector>
 
-#include "conversations/BaseConversation.h"
-#include "conversations/SupplierLine.h"
 #include "core/character/Actor.h"
+#include "core/conversations/BaseConversation.h"
+#include "core/conversations/SupplierLine.h"
 #include "core/finance/Money.h"
 #include "core/supply/IngredientBatch.h"
 #include "core/supply/SupplierContract.h"

@@ -6,11 +6,11 @@
 
 // The recipe list view and loading recipes from disk.
 
+#include "core/factories/PizzaFactory.h"
 #include "core/state/GameState.h"
 #include "engine/Logger.h"
 #include "engine/PlatformPaths.h"
 #include "engine/ui/TextAnchor.h"
-#include "factories/PizzaFactory.h"
 #include "gfx/Blit.h"
 #include "resources/BobSizeFn.h"
 #include "resources/util/FileUtils.h"

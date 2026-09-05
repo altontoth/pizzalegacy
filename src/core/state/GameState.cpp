@@ -14,7 +14,6 @@
 #include <optional>
 #include <ranges>
 #include <utility>
-#include "conversations/MayorConversation.h"
 #include "core/character/Actor.h"
 #include "core/character/Awards.h"
 #include "core/character/MafiaPlayerState.h"
@@ -25,7 +24,12 @@
 #include "core/city/District.h"
 #include "core/city/MayorOffice.h"
 #include "core/city/Property.h"
+#include "core/conversations/MayorConversation.h"
 #include "core/events/MilestoneId.h"
+#include "core/factories/CharacterFactory.h"
+#include "core/factories/CityFactory.h"
+#include "core/factories/PizzaFactory.h"
+#include "core/factories/RestaurantLayoutFactory.h"
 #include "core/finance/TurnInvoices.h"
 #include "core/init/NewGameConfig.h"
 #include "core/restaurant/AIEconomy.h"
@@ -40,10 +44,6 @@
 #include "engine/Logger.h"
 #include "engine/Random.h"
 #include "engine/geom/Spaces.h"
-#include "factories/CharacterFactory.h"
-#include "factories/CityFactory.h"
-#include "factories/PizzaFactory.h"
-#include "factories/RestaurantLayoutFactory.h"
 #include "resources/BobSizeFn.h"
 
 GameState::GameState() = default;

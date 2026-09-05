@@ -7,14 +7,14 @@
 #include "views/screens/purchasing/FurnitureListView.h"
 #include <algorithm>
 #include <optional>
+#include "core/factories/FurnitureFactory.h"
+#include "core/factories/SupplierFactory.h"
 #include "core/finance/Ledger.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/state/GameState.h"
 #include "engine/FormatCompat.h"
 #include "engine/ui/InteractionEvent.h"
 #include "engine/ui/InteractionManager.h"
-#include "factories/FurnitureFactory.h"
-#include "factories/SupplierFactory.h"
 #include "gfx/Blit.h"
 #include "gfx/Draw.h"
 #include "magic_enum/magic_enum.hpp"

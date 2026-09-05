@@ -12,6 +12,8 @@
 #include "core/character/Training.h"
 #include "core/city/City.h"
 #include "core/city/Property.h"
+#include "core/factories/FurnitureFactory.h"
+#include "core/factories/TrainingFactory.h"
 #include "core/finance/Money.h"
 #include "core/food/IngredientArray.h"
 #include "core/logistics/IngredientStock.h"
@@ -23,8 +25,6 @@
 #include "core/save/SaveGameCharacter.h"
 #include "engine/Logger.h"
 #include "engine/geom/Spaces.h"
-#include "factories/FurnitureFactory.h"
-#include "factories/TrainingFactory.h"
 
 namespace save {
 

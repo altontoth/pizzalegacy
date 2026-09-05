@@ -8,6 +8,7 @@
 
 #include "core/character/Player.h"
 #include "core/city/City.h"
+#include "core/factories/IngredientFactory.h"
 #include "core/finance/Ledger.h"
 #include "core/food/Ingredient.h"
 #include "core/food/IngredientCategory.h"
@@ -19,7 +20,6 @@
 #include "engine/Logger.h"
 #include "engine/geom/Spaces.h"
 #include "engine/ui/InteractionEvent.h"
-#include "factories/IngredientFactory.h"
 #include "gfx/Blit.h"
 #include "gfx/Draw.h"
 #include "resources/BlitmapManager.h"

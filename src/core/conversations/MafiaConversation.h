@@ -9,10 +9,10 @@
 #include <optional>
 #include <vector>
 
-#include "conversations/BaseConversation.h"
-#include "conversations/MafiaLine.h"
 #include "core/character/MafiaPlayerState.h"
 #include "core/common/Ids.h"
+#include "core/conversations/BaseConversation.h"
+#include "core/conversations/MafiaLine.h"
 #include "core/finance/Money.h"
 #include "core/state/GameState.h"
 

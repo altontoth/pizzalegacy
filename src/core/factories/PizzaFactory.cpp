@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "factories/PizzaFactory.h"
+#include "core/factories/PizzaFactory.h"
 
 #include <cstring>
 #include <string>
