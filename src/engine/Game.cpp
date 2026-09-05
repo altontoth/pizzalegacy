@@ -173,7 +173,6 @@ int Game::run() {
     configManager.save_config();
   }
 
-  // Use format-specific path based on active_asset_format
   std::string active_path = configManager.active_game_path();
   if (active_path.empty()) {
     // No valid path found - prompt user to select game location

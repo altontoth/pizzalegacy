@@ -117,7 +117,6 @@ std::string ConfigManager::prompt_for_game_location() {
   bool give_up = false;
   bool game_found = false;
   std::string selected_folder;
-  std::string active_asset_format = "english";
 
   while (!give_up && !game_found) {
     const char* folder_name =
@@ -146,7 +145,6 @@ std::string ConfigManager::prompt_for_game_location() {
     return std::string{};
   }
 
-  value("active_asset_format", active_asset_format);
   value("game_path_english", selected_folder);
 
   return selected_folder;
@@ -301,49 +299,6 @@ GameOptions ConfigManager::load_options() const {
   return opts;
 }
 
-std::string
-ConfigManager::game_path_for_format(const std::string& format) const {
-  const std::string key =
-      (format == "german") ? "game_path_german" : "game_path_english";
-
-  auto it = config_.find(key);
-  if (it != config_.end()) {
-    return it->second;
-  }
-
-  return "";
-}
-
 std::string ConfigManager::active_game_path() const {
-  std::string format = value("active_asset_format");
-  if (format.empty()) {
-    format = "english";
-  }
-
-  return game_path_for_format(format);
-}
-
-ConfigManager::FormatAvailability
-ConfigManager::detect_available_formats() const {
-  FormatAvailability result{.english_available = false,
-                            .german_available = false,
-                            .english_path = "",
-                            .german_path = ""};
-
-  // Check game_path_english if set
-  auto it = config_.find("game_path_english");
-  if (it != config_.end() && !result.english_available) {
-    std::string path = it->second;
-    if (fileutils::fexists(path + "/PT.EXE")) {
-      result.english_available = true;
-      result.english_path = path;
-    }
-  }
-
-  return result;
-}
-
-bool ConfigManager::both_formats_available() const {
-  auto availability = detect_available_formats();
-  return availability.english_available && availability.german_available;
+  return value("game_path_english");
 }

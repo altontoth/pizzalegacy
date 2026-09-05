@@ -23,19 +23,7 @@ public:
   void save_options(const GameOptions& opts);
   GameOptions load_options() const;
 
-  struct FormatAvailability {
-    bool english_available;
-    bool german_available;
-    std::string english_path;
-    std::string german_path;
-  };
-
-  std::string game_path_for_format(const std::string& format) const;
   std::string active_game_path() const;
-  FormatAvailability detect_available_formats() const;
-  bool both_formats_available() const;
-  // Migrate old single-path config to new dual-path system
-  void migrate_legacy_game_path();
 
 private:
   std::string filename_;
