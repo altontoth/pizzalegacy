@@ -60,6 +60,12 @@ void CarManager::update(const WorldRect& view, int ticks) {
     newly_visible_regions.push_back(view);
   }
 
+  // A region equal to the whole viewport means we're spawning across the
+  // entire view rather than into a newly revealed strip. The original
+  // halves the spawn chance in that case.
+  const bool covers_full_viewport =
+      newly_visible_regions.size() == 1 && newly_visible_regions[0] == view;
+
   // Spawn cars in newly visible regions based on district traffic density
   for (const auto& region : newly_visible_regions) {
     // Find the center tile of the region to determine district, I believe this
@@ -74,7 +80,8 @@ void CarManager::update(const WorldRect& view, int ticks) {
     const int traffic_density =
         city_.district(district_index).traffic_density();
 
-    spawn_cars_in_region(region, traffic_density);
+    spawn_cars_in_region(region, covers_full_viewport ? traffic_density / 2
+                                                      : traffic_density);
   }
 
   prev_viewport_ = view;
@@ -217,27 +224,6 @@ bool CarManager::cars_would_collide(const Car& a, const Car& b) noexcept {
 
 void CarManager::spawn_cars_in_region(const WorldRect& region,
                                       int traffic_density) {
-  struct SpawnSite {
-    int tx;
-    int ty;
-    // allowed exits (E=1,W=2,S=4,N=8):
-    uint8_t lane_mask;
-  };
-
-  // Calculate target number of cars based on traffic density and region size
-  // traffic_density is 0-100, where 50 is average
-  // Formula: scale density so that:
-  //   - density=0:   0 cars
-  //   - density=50:  ~1 car per 3-4 road tiles
-  //   - density=100: ~2 cars per 3-4 road tiles
-  const int region_tiles = ((region.w / tile_width_pixels) + 1) *
-                           ((region.h / tile_width_pixels) + 1);
-  // TODO: For now assume roughly 30% of tiles are roads , but we could just
-  // calculate this?
-  const int estimated_road_tiles = region_tiles * 3 / 10;
-  const int target_cars =
-      std::max(0, (estimated_road_tiles * traffic_density) / 150);
-
   // Convert region to tile rectangle
   const int tile_left = std::max(0, floor_div(region.x, tile_width_pixels));
   const int tile_top = std::max(0, floor_div(region.y, tile_width_pixels));
@@ -246,31 +232,20 @@ void CarManager::spawn_cars_in_region(const WorldRect& region,
   const int tile_bottom = std::min(
       (region.y + region.h - 1) / tile_width_pixels, MAP_TILES_PER_COLUMN - 1);
 
-  // Gather candidate road tiles in region
-  std::vector<SpawnSite> sites;
+  // Each road tile independently rolls to spawn a car, same as the original:
+  // traffic_density is the percentage chance per tile.
   for (int ty = tile_top; ty <= tile_bottom; ++ty) {
     for (int tx = tile_left; tx <= tile_right; ++tx) {
       int idx = (ty * MAP_TILES_PER_ROW) + tx;
-      uint8_t lanes = Car::spawn_mask(city_.type(idx));
-      if (lanes) {
-        sites.push_back({tx, ty, lanes});
+      if (!Car::spawn_mask(city_.type(idx))) {
+        continue;
+      }
+      if (engine::random::presentation::rand_percentage_chance(
+              traffic_density)) {
+        int type = engine::random::presentation::rand_max_n(MAX_CAR_TYPES);
+        cars_.push_back(Car::spawn(tx, ty, type, city_));
       }
     }
-  }
-
-  if (sites.empty()) {
-    return;
-  }
-
-  // Shuffle & spawn up to target_cars
-  engine::random::presentation::shuffle(sites.begin(), sites.end());
-
-  const std::size_t spawn_count =
-      std::min(static_cast<std::size_t>(target_cars), sites.size());
-  for (std::size_t i = 0; i < spawn_count; ++i) {
-    const auto& s = sites[i];
-    int type = engine::random::presentation::rand_max_n(MAX_CAR_TYPES);
-    cars_.push_back(Car::spawn(s.tx, s.ty, type, city_));
   }
 }
 
