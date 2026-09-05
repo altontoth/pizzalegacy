@@ -7,8 +7,8 @@
 #pragma once
 
 #include <memory>
+#include "engine/gfx/PaletteHandle.h"
 #include "engine/ui/UiMode.h"
-#include "gfx/PaletteHandle.h"
 #include "resources/VgaManager.h"
 
 namespace gfx {

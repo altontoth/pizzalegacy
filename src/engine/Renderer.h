@@ -13,8 +13,8 @@
 #include "engine/LayerInfo.h"
 #include "engine/SDLContext.h"
 #include "engine/geom/Spaces.h"
-#include "gfx/Blit.h"
-#include "gfx/Surface.h"
+#include "engine/gfx/Blit.h"
+#include "engine/gfx/Surface.h"
 
 class Renderable;
 class CursorManager;

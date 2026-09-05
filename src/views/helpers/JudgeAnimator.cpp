@@ -5,7 +5,7 @@
  */
 
 #include "views/helpers/JudgeAnimator.h"
-#include "gfx/Blit.h"
+#include "engine/gfx/Blit.h"
 #include "resources/FontManager.h"
 
 JudgeAnimator::JudgeAnimator(GameContext& context) : context_(context) {}

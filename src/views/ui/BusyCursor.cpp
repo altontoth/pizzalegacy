@@ -8,7 +8,7 @@
 
 #include "engine/Geometry.h"
 #include "engine/geom/Spaces.h"
-#include "gfx/Surface.h"
+#include "engine/gfx/Surface.h"
 #include "views/ui/ScreenText.h"
 
 namespace views::ui {

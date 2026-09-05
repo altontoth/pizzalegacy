@@ -8,7 +8,7 @@
 
 #include <cstdlib>
 
-#include "gfx/Draw.h"
+#include "engine/gfx/Draw.h"
 #include "resources/FontManager.h"
 
 namespace views::ui::components {

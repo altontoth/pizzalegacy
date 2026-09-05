@@ -8,8 +8,8 @@
 
 #include <algorithm>
 
+#include "engine/gfx/Draw.h"
 #include "engine/ui/TextAnchor.h"
-#include "gfx/Draw.h"
 #include "resources/FontManager.h"
 
 constexpr int box_size = 14;

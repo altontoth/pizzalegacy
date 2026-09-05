@@ -11,7 +11,7 @@
 #include "FontLoader.h"
 #include "ResourceManager.h"
 #include "engine/geom/Spaces.h"
-#include "gfx/Surface.h"
+#include "engine/gfx/Surface.h"
 #include "resources/FontTypes.h"
 
 using gfx::Surface;

@@ -10,7 +10,7 @@
 
 #include "core/restaurant/Restaurant.h"
 #include "engine/geom/Spaces.h"
-#include "gfx/Draw.h"
+#include "engine/gfx/Draw.h"
 
 static constexpr std::array<const char*, 7> tv_channels = {
     "-------- OFF --------", "Samson Street", "Music Video",

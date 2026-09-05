@@ -34,12 +34,14 @@
 #include "engine/Renderer.h"
 #include "engine/SDL_include.h"
 #include "engine/Version.h"
+#include "engine/gfx/Surface.h"
 #include "engine/input/BindingsFile.h"
 #include "engine/input/InputManager.h"
 #include "engine/ui/CursorManager.h"
 #include "engine/ui/TooltipManager.h"
-#include "gfx/Surface.h"
+#include "resources/PaletteLoader.h"
 #include "resources/VgaLoader.h"
+#include "resources/util/FileUtils.h"
 #include "views/base/View.h"
 #include "views/factories/ViewFactory.h"
 #include "views/layers/ConsoleLayer.h"
@@ -781,6 +783,7 @@ bool Game::init(int display_height, ConfigManager& config_manager) {
   font_manager_ = std::make_unique<FontManager>(FontLoader());
   vga_manager_ = std::make_unique<VgaManager>(VgaLoader());
   blitmap_manager_ = std::make_unique<BlitmapManager>(vga_manager_.get());
+  resources::load_palette_bank();
   cursor_manager_ =
       std::make_unique<CursorManager>(vga_manager_.get(), display_height);
   tooltip_manager_ = std::make_unique<TooltipManager>();

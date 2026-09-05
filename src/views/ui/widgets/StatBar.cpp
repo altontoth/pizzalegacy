@@ -6,7 +6,7 @@
 
 #include "views/ui/widgets/StatBar.h"
 
-#include "gfx/Surface.h"
+#include "engine/gfx/Surface.h"
 #include "resources/BlitmapIcons.h"
 
 #include <algorithm>

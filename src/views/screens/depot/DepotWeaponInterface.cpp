@@ -12,8 +12,8 @@
 #include "core/state/GameState.h"
 #include "core/state/UIState.h"
 #include "engine/geom/Spaces.h"
+#include "engine/gfx/Blit.h"
 #include "engine/ui/InteractionEvent.h"
-#include "gfx/Blit.h"
 #include "resources/FontManager.h"
 #include "views/ui/DropdownDecoration.h"
 

@@ -12,9 +12,9 @@
 #include "core/state/GameState.h"
 #include "engine/FormatCompat.h"
 #include "engine/Logger.h"
+#include "engine/gfx/Blit.h"
+#include "engine/gfx/Draw.h"
 #include "engine/ui/TextAnchor.h"
-#include "gfx/Blit.h"
-#include "gfx/Draw.h"
 #include "views/screens/pizza/PizzaDesign.h"
 #include "views/ui/widgets/StatBar.h"
 

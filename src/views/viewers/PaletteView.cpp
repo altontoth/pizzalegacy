@@ -11,10 +11,10 @@
 
 #include "core/state/GameState.h"
 #include "engine/DisplayConstants.h"
+#include "engine/gfx/PaletteBank.h"
 #include "engine/input/InputManager.h"
 #include "engine/ui/InteractionEvent.h"
 #include "engine/ui/InteractionLayers.h"
-#include "gfx/PaletteBank.h"
 #include "resources/FontManager.h"
 
 namespace {

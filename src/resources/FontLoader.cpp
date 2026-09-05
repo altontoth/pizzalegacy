@@ -13,6 +13,7 @@
 #include "engine/Fatal.h"
 #include "resources/FontManager.h"
 #include "resources/FontTypes.h"
+#include "resources/util/FileUtils.h"
 
 FontLoader::ParsedFont FontLoader::parse(std::span<const uint8_t> bytes) {
   // Ensure we have at least enough bytes for the font header.

@@ -4,11 +4,11 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "gfx/Draw.h"
+#include "engine/gfx/Draw.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
-#include "gfx/Surface.h"
+#include "engine/gfx/Surface.h"
 
 namespace gfx::draw {
 

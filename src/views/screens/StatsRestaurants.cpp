@@ -13,7 +13,7 @@
 #include "core/state/GameState.h"
 #include "core/util/Constants.h"
 #include "core/util/LegacyConstants.h"
-#include "gfx/Draw.h"
+#include "engine/gfx/Draw.h"
 #include "resources/FontManager.h"
 #include "views/base/ViewDefs.h"
 #include "views/ui/PageDecoration.h"

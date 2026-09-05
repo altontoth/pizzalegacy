@@ -13,8 +13,8 @@
 #include "core/newspaper/NewspaperState.h"
 #include "core/state/GameState.h"
 #include "core/util/GameContext.h"
-#include "gfx/Blit.h"
-#include "gfx/Draw.h"
+#include "engine/gfx/Blit.h"
+#include "engine/gfx/Draw.h"
 #include "resources/FontManager.h"
 #include "resources/FontTypes.h"
 

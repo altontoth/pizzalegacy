@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include "gfx/Surface.h"
+#include "engine/gfx/Surface.h"
 
 constexpr int NUMBER_OF_BARS = 10;
 constexpr int LINE_HEIGHT = 2;

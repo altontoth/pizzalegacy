@@ -12,7 +12,7 @@
 #include "core/state/UIState.h"
 #include "engine/FormatCompat.h"
 #include "engine/geom/Spaces.h"
-#include "gfx/Blit.h"
+#include "engine/gfx/Blit.h"
 #include "resources/FontManager.h"
 #include "views/ui/PopupManager.h"
 #include "views/ui/popups/AlertPopup.h"

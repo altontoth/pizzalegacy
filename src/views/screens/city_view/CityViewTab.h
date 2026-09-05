@@ -9,7 +9,7 @@
 #include <string>
 #include "core/city/CityViewCommon.h"
 #include "engine/geom/Spaces.h"
-#include "gfx/Surface.h"
+#include "engine/gfx/Surface.h"
 
 using gfx::Surface;
 

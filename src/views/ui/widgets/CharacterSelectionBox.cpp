@@ -6,7 +6,7 @@
 
 #include "views/ui/widgets/CharacterSelectionBox.h"
 #include "engine/geom/Spaces.h"
-#include "gfx/Draw.h"
+#include "engine/gfx/Draw.h"
 #include "resources/FontManager.h"
 #include "resources/util/TextEncoding.h"
 

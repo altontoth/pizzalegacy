@@ -14,7 +14,7 @@
 
 #include "engine/FormatCompat.h"
 #include "engine/Size.h"
-#include "gfx/Draw.h"
+#include "engine/gfx/Draw.h"
 #include "resources/FontManager.h"
 
 namespace {

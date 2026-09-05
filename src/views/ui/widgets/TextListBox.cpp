@@ -9,7 +9,7 @@
 #include <algorithm>
 #include <utility>
 #include "engine/geom/Spaces.h"
-#include "gfx/Draw.h"
+#include "engine/gfx/Draw.h"
 #include "resources/FontManager.h"
 #include "views/ui/widgets/ScrollThumb.h"
 

@@ -6,17 +6,16 @@
 
 #pragma once
 
-// PaletteBank - loads and caches the 71 VGA palettes (palette.e) lazily.
+// PaletteBank - caches the 71 VGA palettes (palette.e) once a loader has
+// handed it the file contents.
 
 #include "engine/Fatal.h"
-#include "gfx/Color.h"
-#include "gfx/PaletteHandle.h"
-#include "resources/util/FileUtils.h"
+#include "engine/gfx/Color.h"
+#include "engine/gfx/PaletteHandle.h"
 
 #include <array>
 #include <bitset>
 #include <cstdint>
-#include <fstream>
 #include <vector>
 
 namespace gfx {
@@ -69,11 +68,12 @@ public:
   // copy with override applied
   std::vector<Color> colors(PaletteHandle base, const PaletteOverride& ovr);
 
-private:
-  PaletteBank() { load_palette_file(); }
+  // Takes the DOS PALETTE.E contents: 71 palettes * 256 colors * 3 bytes
+  // (6-bit RGB)
+  void load_dos_palette(const std::vector<uint8_t>& dos_raw);
 
-  void load_palette_file();
-  void load_dos_palette();
+private:
+  PaletteBank() = default;
 
   /* Packed raw data: 71 palettes x 256 colors x 3 bytes */
   std::vector<uint8_t> raw_;
@@ -84,6 +84,9 @@ private:
 inline const std::vector<Color>& PaletteBank::colors(PaletteHandle h) {
   if (h.id >= PALETTE_COUNT) {
     throw std::out_of_range("Palette id out of range" + std::to_string(h.id));
+  }
+  if (raw_.empty()) {
+    fatal("PaletteBank used before palette.e was loaded");
   }
 
   if (!loaded_.test(h.id)) {
@@ -121,32 +124,20 @@ inline std::vector<Color> PaletteBank::colors(PaletteHandle base,
   return out;
 }
 
-inline void PaletteBank::load_palette_file() {
+inline void PaletteBank::load_dos_palette(const std::vector<uint8_t>& dos_raw) {
   if (!raw_.empty()) {
     return;
+  }
+
+  constexpr std::size_t DOS_FILE_SIZE =
+      VGA_PALETTE_COUNT * VGA_COLORS_PER_PALETTE * VGA_BYTES_PER_COLOR;
+  if (dos_raw.size() != DOS_FILE_SIZE) {
+    fatal("palette.e has the wrong size");
   }
 
   constexpr std::size_t TOTAL_SIZE =
       PALETTE_COUNT * COLORS_PER_PALETTE * BYTES_PER_COLOR;
   raw_.resize(TOTAL_SIZE, 0);
-
-  load_dos_palette();
-}
-
-inline void PaletteBank::load_dos_palette() {
-  // Load DOS PALETTE.E: 71 palettes * 256 colors * 3 bytes (6-bit RGB)
-  constexpr std::size_t DOS_FILE_SIZE =
-      VGA_PALETTE_COUNT * VGA_COLORS_PER_PALETTE * VGA_BYTES_PER_COLOR;
-
-  std::ifstream is = fileutils::open("gfx/palette.e", std::ios::binary);
-  if (!is) {
-    fatal("Failed to open gfx/palette.e");
-  }
-
-  std::vector<uint8_t> dos_raw(DOS_FILE_SIZE);
-  if (!is.read(reinterpret_cast<char*>(dos_raw.data()), DOS_FILE_SIZE)) {
-    fatal("Failed to read full palette.e");
-  }
 
   // Convert 6-bit RGB to 8-bit and store in raw_
   for (std::size_t i = 0; i < dos_raw.size(); ++i) {

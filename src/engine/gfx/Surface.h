@@ -12,8 +12,8 @@
 #include <vector>
 #include "engine/Size.h"
 #include "engine/geom/Spaces.h"
-#include "gfx/ColorIndex.h"
-#include "gfx/PaletteBank.h"
+#include "engine/gfx/ColorIndex.h"
+#include "engine/gfx/PaletteBank.h"
 
 namespace gfx {
 

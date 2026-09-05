@@ -8,7 +8,7 @@
 
 #include <string>
 
-#include "gfx/Surface.h"
+#include "engine/gfx/Surface.h"
 
 using gfx::Surface;
 

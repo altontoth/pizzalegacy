@@ -8,8 +8,8 @@
 
 #include <array>
 #include "engine/Random.h"
-#include "gfx/ColorIndex.h"
-#include "gfx/Draw.h"
+#include "engine/gfx/ColorIndex.h"
+#include "engine/gfx/Draw.h"
 #include "views/base/ViewDefs.h"
 
 namespace views::ui {

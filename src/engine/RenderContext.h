@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include "gfx/Surface.h"
+#include "engine/gfx/Surface.h"
 
 struct RenderContext {
   gfx::Surface* surface{nullptr};

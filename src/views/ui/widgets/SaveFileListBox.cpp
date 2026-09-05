@@ -10,7 +10,7 @@
 #include "core/time/GameDate.h"
 #include "engine/FormatCompat.h"
 #include "engine/geom/Spaces.h"
-#include "gfx/Draw.h"
+#include "engine/gfx/Draw.h"
 #include "resources/FontManager.h"
 #include "views/ui/widgets/ScrollThumb.h"
 

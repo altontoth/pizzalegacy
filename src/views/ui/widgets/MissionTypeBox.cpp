@@ -8,7 +8,7 @@
 
 #include <algorithm>
 #include "engine/geom/Spaces.h"
-#include "gfx/Draw.h"
+#include "engine/gfx/Draw.h"
 #include "resources/FontManager.h"
 
 constexpr uint8_t DARK_BORDER = 10;

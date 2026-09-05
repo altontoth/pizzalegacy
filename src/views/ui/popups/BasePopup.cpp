@@ -5,8 +5,8 @@
  */
 
 #include "views/ui/popups/BasePopup.h"
+#include "engine/gfx/Draw.h"
 #include "engine/input/InputManager.h"
-#include "gfx/Draw.h"
 #include "views/ui/popups/PopupButton.h"
 
 BasePopup::BasePopup(const GameContext& context)

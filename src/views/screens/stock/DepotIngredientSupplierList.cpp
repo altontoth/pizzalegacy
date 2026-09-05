@@ -12,7 +12,7 @@
 #include "core/state/GameState.h"
 #include "core/supply/FoodSupplier.h"
 #include "engine/FormatCompat.h"
-#include "gfx/Blit.h"
+#include "engine/gfx/Blit.h"
 #include "resources/BlitmapManager.h"
 #include "resources/FontManager.h"
 

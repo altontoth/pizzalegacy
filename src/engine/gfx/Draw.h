@@ -6,8 +6,8 @@
 
 #pragma once
 
-#include "gfx/ColorIndex.h"
-#include "gfx/Surface.h"
+#include "engine/gfx/ColorIndex.h"
+#include "engine/gfx/Surface.h"
 
 using gfx::Surface;
 

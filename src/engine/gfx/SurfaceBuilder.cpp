@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "gfx/SurfaceBuilder.h"
+#include "engine/gfx/SurfaceBuilder.h"
 #include "engine/Logger.h"
 
 namespace gfx {

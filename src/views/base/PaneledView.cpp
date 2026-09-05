@@ -13,7 +13,7 @@
 #include "core/util/LegacyConstants.h"
 #include "engine/DisplayConstants.h"
 #include "engine/geom/Spaces.h"
-#include "gfx/Blit.h"
+#include "engine/gfx/Blit.h"
 #include "views/base/SharedPanel.h"
 #include "views/base/ViewDefs.h"
 #include "views/screens/InputPanel.h"

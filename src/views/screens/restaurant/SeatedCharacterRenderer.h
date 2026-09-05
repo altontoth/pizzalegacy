@@ -8,7 +8,7 @@
 
 #include <array>
 #include "core/util/GameContext.h"
-#include "gfx/Surface.h"
+#include "engine/gfx/Surface.h"
 #include "views/screens/restaurant/CharacterController.h"
 
 namespace views::screens::restaurant {

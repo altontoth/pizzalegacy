@@ -10,7 +10,7 @@
 
 #include "engine/Size.h"
 #include "engine/geom/Spaces.h"
-#include "gfx/Surface.h"
+#include "engine/gfx/Surface.h"
 #include "resources/FontManager.h"
 #include "resources/FontTypes.h"
 

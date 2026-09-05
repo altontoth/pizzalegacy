@@ -13,8 +13,8 @@
 #include "engine/Renderable.h"
 #include "engine/SDL_include.h"
 #include "engine/adapters/SDLRectAdapter.h"
+#include "engine/gfx/Surface.h"
 #include "engine/ui/CursorManager.h"
-#include "gfx/Surface.h"
 
 using gfx::Surface;
 

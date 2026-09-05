@@ -9,7 +9,7 @@
 #include <functional>
 #include <optional>
 
-#include "gfx/Surface.h"
+#include "engine/gfx/Surface.h"
 #include "views/ui/SlideAnimator.h"
 
 namespace views::ui {

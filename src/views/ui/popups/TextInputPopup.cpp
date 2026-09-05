@@ -5,8 +5,8 @@
  */
 
 #include "views/ui/popups/TextInputPopup.h"
+#include "engine/gfx/Surface.h"
 #include "engine/input/InputManager.h"
-#include "gfx/Surface.h"
 #include "resources/util/TextEncoding.h"
 
 #include <algorithm>

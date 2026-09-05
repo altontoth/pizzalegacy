@@ -17,6 +17,7 @@
 #include "engine/Fatal.h"
 #include "resources/AssetMetadata.h"
 #include "resources/Vga.h"
+#include "resources/util/FileUtils.h"
 
 #define DOS_VGA_HEADER_SIZE 7
 

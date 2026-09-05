@@ -5,8 +5,8 @@
  */
 
 #pragma once
-#include "gfx/Draw.h"
-#include "gfx/Surface.h"
+#include "engine/gfx/Draw.h"
+#include "engine/gfx/Surface.h"
 
 namespace gfx {
 

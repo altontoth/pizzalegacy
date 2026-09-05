@@ -16,8 +16,8 @@
 #include "engine/FormatCompat.h"
 #include "engine/Logger.h"
 #include "engine/geom/Spaces.h"
+#include "engine/gfx/Blit.h"
 #include "engine/ui/InteractionEvent.h"
-#include "gfx/Blit.h"
 #include "resources/BlitmapManager.h"
 #include "resources/FontManager.h"
 

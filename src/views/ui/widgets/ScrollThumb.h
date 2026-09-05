@@ -10,7 +10,7 @@
 #include <cstdint>
 #include "engine/Size.h"
 #include "engine/geom/Spaces.h"
-#include "gfx/Surface.h"
+#include "engine/gfx/Surface.h"
 
 // Draws the scroll bar thumb on the right edge of a list.
 inline void draw_scroll_thumb(gfx::Surface& block, Size size, int scroll_offset,

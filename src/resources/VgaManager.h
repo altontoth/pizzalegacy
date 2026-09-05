@@ -5,7 +5,7 @@
  */
 
 #pragma once
-#include "gfx/Surface.h"
+#include "engine/gfx/Surface.h"
 #include "resources/ResourceManager.h"
 #include "resources/VgaLoader.h"
 

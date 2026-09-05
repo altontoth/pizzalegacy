@@ -12,8 +12,8 @@
 #include <string_view>
 
 #include "core/finance/Money.h"
+#include "engine/gfx/PaletteHandle.h"
 #include "engine/input/TextSession.h"
-#include "gfx/PaletteHandle.h"
 #include "views/ui/popups/BasePopup.h"
 
 class ChequePopup : public BasePopup {

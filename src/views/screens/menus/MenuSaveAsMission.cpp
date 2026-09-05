@@ -13,6 +13,7 @@
 #include "core/state/GameState.h"
 #include "engine/Logger.h"
 #include "resources/FontTypes.h"
+#include "resources/util/FileUtils.h"
 #include "views/screens/menus/MenuTheme.h"
 #include "views/ui/PopupManager.h"
 #include "views/ui/popups/AlertPopup.h"

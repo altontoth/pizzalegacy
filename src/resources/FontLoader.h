@@ -10,7 +10,7 @@
 #include <unordered_map>
 #include <utfcpp/utf8.h>
 #include <vector>
-#include "gfx/Surface.h"
+#include "engine/gfx/Surface.h"
 #include "resources/Font.h"
 #include "resources/FontHeader.h"
 #include "resources/FontTypes.h"

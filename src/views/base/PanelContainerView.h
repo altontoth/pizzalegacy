@@ -6,7 +6,7 @@
 #pragma once
 
 #include "engine/DebugLabel.h"
-#include "gfx/Blit.h"
+#include "engine/gfx/Blit.h"
 #include "views/base/View.h"
 
 class PanelContainerView : public View,

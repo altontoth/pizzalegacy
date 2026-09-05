@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "gfx/RawRenderable.h"
+#include "engine/gfx/RawRenderable.h"
 #include "views/ui/popups/BasePopup.h"
 #include "views/ui/popups/PopupButton.h"
 

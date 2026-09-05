@@ -6,8 +6,8 @@
 
 #pragma once
 
-#include "gfx/RawRenderable.h"
-#include "gfx/Surface.h"
+#include "engine/gfx/RawRenderable.h"
+#include "engine/gfx/Surface.h"
 
 class RawRenderer {
 public:

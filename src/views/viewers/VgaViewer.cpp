@@ -7,12 +7,13 @@
 #include "views/viewers/VgaViewer.h"
 
 #include "engine/DisplayConstants.h"
+#include "engine/gfx/Draw.h"
+#include "engine/gfx/PaletteBank.h"
+#include "engine/gfx/Surface.h"
 #include "engine/ui/InteractionEvent.h"
-#include "gfx/Draw.h"
-#include "gfx/PaletteBank.h"
-#include "gfx/Surface.h"
 #include "resources/AssetMetadata.h"
 #include "resources/FontManager.h"
+#include "resources/util/FileUtils.h"
 #include "views/base/ViewDefs.h"
 
 VgaViewer::VgaViewer(GameContext& context, GameState& state,

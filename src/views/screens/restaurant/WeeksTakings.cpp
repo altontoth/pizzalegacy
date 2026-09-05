@@ -16,7 +16,7 @@
 #include "core/state/UIState.h"
 #include "core/util/LegacyConstants.h"
 #include "engine/Logger.h"
-#include "gfx/Draw.h"
+#include "engine/gfx/Draw.h"
 #include "resources/BlitmapManager.h"
 #include "resources/FontManager.h"
 #include "views/base/ViewDefs.h"

@@ -12,11 +12,12 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <span>
 #include <sys/stat.h>
 #include <utility>
-#include "core/save/SaveGameManager.h"
 #include "engine/Fatal.h"
 #include "engine/Logger.h"
+#include "engine/PlatformPaths.h"
 #if PLEGACY_EMULATE_CASE_INSENSITIVE_FS
 #include <string.h>
 #endif
@@ -56,7 +57,7 @@ find_file_path(const std::string& file_path) {
       }
     }
     else if (input_path.string().starts_with("saves/")) {
-      const auto& saves_dir = save::SaveGameManager::get_saves_directory();
+      const auto& saves_dir = platform_paths::saves_dir();
       auto relative = input_path.string().substr(6); // skip "saves/"
       resolved = fs::path(saves_dir) / relative;
     }
@@ -196,7 +197,7 @@ std::vector<FileEntry> list_files(const std::string& directory,
   fs::path search_path;
 
   if (directory == "saves" || directory.starts_with("saves/")) {
-    search_path = save::SaveGameManager::get_saves_directory();
+    search_path = platform_paths::saves_dir();
   }
   else {
     search_path = fs::path(game_data_path_) / directory;

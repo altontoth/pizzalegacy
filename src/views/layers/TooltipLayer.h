@@ -8,8 +8,8 @@
 
 #include "engine/DebugLabel.h"
 #include "engine/DisplayConstants.h"
+#include "engine/gfx/Draw.h"
 #include "engine/ui/TooltipManager.h"
-#include "gfx/Draw.h"
 #include "resources/FontManager.h"
 #include "views/base/OverlayBehavior.h"
 #include "views/base/View.h"

@@ -13,7 +13,7 @@
 #include "core/finance/Money.h"
 #include "core/state/GameState.h"
 #include "core/util/LegacyConstants.h"
-#include "gfx/Blit.h"
+#include "engine/gfx/Blit.h"
 #include "views/base/ViewDefs.h"
 #include "views/ui/PopupManager.h"
 #include "views/ui/popups/ChequePopup.h"

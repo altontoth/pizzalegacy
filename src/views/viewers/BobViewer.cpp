@@ -9,8 +9,8 @@
 #include <cstddef>
 #include <cstdlib>
 #include "core/util/Tools.h"
+#include "engine/gfx/PaletteBank.h"
 #include "engine/input/InputManager.h"
-#include "gfx/PaletteBank.h"
 #include "views/ui/PopupManager.h"
 #include "views/ui/popups/TextInputPopup.h"
 

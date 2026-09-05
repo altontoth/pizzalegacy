@@ -7,7 +7,7 @@
 #pragma once
 
 #include "core/Demographics.h"
-#include "gfx/Surface.h"
+#include "engine/gfx/Surface.h"
 #include "resources/Blitmap.h"
 #include "resources/BlitmapIcons.h"
 #include "resources/FontManager.h"

@@ -17,7 +17,7 @@
 #include "engine/audio/AudioManager.h"
 #include "engine/geom/Camera.h"
 #include "engine/geom/Spaces.h"
-#include "gfx/PaletteCycleController.h"
+#include "engine/gfx/PaletteCycleController.h"
 #include "views/base/MainPanelView.h"
 #include "views/helpers/camera/CameraController.h"
 #include "views/helpers/camera/RmbDragScroller.h"

@@ -11,7 +11,7 @@
 #include "core/restaurant/Restaurant.h"
 #include "engine/audio/AudioManager.h"
 #include "engine/geom/Spaces.h"
-#include "gfx/Draw.h"
+#include "engine/gfx/Draw.h"
 
 static constexpr std::array<const char*, 7> music_titles = {
     "-------- OFF --------",

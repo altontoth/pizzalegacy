@@ -9,9 +9,9 @@
 #include "core/state/GameState.h"
 #include "core/state/UIState.h"
 #include "engine/DisplayConstants.h"
+#include "engine/gfx/Blit.h"
 #include "engine/input/InputManager.h"
 #include "engine/ui/InteractionEvent.h"
-#include "gfx/Blit.h"
 #include "resources/util/FileUtils.h"
 
 namespace {

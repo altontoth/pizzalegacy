@@ -247,10 +247,6 @@ set(GAME_PLEGACY_SOURCES
     src/views/viewers/PaletteView.cpp
     src/views/viewers/SoundViewer.cpp
     src/views/viewers/VgaViewer.cpp
-    src/gfx/ColorIndex.cpp
-    src/gfx/Draw.cpp
-    src/gfx/Surface.cpp
-    src/gfx/SurfaceBuilder.cpp
     src/resources/AssetMetadata.cpp
     src/resources/BlitmapManager.cpp
     src/resources/Bob.cpp
@@ -259,6 +255,7 @@ set(GAME_PLEGACY_SOURCES
     src/resources/FontLoader.cpp
     src/resources/FontManager.cpp
     src/resources/MFileLoader.cpp
+    src/resources/PaletteLoader.cpp
     src/resources/Vga.cpp
     src/resources/VgaLoader.cpp
     src/resources/util/FileUtils.cpp
@@ -276,6 +273,10 @@ set(ENGINE_PLEGACY_SOURCES
     src/engine/audio/AudioManager.cpp
     src/engine/audio/VocDecoder.cpp
     src/engine/geom/Camera.cpp
+    src/engine/gfx/ColorIndex.cpp
+    src/engine/gfx/Draw.cpp
+    src/engine/gfx/Surface.cpp
+    src/engine/gfx/SurfaceBuilder.cpp
     src/engine/input/BindingsFile.cpp
     src/engine/input/DefaultBindings.cpp
     src/engine/input/Gamepad.cpp
@@ -522,6 +523,16 @@ set(PLEGACY_HEADERS
     src/engine/geom/TypedPoint.h
     src/engine/geom/TypedRect.h
     src/engine/geom/ViewportTransform.h
+    src/engine/gfx/Blit.h
+    src/engine/gfx/Color.h
+    src/engine/gfx/ColorIndex.h
+    src/engine/gfx/Draw.h
+    src/engine/gfx/PaletteBank.h
+    src/engine/gfx/PaletteCycleController.h
+    src/engine/gfx/PaletteHandle.h
+    src/engine/gfx/RawRenderable.h
+    src/engine/gfx/Surface.h
+    src/engine/gfx/SurfaceBuilder.h
     src/engine/input/Action.h
     src/engine/input/BindingsFile.h
     src/engine/input/Gamepad.h
@@ -542,16 +553,6 @@ set(PLEGACY_HEADERS
     src/engine/ui/TooltipManager.h
     src/engine/ui/TooltipRequest.h
     src/engine/ui/UiMode.h
-    src/gfx/Blit.h
-    src/gfx/Color.h
-    src/gfx/ColorIndex.h
-    src/gfx/Draw.h
-    src/gfx/PaletteBank.h
-    src/gfx/PaletteCycleController.h
-    src/gfx/PaletteHandle.h
-    src/gfx/RawRenderable.h
-    src/gfx/Surface.h
-    src/gfx/SurfaceBuilder.h
     src/resources/AssetMetadata.h
     src/resources/Blitmap.h
     src/resources/Blitmap.inl
@@ -567,6 +568,7 @@ set(PLEGACY_HEADERS
     src/resources/FontManager.h
     src/resources/FontTypes.h
     src/resources/MFileLoader.h
+    src/resources/PaletteLoader.h
     src/resources/ResourceManager.h
     src/resources/Vga.h
     src/resources/VgaLoader.h

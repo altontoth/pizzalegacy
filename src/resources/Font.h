@@ -11,8 +11,8 @@
 #include <vector>
 #include "FontTypes.h"
 #include "engine/geom/Spaces.h"
+#include "engine/gfx/Surface.h"
 #include "engine/ui/TextAnchor.h"
-#include "gfx/Surface.h"
 
 using gfx::Surface;
 

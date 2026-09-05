@@ -4,13 +4,13 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "gfx/Surface.h"
+#include "engine/gfx/Surface.h"
 #include <algorithm>
 #include <cassert>
 #include <cstring>
 #include <numeric>
 #include "engine/Fatal.h"
-#include "gfx/PaletteBank.h"
+#include "engine/gfx/PaletteBank.h"
 
 namespace gfx {
 

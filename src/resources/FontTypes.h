@@ -10,9 +10,9 @@
 #include <optional>
 #include <unordered_map>
 #include "engine/geom/PxOffset.h"
+#include "engine/gfx/ColorIndex.h"
+#include "engine/gfx/Surface.h"
 #include "engine/ui/TextAnchor.h"
-#include "gfx/ColorIndex.h"
-#include "gfx/Surface.h"
 
 using gfx::Surface;
 

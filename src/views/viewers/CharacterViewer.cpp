@@ -8,8 +8,8 @@
 
 #include <cstdlib>
 #include "engine/FormatCompat.h"
+#include "engine/gfx/Draw.h"
 #include "engine/input/InputManager.h"
-#include "gfx/Draw.h"
 #include "magic_enum/magic_enum.hpp"
 #include "resources/FontManager.h"
 #include "views/screens/restaurant/CharacterController.h"

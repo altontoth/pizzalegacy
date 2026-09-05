@@ -9,7 +9,7 @@
 #include "core/state/GameState.h"
 #include "core/state/UIState.h"
 #include "core/supply/Supplier.h"
-#include "gfx/Blit.h"
+#include "engine/gfx/Blit.h"
 #include "resources/FontManager.h"
 
 PurchasingMain::PurchasingMain(GameContext& context, GameState& state)

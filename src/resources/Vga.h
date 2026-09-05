@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-#include "gfx/Surface.h"
+#include "engine/gfx/Surface.h"
 
 using gfx::PaletteHandle;
 using gfx::Surface;

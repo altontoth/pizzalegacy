@@ -9,7 +9,9 @@
 #include <fstream>
 #include <iostream>
 
-#include "gfx/Surface.h"
+#include "resources/util/FileUtils.h"
+
+#include "engine/gfx/Surface.h"
 #include "resources/BlitmapIcons.h"
 
 using gfx::Surface;

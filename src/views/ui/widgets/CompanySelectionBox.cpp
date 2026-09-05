@@ -8,9 +8,9 @@
 #include <algorithm>
 #include <utility>
 #include "engine/geom/Spaces.h"
+#include "engine/gfx/Draw.h"
+#include "engine/gfx/Surface.h"
 #include "engine/input/TextSession.h"
-#include "gfx/Draw.h"
-#include "gfx/Surface.h"
 #include "resources/FontManager.h"
 #include "resources/util/TextEncoding.h"
 

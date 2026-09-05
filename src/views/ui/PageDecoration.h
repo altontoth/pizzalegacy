@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "gfx/Surface.h"
+#include "engine/gfx/Surface.h"
 #include "resources/Blitmap.h"
 #include "resources/Bob.h"
 #include "resources/FontManager.h"

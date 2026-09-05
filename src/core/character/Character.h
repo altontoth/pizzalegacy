@@ -14,7 +14,7 @@
 
 #include "core/finance/Money.h"
 #include "engine/Math.h"
-#include "gfx/RawRenderable.h"
+#include "engine/gfx/RawRenderable.h"
 
 // DOS version dimensions (most common)
 #define PICTURE_WIDTH 52

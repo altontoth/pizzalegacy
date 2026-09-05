@@ -8,7 +8,7 @@
 
 #include <cstdint>
 
-#include "gfx/Surface.h"
+#include "engine/gfx/Surface.h"
 #include "views/base/RawRenderer.h"
 
 namespace views::helpers {

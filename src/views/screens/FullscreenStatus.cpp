@@ -9,10 +9,10 @@
 #include "core/state/GameState.h"
 #include "engine/DisplayConstants.h"
 #include "engine/FormatCompat.h"
+#include "engine/gfx/Blit.h"
+#include "engine/gfx/Color.h"
 #include "engine/input/InputManager.h"
 #include "engine/ui/InteractionEvent.h"
-#include "gfx/Blit.h"
-#include "gfx/Color.h"
 #include "resources/FontManager.h"
 
 #include <array>

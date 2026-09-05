@@ -10,7 +10,7 @@
 
 #include "engine/DisplayConstants.h"
 #include "engine/Renderer.h"
-#include "gfx/Surface.h"
+#include "engine/gfx/Surface.h"
 
 using DisplayConstants::SCREEN_WIDTH;
 using gfx::Surface;

@@ -6,8 +6,8 @@
 
 #include "views/ui/popups/ChequePopup.h"
 #include "core/util/Tools.h"
+#include "engine/gfx/Blit.h"
 #include "engine/input/InputManager.h"
-#include "gfx/Blit.h"
 #include "views/base/ViewDefs.h"
 
 ChequePopup::ChequePopup(const GameContext& context, callback_t cb)

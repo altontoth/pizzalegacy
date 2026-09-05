@@ -5,8 +5,8 @@
  */
 
 #include "views/layers/DebugLayer.h"
+#include "engine/gfx/Draw.h"
 #include "engine/input/InputManager.h"
-#include "gfx/Draw.h"
 #include "resources/FontManager.h"
 
 DebugLayer::DebugLayer(GameContext& context, GameState& state)

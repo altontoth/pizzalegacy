@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "gfx/ColorIndex.h"
+#include "engine/gfx/ColorIndex.h"
 
 namespace gfx {
 

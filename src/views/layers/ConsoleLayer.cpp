@@ -8,9 +8,9 @@
 
 #include <algorithm>
 #include "engine/DisplayConstants.h"
+#include "engine/gfx/Draw.h"
 #include "engine/input/InputManager.h"
 #include "engine/ui/InteractionEvent.h"
-#include "gfx/Draw.h"
 #include "resources/FontManager.h"
 #include "resources/util/TextEncoding.h"
 #include "views/base/ViewDefs.h"
