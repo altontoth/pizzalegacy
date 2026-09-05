@@ -26,7 +26,7 @@ class Property;
 class CityFactory {
 public:
   static std::unique_ptr<City>
-  create_city(core::CityId id,
+  create_city(core::CityId id, bool fix_legacy_bugs,
               const std::vector<std::pair<uint8_t, int>>& player_chars = {});
 
 private:
@@ -81,7 +81,7 @@ private:
   void parse_phone_numbers(std::ifstream& is);
   void populate_properties(City& city);
 
-  void build_city_object(City& city, int id);
+  void build_city_object(City& city, int id, bool fix_legacy_bugs);
   static void seed_ingredient_trends(City& city);
   void populate_types();
   void load_color_definition();

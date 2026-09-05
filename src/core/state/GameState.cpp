@@ -37,7 +37,6 @@
 #include "core/restaurant/StaffEventDialogs.h"
 #include "core/restaurant/StaffEvents.h"
 #include "core/state/EndOfDayCause.h"
-#include "core/util/ConfigManager.h"
 #include "core/util/GameContext.h"
 #include "engine/Fatal.h"
 #include "engine/FormatCompat.h"
@@ -255,7 +254,8 @@ City& GameState::city_or_create(core::CityId city_id) {
   assert(is_valid_city_id(city_id));
   auto& city = cities_[city_id.value];
   if (city == nullptr) {
-    city = CityFactory::create_city(city_id, build_player_chars());
+    city = CityFactory::create_city(city_id, options_.fix_legacy_bugs,
+                                    build_player_chars());
   }
   return *city;
 }
@@ -1126,6 +1126,7 @@ void GameState::reset_for_load() {
   const ClockRate clock_rate = clock_rate_;
   const uint32_t accumulator = pit_accumulator_us_;
   const InterruptionRate rate = turn_.interruption_rate();
+  const GameOptions options = options_;
 
   *this = GameState{};
   // Re-seat self-referencing members; move assignment left them pointing at
@@ -1140,6 +1141,7 @@ void GameState::reset_for_load() {
   clock_rate_ = clock_rate;
   pit_accumulator_us_ = accumulator;
   turn_.interruption_rate(rate);
+  options_ = options;
 
   staff_event_presenter_ = std::move(staff_presenter);
   monthly_entry_presenter_ = std::move(entry_presenter);
@@ -1402,23 +1404,6 @@ void GameState::recalculate_all_pizza_demographics() {
       recipe.pizza_mut().calculate_demographic_scores(customer_taste_profiles_);
     }
   }
-}
-
-// Game options delegates to ConfigManager (single source of truth)
-GameOptions& GameState::options() {
-  auto* config = ConfigManager::instance();
-  if (!config) {
-    fatal("ConfigManager not initialized when accessing GameState::options()");
-  }
-  return config->options();
-}
-
-const GameOptions& GameState::options() const {
-  auto* config = ConfigManager::instance();
-  if (!config) {
-    fatal("ConfigManager not initialized when accessing GameState::options()");
-  }
-  return config->options();
 }
 
 void GameState::request_resolution_change(ScreenResolution res) {

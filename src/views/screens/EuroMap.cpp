@@ -289,7 +289,7 @@ void EuroMap::on_city_click(core::CityId city, views::ui::MouseButton btn) {
   // acts as accepting the price, saving the user from having to figure out that
   // they have to click the white box with the price (which is not communicated
   // to them in any way).
-  if (context_.config->options().qol_improvements &&
+  if (state_.options().qol_improvements &&
       map_state_ == MapState::CITY_CONFIRMED && last_clicked_city_ == city) {
     attempt_flight();
     return;

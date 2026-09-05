@@ -621,7 +621,7 @@ void AnimatedStats::render_capacity(const RenderContext& ctx) {
   }
 
   // Hover tooltips over the row icons (left of each bar)
-  if (context_.config->options().qol_improvements) {
+  if (state_.options().qol_improvements) {
     static constexpr std::array<std::string_view, 5> CAT_LABELS = {
         "Seating", "Ingredient stock", "Chefs", "Ovens", "Waiters"};
 
@@ -960,7 +960,7 @@ void AnimatedStats::render_production(const RenderContext& ctx) {
   }
 
   // Hover tooltips to give some sense of what's going on on this screen
-  if (context_.config->options().qol_improvements) {
+  if (state_.options().qol_improvements) {
     constexpr int WL = LegacyConstants::WOOD_BORDER_WIDTH_LEFT;
     constexpr int WT = LegacyConstants::WOOD_BORDER_HEIGHT_TOP;
 

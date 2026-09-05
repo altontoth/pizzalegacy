@@ -67,7 +67,7 @@ static_assert(sizeof(DistrictDataRaw) == 104,
               "DistrictDataRaw should be 104 bytes");
 
 std::unique_ptr<City> CityFactory::create_city(
-    core::CityId cid,
+    core::CityId cid, bool fix_legacy_bugs,
     const std::vector<std::pair<uint8_t, int>>& player_chars) {
   CityFactory factory;
   auto id = cid.value;
@@ -80,7 +80,7 @@ std::unique_ptr<City> CityFactory::create_city(
   auto city = std::make_unique<City>(core::CityId{id});
   city->mayor_office().init_private_account();
   factory.populate_properties(*city);
-  factory.build_city_object(*city, id);
+  factory.build_city_object(*city, id, fix_legacy_bugs);
   city->job_market().init(player_chars);
   return city;
 }
@@ -461,7 +461,7 @@ CityFactory::invert_transform_phone_number(uint32_t transformed_value) {
   return phone_number;
 }
 
-void CityFactory::build_city_object(City& city, int id) {
+void CityFactory::build_city_object(City& city, int id, bool fix_legacy_bugs) {
   city.data_length(data_length_);
   city.map_data(map_data_);
   city.named_buildings(named_buildings_);
@@ -570,7 +570,7 @@ void CityFactory::build_city_object(City& city, int id) {
 
   // Seed the economy graph with 10 initial data points
   for (int i = 0; i < 10; ++i) {
-    city.economy_trend().tick();
+    city.economy_trend().tick(fix_legacy_bugs);
   }
 
   seed_ingredient_trends(city);

@@ -5,15 +5,13 @@
  */
 
 #include "core/city/EconomyTrend.h"
-#include "core/state/GameOptions.h"
-#include "core/util/ConfigManager.h"
 #include "engine/Random.h"
 
 #include <algorithm>
 
-void EconomyTrend::tick() {
+void EconomyTrend::tick(bool fix_legacy_bugs) {
   if (counter_ == 0) {
-    start_new_trend();
+    start_new_trend(fix_legacy_bugs);
   }
 
   const int direction = (target_ - current_ >= 0) ? 1 : -1;
@@ -37,11 +35,10 @@ void EconomyTrend::tick() {
   --counter_;
 }
 
-void EconomyTrend::start_new_trend() {
+void EconomyTrend::start_new_trend(bool fix_legacy_bugs) {
   target_ = engine::random::rand_max_n(240) - 120;
   // Shifted to 1 to 40 weeks when fixing bugs, which keeps the decrement in
   // tick() away from wrapping around.
-  const bool fix = ConfigManager::instance()->options().fix_legacy_bugs;
-  counter_ =
-      static_cast<uint8_t>(engine::random::rand_max_n(40) + (fix ? 1 : 0));
+  counter_ = static_cast<uint8_t>(engine::random::rand_max_n(40) +
+                                  (fix_legacy_bugs ? 1 : 0));
 }

@@ -80,7 +80,7 @@ void TextListBox::draw(Surface& screen, ViewPoint p, bool is_selected) {
                                     FontFace::PIZ_NUMB, PLACEHOLDER_COLOR);
   }
 
-  if (context_.config->options().qol_improvements) {
+  if (scroll_thumb_) {
     draw_scroll_thumb(block, size_, *scroll_offset_, visible_lines(), count);
   }
 

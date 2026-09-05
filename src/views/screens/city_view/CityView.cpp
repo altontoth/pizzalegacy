@@ -151,10 +151,8 @@ CityView::CityView(GameContext& context, GameState& state, core::CityId id)
                        MAIN_PANEL_WIDTH, MAIN_PANEL_HEIGHT};
   rmb_drag_scroller_.init(
       camctrl_,
-      [this] {
-        return context_.config->options().qol_improvements && !zoom_selector_;
-      },
-      [this] { return context_.config->options().rmb_drag_inverted; },
+      [this] { return state_.options().qol_improvements && !zoom_selector_; },
+      [this] { return state_.options().rmb_drag_inverted; },
       [this](ViewPoint abs_pos) {
         const auto cfg = ZoomConfig::for_zoom_level(zoom_);
         ViewPoint vp{abs_pos.x - cfg.x_borders_offset,
@@ -258,7 +256,7 @@ void CityView::register_map_interactions_viewport() {
             if (zoom_selector_) {
               disable_zoom_cursor();
             }
-            else if (!context_.config->options().qol_improvements) {
+            else if (!state_.options().qol_improvements) {
               if (zoom_ == ZoomLevel::CLOSE || zoom_ == ZoomLevel::MEDIUM) {
                 zoom_out(ie.local);
               }
@@ -268,7 +266,7 @@ void CityView::register_map_interactions_viewport() {
           break;
         }
         case views::ui::InteractionEvent::Type::Scroll: {
-          if (!context_.config->options().qol_improvements) {
+          if (!state_.options().qol_improvements) {
             break;
           }
           if (ie.scroll_delta > 0 && zoom_ != ZoomLevel::CLOSE) {
@@ -317,7 +315,7 @@ void CityView::zoom_in(ViewPoint p_view_local) {
 }
 
 void CityView::update_city_sound() {
-  if (!context_.audio || !context_.config->options().map_fx) {
+  if (!context_.audio || !state_.options().map_fx) {
     return;
   }
 
@@ -1347,7 +1345,7 @@ void CityView::render_highlights(const RenderContext& ctx) {
       int view_box_size = cell_view_size;
       if (zoom_ == ZoomLevel::FAR) {
         view_box_size *= 2;
-        if (context_.config->options().qol_improvements) {
+        if (state_.options().qol_improvements) {
           view_box_size *= 2;
         }
       }

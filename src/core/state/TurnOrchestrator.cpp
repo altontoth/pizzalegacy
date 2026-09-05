@@ -1457,7 +1457,7 @@ void TurnOrchestrator::run_city_start_of_day(City& city) {
   // The weekly trend step. Arriving from the map runs this pass, so a city
   // entered on the first day of a week ticks on arrival.
   if (gs_->time().current_date().week_day_index() == 0) {
-    city.economy_trend().tick();
+    city.economy_trend().tick(gs_->options().fix_legacy_bugs);
     city.ingredient_trend_system().weekly_seed();
   }
 

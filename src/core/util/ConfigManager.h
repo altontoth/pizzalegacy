@@ -16,15 +16,10 @@ public:
 
   bool load_config();
 
-  static void set_instance(ConfigManager* instance);
-  static ConfigManager* instance();
   void save_config();
   std::string prompt_for_game_location();
   const std::string value(const std::string& key) const;
   void value(const std::string& key, const std::string& value);
-  const GameOptions& options() const { return options_; }
-  GameOptions& options() { return options_; }
-
   void save_options(const GameOptions& opts);
   GameOptions load_options() const;
 
@@ -45,6 +40,4 @@ public:
 private:
   std::string filename_;
   std::map<std::string, std::string> config_;
-  GameOptions options_;
-  static ConfigManager* s_instance_;
 };

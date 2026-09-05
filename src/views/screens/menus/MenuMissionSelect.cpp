@@ -64,13 +64,13 @@ MenuMissionSelect::MenuMissionSelect(GameContext& context, GameState& state)
     }
   }));
 
-  auto goals =
-      std::make_unique<TextListBox>(context, Size{GOALS_BOX_W, GOALS_BOX_H},
-                                    &goals_scroll_, [this](int index) {
-                                      if (goals_mode_ == GoalsBoxMode::Files) {
-                                        select_player_mission(index);
-                                      }
-                                    });
+  auto goals = std::make_unique<TextListBox>(
+      context, Size{GOALS_BOX_W, GOALS_BOX_H}, &goals_scroll_,
+      state.options().qol_improvements, [this](int index) {
+        if (goals_mode_ == GoalsBoxMode::Files) {
+          select_player_mission(index);
+        }
+      });
   goals_box_ = goals.get();
   add_menu_item(std::move(goals));
 

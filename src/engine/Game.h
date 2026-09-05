@@ -63,7 +63,7 @@ private:
     bool skip_tick_during_fade_in = false;
   };
 
-  bool init(int display_height, ConfigManager& config_manager);
+  bool init(int display_height, const GameOptions& options);
   bool capture_screenshot(GameState& gs, const std::string& path);
   Renderable* change_state(GameState& gs);
   bool enforce_aspect_ratio(SDL_Window*, int, int);

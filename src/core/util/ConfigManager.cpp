@@ -14,17 +14,9 @@
 #include <tinyfiledialogs/tinyfiledialogs.h>
 #include <vector>
 #include "core/state/GameOptions.h"
-#include "core/state/GameState.h"
 #include "engine/Fatal.h"
+#include "engine/Logger.h"
 #include "resources/util/FileUtils.h"
-
-ConfigManager* ConfigManager::s_instance_ = nullptr;
-
-void ConfigManager::set_instance(ConfigManager* instance) {
-  s_instance_ = instance;
-}
-
-ConfigManager* ConfigManager::instance() { return s_instance_; }
 
 ConfigManager::ConfigManager(std::string filename)
     : filename_(std::move(filename)) {}
@@ -49,8 +41,6 @@ bool ConfigManager::load_config() {
     std::string value = line.substr(delimiterPos + 1);
     config_[key] = value;
   }
-  options_ = load_options();
-
   return true;
 }
 
@@ -182,8 +172,6 @@ static bool string_to_bool(const std::string& str) {
 }
 
 void ConfigManager::save_options(const GameOptions& opts) {
-  options_ = opts;
-
   auto save_bool = [this](const std::string& key, bool value) {
     config_[key] = bool_to_string(value);
   };

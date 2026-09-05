@@ -204,7 +204,7 @@ int Game::run() {
   const int display_height =
       get_display_height(loaded_options.crt_aspect_ratio);
 
-  if (!init(display_height, configManager)) {
+  if (!init(display_height, loaded_options)) {
     std::cerr << "Init failed!\n";
     return 1;
   }
@@ -747,7 +747,7 @@ void Game::handle_resize_event(const SDL_Event& event, LoopState& loop_state) {
   loop_state.context.cursor->update_scaled_cursor(new_width, new_height);
 }
 
-bool Game::init(int display_height, ConfigManager& config_manager) {
+bool Game::init(int display_height, const GameOptions& options) {
   display_height_ = display_height;
 
   // Logger that links to stdout/stderr
@@ -768,10 +768,6 @@ bool Game::init(int display_height, ConfigManager& config_manager) {
   // Seed from wall-clock time so each run differs.
   engine::random::seed(
       rng_seed_.value_or(static_cast<uint32_t>(time(nullptr))));
-
-  // Set ConfigManager instance for global access (used by Platform and
-  // TextEncoding)
-  ConfigManager::set_instance(&config_manager);
 
   bob_manager_ = std::make_unique<BobManager>(BobLoader());
   font_manager_ = std::make_unique<FontManager>(FontLoader());
@@ -800,12 +796,12 @@ bool Game::init(int display_height, ConfigManager& config_manager) {
   // so the Microprose logo is already visible before the slow adl_init call.
   audio_manager_ = std::make_unique<audio::AudioManager>();
   context.audio = audio_manager_.get();
-  audio_manager_->sound_volume(config_manager.options().sound_volume);
-  audio_manager_->music_volume(config_manager.options().music_volume);
-  audio_manager_->music_enabled(config_manager.options().music);
+  audio_manager_->sound_volume(options.sound_volume);
+  audio_manager_->music_volume(options.music_volume);
+  audio_manager_->music_enabled(options.music);
 
-  auto [win_w, win_h] = resolution_window_size(
-      config_manager.options().resolution, display_height);
+  auto [win_w, win_h] =
+      resolution_window_size(options.resolution, display_height);
   SDL_Window* window = nullptr;
   SDL_Renderer* renderer_handle = nullptr;
   if (!SDL_CreateWindowAndRenderer("Pizza Legacy", win_w, win_h,

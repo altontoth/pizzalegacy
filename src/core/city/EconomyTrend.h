@@ -14,7 +14,8 @@ constexpr int max_history = 60;
 // City-level macro-economic indicator.
 class EconomyTrend {
 public:
-  void tick();
+  // fix_legacy_bugs keeps a fresh trend from picking a counter of zero.
+  void tick(bool fix_legacy_bugs);
 
   int current() const { return current_; }
   void current(int v) { current_ = v; }
@@ -33,7 +34,7 @@ public:
   void history(std::array<int, max_history> h) { history_ = h; }
 
 private:
-  void start_new_trend();
+  void start_new_trend(bool fix_legacy_bugs);
 
   int current_{0};
   int target_{0};

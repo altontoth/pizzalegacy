@@ -19,9 +19,10 @@
 // line at a time.
 class TextListBox : public MenuItem, public debug::AutoLabel<TextListBox> {
 public:
-  TextListBox(GameContext& gc, Size size, int* scroll_offset,
+  TextListBox(GameContext& gc, Size size, int* scroll_offset, bool scroll_thumb,
               std::function<void(int)> on_line_clicked = nullptr)
       : MenuItem(gc), size_(size), scroll_offset_(scroll_offset),
+        scroll_thumb_(scroll_thumb),
         on_line_clicked_(std::move(on_line_clicked)) {}
 
   // The placeholder is shown in light gray while the list is empty.
@@ -46,6 +47,7 @@ private:
   std::string placeholder_;
   bool clickable_ = false;
   int* scroll_offset_;
+  bool scroll_thumb_;
   std::function<void(int)> on_line_clicked_;
   ListCursor cursor_;
 };

@@ -319,9 +319,8 @@ public:
   StatusHub& status() { return status_hub_; }
   const StatusHub& status() const { return status_hub_; }
 
-  // Game options - delegates to ConfigManager (single source of truth)
-  GameOptions& options();
-  const GameOptions& options() const;
+  GameOptions& options() { return options_; }
+  const GameOptions& options() const { return options_; }
 
   // Fullscreen message manager
   core::events::CareerLog& career_log() { return career_log_; }
@@ -511,6 +510,7 @@ private:
   core::RestaurantId next_restaurant_id_{0};
   std::vector<FurnitureBatch> furniture_placement_;
   StatusHub status_hub_{time_};
+  GameOptions options_;
   TurnOrchestrator turn_{*this};
   CompetitionCoordinator competitions_{*this};
   MilestoneTracker milestones_{*this};

@@ -59,7 +59,7 @@ void MarketResearch::render_bar_chart(
     int max_val =
         static_cast<int>(*std::max_element(values.begin(), values.end()));
     // Original game starts at $10K chunks; qol_improvements allows finer $1K
-    const bool fine_scale = context_.config->options().qol_improvements;
+    const bool fine_scale = state_.options().qol_improvements;
     constexpr std::array<int, 5> original_units = {10'000, 100'000, 1'000'000,
                                                    10'000'000, 100'000'000};
     constexpr std::array<int, 6> improved_units = {
@@ -147,7 +147,7 @@ void MarketResearch::render_bar_chart(
     ctx.surface->blit(landsym, src, ViewPoint{icon_x, icon_y});
 
     // Hover tooltip showing actual value
-    if (context_.config->options().qol_improvements) {
+    if (state_.options().qol_improvements) {
       float display_value = values[i];
       std::string tip;
       if (mode == BarChartMode::Percentage) {
