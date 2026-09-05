@@ -117,25 +117,6 @@ int Staff::pizzas_per_day() const { return character_.pizzas_per_day(); }
 
 void Staff::pizzas_per_day(int ppd) { character_.pizzas_per_day(ppd); }
 
-int Staff::calculate_prep_time_minutes(int operating_minutes) const {
-  int ppd = pizzas_per_day();
-  if (ppd == 0) {
-    return operating_minutes; // Avoid division by zero
-  }
-
-  return operating_minutes / ppd;
-}
-
-int Staff::calculate_service_time_minutes(int operating_minutes) const {
-  // Same calculation as prep time - converts throughput to time
-  int ppd = pizzas_per_day();
-  if (ppd == 0) {
-    return operating_minutes; // Avoid division by zero
-  }
-
-  return operating_minutes / ppd;
-}
-
 const core::character::Character& Staff::character() const {
   return character_;
 }

@@ -433,15 +433,7 @@ int Restaurant::calculate_seating_capacity(
   // seating_capacity = (seat_count * operating minutes) / avg_seating_time
   assert(service_data);
 
-  int seat_count = 0;
-  if (layout_) {
-    for (const auto& pf : layout_->placed_furniture()) {
-      if (pf && pf->furniture()->category() == FurnitureCategory::CHAIR &&
-          pf->linked_furniture_id().has_value()) {
-        seat_count += pf->furniture()->capacity();
-      }
-    }
-  }
+  const int seat_count = layout_ ? layout_->seated_chair_count() : 0;
 
   const float seating_time = service_data->avg_seating_time;
 
@@ -456,15 +448,7 @@ int Restaurant::calculate_seating_capacity(
 }
 
 Restaurant::Occupancy Restaurant::guest_occupancy() const {
-  int seat_count = 0;
-  if (layout_) {
-    for (const auto& pf : layout_->placed_furniture()) {
-      if (pf && pf->furniture()->category() == FurnitureCategory::CHAIR &&
-          pf->linked_furniture_id().has_value()) {
-        ++seat_count;
-      }
-    }
-  }
+  const int seat_count = layout_ ? layout_->seated_chair_count() : 0;
   if (seat_count == 0) {
     return {.guests = 0, .seats = 0};
   }
@@ -590,10 +574,6 @@ ServiceTimeData Restaurant::calculate_service_time_data() const {
   const float operating_minutes =
       static_cast<float>(operating_minutes_per_day());
 
-  // Per-demographic eating times: Children, YoungAdults, BlueCollar,
-  // WhiteCollar, Business, Seniors
-  constexpr int DEMOGRAPHIC_EATING_TIMES[6] = {12, 10, 8, 10, 7, 15};
-
   // Weighted average oven time: sum(capacity * bake_time) / sum(capacity)
   if (layout_) {
     float total_oven_minutes = 0.0f;
@@ -675,15 +655,13 @@ ServiceTimeData Restaurant::calculate_service_time_data() const {
     float weighted_sum = 0.0f;
     float total_demand = 0.0f;
 
-    int demo_index = 0;
     for (ConsumerType demographic : ALL_CONSUMER_TYPES) {
       // Add 1 to each demand count to avoid zero weights
       auto demand =
           static_cast<float>(economy_.customer_counts()[demographic] + 1);
       weighted_sum +=
-          demand * static_cast<float>(DEMOGRAPHIC_EATING_TIMES[demo_index]);
+          demand * static_cast<float>(demographic_eating_time(demographic));
       total_demand += demand;
-      demo_index++;
     }
 
     if (total_demand > 0.0f) {
@@ -762,10 +740,6 @@ FurnitureStats Restaurant::calculate_furniture_stats() const {
         if (category == FurnitureCategory::CHAIR) {
           quality_sum += pf->furniture()->quality();
           quality_count++;
-
-          if (pf->linked_furniture_id().has_value()) {
-            stats.seat_count += pf->furniture()->capacity();
-          }
         }
       }
     }
@@ -775,13 +749,10 @@ FurnitureStats Restaurant::calculate_furniture_stats() const {
     stats.avg_quality = quality_sum / quality_count;
   }
 
-  auto service_data = calculate_service_time_data();
-  int seating_time = static_cast<int>(service_data.avg_seating_time);
+  stats.seat_count = layout_->seated_chair_count();
 
-  if (seating_time > 0 && stats.seat_count > 0) {
-    stats.customers_per_day =
-        (operating_minutes_per_day() * stats.seat_count) / seating_time;
-  }
+  auto service_data = calculate_service_time_data();
+  stats.customers_per_day = calculate_seating_capacity(&service_data);
 
   if (stats.customers_per_day > 0) {
     int demand = stats_.yesterday.orders_generated;
@@ -930,121 +901,12 @@ int Restaurant::calculate_stock_capacity(
   return final_capacity;
 }
 
-int Restaurant::calculate_weighted_average_oven_time() const {
-  if (!layout_) {
-    return 0;
-  }
-
-  int numerator = 0;
-  int denominator = 0;
-
-  for (const auto& pf : layout_->placed_kitchen_furniture()) {
-    if (pf && pf->furniture()->category() == FurnitureCategory::KITCHENWARE) {
-      int bake_time = pf->furniture()->bake_time();
-      int oven_capacity = pf->furniture()->capacity();
-
-      if (bake_time > 0 && oven_capacity > 0) {
-        numerator += bake_time * oven_capacity;
-        denominator += oven_capacity;
-      }
-    }
-  }
-
-  if (denominator == 0) {
-    return 0;
-  }
-
-  return numerator / denominator;
-}
-
-int Restaurant::calculate_service_time_minutes(ConsumerType demographic) const {
-  const int operating_minutes = operating_minutes_per_day();
-
-  int total_chef_time = 0;
-  int chef_count = 0;
-  for (const auto& cook : cooks_) {
-    if (cook.has_value() && !cook->is_away()) {
-      total_chef_time += cook->calculate_prep_time_minutes(operating_minutes);
-      chef_count++;
-    }
-  }
-  const int avg_chef_time =
-      (chef_count > 0) ? (total_chef_time / chef_count) : 0;
-
-  const int oven_time = calculate_weighted_average_oven_time();
-
-  int total_waiter_time = 0;
-  int waiter_count = 0;
-  for (const auto& waiter : waiters_) {
-    if (waiter.has_value() && !waiter->is_away()) {
-      total_waiter_time +=
-          waiter->calculate_service_time_minutes(operating_minutes);
-      waiter_count++;
-    }
-  }
-  const int avg_waiter_time =
-      (waiter_count > 0) ? (total_waiter_time / waiter_count) : 0;
-
-  const int demographic_time = get_demographic_service_time(demographic);
-
-  // total = max(chef, oven) + waiter + demographic
-  const int kitchen_time = std::max(avg_chef_time, oven_time);
-  const int total_time = kitchen_time + avg_waiter_time + demographic_time;
-
-  return total_time;
-}
-
 int Restaurant::calculate_service_time_minutes() const {
   // Pure service time WITHOUT eating time.
   // Used for staff screen display and popularity component 0.
   // Formula: max(chef_time, oven_time) + waiter_time
   auto data = calculate_service_time_data();
   return data.service_time_minutes;
-}
-
-int Restaurant::calculate_block_throughput(ConsumerType demographic) const {
-  int service_time = calculate_service_time_minutes(demographic);
-
-  if (service_time == 0) {
-    return 0;
-  }
-
-  int seat_count = 0;
-  if (layout_) {
-    for (const auto& pf : layout_->placed_furniture()) {
-      if (pf) {
-        seat_count += pf->furniture()->capacity();
-      }
-    }
-  }
-
-  constexpr int BLOCK_DURATION_MINUTES = 10;
-  int throughput = (BLOCK_DURATION_MINUTES * seat_count) / service_time;
-
-  return throughput;
-}
-
-int Restaurant::calculate_block_throughput() const {
-  // Uses seating time (service + eating) since throughput is about
-  // how many customers can cycle through seats per 10-minute block.
-  auto data = calculate_service_time_data();
-  int seating_time = static_cast<int>(data.avg_seating_time);
-
-  if (seating_time == 0) {
-    return 0;
-  }
-
-  int seat_count = 0;
-  if (layout_) {
-    for (const auto& pf : layout_->placed_furniture()) {
-      if (pf) {
-        seat_count += pf->furniture()->capacity();
-      }
-    }
-  }
-
-  constexpr int BLOCK_DURATION_MINUTES = 10;
-  return (BLOCK_DURATION_MINUTES * seat_count) / seating_time;
 }
 
 void Restaurant::end_of_day(GameState& game_state) {

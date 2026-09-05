@@ -320,15 +320,8 @@ public:
   // Finds first empty slot, or overwrites slot 0 if all full.
   void add_reputation_damage(int penalty, int recovery_per_day);
 
-  int calculate_weighted_average_oven_time() const;
-
-  int calculate_service_time_minutes(ConsumerType demographic) const;
   // Weighted average across demographics using actual customer mix
   int calculate_service_time_minutes() const;
-
-  // Throughput for a 10-minute block
-  int calculate_block_throughput(ConsumerType demographic) const;
-  int calculate_block_throughput() const;
 
   int count_ovens() const;
   int count_cooks() const;

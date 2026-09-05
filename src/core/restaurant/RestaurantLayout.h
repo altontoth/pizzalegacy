@@ -38,6 +38,8 @@ public:
   void clear();
   // Count of items linked to this one
   int linked_furniture_count(core::FurnitureId id) const;
+  // Chairs standing at a table; one guest each.
+  int seated_chair_count() const;
 
 private:
   Size restaurant_size_;

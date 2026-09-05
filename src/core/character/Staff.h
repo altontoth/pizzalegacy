@@ -86,14 +86,6 @@ public:
   void tick_days_away();
   int days_away_remaining() const { return days_away_remaining_; }
 
-  // Calculate prep time in minutes (for chefs)
-  // Derived from pizzas_per_day: time = operating_minutes / pizzas_per_day
-  int calculate_prep_time_minutes(int operating_minutes) const;
-
-  // Calculate service time in minutes (for waiters)
-  // Derived from pizzas_per_day: time = operating_minutes / pizzas_per_day
-  int calculate_service_time_minutes(int operating_minutes) const;
-
   const core::character::Character& character() const;
   core::character::JobRole job_role() const;
 

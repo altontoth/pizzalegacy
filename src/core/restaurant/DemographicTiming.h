@@ -9,10 +9,9 @@
 #include <array>
 #include "core/Demographics.h"
 
-// Time added to service pipeline per customer demographic (in minutes)
-// This represents eating time, payment time, and other customer-specific delays
+// Minutes a customer of each demographic spends eating.
 constexpr std::array<int, static_cast<size_t>(ConsumerType::Count)>
-    DEMOGRAPHIC_SERVICE_TIME = {
+    DEMOGRAPHIC_EATING_TIME = {
         12, // Children
         10, // Young People
         8,  // Blue Collar
@@ -21,7 +20,6 @@ constexpr std::array<int, static_cast<size_t>(ConsumerType::Count)>
         15, // Senior Citizens
 };
 
-// Helper function to get demographic service time
-inline int get_demographic_service_time(ConsumerType demographic) {
-  return DEMOGRAPHIC_SERVICE_TIME[static_cast<size_t>(demographic)];
+inline int demographic_eating_time(ConsumerType demographic) {
+  return DEMOGRAPHIC_EATING_TIME[static_cast<size_t>(demographic)];
 }

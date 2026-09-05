@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include "core/restaurant/Furniture.h"
 
 RestaurantLayout::RestaurantLayout(Size rest_size, Size kitchen_size,
                                    int entrance_offset,
@@ -54,7 +55,12 @@ RestaurantLayout::remove_by_id(core::FurnitureId id, bool kitchen_furniture) {
   if (it != f_list.end()) {
     auto removed = std::move(*it); // move out the unique_ptr
     f_list.erase(it);              // erase from the right vector
-    return removed;                // hand ownership to caller
+    for (const auto& pf : placed_furniture_) {
+      if (pf->linked_furniture_id() == id) {
+        pf->unlink_furniture();
+      }
+    }
+    return removed; // hand ownership to caller
   }
   return nullptr;
 }
@@ -134,6 +140,17 @@ int RestaurantLayout::linked_furniture_count(core::FurnitureId id) const {
   int count = 0;
   for (const auto& linked : placed_furniture_) {
     if (linked->linked_furniture_id() == id) {
+      count++;
+    }
+  }
+  return count;
+}
+
+int RestaurantLayout::seated_chair_count() const {
+  int count = 0;
+  for (const auto& pf : placed_furniture_) {
+    if (pf->furniture()->category() == FurnitureCategory::CHAIR &&
+        pf->linked_furniture_id().has_value()) {
       count++;
     }
   }
