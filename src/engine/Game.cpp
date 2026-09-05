@@ -805,6 +805,7 @@ bool Game::init(int display_height, ConfigManager& config_manager) {
   context.audio = audio_manager_.get();
   audio_manager_->sound_volume(config_manager.options().sound_volume);
   audio_manager_->music_volume(config_manager.options().music_volume);
+  audio_manager_->music_enabled(config_manager.options().music);
 
   auto [win_w, win_h] = resolution_window_size(
       config_manager.options().resolution, display_height);

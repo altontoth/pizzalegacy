@@ -9,7 +9,6 @@
 #include <algorithm>
 #include <cstring>
 
-#include "core/util/ConfigManager.h"
 #include "engine/Logger.h"
 #include "engine/SDL_include.h"
 #include "engine/audio/VocDecoder.h"
@@ -209,8 +208,7 @@ void AudioManager::play_music(MusicId id, LoopMode loop) {
     return;
   }
 
-  auto* config = ConfigManager::instance();
-  if (config && !config->options().music) {
+  if (!music_enabled_) {
     return;
   }
 
@@ -266,6 +264,8 @@ void AudioManager::music_volume(float volume) {
 void AudioManager::sound_volume(float volume) {
   sound_volume_ = std::clamp(volume, 0.0f, 1.0f);
 }
+
+void AudioManager::music_enabled(bool enabled) { music_enabled_ = enabled; }
 
 bool AudioManager::is_playing() const {
   if (!audio_enabled_) {

@@ -106,6 +106,7 @@ public:
   // Volume control (0.0 to 1.0)
   void music_volume(float volume);
   void sound_volume(float volume);
+  void music_enabled(bool enabled);
 
   void init();
   void load_default_assets();
@@ -148,6 +149,7 @@ private:
 
   // Volume
   float music_volume_ = 1.0f;
+  bool music_enabled_ = true;
   // Pre-volume boost for OPL output (otherwise was too quiet):
   float music_gain_ = 6.0f;
   float sound_volume_ = 0.9f;

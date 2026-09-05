@@ -98,6 +98,7 @@ void MenuOptions::build_audio(GameState& state) {
   add_menu_item(std::make_unique<ToggleMenuItem>(
       context_, "Music", state.options().music, [&state, this] {
         state.options().music = !state.options().music;
+        context_.audio->music_enabled(state.options().music);
         mark_dirty();
       }));
   add_menu_item(std::make_unique<SliderMenuItem>(
