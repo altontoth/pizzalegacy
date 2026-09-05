@@ -62,11 +62,6 @@ struct MissionListEntry {
   std::filesystem::path path; // absolute path
 };
 
-// Directory for player-saved missions, injected at startup from
-// platform_paths (same pattern as SaveGameManager::set_saves_directory).
-void set_missions_directory(std::string dir);
-const std::string& get_missions_directory();
-
 // Missions from the original game data "m/" directory followed by
 // player-saved missions from the missions directory.
 std::vector<MissionListEntry> list_available_missions();

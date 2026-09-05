@@ -16,6 +16,7 @@
 #include "core/events/MilestoneId.h"
 #include "core/time/GameDate.h"
 #include "engine/Logger.h"
+#include "engine/PlatformPaths.h"
 #include "resources/util/FileUtils.h"
 
 namespace core::mission {
@@ -23,8 +24,6 @@ namespace core::mission {
 namespace fs = std::filesystem;
 
 namespace {
-
-std::string missions_directory_;
 
 // Column offsets within the 400-byte file.
 constexpr int MIS_EVENT_OFFSET = 0 * MIS_SLOT_COUNT;
@@ -173,12 +172,6 @@ bool write_mission_file(const fs::path& path,
   return os.good();
 }
 
-void set_missions_directory(std::string dir) {
-  missions_directory_ = std::move(dir);
-}
-
-const std::string& get_missions_directory() { return missions_directory_; }
-
 std::vector<MissionListEntry> list_available_missions() {
   std::vector<MissionListEntry> missions;
 
@@ -188,14 +181,14 @@ std::vector<MissionListEntry> list_available_missions() {
   }
 
   // Player-saved missions.
-  append_missions_from_dir(get_missions_directory(), "", missions);
+  append_missions_from_dir(platform_paths::missions_dir(), "", missions);
 
   return missions;
 }
 
 std::vector<fileutils::FileEntry> list_player_mission_files() {
   std::vector<MissionListEntry> missions;
-  append_missions_from_dir(get_missions_directory(), "", missions);
+  append_missions_from_dir(platform_paths::missions_dir(), "", missions);
 
   std::vector<fileutils::FileEntry> files;
   files.reserve(missions.size());
@@ -225,7 +218,7 @@ std::string sanitize_mission_name(const std::string& name) {
 std::optional<fs::path>
 save_career_mission(const std::string& name,
                     const std::vector<TargetMilestone>& cv_entries) {
-  const fs::path dir = get_missions_directory();
+  const fs::path dir = platform_paths::missions_dir();
   std::error_code ec;
   fs::create_directories(dir, ec);
 

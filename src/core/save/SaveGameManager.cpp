@@ -43,6 +43,7 @@
 #include "engine/Endian.h"
 #include "engine/FormatCompat.h"
 #include "engine/Logger.h"
+#include "engine/PlatformPaths.h"
 #include "engine/Random.h"
 #include "engine/StringUtil.h"
 
@@ -88,22 +89,8 @@ json metadata_from_save_json(const json& j) {
 
 } // namespace
 
-std::string SaveGameManager::saves_directory_;
-
-void SaveGameManager::set_saves_directory(std::string dir) {
-  saves_directory_ = std::move(dir);
-}
-
-const std::string& SaveGameManager::get_saves_directory() {
-  if (saves_directory_.empty()) {
-    static const std::string fallback = "saves";
-    return fallback;
-  }
-  return saves_directory_;
-}
-
 std::string SaveGameManager::get_full_path(const std::string& filename) {
-  fs::path saves_dir = get_saves_directory();
+  fs::path saves_dir = platform_paths::saves_dir();
 
   // Create saves directory if it doesn't exist
   if (!fs::exists(saves_dir)) {
@@ -199,7 +186,7 @@ std::string autosave_slot_filename(int slot) {
 }
 
 std::string next_autosave_filename(int slot_count) {
-  fs::path saves_dir = SaveGameManager::get_saves_directory();
+  fs::path saves_dir = platform_paths::saves_dir();
 
   // Fill slots in order before overwriting any
   for (int i = 1; i <= slot_count; ++i) {

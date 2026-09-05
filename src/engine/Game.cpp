@@ -19,9 +19,7 @@
 #include "core/debug/DebugConsole.h"
 #include "core/debug/command/CommandDef.h"
 #include "core/factories/CharacterFactory.h"
-#include "core/mission/MissionFile.h"
 #include "core/restaurant/StaffEventData.h"
-#include "core/save/SaveGameManager.h"
 #include "core/state/TurnOrchestrator.h"
 #include "core/state/UIState.h"
 #include "core/state/ViewerType.h"
@@ -150,10 +148,6 @@ int Game::run() {
     return 1;
   }
   platform_paths::init();
-
-  // Configure platform-aware saves directory
-  save::SaveGameManager::set_saves_directory(platform_paths::saves_dir());
-  core::mission::set_missions_directory(platform_paths::missions_dir());
 
   // Use CLI-provided config path, or fall back to platform default
   std::string effective_config =

@@ -69,9 +69,6 @@ public:
   static std::optional<SaveMetadata>
   read_save_metadata(const std::string& filename);
 
-  static void set_saves_directory(std::string dir);
-  static const std::string& get_saves_directory();
-
   static std::vector<HighScoreEntry> load_high_scores();
   static bool add_high_score(HighScoreEntry entry);
 
@@ -85,7 +82,6 @@ private:
   static void json_to_state(const json& j, GameState& state,
                             GameContext& context);
 
-  static std::string saves_directory_;
   static std::string get_full_path(const std::string& filename);
 };
 

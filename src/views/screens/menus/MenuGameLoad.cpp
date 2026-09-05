@@ -14,6 +14,7 @@
 #include "core/state/UIState.h"
 #include "core/util/ConfigManager.h"
 #include "engine/Logger.h"
+#include "engine/PlatformPaths.h"
 #include "resources/FontTypes.h"
 #include "resources/util/FileUtils.h"
 #include "views/screens/menus/MenuTheme.h"
@@ -208,9 +209,7 @@ void MenuGameLoad::delete_selected_file() {
         }
 
         namespace fs = std::filesystem;
-        auto full_path =
-            fs::path(save::SaveGameManager::get_saves_directory()) /
-            file_to_delete;
+        auto full_path = fs::path(platform_paths::saves_dir()) / file_to_delete;
 
         try {
           if (fs::remove(full_path)) {

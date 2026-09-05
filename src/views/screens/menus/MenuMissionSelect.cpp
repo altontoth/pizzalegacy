@@ -16,6 +16,7 @@
 #include "core/state/UIState.h"
 #include "engine/FormatCompat.h"
 #include "engine/Logger.h"
+#include "engine/PlatformPaths.h"
 #include "resources/Font.h"
 #include "resources/FontTypes.h"
 #include "resources/util/FileUtils.h"
@@ -128,7 +129,7 @@ void MenuMissionSelect::select_player_mission(int index) {
   if (index < 0 || index >= static_cast<int>(player_files_.size())) {
     return;
   }
-  load_mission(std::filesystem::path(core::mission::get_missions_directory()) /
+  load_mission(std::filesystem::path(platform_paths::missions_dir()) /
                player_files_[index].filename);
 }
 
