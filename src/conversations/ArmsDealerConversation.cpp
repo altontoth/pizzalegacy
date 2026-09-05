@@ -24,7 +24,7 @@ bool ArmsDealerConversation::advance() {
     current_line(ArmsDealerLine::I_WANT_JOKE_ARTICLES);
     break;
   case ArmsDealerLine::OK_HOW_MANY:
-  case ArmsDealerLine::HOW_MANY_SCOOPS:
+  case ArmsDealerLine::HOW_MANY_SCOOPS2:
     current_line(ArmsDealerLine::ONE_PIECE);
     break;
   case ArmsDealerLine::JOKE_INTRO:
@@ -189,7 +189,7 @@ bool ArmsDealerConversation::advance_proposal(bool agree) {
     break;
   case ArmsDealerLine::ONE_SCOOP_COSTS:
     if (agree) {
-      current_line(ArmsDealerLine::HOW_MANY_SCOOPS);
+      current_line(ArmsDealerLine::HOW_MANY_SCOOPS2);
     }
     else {
       current_line(ArmsDealerLine::DONT_NEGOTIATE);
@@ -317,12 +317,14 @@ ArmsDealerConversation::lines() const {
         make_line(ArmsDealerLine::CHOOSE_FLAVOR),
     };
     break;
+  // Dead line in the original: WAFFEN.e has "How many scoops would you
+  // like?" twice, and nothing ever reaches this one. HOW_MANY_SCOOPS2 is
+  // the copy the game actually uses.
   case ArmsDealerLine::HOW_MANY_SCOOPS:
     return {
         make_line(ArmsDealerLine::HOW_MANY_SCOOPS),
     };
     break;
-  // This shouldn't be used, not sure why it was double in WAFFEN.e:
   case ArmsDealerLine::HOW_MANY_SCOOPS2:
     return {
         make_line(ArmsDealerLine::HOW_MANY_SCOOPS2),
