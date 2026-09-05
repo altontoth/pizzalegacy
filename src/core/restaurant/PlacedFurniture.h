@@ -11,7 +11,7 @@
 #include "engine/BobRenderable.h"
 #include "engine/geom/Spaces.h"
 
-constexpr uint8_t UNLINKED_FURNITURE = 0xFF;
+constexpr uint8_t UNLINKED_FURNITURE = 255;
 
 enum class Rotation {
   SOUTH = 240,

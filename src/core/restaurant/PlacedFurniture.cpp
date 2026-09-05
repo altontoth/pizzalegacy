@@ -18,7 +18,7 @@ PlacedFurniture::PlacedFurniture(const Furniture* furniture,
                                  core::FurnitureId linked_furniture_id,
                                  int bob_state)
     : furniture_(furniture), id_(id), origin_(pos),
-      linked_furniture_id_(linked_furniture_id.value == 0xFF
+      linked_furniture_id_(linked_furniture_id.value == UNLINKED_FURNITURE
                                ? std::nullopt
                                : std::optional{linked_furniture_id}),
       bob_state_(bob_state) {}
