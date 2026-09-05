@@ -9,7 +9,7 @@
 #include <optional>
 #include <string>
 #include <vector>
-#include "engine/DebugConsole.h"
+#include "core/debug/DebugConsole.h"
 #include "engine/DebugLabel.h"
 #include "engine/input/InputListener.h"
 #include "engine/input/ListenerToken.h"

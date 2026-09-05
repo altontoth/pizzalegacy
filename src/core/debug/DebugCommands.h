@@ -6,9 +6,9 @@
 
 #pragma once
 
+#include "core/debug/DebugConsole.h"
 #include "core/state/GameState.h"
 #include "core/util/GameContext.h"
-#include "engine/DebugConsole.h"
 
 void register_debug_commands(DebugConsole& console, GameState& state,
                              GameContext& context);

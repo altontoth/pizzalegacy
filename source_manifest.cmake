@@ -20,6 +20,7 @@ set(GAME_PLEGACY_SOURCES
     src/core/city/PizzaCharts.cpp
     src/core/city/Property.cpp
     src/core/debug/DebugCommands.cpp
+    src/core/debug/DebugConsole.cpp
     src/core/debug/command/CommandContext.cpp
     src/core/debug/command/CommandParser.cpp
     src/core/debug/command/CommandRegistry.cpp
@@ -265,7 +266,6 @@ set(GAME_PLEGACY_SOURCES
 )
 
 set(ENGINE_PLEGACY_SOURCES
-    src/engine/DebugConsole.cpp
     src/engine/Game.cpp
     src/engine/Logger.cpp
     src/engine/Math.cpp
@@ -340,6 +340,7 @@ set(PLEGACY_HEADERS
     src/core/city/Property.h
     src/core/common/Ids.h
     src/core/debug/DebugCommands.h
+    src/core/debug/DebugConsole.h
     src/core/debug/command/ArgSpec.h
     src/core/debug/command/ArgType.h
     src/core/debug/command/CommandContext.h
@@ -473,7 +474,6 @@ set(PLEGACY_HEADERS
     src/core/util/LegacyConstants.h
     src/core/util/Tools.h
     src/engine/BobRenderable.h
-    src/engine/DebugConsole.h
     src/engine/DebugLabel.h
     src/engine/DisplayConstants.h
     src/engine/Endian.h

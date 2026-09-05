@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "engine/DebugConsole.h"
+#include "core/debug/DebugConsole.h"
 #include "core/debug/command/CommandDef.h"
 #include "core/debug/command/CommandRegistry.h"
 #include "core/debug/command/CommandResult.h"

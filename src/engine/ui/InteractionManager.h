@@ -16,8 +16,6 @@
 #include <string_view>
 #include <vector>
 
-#include "core/util/GameContext.h"
-#include "engine/DebugConsole.h"
 #include "engine/DisplayConstants.h"
 #include "engine/FormatCompat.h"
 #include "engine/geom/Spaces.h"
@@ -184,7 +182,6 @@ public:
 
 private:
   friend class ::DebugLayer;
-  friend void register_debug_commands(DebugConsole&, GameState&, GameContext&);
 
   struct InteractionItem {
     ItemID id;

@@ -16,6 +16,7 @@
 
 #include "core/character/Player.h"
 #include "core/debug/DebugCommands.h"
+#include "core/debug/DebugConsole.h"
 #include "core/debug/command/CommandDef.h"
 #include "core/mission/MissionFile.h"
 #include "core/restaurant/StaffEventData.h"
@@ -24,7 +25,6 @@
 #include "core/state/UIState.h"
 #include "core/state/ViewerType.h"
 #include "core/util/ConfigManager.h"
-#include "engine/DebugConsole.h"
 #include "engine/FpsManager.h"
 #include "engine/Logger.h"
 #include "engine/PendingFade.h"
