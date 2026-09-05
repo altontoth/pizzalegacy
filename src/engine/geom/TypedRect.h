@@ -46,8 +46,8 @@ template <typename Tag> struct TypedRect {
   }
 
   [[nodiscard]] bool intersects(const TypedRect& other) const noexcept {
-    return x <= other.x + other.w && x + w >= other.x &&
-           y <= other.y + other.h && y + h >= other.y;
+    return x < other.x + other.w && x + w > other.x && y < other.y + other.h &&
+           y + h > other.y;
   }
 
   [[nodiscard]] TypedPoint<Tag> point() const noexcept {
