@@ -117,15 +117,18 @@ void MenuOptions::build_graphics(GameState& state) {
         state.request_crt_change(state.options().crt_aspect_ratio);
         mark_dirty();
       }));
-  add_menu_item(std::make_unique<EnumMenuItem<ScreenResolution>>(
-      context_, "Screen Resolution", state.options().resolution,
-      std::vector{ScreenResolution::Res_640x400,
-                  ScreenResolution::Res_1280x800},
-      [&state, this] {
-        state.request_resolution_change(state.options().resolution);
+  add_menu_item(std::make_unique<ToggleMenuItem>(
+      context_, "Double Size", state.options().double_size, [&state, this] {
+        state.options().double_size = !state.options().double_size;
+        state.request_double_size_change(state.options().double_size);
         mark_dirty();
-      },
-      face));
+      }));
+  add_menu_item(std::make_unique<ToggleMenuItem>(
+      context_, "Fullscreen", state.options().fullscreen, [&state, this] {
+        state.options().fullscreen = !state.options().fullscreen;
+        state.request_fullscreen_change(state.options().fullscreen);
+        mark_dirty();
+      }));
   add_menu_item(std::make_unique<EnumMenuItem<FpsOption>>(
       context_, "Render FPS", state.options().render_fps,
       std::vector{FpsOption::Fps30, FpsOption::Fps60, FpsOption::Fps120},

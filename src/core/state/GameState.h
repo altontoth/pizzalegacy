@@ -118,11 +118,15 @@ public:
   bool should_exit() const { return quit_; }
   void request_exit() { quit_ = true; }
 
-  // Resolution change request (consumed by engine)
-  void request_resolution_change(ScreenResolution res);
-  [[nodiscard]] std::optional<ScreenResolution>
-  pending_resolution_change() const;
-  void clear_resolution_request();
+  // Window size change request (consumed by engine)
+  void request_double_size_change(bool enabled);
+  [[nodiscard]] std::optional<bool> pending_double_size_change() const;
+  void clear_double_size_request();
+
+  // Fullscreen change request (consumed by engine)
+  void request_fullscreen_change(bool enabled);
+  [[nodiscard]] std::optional<bool> pending_fullscreen_change() const;
+  void clear_fullscreen_request();
 
   // CRT aspect ratio change request (consumed by engine)
   void request_crt_change(bool enabled);
@@ -515,7 +519,8 @@ private:
   CompetitionCoordinator competitions_{*this};
   MilestoneTracker milestones_{*this};
   RealEstate real_estate_{*this};
-  std::optional<ScreenResolution> pending_resolution_;
+  std::optional<bool> pending_double_size_;
+  std::optional<bool> pending_fullscreen_;
   std::optional<bool> pending_crt_;
   core::newspaper::ArticleDatabase article_database_;
   core::events::CareerLog career_log_;

@@ -54,7 +54,6 @@ public:
 
 private:
   struct LoopState {
-    bool fullscreen = false;
     OverlayManager* overlays = nullptr;
     GameState& game_state;
     GameContext& context;
@@ -66,6 +65,7 @@ private:
   bool init(int display_height, const GameOptions& options);
   bool capture_screenshot(GameState& gs, const std::string& path);
   Renderable* change_state(GameState& gs);
+  void apply_fullscreen(bool enabled);
   bool enforce_aspect_ratio(SDL_Window*, int, int);
   void create_some_players(GameState&);
   void load_assets();

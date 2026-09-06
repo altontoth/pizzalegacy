@@ -149,7 +149,9 @@ struct GameOptions {
   bool crt_aspect_ratio = false;
   bool fix_legacy_bugs = true;
   bool qol_improvements = true;
-  ScreenResolution resolution = ScreenResolution::Res_640x400;
+  // Start the window at twice the 640x400 surface.
+  bool double_size = true;
+  bool fullscreen = false;
   AutosaveFrequency autosave_frequency = AutosaveFrequency::Daily;
   // Number of rotating autosave slot files.
   int autosave_count = 3;

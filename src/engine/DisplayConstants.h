@@ -6,8 +6,7 @@
 
 #pragma once
 
-#include <optional>
-#include <string_view>
+#include <utility>
 
 namespace DisplayConstants {
 
@@ -24,45 +23,8 @@ inline constexpr int BPP = 32;
 // Ticks a screen fade takes in one direction, so a round trip is twice this.
 inline constexpr int default_fade_length = 12;
 
-enum class ScreenResolution { Res_640x400, Res_1280x800 };
-
-constexpr std::string_view to_string(ScreenResolution r) {
-  switch (r) {
-  case ScreenResolution::Res_640x400:
-    return "640x400";
-  case ScreenResolution::Res_1280x800:
-    return "1280x800";
-  }
-  return "Unknown";
-}
-
-constexpr std::string_view to_config_value(ScreenResolution r) {
-  return to_string(r);
-}
-
-inline std::optional<ScreenResolution>
-screen_resolution_from_config_value(std::string_view value) {
-  if (value == "640x400") {
-    return ScreenResolution::Res_640x400;
-  }
-  if (value == "1280x800") {
-    return ScreenResolution::Res_1280x800;
-  }
-  return std::nullopt;
-}
-
-constexpr int resolution_scale(ScreenResolution r) {
-  switch (r) {
-  case ScreenResolution::Res_640x400:
-    return 1;
-  case ScreenResolution::Res_1280x800:
-    return 2;
-  }
-  return 1;
-}
-
-inline std::pair<int, int> resolution_window_size(ScreenResolution r,
-                                                  int display_height) {
-  int scale = resolution_scale(r);
+inline std::pair<int, int> window_size_for(bool double_size,
+                                           int display_height) {
+  const int scale = double_size ? 2 : 1;
   return {DisplayConstants::SCREEN_WIDTH * scale, display_height * scale};
 }

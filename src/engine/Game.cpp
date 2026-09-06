@@ -142,6 +142,16 @@ Game::Game(LaunchOptions opts)
 Game::~Game() = default;
 
 int Game::run() {
+  // Logger that links to stdout/stderr
+  Logger::add_sink([](LogLevel lvl, const std::string& msg) {
+    const std::string full = Logger::level_prefix(lvl) + msg + "\n";
+    if (lvl == LogLevel::Warning) {
+      std::cerr << full;
+    }
+    else {
+      std::cout << full;
+    }
+  });
 
   if (!sdl_session_.initialized()) {
     std::cerr << "SDL failed to init: " << SDL_GetError() << "\n";
@@ -187,6 +197,11 @@ int Game::run() {
 
   // Load options early to determine display height
   auto loaded_options = configManager.load_options();
+
+  if (!exec_script_) {
+    // Rewrite the defaults and current overrides in the settings file.
+    configManager.save_options(loaded_options);
+  }
 
   // Override with command line --crt flag if provided
   if (crt_mode_override_) {
@@ -326,7 +341,6 @@ Examples:
   overlays.push<ConsoleLayer>(context, state, debug_console);
 
   LoopState loop_state = {
-      .fullscreen = false,
       .overlays = &overlays,
       .game_state = state,
       .context = context,
@@ -348,13 +362,10 @@ Examples:
       .request_screenshot =
           [&loop_state] { loop_state.screenshot_requested = true; },
       .toggle_fullscreen =
-          [this, &loop_state] {
-            loop_state.fullscreen = !loop_state.fullscreen;
-            if (!SDL_SetWindowFullscreen(sdl_.window.get(),
-                                         loop_state.fullscreen)) {
-              Logger::warn("Failed to set fullscreen {}: {}",
-                           loop_state.fullscreen, SDL_GetError());
-            }
+          [&loop_state] {
+            GameOptions& options = loop_state.game_state.options();
+            options.fullscreen = !options.fullscreen;
+            loop_state.game_state.request_fullscreen_change(options.fullscreen);
           },
       .set_time_scale =
           [&loop_state](int scale) {
@@ -474,10 +485,15 @@ Examples:
         loop_state.skip_tick_during_fade_in = false;
       }
 
-      if (auto res = state.pending_resolution_change()) {
-        state.clear_resolution_request();
-        auto [w, h] = resolution_window_size(*res, display_height_);
+      if (auto double_size = state.pending_double_size_change()) {
+        state.clear_double_size_request();
+        auto [w, h] = window_size_for(*double_size, display_height_);
         apply_window_size(w, h);
+      }
+
+      if (auto enabled = state.pending_fullscreen_change()) {
+        state.clear_fullscreen_request();
+        apply_fullscreen(*enabled);
       }
 
       if (auto crt = state.pending_crt_change()) {
@@ -491,7 +507,7 @@ Examples:
         interaction_manager_->set_display_height(display_height_);
         cursor_manager_->display_height(display_height_);
         auto [w, h] =
-            resolution_window_size(state.options().resolution, display_height_);
+            window_size_for(state.options().double_size, display_height_);
         apply_window_size(w, h);
       }
 
@@ -580,6 +596,12 @@ Examples:
 
     fps.end_frame_and_sleep();
   }
+  // --crt is a one-off that we don't want to update the config with the CRT
+  // option on, so don't write the config if this flag was passed.
+  if (!crt_mode_override_) {
+    configManager.save_options(state.options());
+  }
+
   // Make sure to reset view which might use GameState in their destructor:
   current_view_.reset();
   return 0;
@@ -735,7 +757,7 @@ void Game::handle_resize_event(const SDL_Event& event, LoopState& loop_state) {
   int new_height = event.window.data2;
 
   // In fullscreen, aspect ratio enforcement is not needed due to letterboxing.
-  if (!loop_state.fullscreen) {
+  if (!loop_state.game_state.options().fullscreen) {
     if (!enforce_aspect_ratio(sdl_.window.get(), new_width, new_height)) {
       // Skip further handling as a new SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED will
       // be triggered
@@ -748,17 +770,6 @@ void Game::handle_resize_event(const SDL_Event& event, LoopState& loop_state) {
 
 bool Game::init(int display_height, const GameOptions& options) {
   display_height_ = display_height;
-
-  // Logger that links to stdout/stderr
-  Logger::add_sink([](LogLevel lvl, const std::string& msg) {
-    const std::string full = Logger::level_prefix(lvl) + msg + "\n";
-    if (lvl == LogLevel::Warning) {
-      std::cerr << full;
-    }
-    else {
-      std::cout << full;
-    }
-  });
 
   // Validate display height is one of the supported values
   assert(display_height_ == DisplayConstants::LOGICAL_HEIGHT ||
@@ -799,8 +810,7 @@ bool Game::init(int display_height, const GameOptions& options) {
   audio_manager_->music_volume(options.music_volume);
   audio_manager_->music_enabled(options.music);
 
-  auto [win_w, win_h] =
-      resolution_window_size(options.resolution, display_height);
+  auto [win_w, win_h] = window_size_for(options.double_size, display_height);
   SDL_Window* window = nullptr;
   SDL_Renderer* renderer_handle = nullptr;
   if (!SDL_CreateWindowAndRenderer("Pizza Legacy", win_w, win_h,
@@ -813,6 +823,9 @@ bool Game::init(int display_height, const GameOptions& options) {
   sdl_.renderer.reset(renderer_handle);
   SDL_SetWindowPosition(sdl_.window.get(), SDL_WINDOWPOS_CENTERED,
                         SDL_WINDOWPOS_CENTERED);
+  if (options.fullscreen) {
+    apply_fullscreen(true);
+  }
 
   input_manager_->window(sdl_.window.get());
   cursor_manager_->window(sdl_.window.get());
@@ -888,6 +901,12 @@ Renderable* Game::change_state(GameState& gs) {
   context.ui_mode = result.ui_mode;
 
   return current_view_.get();
+}
+
+void Game::apply_fullscreen(bool enabled) {
+  if (!SDL_SetWindowFullscreen(sdl_.window.get(), enabled)) {
+    Logger::warn("Failed to set fullscreen {}: {}", enabled, SDL_GetError());
+  }
 }
 
 // Returns true if the window size was let through without issue,

@@ -225,8 +225,7 @@ struct OptionDef {
   std::string_view name;
   std::variant<bool GameOptions::*, int GameOptions::*, float GameOptions::*,
                WinCondition GameOptions::*, FpsOption GameOptions::*,
-               AutosaveFrequency GameOptions::*,
-               ScreenResolution GameOptions::*>
+               AutosaveFrequency GameOptions::*>
       member;
   std::string_view description;
   // Inclusive bounds, for the numeric options only.
@@ -303,12 +302,19 @@ static const OptionDef option_defs[] = {
          [](GameState& state, GameContext&) {
            state.request_crt_change(state.options().crt_aspect_ratio);
          }},
-    {.name = "resolution",
-     .member = &GameOptions::resolution,
-     .description = "640x400 or 1280x800",
+    {.name = "double_size",
+     .member = &GameOptions::double_size,
+     .description = "Start the window at twice the 640x400 surface",
      .apply =
          [](GameState& state, GameContext&) {
-           state.request_resolution_change(state.options().resolution);
+           state.request_double_size_change(state.options().double_size);
+         }},
+    {.name = "fullscreen",
+     .member = &GameOptions::fullscreen,
+     .description = "Fullscreen, the same toggle as Ctrl+F",
+     .apply =
+         [](GameState& state, GameContext&) {
+           state.request_fullscreen_change(state.options().fullscreen);
          }},
     {.name = "render_fps",
      .member = &GameOptions::render_fps,
@@ -371,9 +377,6 @@ static std::string option_value(const GameOptions& options,
                    return std::string(to_config_value(options.*member));
                  },
                  [&](AutosaveFrequency GameOptions::* member) -> std::string {
-                   return std::string(to_config_value(options.*member));
-                 },
-                 [&](ScreenResolution GameOptions::* member) -> std::string {
                    return std::string(to_config_value(options.*member));
                  }},
       option.member);
@@ -458,15 +461,6 @@ static std::optional<std::string> set_option(GameOptions& options,
             else {
               failure = compat::format(
                   "Expected off, daily, weekly or monthly, got '{}'", value);
-            }
-          },
-          [&](ScreenResolution GameOptions::* member) {
-            if (auto parsed = screen_resolution_from_config_value(value)) {
-              options.*member = *parsed;
-            }
-            else {
-              failure = compat::format("Expected 640x400 or 1280x800, got '{}'",
-                                       value);
             }
           }},
       option.member);

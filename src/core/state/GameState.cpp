@@ -1406,15 +1406,25 @@ void GameState::recalculate_all_pizza_demographics() {
   }
 }
 
-void GameState::request_resolution_change(ScreenResolution res) {
-  pending_resolution_ = res;
+void GameState::request_double_size_change(bool enabled) {
+  pending_double_size_ = enabled;
 }
 
-std::optional<ScreenResolution> GameState::pending_resolution_change() const {
-  return pending_resolution_;
+std::optional<bool> GameState::pending_double_size_change() const {
+  return pending_double_size_;
 }
 
-void GameState::clear_resolution_request() { pending_resolution_.reset(); }
+void GameState::clear_double_size_request() { pending_double_size_.reset(); }
+
+void GameState::request_fullscreen_change(bool enabled) {
+  pending_fullscreen_ = enabled;
+}
+
+std::optional<bool> GameState::pending_fullscreen_change() const {
+  return pending_fullscreen_;
+}
+
+void GameState::clear_fullscreen_request() { pending_fullscreen_.reset(); }
 
 void GameState::request_crt_change(bool enabled) { pending_crt_ = enabled; }
 
