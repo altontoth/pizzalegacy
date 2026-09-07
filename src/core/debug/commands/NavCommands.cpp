@@ -34,6 +34,55 @@ static CommandDef make_screen_nav(const std::string& name,
   };
 }
 
+static CommandDef make_nav_options() {
+  return CommandDef{
+      .name = "op",
+      .description = "Navigate to the options menu",
+      .help_text = R"(Usage: nav op [section]
+
+Opens the options menu, or one of its sections directly.
+
+Examples:
+  nav op            # The section list
+  nav op graphics   # Straight into the graphics section
+)",
+      .args =
+          {
+              ArgSpec{
+                  .name = "section",
+                  .type = ArgType::String,
+                  .optional = true,
+                  .default_provider = DefaultProvider::EmptyString,
+                  .description = "audio, graphics, controls or gameplay",
+                  .allowed_values =
+                      std::vector<std::string>{"audio", "graphics", "controls",
+                                               "gameplay"},
+              },
+          },
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        const std::string section = ctx.string_arg(0);
+        if (section.empty()) {
+          ctx.state.ui().push<ScreenTag>(ScreenTag::Kind::MenuOptions);
+          return CommandResult::success().add_message("Navigated to options");
+        }
+        static const std::pair<std::string_view, OptionsScreen> sections[] = {
+            {"audio", OptionsScreen::Audio},
+            {"graphics", OptionsScreen::Graphics},
+            {"controls", OptionsScreen::Controls},
+            {"gameplay", OptionsScreen::Gameplay}};
+        for (const auto& [name, screen] : sections) {
+          if (name == section) {
+            ctx.state.ui().push<OptionsMenuState>(OptionsMenuState{screen});
+            return CommandResult::success().add_message(
+                compat::format("Navigated to options {}", section));
+          }
+        }
+        return CommandResult::error(
+            compat::format("Unknown options section '{}'", section));
+      },
+  };
+}
+
 static CommandDef make_nav_cityview() {
   return CommandDef{
       .name = "cityview",
@@ -366,8 +415,7 @@ CommandDef make_nav_commands() {
                                       ScreenTag::Kind::MenuMain))
       .add_subcommand(make_screen_nav("ng", {}, "new game menu",
                                       ScreenTag::Kind::MenuNewGame))
-      .add_subcommand(make_screen_nav("op", {}, "options menu",
-                                      ScreenTag::Kind::MenuOptions))
+      .add_subcommand(make_nav_options())
       .add_subcommand(make_screen_nav("disk", {"dm"}, "disk menu",
                                       ScreenTag::Kind::DiskMenu))
       .add_subcommand(make_screen_nav("load", {}, "game load menu",
