@@ -421,6 +421,7 @@ Examples:
     SDL_GetWindowSize(sdl_.window.get(), &actual_w, &actual_h);
     state.window_size(actual_w, actual_h);
     loop_state.context.cursor->update_scaled_cursor(actual_w, actual_h);
+    warp_pointer_on_resize_ = true;
   };
 
   int render_fps = static_cast<int>(state.options().render_fps);
@@ -493,6 +494,7 @@ Examples:
 
       if (auto enabled = state.pending_fullscreen_change()) {
         state.clear_fullscreen_request();
+        warp_pointer_on_resize_ = true;
         apply_fullscreen(*enabled);
       }
 
@@ -766,6 +768,18 @@ void Game::handle_resize_event(const SDL_Event& event, LoopState& loop_state) {
   }
   loop_state.game_state.window_size(new_width, new_height);
   loop_state.context.cursor->update_scaled_cursor(new_width, new_height);
+
+  if (warp_pointer_on_resize_) {
+    warp_pointer_on_resize_ = false;
+    // The mouse didn't move, but the resize changes where it sits in the
+    // window... Move it to the position where we draw the cursor.
+    float window_x = 0.0f;
+    float window_y = 0.0f;
+    SDL_RenderCoordinatesToWindow(
+        sdl_.renderer.get(), static_cast<float>(last_mouse_pos_.x),
+        static_cast<float>(last_mouse_pos_.y), &window_x, &window_y);
+    SDL_WarpMouseInWindow(sdl_.window.get(), window_x, window_y);
+  }
 }
 
 bool Game::init(int display_height, const GameOptions& options) {

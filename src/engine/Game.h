@@ -99,6 +99,7 @@ private:
   Surface surface_;
   ScreenPoint last_mouse_pos_;
   bool prev_relative_mouse_mode_ = false;
+  bool warp_pointer_on_resize_ = false;
   ScreenPoint pre_relative_mouse_pos_;
   std::string filename_;
   std::string config_path_;
