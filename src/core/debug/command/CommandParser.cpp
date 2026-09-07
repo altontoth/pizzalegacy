@@ -12,6 +12,20 @@
 
 namespace debug::command {
 
+namespace {
+
+// An empty string default represents no value, so it does not need to satisfy
+// the argument's value constraints.
+ValidationResult validate_default(const ParsedValue& value, const ArgSpec& spec,
+                                  GameState& state) {
+  if (spec.default_provider == DefaultProvider::EmptyString) {
+    return ValidationResult::success();
+  }
+  return ValueValidator::validate_spec_constraints(value, spec, state);
+}
+
+} // namespace
+
 CommandParser::ParsedCommand
 CommandParser::parse(const CommandDef& root,
                      const std::vector<std::string>& tokens, GameState& state) {
@@ -85,8 +99,7 @@ CommandParser::parse(const CommandDef& root,
         try {
           auto default_val =
               resolve_default(spec.default_provider, spec.type, state);
-          auto validation = ValueValidator::validate_spec_constraints(
-              default_val, spec, state);
+          auto validation = validate_default(default_val, spec, state);
           if (!validation.valid) {
             result.error_result = CommandResult::error(
                 compat::format("Default for argument '{}' is not usable: {}",
@@ -196,8 +209,7 @@ CommandParser::parse_argument(const std::string& token, const ArgSpec& spec,
       try {
         auto default_val =
             resolve_default(spec.default_provider, spec.type, state);
-        auto validation =
-            ValueValidator::validate_spec_constraints(default_val, spec, state);
+        auto validation = validate_default(default_val, spec, state);
         if (!validation.valid) {
           result.error_result = CommandResult::error(
               compat::format("Default for argument '{}' is not usable: {}",
