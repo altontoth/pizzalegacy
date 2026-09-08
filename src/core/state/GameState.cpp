@@ -328,6 +328,7 @@ void GameState::advance_time_block() {
   time_.advance_10_minutes();
 
   const auto now = time_.time_of_day();
+  Logger::debug("Clock advanced to {:02d}:{:02d}", now.hour, now.minute);
 
   if (now == Restaurant::DEFAULT_OPENING_TIME) {
     status_hub_.post_direct(StatusMsg{
@@ -351,9 +352,9 @@ void GameState::advance_game_time() {
 }
 
 void GameState::advance_second() {
-  // A stopped clock doesn't count seconds, so the block resumes where it left
-  // off.
-  if (clock_rate_ == ClockRate::Stopped) {
+  // A stopped or suspended clock doesn't count seconds, so the block resumes
+  // where it left off.
+  if (clock_rate_ == ClockRate::Stopped || clock_suspended_) {
     return;
   }
 
@@ -362,7 +363,7 @@ void GameState::advance_second() {
     second_in_block_ = 0;
   }
 
-  if (clock_rate_ != ClockRate::Running || clock_suspended_) {
+  if (clock_rate_ != ClockRate::Running) {
     return;
   }
   if (second_in_block_ < seconds_per_block) {
@@ -524,9 +525,21 @@ bool GameState::process_pending_milestones() {
   return !pending.empty();
 }
 
-void GameState::suspend_clock() { clock_suspended_ = true; }
+void GameState::suspend_clock() {
+  if (!clock_suspended_) {
+    Logger::debug("Clock suspended at {:02d}:{:02d}, second {} of the block",
+                  time_.current_hour(), time_.current_minute(),
+                  second_in_block_);
+  }
+  clock_suspended_ = true;
+}
 
 void GameState::resume_clock() {
+  if (clock_suspended_) {
+    Logger::debug("Clock resumed at {:02d}:{:02d}, second {} of the block",
+                  time_.current_hour(), time_.current_minute(),
+                  second_in_block_);
+  }
   clock_suspended_ = false;
 
   if (turn_.may_auto_end_turn()) {

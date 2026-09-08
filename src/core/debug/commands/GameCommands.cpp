@@ -11,6 +11,7 @@
 #include "core/mission/MissionScoring.h"
 #include "core/mission/MissionTarget.h"
 #include "core/save/SaveGameManager.h"
+#include "core/state/ClockRate.h"
 #include "core/state/EndOfDayCause.h"
 #include "core/state/GameOptions.h"
 #include "core/state/GameState.h"
@@ -608,6 +609,18 @@ Example:
   };
 }
 
+static std::string_view clock_rate_name(ClockRate rate) {
+  switch (rate) {
+  case ClockRate::Stopped:
+    return "stopped";
+  case ClockRate::SecondsOnly:
+    return "seconds only";
+  case ClockRate::Running:
+    return "running";
+  }
+  return "unknown";
+}
+
 static CommandDef make_game_time() {
   return CommandDef{
       .name = "time",
@@ -620,6 +633,26 @@ static CommandDef make_game_time() {
       },
   }
       .add_subcommand(make_game_time_set());
+}
+
+static CommandDef make_game_clock() {
+  return CommandDef{
+      .name = "clock",
+      .description = "Clock state",
+      .help_text = R"(Reports the rate the current screen asks for, whether
+the turn pipeline has the clock suspended, and how far into the ten-minute
+block the second counter has come.
+)",
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        auto& time = ctx.state.time();
+        return CommandResult::success().add_message(compat::format(
+            "{:02d}:{:02d}, clock {}{}, second {} of {} in the block",
+            time.current_hour(), time.current_minute(),
+            clock_rate_name(ctx.state.clock_rate()),
+            ctx.state.is_clock_suspended() ? " (suspended)" : "",
+            ctx.state.second_in_block(), seconds_per_block));
+      },
+  };
 }
 
 static CommandDef make_game_competition_monthly() {
@@ -1059,6 +1092,7 @@ CommandDef make_game_commands() {
       .add_subcommand(make_game_date())
       .add_subcommand(make_game_options())
       .add_subcommand(make_game_time())
+      .add_subcommand(make_game_clock())
       .add_subcommand(make_game_competition())
       .add_subcommand(make_game_end())
       .add_subcommand(make_game_levent())

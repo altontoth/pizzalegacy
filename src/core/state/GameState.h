@@ -275,6 +275,8 @@ public:
   void suspend_clock();
   void resume_clock();
   void clock_rate(ClockRate rate) { clock_rate_ = rate; }
+  ClockRate clock_rate() const { return clock_rate_; }
+  bool is_clock_suspended() const { return clock_suspended_; }
 
   // For headless play:
   void enter_realtime_play();
