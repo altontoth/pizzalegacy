@@ -9,8 +9,12 @@
 
 namespace debug::command {
 
+bool CommandContext::has_arg(size_t index) const {
+  return index < args.size() && args[index].source != ValueSource::Absent;
+}
+
 const ParsedValue& CommandContext::arg(size_t index) const {
-  if (index >= args.size()) {
+  if (!has_arg(index)) {
     throw std::runtime_error(compat::format(
         "Argument {} not provided (have {} arguments)", index, args.size()));
   }

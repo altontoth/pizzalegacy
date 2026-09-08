@@ -261,8 +261,8 @@ Examples:
           },
       .handler = [](const CommandContext& ctx) -> CommandResult {
         auto ingredient_id = ctx.int_arg(0);
-        auto quantity = ctx.args.size() > 1 ? ctx.int_arg(1) : 10000;
-        auto quality = ctx.args.size() > 2 ? ctx.int_arg(2) : 100;
+        auto quantity = ctx.has_arg(1) ? ctx.int_arg(1) : 10000;
+        auto quality = ctx.has_arg(2) ? ctx.int_arg(2) : 100;
         auto city_id = ctx.city_id(3);
         auto player_id = ctx.player_id(4);
 
@@ -510,7 +510,7 @@ Examples:
         auto city_id = ctx.city_id(2);
         auto player_id = ctx.player_id(3);
         auto depot_index =
-            ctx.args.size() > 4 ? static_cast<int>(ctx.int_arg(4)) : 0;
+            ctx.has_arg(4) ? static_cast<int>(ctx.int_arg(4)) : 0;
 
         if (std::ranges::find(core::item::weapon_list, item_id) ==
             core::item::weapon_list.end()) {

@@ -23,6 +23,7 @@ namespace debug::command {
 enum class ValueSource {
   UserProvided,    // Explicit value from command line
   DefaultProvider, // Resolved from a DefaultProvider
+  Absent,          // Optional argument with no default, left out
 };
 
 // A parsed and typed command argument with provenance tracking
@@ -62,6 +63,9 @@ struct ParsedValue {
 
   // For logging/debugging - describes where this value came from
   std::string describe_source() const;
+
+  // Placeholder for an optional argument the user left out (has no value).
+  static ParsedValue absent(ArgType type);
 };
 
 } // namespace debug::command

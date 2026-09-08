@@ -112,7 +112,7 @@ Examples:
         }
 
         // Determine filter
-        bool filter_player = !ctx.args.empty();
+        bool filter_player = ctx.has_arg(0);
         core::PlayerId filter_id{0};
         if (filter_player) {
           filter_id = ctx.player_id(0);
@@ -254,7 +254,7 @@ Examples:
         }
 
         std::vector<Property*> shown;
-        if (ctx.args.empty()) {
+        if (!ctx.has_arg(0)) {
           for (auto* property : city->properties()) {
             if (property->is_for_sale() || property->is_for_rent()) {
               shown.push_back(property);

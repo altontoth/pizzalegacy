@@ -57,26 +57,6 @@ ParsedValue resolve_default(DefaultProvider provider, ArgType type,
     break;
   }
 
-  case DefaultProvider::ActivePizza:
-    // Future implementation when pizza designer has active pizza concept
-    fatal("ActivePizza default not yet implemented");
-
-  case DefaultProvider::Zero:
-    if (type == ArgType::Int) {
-      result.value = int64_t{0};
-    }
-    else if (type == ArgType::Money) {
-      result.value = Money{0};
-    }
-    else {
-      fatal("Zero default only valid for Int or Money");
-    }
-    break;
-
-  case DefaultProvider::EmptyString:
-    result.value = std::string{};
-    break;
-
   case DefaultProvider::CurrentDate:
     result.value = state.time().current_date();
     break;

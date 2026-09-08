@@ -18,7 +18,6 @@
 #include "core/state/GameState.h"
 #include "engine/FormatCompat.h"
 
-#include <algorithm>
 #include <array>
 #include <cstddef>
 
@@ -141,7 +140,7 @@ when:   now shows the dialog, queue leaves it waiting like a day-start event
         auto type_str = ctx.string_arg(0);
         auto player_id = ctx.player_id(1);
         auto restaurant_id = ctx.restaurant_id(2);
-        auto slot = ctx.args.size() > 3 ? static_cast<int>(ctx.int_arg(3)) : 0;
+        auto slot = ctx.has_arg(3) ? static_cast<int>(ctx.int_arg(3)) : 0;
 
         Restaurant* restaurant = nullptr;
         if (auto err =
@@ -210,7 +209,7 @@ when:   now shows the dialog, queue leaves it waiting like a day-start event
             .type = event_type,
         };
 
-        if (ctx.args.size() > 4 && ctx.string_arg(4) == "queue") {
+        if (ctx.has_arg(4) && ctx.string_arg(4) == "queue") {
           ctx.state.turn().restore_deferred_staff_event(event,
                                                         restaurant->id());
           return CommandResult::success(
@@ -270,7 +269,7 @@ Examples:
         auto value = static_cast<int>(ctx.int_arg(0));
         auto player_id = ctx.player_id(1);
         auto restaurant_id = ctx.restaurant_id(2);
-        auto slot = ctx.args.size() > 3 ? static_cast<int>(ctx.int_arg(3)) : 0;
+        auto slot = ctx.has_arg(3) ? static_cast<int>(ctx.int_arg(3)) : 0;
 
         Restaurant* restaurant = nullptr;
         if (auto err =
@@ -338,7 +337,7 @@ Examples:
         auto days = static_cast<int>(ctx.int_arg(0));
         auto player_id = ctx.player_id(1);
         auto restaurant_id = ctx.restaurant_id(2);
-        auto slot = ctx.args.size() > 3 ? static_cast<int>(ctx.int_arg(3)) : 0;
+        auto slot = ctx.has_arg(3) ? static_cast<int>(ctx.int_arg(3)) : 0;
 
         Restaurant* restaurant = nullptr;
         if (auto err =
@@ -407,7 +406,7 @@ Examples:
         auto player_id = ctx.player_id(1);
         auto restaurant_id = ctx.restaurant_id(2);
         auto character_id =
-            ctx.args.size() > 3 ? static_cast<int>(ctx.int_arg(3)) : 0;
+            ctx.has_arg(3) ? static_cast<int>(ctx.int_arg(3)) : 0;
 
         Restaurant* restaurant = nullptr;
         if (auto err =
@@ -586,7 +585,7 @@ Examples:
         auto course = static_cast<int>(ctx.int_arg(0));
         auto player_id = ctx.player_id(1);
         auto restaurant_id = ctx.restaurant_id(2);
-        auto slot = ctx.args.size() > 3 ? static_cast<int>(ctx.int_arg(3)) : 0;
+        auto slot = ctx.has_arg(3) ? static_cast<int>(ctx.int_arg(3)) : 0;
 
         Restaurant* restaurant = nullptr;
         if (auto err =
@@ -640,10 +639,6 @@ Examples:
                   .name = "days",
                   .type = ArgType::Int,
                   .optional = true,
-                  // Zero default keeps this leading arg in a fixed position so
-                  // the player/restaurant indices don't shift when it is
-                  // omitted; the handler maps the 0 to the real default of 1.
-                  .default_provider = DefaultProvider::Zero,
                   .description = "Days left on the course (>= 1)",
                   .min_value = 1,
                   .max_value = 365,
@@ -653,7 +648,7 @@ Examples:
           },
       .handler = [](const CommandContext& ctx) -> CommandResult {
         // The Zero provider yields 0; the real default is 1.
-        int days = std::max(1, static_cast<int>(ctx.int_arg(0)));
+        int days = ctx.has_arg(0) ? static_cast<int>(ctx.int_arg(0)) : 1;
         auto player_id = ctx.player_id(1);
         auto restaurant_id = ctx.restaurant_id(2);
 

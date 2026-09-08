@@ -24,6 +24,10 @@ struct CommandContext {
   const CommandRegistry& registry;
   std::vector<ParsedValue> args; // Validated positional arguments
 
+  // Was a value given for this argument, either by the user or by its
+  // default provider?
+  bool has_arg(size_t index) const;
+
   // Access argument with bounds checking
   const ParsedValue& arg(size_t index) const;
 

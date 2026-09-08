@@ -474,7 +474,7 @@ Examples:
         auto player_id = ctx.player_id(0);
 
         std::optional<int> only_index;
-        if (ctx.args.size() > 1) {
+        if (ctx.has_arg(1)) {
           only_index = static_cast<int>(ctx.int_arg(1));
         }
 

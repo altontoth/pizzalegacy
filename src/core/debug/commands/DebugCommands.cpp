@@ -199,7 +199,6 @@ Examples:
                   .name = "file",
                   .type = ArgType::String,
                   .optional = true,
-                  .default_provider = DefaultProvider::EmptyString,
                   .description = "Where to write the hashed document",
               },
           },
@@ -431,7 +430,7 @@ Examples:
               },
           },
       .handler = [](const CommandContext& ctx) -> CommandResult {
-        const std::string path = ctx.args.empty() ? "" : ctx.string_arg(0);
+        const std::string path = ctx.has_arg(0) ? ctx.string_arg(0) : "";
 
         CommandResult result = CommandResult::success();
         for (const auto& line : ctx.registry.get_help(path)) {

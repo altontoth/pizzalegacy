@@ -75,9 +75,8 @@ Examples:
               compat::format("Restaurant {} not found", rid.value));
         }
 
-        bool is_first = ctx.args.size() >= 2
-                            ? ctx.bool_arg(1)
-                            : restaurant->first_inspection_pending();
+        bool is_first = ctx.has_arg(1) ? ctx.bool_arg(1)
+                                       : restaurant->first_inspection_pending();
 
         ctx.state.turn().trigger_mayor_inspection(rid, is_first);
         return CommandResult::success().add_message(
@@ -147,7 +146,7 @@ Examples:
         }
 
         std::optional<int> winner_id;
-        if (ctx.args.size() >= 2) {
+        if (ctx.has_arg(1)) {
           int raw = static_cast<int>(ctx.int_arg(1));
           if (raw >= 0) {
             winner_id = raw;
@@ -173,7 +172,7 @@ Examples:
 
         const std::string winner =
             winner_id.has_value() ? std::to_string(*winner_id) : "none";
-        if (ctx.args.size() > 2 && ctx.string_arg(2) == "queue") {
+        if (ctx.has_arg(2) && ctx.string_arg(2) == "queue") {
           bool fit = ctx.state.turn().queue_mayor_award(
               event, ctx.state.active_player()->id());
           return CommandResult::success().add_message(compat::format(

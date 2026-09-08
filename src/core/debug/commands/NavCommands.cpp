@@ -52,7 +52,6 @@ Examples:
                   .name = "section",
                   .type = ArgType::String,
                   .optional = true,
-                  .default_provider = DefaultProvider::EmptyString,
                   .description = "audio, graphics, controls or gameplay",
                   .allowed_values =
                       std::vector<std::string>{"audio", "graphics", "controls",
@@ -180,7 +179,7 @@ Examples:
       .handler = [](const CommandContext& ctx) -> CommandResult {
         auto rid = ctx.restaurant_id(0);
         std::optional<int> screen;
-        if (ctx.args.size() > 1) {
+        if (ctx.has_arg(1)) {
           screen = static_cast<int>(ctx.int_arg(1));
         }
         ctx.state.bootstrap_minimal_playable_world(ctx.context);
@@ -229,7 +228,7 @@ Examples:
           },
       .handler = [](const CommandContext& ctx) -> CommandResult {
         std::optional<int> screen;
-        if (!ctx.args.empty()) {
+        if (ctx.has_arg(0)) {
           screen = static_cast<int>(ctx.int_arg(0));
         }
         ctx.state.bootstrap_minimal_playable_world(ctx.context);
@@ -278,7 +277,6 @@ static ArgSpec ingredient_category_arg() {
       .name = "category",
       .type = ArgType::String,
       .optional = true,
-      .default_provider = DefaultProvider::EmptyString,
       .description = "vegetables, meat, fruit or cheese",
       .allowed_values =
           std::vector<std::string>{"vegetables", "meat", "fruit", "cheese"},
@@ -311,7 +309,7 @@ Examples:
       .args = {ingredient_category_arg()},
       .handler = [](const CommandContext& ctx) -> CommandResult {
         ctx.state.bootstrap_minimal_playable_world(ctx.context);
-        const std::string name = ctx.args.empty() ? "" : ctx.string_arg(0);
+        const std::string name = ctx.has_arg(0) ? ctx.string_arg(0) : "";
         if (name.empty()) {
           ctx.state.ui().push<DepotMainState>(DepotMainState{});
           return CommandResult::success().add_message("Navigated to the depot");
@@ -367,7 +365,6 @@ Examples:
                   .name = "depot",
                   .type = ArgType::String,
                   .optional = true,
-                  .default_provider = DefaultProvider::EmptyString,
                   .description =
                       R"(Say "depot" for the central depot's screen)",
               },
@@ -380,7 +377,7 @@ Examples:
               "No such ingredient category: {}", ctx.string_arg(0)));
         }
         const auto supplier_id = static_cast<uint8_t>(ctx.int_arg(1));
-        const bool depot = ctx.args.size() > 2 && ctx.string_arg(2) == "depot";
+        const bool depot = ctx.has_arg(2) && ctx.string_arg(2) == "depot";
         if (depot) {
           ctx.state.ui().push<DepotIngredientOrderState>(
               DepotIngredientOrderState{.supplier_id = supplier_id,
@@ -527,7 +524,7 @@ Examples:
                   "No active restaurant",
                   "Open one first, e.g. nav restaurant 0");
             }
-            const std::string name = ctx.args.empty() ? "" : ctx.string_arg(0);
+            const std::string name = ctx.has_arg(0) ? ctx.string_arg(0) : "";
             if (name.empty()) {
               ctx.state.ui().push<StockMainState>(StockMainState{});
               return CommandResult::success().add_message(

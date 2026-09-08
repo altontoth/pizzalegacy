@@ -40,7 +40,6 @@ Examples:
                   .name = "all",
                   .type = ArgType::String,
                   .optional = true,
-                  .default_provider = DefaultProvider::EmptyString,
                   .description = "Pass 'all' to show all 50 slots",
               },
           },
@@ -52,7 +51,7 @@ Examples:
         auto& sys = city->newspaper_event_system();
         auto& types = sys.scheduled_types();
         auto& countdowns = sys.scheduled_countdowns();
-        bool show_all = !ctx.args.empty() && ctx.string_arg(0) == "all";
+        bool show_all = ctx.has_arg(0) && ctx.string_arg(0) == "all";
 
         std::vector<std::string> lines;
         lines.push_back("Scheduled event slots:");
@@ -156,7 +155,7 @@ Examples:
         }
         auto& sys = city->newspaper_event_system();
 
-        if (!ctx.args.empty()) {
+        if (ctx.has_arg(0)) {
           auto slot = ctx.int_arg(0);
           if (slot < 0 || slot >= 50) {
             return CommandResult::error("Slot must be 0-49");
@@ -364,8 +363,8 @@ Examples:
 
         auto& ns = city->newspaper_state();
         ns.article_id = static_cast<uint8_t>(article_id);
-        ns.cooldown = ctx.args.size() > 1 ? static_cast<int>(ctx.int_arg(1))
-                                          : NewspaperState::EVENT_COOLDOWN;
+        ns.cooldown = ctx.has_arg(1) ? static_cast<int>(ctx.int_arg(1))
+                                     : NewspaperState::EVENT_COOLDOWN;
 
         return CommandResult::success().add_message(compat::format(
             "Set article_id={} cooldown={}", ns.article_id, ns.cooldown));
@@ -522,7 +521,6 @@ Examples:
                   .name = "all",
                   .type = ArgType::String,
                   .optional = true,
-                  .default_provider = DefaultProvider::EmptyString,
                   .description = "Pass 'all' to show all 96 slots",
               },
           },
@@ -537,7 +535,7 @@ Examples:
         const auto& targets = trends.targets();
         const auto& durations = trends.durations();
         const auto& approaching = trends.approaching_flags();
-        bool show_all = !ctx.args.empty() && ctx.string_arg(0) == "all";
+        bool show_all = ctx.has_arg(0) && ctx.string_arg(0) == "all";
 
         std::vector<std::string> lines;
         lines.push_back(
@@ -747,7 +745,7 @@ Examples:
 
         auto& trends = city->ingredient_trend_system();
 
-        if (!ctx.args.empty()) {
+        if (ctx.has_arg(0)) {
           auto slot = ctx.int_arg(0);
           if (slot < 0 || slot >= max_ingredient_count) {
             return CommandResult::error(
@@ -793,7 +791,7 @@ Examples:
           return CommandResult::error("No active city");
         }
 
-        int64_t n = !ctx.args.empty() ? ctx.int_arg(0) : 1;
+        int64_t n = ctx.has_arg(0) ? ctx.int_arg(0) : 1;
         if (n < 1 || n > 1000) {
           return CommandResult::error("N must be 1-1000");
         }

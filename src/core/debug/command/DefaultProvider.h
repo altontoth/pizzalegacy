@@ -22,9 +22,6 @@ enum class DefaultProvider {
   ActivePlayer,     // state.active_player()->id()
   ActiveRestaurant, // state.active_restaurant()->id()
   ActiveCity,       // state.active_city_id()
-  ActivePizza,      // Future: active pizza in designer
-  Zero,             // Numeric 0
-  EmptyString,      // ""
   CurrentDate,      // state.time().current_date()
 };
 
@@ -42,15 +39,6 @@ constexpr bool is_compatible(DefaultProvider provider, ArgType type) {
 
   case DefaultProvider::ActiveCity:
     return type == ArgType::CityId;
-
-  case DefaultProvider::ActivePizza:
-    return type == ArgType::RecipeId;
-
-  case DefaultProvider::Zero:
-    return type == ArgType::Int || type == ArgType::Money;
-
-  case DefaultProvider::EmptyString:
-    return type == ArgType::String;
 
   case DefaultProvider::CurrentDate:
     return type == ArgType::Date;

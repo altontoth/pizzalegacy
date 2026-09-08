@@ -672,7 +672,7 @@ Valid causes: debts, suppliers, killed, tycoon
           return CommandResult::error("No active player");
         }
 
-        if (ctx.args.empty()) {
+        if (!ctx.has_arg(0)) {
           return CommandResult::error(
               "Missing cause argument",
               "Usage: game end <debts|killed|tycoon|suppliers>");
@@ -887,7 +887,7 @@ Example:
               },
           },
       .handler = [](const CommandContext& ctx) -> CommandResult {
-        if (ctx.args.empty()) {
+        if (!ctx.has_arg(0)) {
           return CommandResult::success().add_message(
               compat::format("Time scale is {}x", ctx.state.time_scale()));
         }
@@ -1034,8 +1034,7 @@ Example:
               },
           },
       .handler = [](const CommandContext& ctx) -> CommandResult {
-        const int count =
-            ctx.args.empty() ? 1 : static_cast<int>(ctx.int_arg(0));
+        const int count = ctx.has_arg(0) ? static_cast<int>(ctx.int_arg(0)) : 1;
         if (count < 1) {
           return CommandResult::error("Tick count must be at least 1");
         }

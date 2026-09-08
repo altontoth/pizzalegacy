@@ -102,7 +102,7 @@ Examples:
         restaurant->protection_timer(30);
         restaurant->protection_contacted(true);
 
-        if (ctx.args.size() > 1 && ctx.string_arg(1) == "queue") {
+        if (ctx.has_arg(1) && ctx.string_arg(1) == "queue") {
           auto* player = ctx.state.active_player();
           ctx.state.turn().restore_deferred_racket_offer(
               {.player_id = player->id(),
@@ -351,13 +351,13 @@ Examples:
         auto& pickup = player->mafia_state().active_mission->pickup;
         pickup.tile_index = static_cast<int>(ctx.int_arg(0));
         pickup.date = ctx.state.time().current_date();
-        if (ctx.args.size() >= 2) {
+        if (ctx.has_arg(1)) {
           pickup.hour = static_cast<int>(ctx.int_arg(1));
         }
         else {
           pickup.hour = ctx.state.time().current_hour();
         }
-        if (ctx.args.size() >= 3) {
+        if (ctx.has_arg(2)) {
           pickup.minute = static_cast<int>(ctx.int_arg(2));
         }
         else {
@@ -417,13 +417,13 @@ Examples:
         auto& dropoff = player->mafia_state().active_mission->dropoff;
         dropoff.tile_index = static_cast<int>(ctx.int_arg(0));
         dropoff.date = ctx.state.time().current_date();
-        if (ctx.args.size() >= 2) {
+        if (ctx.has_arg(1)) {
           dropoff.hour = static_cast<int>(ctx.int_arg(1));
         }
         else {
           dropoff.hour = ctx.state.time().current_hour();
         }
-        if (ctx.args.size() >= 3) {
+        if (ctx.has_arg(2)) {
           dropoff.minute = static_cast<int>(ctx.int_arg(2));
         }
         else {

@@ -6,25 +6,12 @@
 
 #include "core/debug/command/CommandParser.h"
 #include "DefaultProvider.h"
+#include "ParsedValue.h"
 #include "TypeParser.h"
 #include "ValueValidator.h"
 #include "core/state/GameState.h"
 
 namespace debug::command {
-
-namespace {
-
-// An empty string default represents no value, so it does not need to satisfy
-// the argument's value constraints.
-ValidationResult validate_default(const ParsedValue& value, const ArgSpec& spec,
-                                  GameState& state) {
-  if (spec.default_provider == DefaultProvider::EmptyString) {
-    return ValidationResult::success();
-  }
-  return ValueValidator::validate_spec_constraints(value, spec, state);
-}
-
-} // namespace
 
 CommandParser::ParsedCommand
 CommandParser::parse(const CommandDef& root,
@@ -99,7 +86,8 @@ CommandParser::parse(const CommandDef& root,
         try {
           auto default_val =
               resolve_default(spec.default_provider, spec.type, state);
-          auto validation = validate_default(default_val, spec, state);
+          auto validation = ValueValidator::validate_spec_constraints(
+              default_val, spec, state);
           if (!validation.valid) {
             result.error_result = CommandResult::error(
                 compat::format("Default for argument '{}' is not usable: {}",
@@ -121,7 +109,9 @@ CommandParser::parse(const CommandDef& root,
             missing_argument_error(*match.command, spec, arg_tokens.size());
         return result;
       }
-      // else: optional with no default - skip it
+      else {
+        parsed_args.push_back(ParsedValue::absent(spec.type));
+      }
     }
   }
 
@@ -209,7 +199,8 @@ CommandParser::parse_argument(const std::string& token, const ArgSpec& spec,
       try {
         auto default_val =
             resolve_default(spec.default_provider, spec.type, state);
-        auto validation = validate_default(default_val, spec, state);
+        auto validation =
+            ValueValidator::validate_spec_constraints(default_val, spec, state);
         if (!validation.valid) {
           result.error_result = CommandResult::error(
               compat::format("Default for argument '{}' is not usable: {}",

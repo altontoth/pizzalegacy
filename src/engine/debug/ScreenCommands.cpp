@@ -45,14 +45,12 @@ Examples:
                   .name = "file",
                   .type = debug::command::ArgType::String,
                   .optional = true,
-                  .default_provider =
-                      debug::command::DefaultProvider::EmptyString,
                   .description = "Where to write the PNG",
               },
           },
       .handler = [&game, &state](const debug::command::CommandContext& ctx)
           -> debug::command::CommandResult {
-        const std::string name = ctx.args.empty() ? "" : ctx.string_arg(0);
+        const std::string name = ctx.has_arg(0) ? ctx.string_arg(0) : "";
         const std::string path = resolve_screenshot_path(name);
         if (!game.capture_screenshot(state, path)) {
           return debug::command::CommandResult::error(

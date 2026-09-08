@@ -100,8 +100,17 @@ std::string ParsedValue::describe_source() const {
                             magic_enum::enum_name(*provider_used));
     }
     return "default";
+  case ValueSource::Absent:
+    return "not given";
   }
   return "unknown";
+}
+
+ParsedValue ParsedValue::absent(ArgType type) {
+  ParsedValue val;
+  val.type = type;
+  val.source = ValueSource::Absent;
+  return val;
 }
 
 } // namespace debug::command
