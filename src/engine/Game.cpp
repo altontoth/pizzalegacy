@@ -553,6 +553,11 @@ int Game::run() {
       loop_state.screenshot_requested = false;
     }
 
+    if (loop_state.redraw_requested) {
+      loop_state.redraw_requested = false;
+      renderer.invalidate();
+    }
+
     // For software cursor:
     cursor_manager_->cursor_position(pointer_->position());
     renderer.render();
@@ -737,6 +742,9 @@ void Game::handle_resize_event(const SDL_Event& event, LoopState& loop_state) {
   }
   loop_state.game_state.window_size(new_width, new_height);
   loop_state.context.cursor->update_scaled_cursor(new_width, new_height);
+
+  // The window shows the frame drawn for the old size until the next redraw.
+  loop_state.redraw_requested = true;
 
   if (warp_pointer_on_resize_) {
     warp_pointer_on_resize_ = false;

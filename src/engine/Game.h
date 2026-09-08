@@ -64,6 +64,7 @@ private:
     bool screenshot_requested = false;
     bool fade_on_next_transition = false;
     bool skip_tick_during_fade_in = false;
+    bool redraw_requested = false;
   };
 
   bool init(int display_height, const GameOptions& options);

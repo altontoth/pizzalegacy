@@ -33,6 +33,8 @@ public:
                                                float fade_factor = 1.0f);
   void with_current_frame(std::function<void(SDL_Surface*)> callback) const;
   void set_display_height(int height) { display_height_ = height; }
+  // Recomposite and present even when no layer is dirty.
+  void invalidate() { force_recompose_ = true; }
   void set_cursor_manager(CursorManager* cursor) { cursor_ = cursor; }
 
   // Fade control - returns true when fade completes
