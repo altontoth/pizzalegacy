@@ -8,7 +8,6 @@
 
 namespace {
 constexpr int popup_width = 374;
-constexpr int popup_border = 10;
 constexpr int vert_padding = 24;
 constexpr int btn_left = 18;
 constexpr int btn_size = 32;
@@ -17,7 +16,7 @@ constexpr int row_height = btn_size + 40;
 constexpr int text_color = 10;
 
 constexpr int text_x = btn_left + btn_size + text_gap;
-constexpr int btn_y_base = popup_border + vert_padding;
+constexpr int btn_y_base = BasePopup::popup_border + vert_padding;
 } // namespace
 
 OptionsPopup::OptionsPopup(const GameContext& context,

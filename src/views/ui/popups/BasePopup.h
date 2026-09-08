@@ -47,6 +47,8 @@ public:
   // Any shortcut that was registered gets handled here.
   bool on_action(const input::ActionEvent& ev) override;
 
+  // The beveled frame popup_surface() draws is this wide on every side.
+  static constexpr int popup_border = 10;
   Surface popup_surface(int width, int height);
   Surface text_button(const std::string& text, int width, int height,
                       bool mouse_down);

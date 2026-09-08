@@ -51,7 +51,6 @@ void ConfirmPopup::add_interactions(views::ui::InteractionContext ictx,
 void ConfirmPopup::render(Surface& surface, ViewPoint origin) {
   int height = popup_height_;
   constexpr int text_color = 10;
-  const int border_size = 10;
 
   if (renderable_) {
     // Render character picture on the left
@@ -63,12 +62,14 @@ void ConfirmPopup::render(Surface& surface, ViewPoint origin) {
              38 + button_bottom_margin_;
 
     auto s = popup_surface(popup_width_, height);
-    s.blit_raw(picture, {border_size, border_size});
+    s.blit_raw(picture, {popup_border, popup_border});
 
     // Render text on the right (after the picture + some spacing)
-    const int text_x = border_size + picture.width() + pic_text_left_margin_;
+    const int text_x = popup_border + picture.width() + pic_text_left_margin_;
+    const int text_w =
+        popup_width_ - text_x - popup_border - pic_text_left_margin_;
     font_->render_into_rect(
-        s, text_, {text_x, pic_text_top_margin_ + border_size, 212, 300},
+        s, text_, {text_x, pic_text_top_margin_ + popup_border, text_w, 300},
         FontFace::ASTANDAR, TextStyle{.color = text_color});
 
     btn_yes_.render_with(*this, s);
@@ -78,10 +79,11 @@ void ConfirmPopup::render(Surface& surface, ViewPoint origin) {
   else {
     // No picture, use default layout
     auto s = popup_surface(popup_width_, height);
-    font_->render_into_rect(s, text_,
-                            {border_size + text_left_margin_,
-                             border_size + text_top_margin_, 352, 300},
-                            FontFace::ASTANDAR, TextStyle{.color = text_color});
+    const int text_x = popup_border + text_left_margin_;
+    const int text_w = popup_width_ - text_x - popup_border - text_left_margin_;
+    font_->render_into_rect(
+        s, text_, {text_x, popup_border + text_top_margin_, text_w, 300},
+        FontFace::ASTANDAR, TextStyle{.color = text_color});
 
     btn_yes_.render_with(*this, s);
     btn_no_.render_with(*this, s);

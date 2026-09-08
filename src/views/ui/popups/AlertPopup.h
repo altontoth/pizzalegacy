@@ -35,11 +35,10 @@ private:
   static constexpr int button_x_ = 30;
   static constexpr int text_to_button_gap_ = 8;
   static constexpr int text_color_ = 9;
-  static constexpr int picture_margin_ = 10;
   static constexpr int picture_text_gap_ = 10;
   int popup_height_{default_popup_height_};
   static constexpr int text_width_beside_picture(int picture_width) {
-    return popup_width_ - picture_margin_ - picture_width - picture_text_gap_ -
+    return popup_width_ - popup_border - picture_width - picture_text_gap_ -
            text_left_margin_ * 2;
   }
 };

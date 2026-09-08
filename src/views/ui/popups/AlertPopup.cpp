@@ -30,7 +30,7 @@ AlertPopup::AlertPopup(const GameContext& ctx, std::string text, callback_t cb,
                                     text_width_beside_picture(picture_width),
                                     TextStyle{.color = text_color_});
     content_bottom =
-        std::max(picture_margin_ + picture_height + text_to_button_gap_,
+        std::max(popup_border + picture_height + text_to_button_gap_,
                  text_top_margin_ + metrics.height + text_to_button_gap_);
   }
   else {
@@ -61,9 +61,9 @@ void AlertPopup::render(Surface& surface, ViewPoint origin) {
     auto picture = renderer.surface(*renderable_);
 
     auto s = popup_surface(popup_width_, popup_height_);
-    s.blit_raw(picture, {picture_margin_, picture_margin_});
+    s.blit_raw(picture, {popup_border, popup_border});
 
-    int text_x = picture_margin_ + picture.width() + picture_text_gap_;
+    int text_x = popup_border + picture.width() + picture_text_gap_;
     font_->render_into_rect(
         s, text_,
         {text_x, text_top_margin_, text_width_beside_picture(picture.width()),
