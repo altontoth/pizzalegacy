@@ -310,8 +310,6 @@ endif()
 add_library(game_plegacy STATIC ${GAME_PLEGACY_SOURCES})
 
 if(NOT HAS_STD_FORMAT)
-    # Add include dirs & compile defs to the static library
-    target_include_directories(game_plegacy PUBLIC fmt::fmt)
     target_link_libraries(game_plegacy PUBLIC fmt::fmt)
     target_compile_definitions(game_plegacy PUBLIC HAS_STD_FORMAT=0)
 else()
