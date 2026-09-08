@@ -13,6 +13,13 @@
 
 namespace views::ui {
 
+void PointerTracker::display_height(int height) {
+  if (height != display_height_) {
+    position_.y = position_.y * height / display_height_;
+    display_height_ = height;
+  }
+}
+
 void PointerTracker::on_motion(const SDL_MouseMotionEvent& motion) {
   position_ = ScreenPoint{
       std::clamp(static_cast<int>(motion.x), 0,

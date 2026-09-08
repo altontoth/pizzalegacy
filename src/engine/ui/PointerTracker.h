@@ -19,7 +19,9 @@ public:
   PointerTracker(InteractionManager& interaction, int display_height)
       : interaction_(interaction), display_height_(display_height) {}
 
-  void display_height(int height) { display_height_ = height; }
+  // Keep the pointer at the same relative position when the screen height
+  // changes.
+  void display_height(int height);
 
   // An absolute move, clamped to the screen.
   void on_motion(const SDL_MouseMotionEvent& motion);
