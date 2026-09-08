@@ -46,17 +46,7 @@ find_file_path(const std::string& file_path) {
   fs::path resolved;
 
   if (!input_path.is_absolute()) {
-    if (input_path.string().starts_with("assets/")) {
-      fs::path candidate1 = fs::path("..") / input_path;
-      fs::path candidate2 = fs::path(".") / input_path;
-      if (fs::exists(candidate1)) {
-        return candidate1;
-      }
-      if (fs::exists(candidate2)) {
-        return candidate2;
-      }
-    }
-    else if (input_path.string().starts_with("saves/")) {
+    if (input_path.string().starts_with("saves/")) {
       const auto& saves_dir = platform_paths::saves_dir();
       auto relative = input_path.string().substr(6); // skip "saves/"
       resolved = fs::path(saves_dir) / relative;
@@ -132,6 +122,16 @@ std::vector<uint8_t> read_bytes(const std::string& file_path) {
             static_cast<std::streamsize>(bytes.size()));
   }
   return bytes;
+}
+
+bool write_bytes(const std::string& path, std::span<const uint8_t> bytes) {
+  std::ofstream out(path, std::ios::binary);
+  if (!out) {
+    return false;
+  }
+  out.write(reinterpret_cast<const char*>(bytes.data()),
+            static_cast<std::streamsize>(bytes.size()));
+  return out.good();
 }
 
 std::vector<std::string> load_text_lines(const std::string& path,
@@ -239,6 +239,8 @@ std::vector<FileEntry> list_files(const std::string& directory,
 void game_data_path(const std::string& file_path) {
   game_data_path_ = file_path;
 }
+
+const std::string& game_data_path() { return game_data_path_; }
 
 bool fexist(const char* filename) {
   struct stat buffer;

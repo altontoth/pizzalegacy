@@ -21,6 +21,7 @@
 #include "engine/input/GlobalActionHandler.h"
 #include "engine/ui/CursorManager.h"
 #include "engine/ui/InteractionManager.h"
+#include "engine/ui/PointerTracker.h"
 #include "resources/BlitmapManager.h"
 #include "resources/BobManager.h"
 #include "resources/FontManager.h"
@@ -52,6 +53,9 @@ public:
   // Process exit code; non-zero when a --exec script had a command fail.
   int run();
 
+  bool capture_screenshot(GameState& gs, const std::string& path);
+  bool write_screen_as_vga(GameState& gs, const std::string& path);
+
 private:
   struct LoopState {
     OverlayManager* overlays = nullptr;
@@ -63,15 +67,13 @@ private:
   };
 
   bool init(int display_height, const GameOptions& options);
-  bool capture_screenshot(GameState& gs, const std::string& path);
   Renderable* change_state(GameState& gs);
   void apply_fullscreen(bool enabled);
+  void load_game_data();
   bool enforce_aspect_ratio(SDL_Window*, int, int);
   void create_some_players(GameState&);
-  void load_assets();
   void handle_events(LoopState& loop_state);
   void handle_resize_event(const SDL_Event& event, LoopState& loop_state);
-  ScreenPoint resolve_motion_position(const SDL_MouseMotionEvent& motion) const;
   ScreenPoint global_cursor_pos_clamped() const;
   static int get_display_height(bool crt_mode);
   SDL_Texture* create_display_texture(int display_height) const;
@@ -89,6 +91,7 @@ private:
   std::unique_ptr<CursorManager> cursor_manager_;
   std::unique_ptr<TooltipManager> tooltip_manager_;
   std::unique_ptr<views::ui::InteractionManager> interaction_manager_;
+  std::unique_ptr<views::ui::PointerTracker> pointer_;
   std::unique_ptr<input::InputManager> input_manager_{nullptr};
   std::unique_ptr<audio::AudioManager> audio_manager_;
   std::unique_ptr<View> current_view_{nullptr};
@@ -97,7 +100,6 @@ private:
   SDLContext sdl_;
   SDL_Surface_unique_ptr screen_;
   Surface surface_;
-  ScreenPoint last_mouse_pos_;
   bool prev_relative_mouse_mode_ = false;
   bool warp_pointer_on_resize_ = false;
   ScreenPoint pre_relative_mouse_pos_;

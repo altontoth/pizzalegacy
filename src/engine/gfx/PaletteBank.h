@@ -13,6 +13,7 @@
 #include "engine/gfx/Color.h"
 #include "engine/gfx/PaletteHandle.h"
 
+#include <algorithm>
 #include <array>
 #include <bitset>
 #include <cstdint>
@@ -72,6 +73,9 @@ public:
   // (6-bit RGB)
   void load_dos_palette(const std::vector<uint8_t>& dos_raw);
 
+  // Stands in for palette 0 until palette.e is loaded.
+  void load_placeholder(const std::vector<Color>& palette_zero);
+
 private:
   PaletteBank() = default;
 
@@ -79,6 +83,7 @@ private:
   std::vector<uint8_t> raw_;
   std::array<std::vector<Color>, PALETTE_COUNT> cache_;
   std::bitset<PALETTE_COUNT> loaded_;
+  bool placeholder_ = false;
 };
 
 inline const std::vector<Color>& PaletteBank::colors(PaletteHandle h) {
@@ -125,7 +130,7 @@ inline std::vector<Color> PaletteBank::colors(PaletteHandle base,
 }
 
 inline void PaletteBank::load_dos_palette(const std::vector<uint8_t>& dos_raw) {
-  if (!raw_.empty()) {
+  if (!raw_.empty() && !placeholder_) {
     return;
   }
 
@@ -137,13 +142,37 @@ inline void PaletteBank::load_dos_palette(const std::vector<uint8_t>& dos_raw) {
 
   constexpr std::size_t TOTAL_SIZE =
       PALETTE_COUNT * COLORS_PER_PALETTE * BYTES_PER_COLOR;
-  raw_.resize(TOTAL_SIZE, 0);
+  raw_.assign(TOTAL_SIZE, 0);
 
   // Convert 6-bit RGB to 8-bit and store in raw_
   for (std::size_t i = 0; i < dos_raw.size(); ++i) {
     // 6-bit to 8-bit: shift left by 2
     raw_[i] = static_cast<uint8_t>(dos_raw[i] << 2);
   }
+
+  cache_ = {};
+  loaded_.reset();
+  placeholder_ = false;
+}
+
+inline void
+PaletteBank::load_placeholder(const std::vector<Color>& palette_zero) {
+  if (!raw_.empty()) {
+    return;
+  }
+
+  constexpr std::size_t TOTAL_SIZE =
+      PALETTE_COUNT * COLORS_PER_PALETTE * BYTES_PER_COLOR;
+  raw_.assign(TOTAL_SIZE, 0);
+
+  const std::size_t count =
+      std::min<std::size_t>(palette_zero.size(), COLORS_PER_PALETTE);
+  for (std::size_t i = 0; i < count; ++i) {
+    raw_[(i * BYTES_PER_COLOR) + 0] = palette_zero[i].r;
+    raw_[(i * BYTES_PER_COLOR) + 1] = palette_zero[i].g;
+    raw_[(i * BYTES_PER_COLOR) + 2] = palette_zero[i].b;
+  }
+  placeholder_ = true;
 }
 
 } // namespace gfx

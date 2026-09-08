@@ -32,6 +32,7 @@
 
 struct ScreenTag {
   enum class Kind {
+    GameLocation,
     Intro,
     MenuMain,
     MenuNewGame,

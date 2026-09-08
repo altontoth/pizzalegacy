@@ -23,7 +23,8 @@ Full license texts are available in the `LICENSES/` directory.
 
 #### SDL3
 
-Usage: Platform abstraction (Graphics, Input, Audio, Window management)
+Usage: Platform abstraction (Graphics, Input, Audio, Window management,
+native dialogs)
 
     Copyright: Copyright (c) 1997-2026 Sam Lantinga
     License:   zlib License (see LICENSES/zlib.txt)
@@ -68,13 +69,6 @@ Usage: Handling of UTF-8 encoded strings and conversions
 
     Copyright: Copyright 2006 Nemanja Trifunovic
     License:   Boost Software License 1.0 (see LICENSES/BSL-1.0.txt)
-
-#### tinyfiledialogs
-
-Usage: Native OS dialogs for asset directory selection
-
-    Copyright: Copyright (c) 2014-2024 Guillaume Vareille
-    License:   zlib License (see LICENSES/zlib.txt)
 
 #### magic\_enum
 

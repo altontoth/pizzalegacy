@@ -416,6 +416,8 @@ CommandDef make_nav_commands() {
       .add_subcommand(make_screen_nav("ng", {}, "new game menu",
                                       ScreenTag::Kind::MenuNewGame))
       .add_subcommand(make_nav_options())
+      .add_subcommand(make_screen_nav("gameloc", {}, "game location",
+                                      ScreenTag::Kind::GameLocation))
       .add_subcommand(make_screen_nav("disk", {"dm"}, "disk menu",
                                       ScreenTag::Kind::DiskMenu))
       .add_subcommand(make_screen_nav("load", {}, "game load menu",

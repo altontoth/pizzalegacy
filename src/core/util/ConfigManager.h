@@ -17,13 +17,13 @@ public:
   bool load_config();
 
   void save_config();
-  std::string prompt_for_game_location();
   const std::string value(const std::string& key) const;
   void value(const std::string& key, const std::string& value);
   void save_options(const GameOptions& opts);
   GameOptions load_options() const;
 
   std::string active_game_path() const;
+  void active_game_path(const std::string& path);
 
 private:
   std::string filename_;

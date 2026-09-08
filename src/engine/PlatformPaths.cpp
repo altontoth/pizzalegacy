@@ -13,6 +13,7 @@ namespace platform_paths {
 
 namespace {
 std::string base_dir_;
+std::string data_dir_;
 } // anonymous namespace
 
 void init() {
@@ -26,9 +27,20 @@ void init() {
     std::cerr << "Warning: SDL_GetPrefPath failed, using current directory\n";
     base_dir_ = "./";
   }
+
+  const char* base = SDL_GetBasePath();
+  if (base) {
+    data_dir_ = std::string(base) + "data/";
+  }
+  else {
+    std::cerr << "Warning: SDL_GetBasePath failed, using current directory\n";
+    data_dir_ = "./data/";
+  }
 }
 
 const std::string& base_dir() { return base_dir_; }
+
+const std::string& data_dir() { return data_dir_; }
 
 std::string config_file_path() { return base_dir_ + "settings.conf"; }
 

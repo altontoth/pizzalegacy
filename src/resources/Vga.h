@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <cstddef>
 #include <string>
 #include <vector>
 
@@ -13,6 +14,9 @@
 
 using gfx::PaletteHandle;
 using gfx::Surface;
+
+// Width, height, data size and padding, two bytes each.
+inline constexpr std::size_t VGA_HEADER_SIZE = 8;
 
 class Vga {
 public:

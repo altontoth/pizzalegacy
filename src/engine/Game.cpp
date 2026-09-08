@@ -9,15 +9,14 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdlib>
-#include <filesystem>
 #include <fstream>
+#include <iostream>
 #include <limits>
 #include <numeric>
 
 #include "core/character/Player.h"
 #include "core/debug/DebugCommands.h"
 #include "core/debug/DebugConsole.h"
-#include "core/debug/command/CommandDef.h"
 #include "core/factories/CharacterFactory.h"
 #include "core/restaurant/StaffEventData.h"
 #include "core/state/TurnOrchestrator.h"
@@ -25,13 +24,18 @@
 #include "core/state/ViewerType.h"
 #include "core/util/ConfigManager.h"
 #include "engine/FpsManager.h"
+#include "engine/GameLocationPrompt.h"
+#include "engine/LayerInfo.h"
 #include "engine/Logger.h"
 #include "engine/PendingFade.h"
 #include "engine/PlatformPaths.h"
 #include "engine/Random.h"
+#include "engine/RenderContext.h"
 #include "engine/Renderer.h"
 #include "engine/SDL_include.h"
+#include "engine/Screenshot.h"
 #include "engine/Version.h"
+#include "engine/debug/ScreenCommands.h"
 #include "engine/gfx/Surface.h"
 #include "engine/input/BindingsFile.h"
 #include "engine/input/InputManager.h"
@@ -39,6 +43,7 @@
 #include "engine/ui/TooltipManager.h"
 #include "resources/PaletteLoader.h"
 #include "resources/VgaLoader.h"
+#include "resources/VgaWriter.h"
 #include "resources/util/FileUtils.h"
 #include "views/base/View.h"
 #include "views/factories/ViewFactory.h"
@@ -56,72 +61,45 @@
 #include "views/ui/staff/StaffEventPopups.h"
 
 namespace {
-SDL_Surface* format_for_png_fixed(SDL_Surface* input) {
-  // Create a surface with explicitly defined RGBA masks;
-  // when using SDL_PNGFormatAlpha something was wrong with the colors
-  SDL_Surface* output =
-      SDL_CreateSurface(input->w, input->h, SDL_PIXELFORMAT_ABGR8888);
 
-  if (!output) {
-    Logger::warn("Failed to create RGB surface: {}", SDL_GetError());
-    return nullptr;
+// Screens get the StatusDisplay from the context, but for headless runs there
+// is no StatusDisplay yet, so create a temporary one.
+class TemporaryStatusPanel {
+public:
+  TemporaryStatusPanel(GameContext& context, GameState& gs)
+      : context_(context) {
+    if (!context_.status_panel) {
+      panel_ = std::make_unique<StatusDisplay>(context, gs, gs.status());
+      context_.status_panel = panel_.get();
+    }
+  }
+  ~TemporaryStatusPanel() {
+    if (panel_) {
+      context_.status_panel = nullptr;
+    }
   }
 
-  if (!SDL_BlitSurface(input, nullptr, output, nullptr)) {
-    Logger::warn("Failed to blit surface: {}", SDL_GetError());
-    SDL_DestroySurface(output);
-    return nullptr;
+private:
+  GameContext& context_;
+  std::unique_ptr<StatusDisplay> panel_;
+};
+
+struct Overlays {
+  Overlays(GameContext& context, GameState& state, TooltipManager& tooltips,
+           DebugConsole& console) {
+    manager.push<GameInfoLayer>(context, state);
+    manager.push<TooltipLayer>(context, state, tooltips);
+    manager.push<TurnLockLayer>(context, state);
+    popup = &manager.push<PopupManager>(context);
+    manager.push<PauseLayer>(context, state);
+    debug = &manager.push<DebugLayer>(context, state);
+    manager.push<ConsoleLayer>(context, state, console);
   }
 
-  return output;
-}
-
-std::string generate_screenshot_filename() {
-  std::time_t t = std::time(nullptr);
-  std::tm tm;
-#if defined(_WIN32)
-  localtime_s(&tm, &t);
-#else
-  localtime_r(&t, &tm);
-#endif
-
-  std::ostringstream oss;
-  oss << "screenshot_" << std::put_time(&tm, "%Y%m%d_%H%M%S") << ".png";
-  return oss.str();
-}
-
-// A bare name goes in the screenshots directory; a path with a directory in
-// it is used unchanged.
-std::string resolve_screenshot_path(const std::string& name) {
-  namespace fs = std::filesystem;
-  if (name.empty()) {
-    return platform_paths::screenshots_dir() + generate_screenshot_filename();
-  }
-  if (fs::path(name).has_parent_path()) {
-    return name;
-  }
-  return platform_paths::screenshots_dir() + name;
-}
-
-bool save_screenshot(SDL_Surface* surface, const std::string& path) {
-  namespace fs = std::filesystem;
-  const fs::path dir = fs::path(path).parent_path();
-  if (!dir.empty() && !fs::exists(dir)) {
-    fs::create_directories(dir);
-  }
-  SDL_Surface* tmp = format_for_png_fixed(surface);
-  if (!tmp) {
-    Logger::warn("Failed to format surface for PNG");
-    return false;
-  }
-  SDL_Surface_unique_ptr png_surface(tmp);
-  if (!SDL_SavePNG(png_surface.get(), path.c_str())) {
-    Logger::warn("Failed to save PNG: {}", SDL_GetError());
-    return false;
-  }
-  Logger::info("Screenshot saved as {}", path);
-  return true;
-}
+  OverlayManager manager;
+  PopupManager* popup = nullptr;
+  DebugLayer* debug = nullptr;
+};
 
 } // end namespace
 
@@ -157,6 +135,12 @@ int Game::run() {
     std::cerr << "SDL failed to init: " << SDL_GetError() << "\n";
     return 1;
   }
+  if (!sdl_session_.init_subsystems(SDL_INIT_VIDEO | SDL_INIT_AUDIO |
+                                    SDL_INIT_GAMEPAD)) {
+    std::cerr << "SDL subsystem init failed: " << SDL_GetError() << "\n";
+    return 1;
+  }
+
   platform_paths::init();
 
   // Use CLI-provided config path, or fall back to platform default
@@ -165,35 +149,7 @@ int Game::run() {
   ConfigManager configManager(effective_config);
 
   // Load config if present
-  const bool had_config = configManager.load_config();
-
-  // If --game-path was provided on CLI, take it (and persist).
-  if (game_path_override_) {
-    configManager.value("game_path_english", *game_path_override_);
-    configManager.save_config();
-  }
-  // Otherwise, if no config file, prompt
-  else if (!had_config) {
-    std::string location = configManager.prompt_for_game_location();
-    if (location.empty()) {
-      std::cout << "Didn't find the original game, giving up.\n";
-      return 1;
-    }
-    configManager.value("game_path_english", location);
-    configManager.save_config();
-  }
-
-  std::string active_path = configManager.active_game_path();
-  if (active_path.empty()) {
-    // No valid path found - prompt user to select game location
-    active_path = configManager.prompt_for_game_location();
-    if (active_path.empty()) {
-      std::cout << "No valid game path found, exiting.\n";
-      return 1;
-    }
-    configManager.save_config();
-  }
-  fileutils::game_data_path(active_path);
+  configManager.load_config();
 
   // Load options early to determine display height
   auto loaded_options = configManager.load_options();
@@ -226,6 +182,24 @@ int Game::run() {
   // Set up ConfigManager in context for options access
   context.config = &configManager;
 
+  // A --game-path is saved once we've confirmed the game is actually there.
+  const std::string configured = game_path_override_
+                                     ? *game_path_override_
+                                     : configManager.active_game_path();
+  const std::string active_path = engine::find_dos_game(configured);
+  if (!active_path.empty() && game_path_override_) {
+    configManager.active_game_path(active_path);
+    configManager.save_config();
+  }
+  if (active_path.empty() && !configured.empty()) {
+    Logger::warn("No PT.EXE under {}, asking where the game is", configured);
+  }
+  if (active_path.empty() && exec_script_) {
+    std::cerr << "error: no game path is configured and a scripted run cannot "
+                 "ask for one. Pass --game-path <folder>.\n";
+    return 1;
+  }
+
   GameState state;
 
   // Use the already-loaded options
@@ -233,131 +207,119 @@ int Game::run() {
 
   // For direct file loading (--vga, --bob, --fnt, --raw), set up the state with
   // the correct viewer type
-  if (vga_viewer_path_) {
-    ViewerState vs;
-    vs.filename = *vga_viewer_path_;
-    vs.type = ViewerType::Vga;
-    state.ui().push<ViewerState>(vs);
-  }
-  else if (bob_viewer_path_) {
-    ViewerState vs;
-    vs.filename = *bob_viewer_path_;
-    vs.type = ViewerType::Bob;
-    state.ui().push<ViewerState>(vs);
-  }
-  else if (!filename_.empty()) {
-    state.ui().push<ViewerState>(filename_);
-  }
-  else {
-    state.ui().push<ScreenTag>(ScreenTag::Kind::Intro);
-  }
+  auto push_start_screen = [&] {
+    if (vga_viewer_path_) {
+      ViewerState vs;
+      vs.filename = *vga_viewer_path_;
+      vs.type = ViewerType::Vga;
+      state.ui().push<ViewerState>(vs);
+    }
+    else if (bob_viewer_path_) {
+      ViewerState vs;
+      vs.filename = *bob_viewer_path_;
+      vs.type = ViewerType::Bob;
+      state.ui().push<ViewerState>(vs);
+    }
+    else if (!filename_.empty()) {
+      state.ui().push<ViewerState>(filename_);
+    }
+    else {
+      state.ui().push<ScreenTag>(ScreenTag::Kind::Intro);
+    }
+  };
 
   {
     int ww;
     int wh;
     SDL_GetWindowSize(sdl_.window.get(), &ww, &wh);
     state.window_size(ww, wh);
-    context.cursor->update_scaled_cursor(ww, wh);
   }
-  create_some_players(state);
-
-  if (!exec_script_) {
-    state.staff_event_presenter(
-        [this](const core::restaurant::StaffEventData& event,
-               Restaurant* restaurant, std::function<void()> on_done) {
-          views::ui::staff::show_staff_event_dialog(context, event, restaurant,
-                                                    std::move(on_done));
-        });
-    state.monthly_entry_presenter(
-        [this, &state](
-            core::PlayerId pid, bool ask_speed,
-            std::function<void(std::optional<MonthlyCompetitionEntry>)> reply) {
-          views::ui::competition::ask_monthly_entry(
-              context, state, pid, ask_speed, std::move(reply));
-        });
-    state.turn_presenter(
-        std::make_unique<views::ui::TurnPresenterView>(context, state));
-  }
-
   // Main game loop prep
   DebugConsole debug_console;
   register_debug_commands(debug_console, state, context);
 
-  debug_console.add_command(debug::command::CommandDef{
-      .name = "screenshot",
-      .description = "Write the current screen to a PNG",
-      .help_text = R"(Renders whatever the UI stack has on top and saves it.
-
-A bare filename goes to the screenshots directory; give a path with a
-directory in it to put it somewhere else. Without an argument the name is
-the timestamp.
-
-Examples:
-  screenshot
-  screenshot stats.png
-  screenshot /tmp/stats.png
-)",
-      .args =
-          {
-              debug::command::ArgSpec{
-                  .name = "file",
-                  .type = debug::command::ArgType::String,
-                  .optional = true,
-                  .default_provider =
-                      debug::command::DefaultProvider::EmptyString,
-                  .description = "Where to write the PNG",
-              },
-          },
-      .handler = [this, &state](const debug::command::CommandContext& ctx)
-          -> debug::command::CommandResult {
-        const std::string name = ctx.args.empty() ? "" : ctx.string_arg(0);
-        const std::string path = ::resolve_screenshot_path(name);
-        if (!capture_screenshot(state, path)) {
-          return debug::command::CommandResult::error(
-              "Nothing was written to " + path);
-        }
-        return debug::command::CommandResult::success({"Wrote " + path});
-      },
-  });
+  for (auto& command : engine::make_screen_commands(*this, context, state)) {
+    debug_console.add_command(std::move(command));
+  }
 
   // And logger that logs to in-game console
   Logger::add_sink(debug_console.make_sink());
   Logger::info("Logger initialized");
 
-  OverlayManager overlays;
-  overlays.push<GameInfoLayer>(context, state);
-  overlays.push<TooltipLayer>(context, state, *tooltip_manager_);
-
-  overlays.push<TurnLockLayer>(context, state);
-
-  auto& popup_mgr = overlays.push<PopupManager>(context);
-  context.popup = &popup_mgr;
-  overlays.push<PauseLayer>(context, state);
-
-  auto& debug_mgr = overlays.push<DebugLayer>(context, state);
-  interaction_manager_->on_hot_changed(
-      [&debug_mgr] { debug_mgr.mark_dirty(); });
-
-  overlays.push<ConsoleLayer>(context, state, debug_console);
+  std::optional<Overlays> overlays;
+  std::unique_ptr<StatusDisplay> status_display;
 
   LoopState loop_state = {
-      .overlays = &overlays,
+      .overlays = nullptr,
       .game_state = state,
       .context = context,
       .screenshot_requested = false,
   };
 
+  // Everything from here on needs the original game's files.
+  auto begin_game = [&](const std::string& path) {
+    fileutils::game_data_path(path);
+    load_game_data();
+    create_some_players(state);
+
+    if (!exec_script_) {
+      state.staff_event_presenter(
+          [this](const core::restaurant::StaffEventData& event,
+                 Restaurant* restaurant, std::function<void()> on_done) {
+            views::ui::staff::show_staff_event_dialog(
+                context, event, restaurant, std::move(on_done));
+          });
+      state.monthly_entry_presenter(
+          [this,
+           &state](core::PlayerId pid, bool ask_speed,
+                   std::function<void(std::optional<MonthlyCompetitionEntry>)>
+                       reply) {
+            views::ui::competition::ask_monthly_entry(
+                context, state, pid, ask_speed, std::move(reply));
+          });
+      state.turn_presenter(
+          std::make_unique<views::ui::TurnPresenterView>(context, state));
+
+      // The shared status panel outlives every screen transition and survives
+      // a game load (its hub subscription is preserved), so it is created once
+      // here.
+      status_display =
+          std::make_unique<StatusDisplay>(context, state, state.status());
+      context.status_panel = status_display.get();
+    }
+
+    overlays.emplace(context, state, *tooltip_manager_, debug_console);
+    context.popup = overlays->popup;
+    interaction_manager_->on_hot_changed(
+        [&overlays] { overlays->debug->mark_dirty(); });
+    loop_state.overlays = &overlays->manager;
+
+    push_start_screen();
+  };
+
+  if (active_path.empty()) {
+    state.ui().push<ScreenTag>(ScreenTag::Kind::GameLocation);
+  }
+  else {
+    begin_game(active_path);
+  }
+
   // after input_manager_ is constructed and DefaultBindings applied
   GlobalActionHandler::Callbacks cb{
       .request_exit =
-          [&loop_state, &popup_mgr] {
-            popup_mgr.origin({150, 130});
-            popup_mgr.create<ConfirmPopup>(
-                "Are you sure you want to exit?", [loop_state](bool agree) {
-                  if (agree) {
-                    loop_state.game_state.request_exit();
-                  }
-                });
+          [&loop_state, &overlays] {
+            if (!overlays) {
+              loop_state.game_state.request_exit();
+              return;
+            }
+            PopupManager& popup = *overlays->popup;
+            popup.origin({150, 130});
+            popup.create<ConfirmPopup>("Are you sure you want to exit?",
+                                       [loop_state](bool agree) {
+                                         if (agree) {
+                                           loop_state.game_state.request_exit();
+                                         }
+                                       });
           },
       .request_screenshot =
           [&loop_state] { loop_state.screenshot_requested = true; },
@@ -392,7 +354,6 @@ Examples:
 
   Renderer renderer(sdl_, display_height_);
   renderer.set_cursor_manager(cursor_manager_.get());
-  cursor_manager_->software_mode(state.options().software_cursor);
   input_manager_->key_repeat(state.options().key_repeat_delay_ms,
                              state.options().key_repeat_interval_ms);
   if (!SDL_SetRenderVSync(
@@ -402,15 +363,15 @@ Examples:
                  SDL_GetError());
   }
 
-  // The shared status panel outlives every screen transition and survives a
-  // game load (its hub subscription is preserved), so it is created once here.
-  auto status_display =
-      std::make_unique<StatusDisplay>(context, state, state.status());
-  context.status_panel = status_display.get();
-
   renderer.add_layers(change_state(state));
-  std::ranges::for_each(overlays.renderables(),
-                        [&](Renderable* r) { renderer.add_layers(r); });
+  if (overlays) {
+    std::ranges::for_each(overlays->manager.renderables(),
+                          [&](Renderable* r) { renderer.add_layers(r); });
+  }
+
+  auto view_frozen = [&overlays] {
+    return overlays && overlays->manager.view_frozen();
+  };
 
   constexpr int MAX_TICKS_PER_FRAME = 5;
 
@@ -469,12 +430,14 @@ Examples:
       // Skip ticking view during fade-in to avoid missing animations/info
       bool should_skip_tick = renderer.is_fading();
 
-      if (!overlays.view_frozen() && !should_skip_tick) {
+      if (!view_frozen() && !should_skip_tick) {
         current_view_->tick();
       }
-      overlays.tick_all();
+      if (overlays) {
+        overlays->manager.tick_all();
+      }
 
-      if (!overlays.simulation_frozen()) {
+      if (overlays && !overlays->manager.simulation_frozen()) {
         state.turn().interruption_rate(current_view_->interruption_rate());
         state.clock_rate(current_view_->clock_rate());
         state.update(simulation_tick_ms);
@@ -498,6 +461,19 @@ Examples:
         apply_fullscreen(*enabled);
       }
 
+      if (state.pending_window_raise()) {
+        state.clear_window_raise_request();
+        SDL_RaiseWindow(sdl_.window.get());
+      }
+
+      if (auto path = state.pending_game_path()) {
+        state.clear_game_path_request();
+        configManager.active_game_path(*path);
+        configManager.save_config();
+        state.ui().pop();
+        begin_game(*path);
+      }
+
       if (auto crt = state.pending_crt_change()) {
         state.clear_crt_request();
         display_height_ = get_display_height(*crt);
@@ -507,6 +483,7 @@ Examples:
             display_height_, SDL_LOGICAL_PRESENTATION_LETTERBOX);
         renderer.set_display_height(display_height_);
         interaction_manager_->set_display_height(display_height_);
+        pointer_->display_height(display_height_);
         cursor_manager_->display_height(display_height_);
         auto [w, h] =
             window_size_for(state.options().double_size, display_height_);
@@ -529,9 +506,8 @@ Examples:
       // Don't transition while a popup is active; the popup must be
       // dismissed first so it shows on the current view, not the new one.
       // view_frozen() before ui_changed() so short-circuit preserves the flag.
-      const bool normal_ui_transition = !renderer.is_fading() &&
-                                        !overlays.view_frozen() &&
-                                        state.ui().ui_changed();
+      const bool normal_ui_transition =
+          !renderer.is_fading() && !view_frozen() && state.ui().ui_changed();
 
       if (fade_out_finished_and_pending || normal_ui_transition) {
         interaction_manager_->clear();
@@ -551,8 +527,10 @@ Examples:
           renderer.clear_layers();
         }
         renderer.add_layers(new_view);
-        std::ranges::for_each(overlays.renderables(),
-                              [&](Renderable* r) { renderer.add_layers(r); });
+        if (overlays) {
+          std::ranges::for_each(overlays->manager.renderables(),
+                                [&](Renderable* r) { renderer.add_layers(r); });
+        }
 
         if (fade_out_finished_and_pending) {
           loop_state.fade_on_next_transition = false;
@@ -570,13 +548,13 @@ Examples:
 
     if (loop_state.screenshot_requested) {
       renderer.with_current_frame([](SDL_Surface* surface) {
-        ::save_screenshot(surface, ::resolve_screenshot_path(""));
+        engine::save_screenshot(surface, engine::resolve_screenshot_path(""));
       });
       loop_state.screenshot_requested = false;
     }
 
     // For software cursor:
-    cursor_manager_->cursor_position(last_mouse_pos_);
+    cursor_manager_->cursor_position(pointer_->position());
     renderer.render();
 
     // Bring the window to the foreground. Raising only takes effect once the
@@ -606,6 +584,11 @@ Examples:
 
   // Make sure to reset view which might use GameState in their destructor:
   current_view_.reset();
+
+  if (fileutils::game_data_path().empty()) {
+    std::cout << "Didn't find the original game, giving up.\n";
+    return 1;
+  }
   return 0;
 }
 
@@ -676,19 +659,6 @@ ScreenPoint Game::global_cursor_pos_clamped() const {
 // in global_cursor_pos_clamped(). Currently disabled everywhere.
 constexpr bool USE_GLOBAL_CURSOR_POS = false;
 
-ScreenPoint
-Game::resolve_motion_position(const SDL_MouseMotionEvent& motion) const {
-  if constexpr (USE_GLOBAL_CURSOR_POS) {
-    return global_cursor_pos_clamped();
-  }
-  else {
-    return ScreenPoint{
-        std::clamp(static_cast<int>(motion.x), 0,
-                   DisplayConstants::SCREEN_WIDTH - 1),
-        std::clamp(static_cast<int>(motion.y), 0, display_height_ - 1)};
-  }
-}
-
 void Game::handle_events(LoopState& loop_state) {
   SDL_Event event;
   while (SDL_PollEvent(&event)) {
@@ -700,14 +670,13 @@ void Game::handle_events(LoopState& loop_state) {
     }
     if (event.type == SDL_EVENT_MOUSE_MOTION) {
       if (cursor_manager_->relative_mouse_mode()) {
-        // In relative mode the cursor is locked; accumulate relative deltas so
-        // the interaction system keeps receiving hover events at a virtual
-        // position that moves with the physical mouse.
-        last_mouse_pos_.x += static_cast<int>(event.motion.xrel);
-        last_mouse_pos_.y += static_cast<int>(event.motion.yrel);
+        pointer_->on_relative_motion(event.motion);
+      }
+      else if constexpr (USE_GLOBAL_CURSOR_POS) {
+        pointer_->position(global_cursor_pos_clamped());
       }
       else {
-        last_mouse_pos_ = resolve_motion_position(event.motion);
+        pointer_->on_motion(event.motion);
       }
     }
     else {
@@ -741,15 +710,15 @@ void Game::handle_events(LoopState& loop_state) {
   // mode, so that when the cursor becomes visible it appears in the same
   // position from before the relative mode.
   if (!cursor_manager_->relative_mouse_mode() && prev_relative_mouse_mode_) {
-    last_mouse_pos_ = pre_relative_mouse_pos_;
+    pointer_->position(pre_relative_mouse_pos_);
   }
 
-  interaction_manager_->update_mouse(last_mouse_pos_);
+  pointer_->update_interaction();
 
   // If relative mouse mode just got turned on, remember where we are.
   const bool now_relative = cursor_manager_->relative_mouse_mode();
   if (now_relative && !prev_relative_mouse_mode_) {
-    pre_relative_mouse_pos_ = last_mouse_pos_;
+    pre_relative_mouse_pos_ = pointer_->position();
   }
   prev_relative_mouse_mode_ = now_relative;
 }
@@ -796,25 +765,17 @@ bool Game::init(int display_height, const GameOptions& options) {
   bob_manager_ = std::make_unique<BobManager>(BobLoader());
   font_manager_ = std::make_unique<FontManager>(FontLoader());
   vga_manager_ = std::make_unique<VgaManager>(VgaLoader());
-  blitmap_manager_ = std::make_unique<BlitmapManager>(vga_manager_.get());
-  resources::load_palette_bank();
-  cursor_manager_ =
-      std::make_unique<CursorManager>(vga_manager_.get(), display_height);
   tooltip_manager_ = std::make_unique<TooltipManager>();
   interaction_manager_ = std::make_unique<views::ui::InteractionManager>(
       *tooltip_manager_, display_height);
+  pointer_ = std::make_unique<views::ui::PointerTracker>(*interaction_manager_,
+                                                         display_height);
   input_manager_ = std::make_unique<input::InputManager>();
   input::configure_default_bindings(*input_manager_);
   input::write_bindings_template(*input_manager_,
                                  platform_paths::bindings_file_path());
   input::apply_bindings_file(*input_manager_,
                              platform_paths::bindings_file_path());
-
-  // Initialize the SDL subsystems we use on top of the bootstrap.
-  if (!sdl_session_.init_subsystems(SDL_INIT_VIDEO | SDL_INIT_AUDIO |
-                                    SDL_INIT_GAMEPAD)) {
-    return false;
-  }
 
   // Create audio manager; init and asset loading are deferred to Intro
   // so the Microprose logo is already visible before the slow adl_init call.
@@ -842,7 +803,6 @@ bool Game::init(int display_height, const GameOptions& options) {
   }
 
   input_manager_->window(sdl_.window.get());
-  cursor_manager_->window(sdl_.window.get());
 
   // Set up the screen
   Logger::debug("Creating screen: w: {}, h: {}, bpp: {}",
@@ -863,12 +823,20 @@ bool Game::init(int display_height, const GameOptions& options) {
       sdl_.renderer.get(), DisplayConstants::SCREEN_WIDTH, display_height,
       SDL_LOGICAL_PRESENTATION_LETTERBOX);
 
-  cursor_manager_->base_cursor_mode(UiMode::Menu);
+  resources::load_fallback_palette();
+  cursor_manager_ =
+      std::make_unique<CursorManager>(vga_manager_.get(), display_height);
+  cursor_manager_->window(sdl_.window.get());
+  cursor_manager_->software_mode(options.software_cursor);
+  int window_width = 0;
+  int window_height = 0;
+  SDL_GetWindowSize(sdl_.window.get(), &window_width, &window_height);
+  cursor_manager_->update_scaled_cursor(window_width, window_height);
+  cursor_manager_->show_cursor();
 
   context.bob = bob_manager_.get();
   context.font = font_manager_.get();
   context.vga = vga_manager_.get();
-  context.blitmap = blitmap_manager_.get();
   context.cursor = cursor_manager_.get();
   context.interaction = interaction_manager_.get();
   context.input = input_manager_.get();
@@ -878,14 +846,7 @@ bool Game::init(int display_height, const GameOptions& options) {
 }
 
 bool Game::capture_screenshot(GameState& gs, const std::string& path) {
-  // Screens draw the status panel from the context; a scripted run has not
-  // made one.
-  std::unique_ptr<StatusDisplay> temporary_status;
-  if (!context.status_panel) {
-    temporary_status =
-        std::make_unique<StatusDisplay>(context, gs, gs.status());
-    context.status_panel = temporary_status.get();
-  }
+  TemporaryStatusPanel status(context, gs);
 
   auto result = ViewFactory::create(context, gs);
   bool saved = false;
@@ -894,14 +855,35 @@ bool Game::capture_screenshot(GameState& gs, const std::string& path) {
     renderer.add_layers(result.view.get());
     renderer.render();
     renderer.with_current_frame([&](SDL_Surface* surface) {
-      saved = ::save_screenshot(surface, path);
+      saved = engine::save_screenshot(surface, path);
     });
   }
 
-  if (temporary_status) {
-    context.status_panel = nullptr;
-  }
   return saved;
+}
+
+bool Game::write_screen_as_vga(GameState& gs, const std::string& path) {
+  TemporaryStatusPanel status(context, gs);
+
+  auto result = ViewFactory::create(context, gs);
+  if (!result.view) {
+    return false;
+  }
+
+  Surface surface(DisplayConstants::SCREEN_WIDTH,
+                  DisplayConstants::SCREEN_HEIGHT, gfx::PaletteHandle{0});
+  for (const LayerInfo& layer : result.view->get_layers()) {
+    Surface layer_surface(layer.area.w, layer.area.h, gfx::PaletteHandle{0});
+    RenderContext render_context{&layer_surface};
+    layer.view->render(render_context);
+    surface.blit_raw(layer_surface, layer.area.point());
+  }
+
+  if (!fileutils::write_bytes(path, VgaWriter::to_bytes(surface))) {
+    Logger::warn("Could not write {}", path);
+    return false;
+  }
+  return true;
 }
 
 Renderable* Game::change_state(GameState& gs) {
@@ -915,6 +897,13 @@ Renderable* Game::change_state(GameState& gs) {
   context.ui_mode = result.ui_mode;
 
   return current_view_.get();
+}
+
+void Game::load_game_data() {
+  resources::load_palette_bank();
+  blitmap_manager_ = std::make_unique<BlitmapManager>(vga_manager_.get());
+  cursor_manager_->base_cursor_mode(UiMode::Menu);
+  context.blitmap = blitmap_manager_.get();
 }
 
 void Game::apply_fullscreen(bool enabled) {

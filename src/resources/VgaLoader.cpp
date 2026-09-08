@@ -19,8 +19,6 @@
 #include "resources/Vga.h"
 #include "resources/util/FileUtils.h"
 
-#define DOS_VGA_HEADER_SIZE 7
-
 Surface VgaLoader::load(const std::string& filename) {
   std::string actual_path = filename + ".vga";
   Logger::debug("Loading VGA file: {}", actual_path);
@@ -39,9 +37,9 @@ Surface VgaLoader::load(const std::string& filename) {
   auto length =
       static_cast<std::size_t>(static_cast<std::streamoff>(length_pos));
 
-  // Allocate a buffer of this length and read the file in:
-  std::vector<char> raw_buffer(length);
-  is.read(raw_buffer.data(), static_cast<std::streamsize>(length));
+  std::vector<uint8_t> raw_buffer(length);
+  is.read(reinterpret_cast<char*>(raw_buffer.data()),
+          static_cast<std::streamsize>(length));
   is.close();
 
   // DOS RLE format
@@ -50,7 +48,7 @@ Surface VgaLoader::load(const std::string& filename) {
 
   // Now that we know the size of the file, we can find the rle_threshold which
   // is stored in the last byte of the data.
-  int rle_threshold = static_cast<uint8_t>(raw_buffer[length]) - 1;
+  int rle_threshold = raw_buffer[length] - 1;
 
   // Determine width and height
   auto width = endian::u16le(raw_buffer[0], raw_buffer[1]);
@@ -65,14 +63,13 @@ Surface VgaLoader::load(const std::string& filename) {
   std::vector<uint8_t> picture(static_cast<size_t>(width * height));
 
   // This is the start point of the data in the file:
-  std::size_t bytes_processed_count = DOS_VGA_HEADER_SIZE + 1;
+  std::size_t bytes_processed_count = VGA_HEADER_SIZE;
   std::size_t picture_index = 0;
   std::size_t expected_pixels = static_cast<std::size_t>(width * height);
 
   while (bytes_processed_count < length) {
     // Read the control byte
-    uint8_t init_data =
-        static_cast<uint8_t>(raw_buffer[bytes_processed_count++]);
+    uint8_t init_data = raw_buffer[bytes_processed_count++];
     if (init_data > rle_threshold) {
       // Repeated pixel branch: the value indicates a run.
       if (bytes_processed_count >= length) {
@@ -80,8 +77,7 @@ Surface VgaLoader::load(const std::string& filename) {
                      "after control byte > rle_threshold.\n";
         break;
       }
-      auto actual_data =
-          static_cast<uint8_t>(raw_buffer[bytes_processed_count++]);
+      auto actual_data = raw_buffer[bytes_processed_count++];
       auto repeat_count = static_cast<std::size_t>(init_data - rle_threshold);
       if ((picture_index + repeat_count) > expected_pixels) {
         std::cerr << "DEBUG: ERROR: Repeated branch would overflow picture "
@@ -111,8 +107,7 @@ Surface VgaLoader::load(const std::string& filename) {
         break;
       }
       for (std::size_t i = 0; i < literal_count; i++) {
-        auto actual_data =
-            static_cast<uint8_t>(raw_buffer[bytes_processed_count + i]);
+        auto actual_data = raw_buffer[bytes_processed_count + i];
         std::fill_n(&picture[picture_index + i], 1, actual_data);
       }
       bytes_processed_count += literal_count;
@@ -133,5 +128,5 @@ Surface VgaLoader::load(const std::string& filename) {
   uint8_t index = palette_opt.value_or(0);
 
   return Surface::from_indexed(std::move(picture), width, height,
-                               gfx::PaletteHandle{index}, 2);
+                               gfx::PaletteHandle{index});
 }

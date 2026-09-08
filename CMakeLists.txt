@@ -344,6 +344,27 @@ add_executable(plegacy
     ${ENGINE_PLEGACY_SOURCES}
 )
 
+# ---------------------------------------------------------
+#  Data directory
+#
+#  The files shipped with the game live in data/ and are read at runtime from
+#  next to the executable, or from the bundle's Resources on macOS. Copying them
+#  into the build tree is what lets a build run in place.
+#  -----------------------------------------------------
+if(APPLE)
+    set(PLEGACY_DATA_DEST "$<TARGET_BUNDLE_CONTENT_DIR:plegacy>/Resources/data")
+else()
+    set(PLEGACY_DATA_DEST "$<TARGET_FILE_DIR:plegacy>/data")
+endif()
+
+add_custom_target(plegacy_data ALL
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${CMAKE_CURRENT_SOURCE_DIR}/data" "${PLEGACY_DATA_DEST}"
+    COMMENT "Copying data directory"
+    VERBATIM
+)
+add_dependencies(plegacy plegacy_data)
+
 if(VECTORIZE_REPORT_FLAGS)
     target_compile_options(game_plegacy PRIVATE ${VECTORIZE_REPORT_FLAGS})
     target_compile_options(plegacy PRIVATE ${VECTORIZE_REPORT_FLAGS})

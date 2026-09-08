@@ -43,6 +43,10 @@ New-Item -ItemType Directory -Path $OutDir | Out-Null
 Copy-Item $ExePath $OutDir
 Write-Host "Copied: $ExeName"
 
+# Copy the data directory (placed next to the executable by the build)
+Copy-Item -Recurse (Join-Path $BuildDir "data") (Join-Path $OutDir "data")
+Write-Host "Copied: data\"
+
 # Copy DLLs found in the build directory
 foreach ($dll in $WantedDlls) {
     $src = Join-Path $BuildDir $dll

@@ -34,6 +34,7 @@
 #include "views/screens/AnimatedStats.h"
 #include "views/screens/EuroMap.h"
 #include "views/screens/FullscreenStatus.h"
+#include "views/screens/GameLocationScreen.h"
 #include "views/screens/GameOver.h"
 #include "views/screens/GlobalStats.h"
 #include "views/screens/Intro.h"
@@ -205,6 +206,9 @@ ViewFactory::Result ViewFactory::create(GameContext& context, GameState& gs) {
               ui_mode = UiMode::Menu;
             }
             switch (s.kind) {
+            case K::GameLocation:
+              view = std::make_unique<GameLocationScreen>(context, gs);
+              break;
             case K::Intro:
               view = std::make_unique<Intro>(context, gs);
               break;

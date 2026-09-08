@@ -1416,6 +1416,22 @@ std::optional<bool> GameState::pending_double_size_change() const {
 
 void GameState::clear_double_size_request() { pending_double_size_.reset(); }
 
+void GameState::request_game_path(std::string path) {
+  pending_game_path_ = std::move(path);
+}
+
+std::optional<std::string> GameState::pending_game_path() const {
+  return pending_game_path_;
+}
+
+void GameState::clear_game_path_request() { pending_game_path_.reset(); }
+
+void GameState::request_window_raise() { pending_window_raise_ = true; }
+
+bool GameState::pending_window_raise() const { return pending_window_raise_; }
+
+void GameState::clear_window_raise_request() { pending_window_raise_ = false; }
+
 void GameState::request_fullscreen_change(bool enabled) {
   pending_fullscreen_ = enabled;
 }

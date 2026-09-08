@@ -37,7 +37,6 @@ echo "" >> "$OUTFILE"
 echo "set(ENGINE_PLEGACY_SOURCES" >> "$OUTFILE"
 find src/engine -type f \( -name '*.cpp' -o -name '*.c' \) | sort | sed "s|^|    |" >> "$OUTFILE"
 find src -maxdepth 1 \( -name '*.cpp' \) | sort | sed "s|^|    |" >> "$OUTFILE"
-find third_party/tinyfiledialogs/ \( -name '*.c' \) | sort | sed "s|^|    |" >> "$OUTFILE"
 echo ")" >> "$OUTFILE"
 
 

@@ -133,6 +133,14 @@ public:
   [[nodiscard]] std::optional<bool> pending_crt_change() const;
   void clear_crt_request();
 
+  void request_game_path(std::string path);
+  [[nodiscard]] std::optional<std::string> pending_game_path() const;
+  void clear_game_path_request();
+
+  void request_window_raise();
+  [[nodiscard]] bool pending_window_raise() const;
+  void clear_window_raise_request();
+
   // Game setup
   void begin_initialization();
   init::Config& initializer();
@@ -521,6 +529,8 @@ private:
   RealEstate real_estate_{*this};
   std::optional<bool> pending_double_size_;
   std::optional<bool> pending_fullscreen_;
+  std::optional<std::string> pending_game_path_;
+  bool pending_window_raise_{false};
   std::optional<bool> pending_crt_;
   core::newspaper::ArticleDatabase article_database_;
   core::events::CareerLog career_log_;

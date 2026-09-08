@@ -19,6 +19,9 @@ namespace gfx {
 
 constexpr uint8_t TRANSPARENT = 0;
 
+// Original assets are scaled up by this on load.
+constexpr int asset_pixel_scale = 2;
+
 class Surface {
 public:
   Surface(Size size, std::optional<PaletteHandle> palette = std::nullopt,
@@ -37,7 +40,7 @@ public:
   [[nodiscard]] static Surface from_indexed(std::span<const uint8_t> src,
                                             int width, int height,
                                             PaletteHandle palette,
-                                            int scale = 2);
+                                            int scale = asset_pixel_scale);
 
   [[nodiscard]] int width() const noexcept { return width_; }
   [[nodiscard]] int height() const noexcept { return height_; }

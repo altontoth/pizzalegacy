@@ -11,10 +11,14 @@
 namespace platform_paths {
 
 // Must be called after SDL_Init(). Resolves the platform-appropriate
-// preferences directory via SDL_GetPrefPath.
+// preferences directory via SDL_GetPrefPath and the data directory via
+// SDL_GetBasePath.
 void init();
 
 const std::string& base_dir();
+// The files shipped with the game: next to the executable on Windows and
+// Linux, in the bundle's Resources on macOS.
+const std::string& data_dir();
 std::string config_file_path();
 std::string bindings_file_path();
 std::string saves_dir();

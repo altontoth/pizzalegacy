@@ -53,6 +53,7 @@ mkdir -p "$APPDIR/usr/share/licenses/plegacy"
 mkdir -p "$APPDIR/usr/share/doc/plegacy"
 
 cp "$BINARY" "$APPDIR/usr/bin/plegacy"
+cp -r "$BUILD_DIR/data" "$APPDIR/usr/bin/data"
 cp "assets/plegacy.desktop" "$APPDIR/usr/share/applications/plegacy.desktop"
 
 cp LICENSES/* "$APPDIR/usr/share/licenses/plegacy/"

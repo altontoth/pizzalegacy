@@ -17,6 +17,22 @@
 
 namespace resources {
 
+namespace {
+
+struct CursorColor {
+  uint8_t index;
+  gfx::Color color;
+};
+
+// The three colors the mouse cursor is drawn in, taken from palette 38.
+constexpr CursorColor cursor_colors[] = {
+    {fallback_palette::cursor_red, gfx::Color{240, 96, 80}},
+    {18, gfx::Color{240, 144, 128}},
+    {19, gfx::Color{240, 160, 160}},
+};
+
+} // namespace
+
 void load_palette_bank() {
   // Load DOS PALETTE.E: 71 palettes * 256 colors * 3 bytes (6-bit RGB)
   constexpr std::size_t DOS_FILE_SIZE = gfx::VGA_PALETTE_COUNT *
@@ -34,6 +50,15 @@ void load_palette_bank() {
   }
 
   gfx::PaletteBank::instance().load_dos_palette(dos_raw);
+}
+
+void load_fallback_palette() {
+  std::vector<gfx::Color> palette(gfx::COLORS_PER_PALETTE, gfx::Color{0, 0, 0});
+  palette[fallback_palette::white] = gfx::Color{252, 252, 252};
+  for (const CursorColor& color : cursor_colors) {
+    palette[color.index] = color.color;
+  }
+  gfx::PaletteBank::instance().load_placeholder(palette);
 }
 
 } // namespace resources

@@ -1,0 +1,68 @@
+#!/usr/bin/env python3
+"""Renders the game location screen into data/game_location.vga.
+
+The screen is drawn with the original game's fonts, which are not there yet
+when the game asks where the original game is. So it is rendered here, on a
+machine that has the game, and shipped in the data directory.
+
+Run it after editing the text in views/screens/GameLocationContent.h:
+
+    tools/gen_game_location_screen
+"""
+
+import argparse
+import os
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from plcheck import game_path, resolve_binary  # noqa: E402
+
+REPO = Path(__file__).resolve().parent.parent
+OUT_VGA = REPO / "data" / "game_location.vga"
+
+
+def render(binary: Path, out_vga: Path, workdir: Path, config: Path) -> None:
+    out_vga.unlink(missing_ok=True)
+    script = workdir / "render.plc"
+    script.write_text(f"nav gameloc\nsavevga {out_vga}\n")
+    result = subprocess.run(
+        [str(binary), "--config", str(config), "--exec", str(script)],
+        capture_output=True,
+        text=True,
+        env=os.environ | {"SDL_VIDEODRIVER": "dummy", "SDL_AUDIODRIVER": "dummy"},
+    )
+    if result.returncode != 0 or not out_vga.exists():
+        sys.exit(f"error: rendering failed\n{result.stdout}{result.stderr}")
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--binary", help="game binary to render with")
+    args = parser.parse_args()
+
+    binary = resolve_binary(args.binary)
+
+    original = game_path()
+    if not original:
+        sys.exit(
+            "error: no game_path in the settings file; "
+            "run the game once so it knows where the original is"
+        )
+
+    with tempfile.TemporaryDirectory() as tmp:
+        workdir = Path(tmp)
+        # A config of its own, so a run of this tool cannot rewrite the
+        # player's settings.
+        config = workdir / "settings.conf"
+        config.write_text(f"game_path={original}\n")
+        render(binary, OUT_VGA, workdir, config)
+        print(f"{OUT_VGA.relative_to(REPO)}: {OUT_VGA.stat().st_size} bytes")
+
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -10,12 +10,9 @@
 #include <array>
 #include <charconv>
 #include <cstdlib>
-#include <filesystem>
 #include <fstream>
 #include <string>
 #include <string_view>
-#include <tinyfiledialogs/tinyfiledialogs.h>
-#include <vector>
 #include "core/state/GameOptions.h"
 #include "engine/Fatal.h"
 #include "engine/Logger.h"
@@ -142,8 +139,11 @@ const auto option_defs = std::to_array({
         "paris, any_city or all_cities; no options screen entry"),
 });
 
-// Settings that take a string instead of being one of a set of options.
-constexpr std::string_view non_option_keys[] = {"game_path_english"};
+// Where the original game lives.
+constexpr std::string_view game_path_key = "game_path";
+
+// Settings the game stores that are not options.
+constexpr std::string_view non_option_keys[] = {game_path_key};
 
 bool known_key(std::string_view key) {
   const auto matches = [key](std::string_view known) { return known == key; };
@@ -223,101 +223,6 @@ void ConfigManager::save_config() {
   }
 }
 
-// Returns the directory containing PT.EXE if found anywhere under `base`,
-// checking known Steam and DOSBox wrapper subdirectory layouts. Empty if not
-// found.
-static std::string probe_for_dos_game(const std::string& base) {
-  namespace fs = std::filesystem;
-  fs::path b(base);
-
-  std::vector<fs::path> candidates;
-  auto add = [&](auto&& p) { candidates.push_back(b / p); };
-
-  add(".");
-  add("game");
-  add("Pizza Connection");
-  add("Pizza Connection/game");
-  add("steamapps/common/Pizza Connection");
-  add("steamapps/common/Pizza Connection/game");
-
-#ifdef __APPLE__
-  add("Pizza Connection.app/Contents/Resources/game");
-  add("Contents/Resources/game");
-  add("Pizza Connection/Pizza Connection.app/Contents/Resources/game");
-  add("steamapps/common/Pizza Connection/Pizza "
-      "Connection.app/Contents/Resources/game");
-#endif
-
-  for (const auto& candidate : candidates) {
-    if (fileutils::fexists((candidate / "PT.EXE").string())) {
-      return candidate.string();
-    }
-  }
-  return {};
-}
-
-#ifdef __APPLE__
-static constexpr const char* location_hint =
-    "Select the folder containing your original Pizza Tycoon / Pizza "
-    "Connection game files.\n\n"
-    "Steam users: you can point to your Steam directory, your steamapps/common "
-    "folder, or the Pizza Connection folder. The game inside the app bundle "
-    "will be found automatically.";
-#elif defined(_WIN32)
-static constexpr const char* location_hint =
-    "Select the folder containing your original Pizza Tycoon / Pizza "
-    "Connection game files.\n\n"
-    "Steam users: you can point to your Steam directory, your "
-    "steamapps\\common folder, or directly to the Pizza Connection folder.\n\n"
-    "GOG users: point to your GOG Galaxy directory or directly to the Pizza "
-    "Connection folder.";
-#else
-static constexpr const char* location_hint =
-    "Select the folder containing your original Pizza Tycoon / Pizza "
-    "Connection game files.\n\n"
-    "Steam users: you can point to your Steam directory, your steamapps/common "
-    "folder, or the Pizza Connection folder.";
-#endif
-
-std::string ConfigManager::prompt_for_game_location() {
-  tinyfd_messageBox("Note", location_hint, "ok", "info", 1);
-
-  bool give_up = false;
-  bool game_found = false;
-  std::string selected_folder;
-
-  while (!give_up && !game_found) {
-    const char* folder_name =
-        tinyfd_selectFolderDialog("Select original game location", nullptr);
-    if (!folder_name) {
-      give_up = true;
-    }
-    else {
-      std::string dos_path = probe_for_dos_game(folder_name);
-      if (!dos_path.empty()) {
-        selected_folder = dos_path;
-        game_found = true;
-        Logger::info("Detected DOS version (PT.EXE) at: {}", dos_path);
-      }
-      else {
-        tinyfd_messageBox(
-            "Error",
-            "Could not find PT.EXE in this directory or any known "
-            "Steam/DOSBox subdirectory.",
-            "ok", "error", 1);
-      }
-    }
-  }
-
-  if (!game_found) {
-    return std::string{};
-  }
-
-  value("game_path_english", selected_folder);
-
-  return selected_folder;
-}
-
 const std::string ConfigManager::value(const std::string& key) const {
   static const std::string empty{};
   auto it = config_.find(key);
@@ -360,5 +265,9 @@ GameOptions ConfigManager::load_options() const {
 }
 
 std::string ConfigManager::active_game_path() const {
-  return value("game_path_english");
+  return value(std::string(game_path_key));
+}
+
+void ConfigManager::active_game_path(const std::string& path) {
+  value(std::string(game_path_key), path);
 }

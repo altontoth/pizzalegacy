@@ -133,6 +133,7 @@ set(GAME_PLEGACY_SOURCES
     src/views/screens/AnimatedStats.cpp
     src/views/screens/EuroMap.cpp
     src/views/screens/FullscreenStatus.cpp
+    src/views/screens/GameLocationScreen.cpp
     src/views/screens/GameOver.cpp
     src/views/screens/GlobalStats.cpp
     src/views/screens/InputPanel.cpp
@@ -258,20 +259,24 @@ set(GAME_PLEGACY_SOURCES
     src/resources/PaletteLoader.cpp
     src/resources/Vga.cpp
     src/resources/VgaLoader.cpp
+    src/resources/VgaWriter.cpp
     src/resources/util/FileUtils.cpp
     src/resources/util/TextEncoding.cpp
 )
 
 set(ENGINE_PLEGACY_SOURCES
     src/engine/Game.cpp
+    src/engine/GameLocationPrompt.cpp
     src/engine/Logger.cpp
     src/engine/Math.cpp
     src/engine/PlatformPaths.cpp
     src/engine/Random.cpp
     src/engine/Renderer.cpp
     src/engine/RendererManager.cpp
+    src/engine/Screenshot.cpp
     src/engine/audio/AudioManager.cpp
     src/engine/audio/VocDecoder.cpp
+    src/engine/debug/ScreenCommands.cpp
     src/engine/geom/Camera.cpp
     src/engine/gfx/ColorIndex.cpp
     src/engine/gfx/Draw.cpp
@@ -289,8 +294,8 @@ set(ENGINE_PLEGACY_SOURCES
     src/engine/input/backend/SDLKeymap.cpp
     src/engine/ui/CursorManager.cpp
     src/engine/ui/InteractionManager.cpp
+    src/engine/ui/PointerTracker.cpp
     src/Main.cpp
-    third_party/tinyfiledialogs/tinyfiledialogs.c
 )
 set(PLEGACY_HEADERS
     src/CoreTypes.h
@@ -493,6 +498,7 @@ set(PLEGACY_HEADERS
     src/engine/FpsManager.h
     src/engine/Game.h
     src/engine/GameClock.h
+    src/engine/GameLocationPrompt.h
     src/engine/Geometry.h
     src/engine/LayerInfo.h
     src/engine/Logger.h
@@ -508,12 +514,14 @@ set(PLEGACY_HEADERS
     src/engine/SDLContext.h
     src/engine/SDLSession.h
     src/engine/SDL_include.h
+    src/engine/Screenshot.h
     src/engine/Size.h
     src/engine/StringUtil.h
     src/engine/TypedPoint.h
     src/engine/adapters/SDLRectAdapter.h
     src/engine/audio/AudioManager.h
     src/engine/audio/VocDecoder.h
+    src/engine/debug/ScreenCommands.h
     src/engine/geom/Camera.h
     src/engine/geom/GeomFormat.h
     src/engine/geom/PxOffset.h
@@ -549,6 +557,7 @@ set(PLEGACY_HEADERS
     src/engine/ui/InteractionEvent.h
     src/engine/ui/InteractionLayers.h
     src/engine/ui/InteractionManager.h
+    src/engine/ui/PointerTracker.h
     src/engine/ui/TextAnchor.h
     src/engine/ui/TooltipManager.h
     src/engine/ui/TooltipRequest.h
@@ -573,6 +582,7 @@ set(PLEGACY_HEADERS
     src/resources/Vga.h
     src/resources/VgaLoader.h
     src/resources/VgaManager.h
+    src/resources/VgaWriter.h
     src/resources/util/ByteReader.h
     src/resources/util/FileUtils.h
     src/resources/util/TextEncoding.h
@@ -613,6 +623,8 @@ set(PLEGACY_HEADERS
     src/views/screens/AnimatedStats.h
     src/views/screens/EuroMap.h
     src/views/screens/FullscreenStatus.h
+    src/views/screens/GameLocationContent.h
+    src/views/screens/GameLocationScreen.h
     src/views/screens/GameOver.h
     src/views/screens/GlobalStats.h
     src/views/screens/InputPanel.h
@@ -742,7 +754,6 @@ set(PLEGACY_HEADERS
     src/views/viewers/VgaViewer.h
     third_party/magic_enum/magic_enum.hpp
     third_party/nlohmann/json.hpp
-    third_party/tinyfiledialogs/tinyfiledialogs.h
     third_party/utfcpp/utf8.h
     third_party/utfcpp/utf8/checked.h
     third_party/utfcpp/utf8/core.h
