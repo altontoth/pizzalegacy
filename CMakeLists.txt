@@ -430,6 +430,28 @@ if(PLEGACY_ENABLE_MUSIC)
   endif()
 endif()
 
+# ---------------------------------------------------------
+#  Windows runtime DLLs
+#
+#  Copy the DLLs the linker resolved next to the executable, so the build tree
+#  runs in place. The MSVC runtime goes with them: the third-party DLLs are
+#  built against it and a clean Windows install has no redistributable.
+# -----------------------------------------------------
+if(WIN32)
+    # SKIP fills CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS without adding install rules.
+    set(CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS_SKIP TRUE)
+    include(InstallRequiredSystemLibraries)
+
+    add_custom_command(TARGET plegacy POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy -t "$<TARGET_FILE_DIR:plegacy>"
+                $<TARGET_RUNTIME_DLLS:plegacy>
+                ${CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS}
+        COMMAND_EXPAND_LISTS
+        COMMENT "Copying runtime DLLs next to the executable"
+        VERBATIM
+    )
+endif()
+
 
 # ---------------------------------------------------------
 #  Developer convenience targets: "format" and "tags"
