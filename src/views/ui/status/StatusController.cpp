@@ -63,7 +63,6 @@ void StatusController::show_city_type_name(const CityCtx& c, int index) {
   StatusMsg msg{
       .payload = build_city_type_name(c, index),
       .scope = StatusScope::City,
-      .ttl = std::chrono::milliseconds{6000},
   };
   emit_status_msg(msg);
 }

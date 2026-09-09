@@ -7,7 +7,6 @@
 #pragma once
 
 #include <array>
-#include <chrono>
 #include <deque>
 #include <functional>
 #include <optional>
@@ -21,6 +20,9 @@
 enum class StatusSeverity { Info, Warning, Error };
 enum class StatusScope { Global, City, Restaurant, View };
 
+// How long a message holds the panel, in clock ticks (one per game second).
+constexpr int default_display_ticks = 6;
+
 struct StatusMsg {
   // Either raw text banner or a full recipe
   std::variant<std::string, StatusDisplayRecipe> payload;
@@ -29,7 +31,7 @@ struct StatusMsg {
   StatusScope scope = StatusScope::Global;
 
   uint8_t color = 0;
-  std::optional<std::chrono::milliseconds> ttl{6000};
+  std::optional<int> display_ticks{default_display_ticks};
   // For queued messages: wait this many 10-minute blocks before showing.
   // Converted to an absolute not_before_block at enqueue time.
   int delay_blocks{0};
@@ -92,19 +94,19 @@ public:
 
   // Queued notification (15-slot array, time-block threshold, yellow)
   void post(StatusMsg m);
-  // Direct message (immediate, preempts queued without consuming its slot)
+  // Direct message: goes straight to the panel, replacing whatever is there
   void post_direct(StatusMsg m);
   // Wipe all queued slots (call at day start)
   void clear_queue();
-  // Force back to baseline (clears whatever is currently showing)
+  // Force back to baseline (clears whatever is currently showing). Pending
+  // queue slots survive and show when their time comes.
   void clear_overlay();
 
   // Suppress all posts (jail/holiday: events process but player sees nothing)
   void suppress(bool s) { suppressed_ = s; }
 
   // Panel interactions
-  void show_baseline(); // Left-click: dismiss current, show baseline
-  void show_previous(); // Right-click: replay last message with fresh TTL
+  void show_previous(); // Right-click: replay the last message
 
   // Header freeze: hold the date/time snapshot shown in the panel header while
   // turn-boundary invoice popups are up. Money stays live via frozen_player().
@@ -121,8 +123,8 @@ public:
     return frozen_player_;
   }
 
-  // Game loop hook
-  void update(uint64_t dt_ms);
+  // Counts down the message on the panel, one tick per game second.
+  void tick();
 
   // For future scroll list UI
   const std::deque<EphemeralEntry>& ephemeral_log() const noexcept {
@@ -136,16 +138,9 @@ private:
     int not_before_block{0};
   };
 
-  // Currently-showing direct message (preempts queued)
-  struct ShowingDirect {
+  struct Showing {
     StatusMsg msg;
-    std::chrono::milliseconds remaining_ms;
-  };
-
-  // Currently-showing queued message + which slot it occupies
-  struct ShowingQueued {
-    int slot_idx;
-    std::chrono::milliseconds remaining_ms;
+    int remaining_ticks;
   };
 
   void rebuild_and_push();
@@ -153,6 +148,7 @@ private:
   // Scan queue_ for the next eligible message and start showing it.
   // Returns true if a message was found and started.
   bool scan_queue();
+  void show(StatusMsg m);
   void log_ephemeral(const StatusMsg& m);
 
   GameTime* time_;
@@ -165,8 +161,7 @@ private:
   static constexpr int QUEUE_SIZE = 15;
   std::array<std::optional<QueueSlot>, QUEUE_SIZE> queue_{};
 
-  std::optional<ShowingDirect> showing_direct_;
-  std::optional<ShowingQueued> showing_queued_;
+  std::optional<Showing> showing_;
 
   StatusDisplayRecipe current_; // last published composite
 

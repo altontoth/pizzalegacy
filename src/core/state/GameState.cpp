@@ -112,7 +112,7 @@ void GameState::post_insufficient_funds() {
   status_hub_.post_direct({
       .payload = "YOU DON'T HAVE ENOUGH MONEY!!!",
       .scope = StatusScope::Global,
-      .ttl = std::chrono::milliseconds{3000},
+      .display_ticks = 3,
   });
 }
 
@@ -363,6 +363,8 @@ void GameState::advance_second() {
     second_in_block_ = 0;
   }
 
+  status_hub_.tick();
+
   if (clock_rate_ != ClockRate::Running) {
     return;
   }
@@ -585,8 +587,6 @@ void GameState::update(uint32_t elapsed_ms) {
   if (active_player_.value < 0) {
     return;
   }
-
-  status_hub_.update(elapsed_ms);
 
   // Handle end-of-turn processing delay between restaurants,
   // so that we have visible changes to the money per restaurant processed.

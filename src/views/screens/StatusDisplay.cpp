@@ -39,7 +39,7 @@ void StatusDisplay::tick() {
           return;
         }
         if (ie.button == views::ui::MouseButton::Left) {
-          state_.status().show_baseline();
+          state_.status().clear_overlay();
         }
         else if (ie.button == views::ui::MouseButton::Right) {
           state_.status().show_previous();

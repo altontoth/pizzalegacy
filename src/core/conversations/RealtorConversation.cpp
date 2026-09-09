@@ -337,7 +337,6 @@ bool RealtorConversation::advance_proposal(bool agree) {
                   "The scrapdealer is happy now!!",
                   furniture_amount + oven_amount),
               .scope = StatusScope::Global,
-              .ttl = std::chrono::milliseconds{6000},
           });
 
           auto date = state_.time().current_date();
