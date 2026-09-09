@@ -170,6 +170,7 @@ void InputManager::end_text_input() {
   text_active_ = false;
   text_sink_ = nullptr;
   repeat_ = {};
+  release_owned_by_text_ = keys_down_;
 }
 
 bool InputManager::text_input_active() const noexcept { return text_active_; }
@@ -325,6 +326,8 @@ void InputManager::evaluate_bindings_for_key_down(Key k, Mod mods) {
 }
 
 void InputManager::evaluate_bindings_for_key_up(Key k) {
+  const bool text_owns_release = release_owned_by_text_.erase(k) > 0;
+
   // Match on the key alone: the held modifiers may have changed since the
   // press, and a stricter match would leave the action stuck down.
   for (const auto& [bind, bound_action] : button_bindings_) {
@@ -336,6 +339,10 @@ void InputManager::evaluate_bindings_for_key_up(Key k) {
       a = Action::CancelInput;
     }
 
+    if (text_owns_release) {
+      actions_down_.erase(a);
+      continue;
+    }
     dispatch_action_release(a);
   }
 }

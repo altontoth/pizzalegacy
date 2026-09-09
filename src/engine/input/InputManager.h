@@ -145,6 +145,8 @@ private:
   // Text input session
   InputListener* text_sink_{nullptr};
   bool text_active_{false};
+  // Keys held when a text session ended; the session owns their release.
+  std::unordered_set<Key> release_owned_by_text_{};
 
   // Physical key state
   std::unordered_set<Key> keys_down_{};
