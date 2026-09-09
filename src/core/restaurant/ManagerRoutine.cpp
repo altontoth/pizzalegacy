@@ -33,6 +33,8 @@ static constexpr Money price_adjust_down = 40_c;
 
 namespace {
 constexpr int opening_block = Restaurant::DEFAULT_OPENING_TIME.to_block();
+// Shopping is reported an hour after opening, one block per category.
+constexpr int shopping_report_block = opening_block + 6;
 } // namespace
 
 ManagerRoutine::ManagerRoutine(Restaurant& restaurant, GameState& game_state)
@@ -271,6 +273,12 @@ void ManagerRoutine::do_shopping() {
     }
 
     if (category_qty > 0) {
+      const int display_block =
+          shopping_report_block + static_cast<int>(category);
+      int delay = display_block - game_state_.time().current_block_of_day();
+      if (delay < 0) {
+        delay = 0;
+      }
       game_state_.status().post(StatusMsg{
           .payload = compat::format(
               "Your manager goes shopping for {} and buys {} at {} for {} "
@@ -279,6 +287,7 @@ void ManagerRoutine::do_shopping() {
               category_total, best_discount),
           .severity = StatusSeverity::Info,
           .scope = StatusScope::Restaurant,
+          .delay_blocks = delay,
       });
     }
   }

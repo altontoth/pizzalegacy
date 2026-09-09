@@ -1048,6 +1048,9 @@ TurnOrchestrator::execute_pipeline_step(const turn::Step& step) {
             gs_->status().clear_queue();
             gs_->status_queue_city_ = gs_->active_city_;
             deferred_manager_alerts_.clear();
+            if (is_human) {
+              gs_->status().suppress(false);
+            }
             // Human restaurants that are in scope are all in the active city,
             // so the per-city guard keeps the city-view-entry trigger from
             // running the day twice. AI has this single trigger, so no guard
@@ -1075,7 +1078,6 @@ TurnOrchestrator::execute_pipeline_step(const turn::Step& step) {
             deliver_depot_stock(gs_->active_player_);
             pending_ai_auto_end_turn_ = !is_human;
             if (!pending_ai_auto_end_turn_) {
-              gs_->status().suppress(false);
               for (auto& msg :
                    gs_->active_player()->take_pending_notifications()) {
                 gs_->status().post(std::move(msg));
