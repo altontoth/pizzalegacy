@@ -11,7 +11,7 @@ Pizza Legacy v@PLEGACY_VERSION_FULL@ - Windows Release
 
 THIRD-PARTY SOFTWARE
 --------------------
-This build includes third-party libraries (SDL2, libpng, libADLMIDI, zlib).
+This build includes third-party libraries (SDL3, zlib, libADLMIDI).
 Their individual licenses are included in the LICENSES\ directory.
 A summary of all third-party components can be found in `THIRD_PARTIES.txt`.
 

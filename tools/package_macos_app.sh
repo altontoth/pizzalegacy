@@ -37,7 +37,7 @@ mkdir -p "$FRAMEWORKS"
 # Build extra -s search path args from pkg-config so dylibbundler can resolve
 # @rpath references
 DYLIBBUNDLER_SEARCH=()
-for lib in libadlmidi sdl2 libpng; do
+for lib in libadlmidi sdl3; do
     dir=$(pkg-config --variable=libdir "$lib" 2>/dev/null || true)
     if [[ -n "$dir" ]]; then
         DYLIBBUNDLER_SEARCH+=(-s "$dir")

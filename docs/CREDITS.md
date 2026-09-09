@@ -37,13 +37,6 @@ Usage: Software OPL3 FM synthesis for CMF music
     Licenses:  LGPL-3.0-or-later (see LICENSES/LGPL-3.0-or-later.txt)
                GPL-3.0-or-later (see LICENSES/GPL-3.0-or-later.txt)
 
-#### libpng
-
-Usage: PNG support for screenshots
-
-    Copyright: Copyright (c) 1995-2026 The PNG Reference Entities
-    License:   libpng License 2.0 (see LICENSES/libpng.txt)
-
 #### zlib
 
 Usage:     Compression for JSON save files

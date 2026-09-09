@@ -23,7 +23,7 @@ your system path.
 
 THIRD-PARTY SOFTWARE
 --------------------
-This build may include bundled third-party libraries (SDL2, libpng, libADLMIDI).
+This build may include bundled third-party libraries (SDL3, zlib, libADLMIDI).
 Their individual licenses are in the LICENSES/ directory.
 A summary of all third-party components is in THIRD_PARTIES.txt.
 

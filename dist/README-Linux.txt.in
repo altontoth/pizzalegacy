@@ -20,7 +20,7 @@ Make the AppImage executable and run it:
 
 THIRD-PARTY SOFTWARE
 --------------------
-This build includes third-party libraries (SDL2, libpng, libADLMIDI).
+This build includes third-party libraries (SDL3, zlib, libADLMIDI).
 Their individual licenses are included inside the AppImage at:
 `usr/share/licenses/plegacy/`
 A summary of all third-party components can be found in

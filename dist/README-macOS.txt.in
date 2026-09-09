@@ -43,7 +43,7 @@ If an "Open Anyway" option appears (near the bottom), you can use that instead.
 
 THIRD-PARTY SOFTWARE
 --------------------
-This build includes third-party libraries (SDL2, libpng, libADLMIDI).
+This build includes third-party libraries (SDL3, zlib, libADLMIDI).
 Their individual licenses are included inside the app bundle at:
 
     Pizza Legacy.app/Contents/Resources/LICENSES/
