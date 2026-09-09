@@ -9,7 +9,6 @@
 #include <array>
 #include <cstdint>
 #include <string>
-#include <string_view>
 #include "core/finance/Money.h"
 
 enum class SupplierType {
@@ -66,7 +65,7 @@ struct SupplierData {
   SupplierID id;
   SupplierType type;
   uint8_t quality;
-  std::string_view name;
+  std::string name;
   uint16_t price_per_tile;
   std::array<int8_t, 6> customer_ratings;
   uint16_t introduction_year;

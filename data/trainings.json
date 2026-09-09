@@ -1,0 +1,164 @@
+{
+  "COOKERY_COURSE_1": {
+    "name": "Cookery Course 1",
+    "type": "COOKING",
+    "duration": 4,
+    "min_level": 0,
+    "cost": 1500,
+    "score_increase": 5,
+    "pizzas_day_increase": 0
+  },
+  "COOKERY_COURSE_2": {
+    "name": "Cookery Course 2",
+    "type": "COOKING",
+    "duration": 4,
+    "min_level": 50,
+    "cost": 2500,
+    "score_increase": 6,
+    "pizzas_day_increase": 0
+  },
+  "AVANTI_AVANTI": {
+    "name": "Avanti Avanti",
+    "type": "COOKING",
+    "duration": 6,
+    "min_level": 40,
+    "cost": 6000,
+    "score_increase": 0,
+    "pizzas_day_increase": 40
+  },
+  "SPECIALITIES": {
+    "name": "Specialities",
+    "type": "COOKING",
+    "duration": 7,
+    "min_level": 60,
+    "cost": 8000,
+    "score_increase": 15,
+    "pizzas_day_increase": 0
+  },
+  "SUPER_COOK": {
+    "name": "Super Cook",
+    "type": "COOKING",
+    "duration": 14,
+    "min_level": 70,
+    "cost": 10000,
+    "score_increase": 15,
+    "pizzas_day_increase": 10
+  },
+  "MASTER_COOK": {
+    "name": "Master Cook",
+    "type": "COOKING",
+    "duration": 20,
+    "min_level": 75,
+    "cost": 18000,
+    "score_increase": 0,
+    "pizzas_day_increase": 30
+  },
+  "SERVING_COURSE": {
+    "name": "Serving Course",
+    "type": "SERVING",
+    "duration": 4,
+    "min_level": 0,
+    "cost": 2000,
+    "score_increase": 5,
+    "pizzas_day_increase": 0
+  },
+  "SALES_COURSE": {
+    "name": "Sales Course",
+    "type": "SERVING",
+    "duration": 7,
+    "min_level": 40,
+    "cost": 5000,
+    "score_increase": 8,
+    "pizzas_day_increase": 0
+  },
+  "FAST_SELLING": {
+    "name": "Fast-Selling",
+    "type": "SERVING",
+    "duration": 7,
+    "min_level": 40,
+    "cost": 7500,
+    "score_increase": 0,
+    "pizzas_day_increase": 30
+  },
+  "CUSTOMER_RELATIONS": {
+    "name": "Customer Relations",
+    "type": "SERVING",
+    "duration": 14,
+    "min_level": 60,
+    "cost": 9000,
+    "score_increase": 12,
+    "pizzas_day_increase": 0
+  },
+  "SUPER_SELLING": {
+    "name": "Super-Selling",
+    "type": "SERVING",
+    "duration": 21,
+    "min_level": 70,
+    "cost": 12000,
+    "score_increase": 14,
+    "pizzas_day_increase": 10
+  },
+  "WAITER_DIPLOMA": {
+    "name": "Waiter Diploma",
+    "type": "SERVING",
+    "duration": 28,
+    "min_level": 75,
+    "cost": 20000,
+    "score_increase": 18,
+    "pizzas_day_increase": 30
+  },
+  "ACCOUNTING": {
+    "name": "Accounting",
+    "type": "MANAGEMENT",
+    "duration": 7,
+    "min_level": 40,
+    "cost": 8000,
+    "score_increase": 6,
+    "pizzas_day_increase": 0
+  },
+  "BOOK_KEEPING": {
+    "name": "Book-keeping",
+    "type": "MANAGEMENT",
+    "duration": 7,
+    "min_level": 45,
+    "cost": 8000,
+    "score_increase": 6,
+    "pizzas_day_increase": 0
+  },
+  "STOCK_MANAGEMENT": {
+    "name": "Stock Management",
+    "type": "MANAGEMENT",
+    "duration": 14,
+    "min_level": 50,
+    "cost": 10000,
+    "score_increase": 8,
+    "pizzas_day_increase": 0
+  },
+  "PROFIT_MAXIMIZING": {
+    "name": "Profit Maximizing",
+    "type": "MANAGEMENT",
+    "duration": 21,
+    "min_level": 60,
+    "cost": 16000,
+    "score_increase": 10,
+    "pizzas_day_increase": 0
+  },
+  "MANAGING_PERSONNEL": {
+    "name": "Managing Personnel",
+    "type": "MANAGEMENT",
+    "duration": 28,
+    "min_level": 70,
+    "cost": 25000,
+    "score_increase": 12,
+    "pizzas_day_increase": 0
+  },
+  "MASTER_OF_BUSINESS": {
+    "name": "Master Of Business",
+    "type": "MANAGEMENT",
+    "duration": 56,
+    "min_level": 80,
+    "cost": 50000,
+    "score_increase": 15,
+    "pizzas_day_increase": 0
+  }
+}

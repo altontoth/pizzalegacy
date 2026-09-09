@@ -27,6 +27,9 @@ struct IngredientData {
   int salty;
   int hot;
   IngredientCategory category;
+  // 4 orientations for each of the 3 sizes: the first row is the largest
+  // size, the second medium, the third smallest. The number of distinct
+  // frames per row reflects how many rotations that size actually has.
   std::array<int, 12> bobs;
 };
 

@@ -53,6 +53,7 @@ set(GAME_PLEGACY_SOURCES
     src/core/factories/CharacterFactory.cpp
     src/core/factories/CityFactory.cpp
     src/core/factories/CommercialFactory.cpp
+    src/core/factories/DataFile.cpp
     src/core/factories/FloorPatternFactory.cpp
     src/core/factories/FurnitureFactory.cpp
     src/core/factories/IngredientFactory.cpp
@@ -377,6 +378,7 @@ set(PLEGACY_HEADERS
     src/core/factories/CharacterFactory.h
     src/core/factories/CityFactory.h
     src/core/factories/CommercialFactory.h
+    src/core/factories/DataFile.h
     src/core/factories/FloorPatternFactory.h
     src/core/factories/FurnitureFactory.h
     src/core/factories/IngredientFactory.h

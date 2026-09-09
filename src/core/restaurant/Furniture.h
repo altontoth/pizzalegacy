@@ -61,12 +61,23 @@ enum class PlacementLayer : uint8_t {
   Top = 3,
 };
 
+// Identifies furniture with special gameplay rules, such as what it leaves
+// behind when destroyed or what interaction opens when clicked.
+enum class FurnitureRole {
+  None = 0,
+  AshesSmall,
+  AshesLarge,
+  AshesKitchen,
+  Jukebox,
+  Tv,
+};
+
 struct FurnitureData {
   FurnitureType type;
   int u1; // unknown
   int quality;
   int supplier;
-  std::string_view name;
+  std::string name;
   int price;
   std::array<int, 4> bobs;
   FurnitureCategory category;
@@ -75,6 +86,7 @@ struct FurnitureData {
   int bake_time;
   PlacementLayer placement_layer;
   std::array<int, static_cast<std::size_t>(ConsumerType::Count)> popularity;
+  FurnitureRole role;
 };
 
 class Furniture {
@@ -93,23 +105,8 @@ public:
   int capacity() const { return capacity_; }
   int bake_time() const { return bake_time_; }
   PlacementLayer placement_layer() const { return placement_layer_; }
+  FurnitureRole role() const { return role_; }
   int popularity(ConsumerType consumer) const;
-
-  void type(FurnitureType type) { type_ = type; }
-  void u1(int u1) { u1_ = u1; }
-  void quality(int quality) { quality_ = quality; }
-  void supplier(int supplier) { supplier_ = supplier; }
-  void name(const std::string& name) { name_ = name; }
-  void price(int price) { price_ = price; }
-  void bobs(const std::vector<int>& bobs) { bobs_ = bobs; }
-  void category(FurnitureCategory category) { category_ = category; }
-  void u2(int u2) { u2_ = u2; }
-  void capacity(int capacity) { capacity_ = capacity; }
-  void bake_time(int bake_time) { bake_time_ = bake_time; }
-  void placement_layer(PlacementLayer placement_layer) {
-    placement_layer_ = placement_layer;
-  }
-  void popularity(ConsumerType consumer, int value);
 
 private:
   FurnitureType type_;
@@ -124,6 +121,7 @@ private:
   int capacity_;
   int bake_time_;
   PlacementLayer placement_layer_;
+  FurnitureRole role_;
   std::array<int, static_cast<std::size_t>(ConsumerType::Count)>
       popularity_; // o1 to o6
 };

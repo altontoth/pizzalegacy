@@ -1,0 +1,578 @@
+{
+  "FREDS_TILE_EMPORIUM": {
+    "type": "FLOORING",
+    "quality": 38,
+    "name": "Fred's Tile Emporium",
+    "price_per_tile": 2,
+    "customer_ratings": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+    ],
+    "introduction_year": 1990,
+    "withdrawal_year": 2200
+  },
+  "USED_TILES": {
+    "type": "FLOORING",
+    "quality": 20,
+    "name": "Used Tiles",
+    "price_per_tile": 1,
+    "customer_ratings": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "introduction_year": 1990,
+    "withdrawal_year": 2200
+  },
+  "APEX_TILE_CENTER": {
+    "type": "FLOORING",
+    "quality": 50,
+    "name": "Apex Tile Center",
+    "price_per_tile": 4,
+    "customer_ratings": [
+      8,
+      8,
+      6,
+      1,
+      1,
+      1
+    ],
+    "introduction_year": 1990,
+    "withdrawal_year": 2200
+  },
+  "CARPETS_UNLIMITED": {
+    "type": "FLOORING",
+    "quality": 68,
+    "name": "Carpets Unlimited",
+    "price_per_tile": 10,
+    "customer_ratings": [
+      0,
+      2,
+      2,
+      9,
+      9,
+      9
+    ],
+    "introduction_year": 1990,
+    "withdrawal_year": 2200
+  },
+  "EXCLUSIVE_CARPETS": {
+    "type": "FLOORING",
+    "quality": 88,
+    "name": "Exclusive Carpets",
+    "price_per_tile": 16,
+    "customer_ratings": [
+      6,
+      4,
+      5,
+      3,
+      2,
+      1
+    ],
+    "introduction_year": 1990,
+    "withdrawal_year": 2200
+  },
+  "USED_CARPET": {
+    "type": "FLOORING",
+    "quality": 20,
+    "name": "Used Carpet",
+    "price_per_tile": 1,
+    "customer_ratings": [
+      1,
+      3,
+      2,
+      7,
+      6,
+      5
+    ],
+    "introduction_year": 1990,
+    "withdrawal_year": 2200
+  },
+  "EXCLUSIVE_TILES": {
+    "type": "FLOORING",
+    "quality": 88,
+    "name": "Exclusive Tiles",
+    "price_per_tile": 20,
+    "customer_ratings": [
+      14,
+      15,
+      17,
+      20,
+      17,
+      12
+    ],
+    "introduction_year": 1990,
+    "withdrawal_year": 2200
+  },
+  "CRAZY_TILES": {
+    "type": "FLOORING",
+    "quality": 56,
+    "name": "Crazy Tiles",
+    "price_per_tile": 10,
+    "customer_ratings": [
+      20,
+      25,
+      14,
+      3,
+      -1,
+      -5
+    ],
+    "introduction_year": 1990,
+    "withdrawal_year": 2200
+  },
+  "HANNOS_WOODEN_FLOORS": {
+    "type": "FLOORING",
+    "quality": 80,
+    "name": "Hanno's Wooden Floors",
+    "price_per_tile": 14,
+    "customer_ratings": [
+      6,
+      5,
+      10,
+      12,
+      18,
+      15
+    ],
+    "introduction_year": 1990,
+    "withdrawal_year": 2200
+  },
+  "MARBLE_FLOORS": {
+    "type": "FLOORING",
+    "quality": 99,
+    "name": "Marble Floors",
+    "price_per_tile": 28,
+    "customer_ratings": [
+      28,
+      21,
+      19,
+      34,
+      38,
+      40
+    ],
+    "introduction_year": 1990,
+    "withdrawal_year": 1996
+  },
+  "FOIL_COATING": {
+    "type": "FLOORING",
+    "quality": 60,
+    "name": "Foil Coating",
+    "price_per_tile": 9,
+    "customer_ratings": [
+      10,
+      10,
+      10,
+      10,
+      10,
+      10
+    ],
+    "introduction_year": 1996,
+    "withdrawal_year": 2200
+  },
+  "HOUSE_OF_STONE": {
+    "type": "FLOORING",
+    "quality": 50,
+    "name": "House of Stone",
+    "price_per_tile": 10,
+    "customer_ratings": [
+      8,
+      8,
+      5,
+      8,
+      5,
+      6
+    ],
+    "introduction_year": 1990,
+    "withdrawal_year": 2200
+  },
+  "RESTAURANT_FURNISHINGS": {
+    "type": "FURNITURE",
+    "quality": 70,
+    "name": "Restaurant Furnishings",
+    "price_per_tile": 6,
+    "customer_ratings": [
+      2,
+      3,
+      2,
+      1,
+      1,
+      1
+    ],
+    "introduction_year": 1990,
+    "withdrawal_year": 2200
+  },
+  "CLASSIC_CROWN": {
+    "type": "FURNITURE",
+    "quality": 80,
+    "name": "Classic Crown",
+    "price_per_tile": 5,
+    "customer_ratings": [
+      2,
+      3,
+      2,
+      1,
+      1,
+      1
+    ],
+    "introduction_year": 1990,
+    "withdrawal_year": 2200
+  },
+  "BARGAIN_BASEMENT": {
+    "type": "FURNITURE",
+    "quality": 40,
+    "name": "Bargain Basement",
+    "price_per_tile": 1,
+    "customer_ratings": [
+      2,
+      3,
+      2,
+      1,
+      1,
+      1
+    ],
+    "introduction_year": 1990,
+    "withdrawal_year": 1996
+  },
+  "SECOND_HAND_FURNITURE": {
+    "type": "FURNITURE",
+    "quality": 20,
+    "name": "2nd Hand Furniture",
+    "price_per_tile": 1,
+    "customer_ratings": [
+      2,
+      3,
+      2,
+      1,
+      1,
+      1
+    ],
+    "introduction_year": 1990,
+    "withdrawal_year": 1995
+  },
+  "GARDEN_FURNITURE_LTD": {
+    "type": "FURNITURE",
+    "quality": 35,
+    "name": "Garden Furniture Ltd",
+    "price_per_tile": 1,
+    "customer_ratings": [
+      2,
+      3,
+      2,
+      1,
+      1,
+      1
+    ],
+    "introduction_year": 1990,
+    "withdrawal_year": 2200
+  },
+  "MODERN_LIVING": {
+    "type": "FURNITURE",
+    "quality": 46,
+    "name": "Modern Living",
+    "price_per_tile": 1,
+    "customer_ratings": [
+      2,
+      3,
+      2,
+      1,
+      1,
+      1
+    ],
+    "introduction_year": 1990,
+    "withdrawal_year": 2200
+  },
+  "MODERN_COMFORT": {
+    "type": "FURNITURE",
+    "quality": 80,
+    "name": "Modern Comfort",
+    "price_per_tile": 1,
+    "customer_ratings": [
+      2,
+      3,
+      2,
+      1,
+      1,
+      1
+    ],
+    "introduction_year": 1996,
+    "withdrawal_year": 2200
+  },
+  "TRENDSETTER_STUDIO": {
+    "type": "FURNITURE",
+    "quality": 70,
+    "name": "Trendsetter Studio",
+    "price_per_tile": 1,
+    "customer_ratings": [
+      2,
+      3,
+      2,
+      1,
+      1,
+      1
+    ],
+    "introduction_year": 1997,
+    "withdrawal_year": 2200
+  },
+  "SMALL_AND_SUNNY": {
+    "type": "FURNITURE",
+    "quality": 60,
+    "name": "Small & Sunny",
+    "price_per_tile": 1,
+    "customer_ratings": [
+      2,
+      3,
+      2,
+      1,
+      1,
+      1
+    ],
+    "introduction_year": 1990,
+    "withdrawal_year": 2200
+  },
+  "PURELY_NATURAL": {
+    "type": "FURNITURE",
+    "quality": 80,
+    "name": "Purely Natural",
+    "price_per_tile": 1,
+    "customer_ratings": [
+      2,
+      3,
+      2,
+      1,
+      1,
+      1
+    ],
+    "introduction_year": 1990,
+    "withdrawal_year": 2200
+  },
+  "ELEGANT_AND_EXCLUSIVE": {
+    "type": "FURNITURE",
+    "quality": 80,
+    "name": "Elegant & Exclusive",
+    "price_per_tile": 1,
+    "customer_ratings": [
+      2,
+      3,
+      2,
+      1,
+      1,
+      1
+    ],
+    "introduction_year": 1990,
+    "withdrawal_year": 2200
+  },
+  "BUSINESS_CLASS": {
+    "type": "FURNITURE",
+    "quality": 86,
+    "name": "Business Class",
+    "price_per_tile": 1,
+    "customer_ratings": [
+      2,
+      3,
+      2,
+      1,
+      1,
+      1
+    ],
+    "introduction_year": 1990,
+    "withdrawal_year": 2200
+  },
+  "LUXURY_FURNISHINGS": {
+    "type": "FURNITURE",
+    "quality": 99,
+    "name": "Luxury Furnishings",
+    "price_per_tile": 1,
+    "customer_ratings": [
+      2,
+      3,
+      2,
+      1,
+      1,
+      1
+    ],
+    "introduction_year": 1990,
+    "withdrawal_year": 2200
+  },
+  "YOUNG_ACTION": {
+    "type": "FURNITURE",
+    "quality": 43,
+    "name": "Young Action",
+    "price_per_tile": 1,
+    "customer_ratings": [
+      2,
+      3,
+      2,
+      1,
+      1,
+      1
+    ],
+    "introduction_year": 1990,
+    "withdrawal_year": 2200
+  },
+  "DANIELS_DECOR": {
+    "type": "EXTRAS",
+    "quality": 50,
+    "name": "Daniel's Decor",
+    "price_per_tile": 1,
+    "customer_ratings": [
+      2,
+      3,
+      2,
+      1,
+      1,
+      1
+    ],
+    "introduction_year": 1990,
+    "withdrawal_year": 2200
+  },
+  "BRUNIS_BLOOMS": {
+    "type": "EXTRAS",
+    "quality": 50,
+    "name": "Bruni's Blooms",
+    "price_per_tile": 1,
+    "customer_ratings": [
+      2,
+      3,
+      2,
+      1,
+      1,
+      1
+    ],
+    "introduction_year": 1990,
+    "withdrawal_year": 2200
+  },
+  "VIDEOGAMES_AND_PINBALL": {
+    "type": "EXTRAS",
+    "quality": 50,
+    "name": "Videogames & Pinball",
+    "price_per_tile": 1,
+    "customer_ratings": [
+      2,
+      3,
+      2,
+      1,
+      1,
+      1
+    ],
+    "introduction_year": 1990,
+    "withdrawal_year": 2200
+  },
+  "NEW_AGE_VIDEOGAMES": {
+    "type": "EXTRAS",
+    "quality": 50,
+    "name": "New Age Videogames",
+    "price_per_tile": 1,
+    "customer_ratings": [
+      2,
+      3,
+      2,
+      1,
+      1,
+      1
+    ],
+    "introduction_year": 1996,
+    "withdrawal_year": 2200
+  },
+  "A_AND_C_ENTERTAINMENT": {
+    "type": "EXTRAS",
+    "quality": 50,
+    "name": "A&C Entertainment",
+    "price_per_tile": 1,
+    "customer_ratings": [
+      2,
+      3,
+      2,
+      1,
+      1,
+      1
+    ],
+    "introduction_year": 1990,
+    "withdrawal_year": 2200
+  },
+  "ALIS_SLOT_MACHINES": {
+    "type": "EXTRAS",
+    "quality": 50,
+    "name": "Ali's Slot Machines",
+    "price_per_tile": 1,
+    "customer_ratings": [
+      2,
+      3,
+      2,
+      1,
+      1,
+      1
+    ],
+    "introduction_year": 1990,
+    "withdrawal_year": 2200
+  },
+  "OVENS": {
+    "type": "KITCHENWARE",
+    "quality": 30,
+    "name": "Ovens",
+    "price_per_tile": 1,
+    "customer_ratings": [
+      2,
+      3,
+      2,
+      1,
+      1,
+      1
+    ],
+    "introduction_year": 1990,
+    "withdrawal_year": 2000
+  },
+  "PIZZA_OVENS": {
+    "type": "KITCHENWARE",
+    "quality": 50,
+    "name": "Pizza Ovens",
+    "price_per_tile": 1,
+    "customer_ratings": [
+      2,
+      3,
+      2,
+      1,
+      1,
+      1
+    ],
+    "introduction_year": 1990,
+    "withdrawal_year": 1997
+  },
+  "ELECTRIC_OVENS": {
+    "type": "KITCHENWARE",
+    "quality": 80,
+    "name": "Electric Ovens",
+    "price_per_tile": 1,
+    "customer_ratings": [
+      2,
+      3,
+      2,
+      1,
+      1,
+      1
+    ],
+    "introduction_year": 1990,
+    "withdrawal_year": 2200
+  },
+  "RESTAURANT_RATIO_LTD": {
+    "type": "KITCHENWARE",
+    "quality": 80,
+    "name": "Restaurant Ratio Ltd",
+    "price_per_tile": 1,
+    "customer_ratings": [
+      2,
+      3,
+      2,
+      1,
+      1,
+      1
+    ],
+    "introduction_year": 1996,
+    "withdrawal_year": 2200
+  }
+}

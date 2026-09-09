@@ -1,0 +1,4247 @@
+{
+  "TRADITIO_ROMANO": {
+    "u1": 2,
+    "quality": 30,
+    "supplier": 12,
+    "name": "Traditio Romano",
+    "price": 180,
+    "bobs": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "category": "CHAIR",
+    "u2": 4,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+    ]
+  },
+  "NAPOLEON": {
+    "u1": 2,
+    "quality": 50,
+    "supplier": 13,
+    "name": "Napoleon",
+    "price": 300,
+    "bobs": [
+      4,
+      5,
+      6,
+      7
+    ],
+    "category": "CHAIR",
+    "u2": 5,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      0,
+      0,
+      0,
+      2,
+      3,
+      4
+    ]
+  },
+  "TSAR": {
+    "u1": 2,
+    "quality": 50,
+    "supplier": 13,
+    "name": "Tsar",
+    "price": 300,
+    "bobs": [
+      8,
+      9,
+      10,
+      11
+    ],
+    "category": "CHAIR",
+    "u2": 8,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      0,
+      0,
+      0,
+      2,
+      3,
+      4
+    ]
+  },
+  "MISS_MARPLE": {
+    "u1": 2,
+    "quality": 82,
+    "supplier": 24,
+    "name": "Miss Marple",
+    "price": 1800,
+    "bobs": [
+      12,
+      13,
+      14,
+      15
+    ],
+    "category": "CHAIR",
+    "u2": 250,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      -5,
+      -4,
+      -1,
+      7,
+      12,
+      16
+    ]
+  },
+  "CLASSIC_LIGHT": {
+    "u1": 2,
+    "quality": 36,
+    "supplier": 12,
+    "name": "Classic Light",
+    "price": 260,
+    "bobs": [
+      16,
+      17,
+      18,
+      19
+    ],
+    "category": "CHAIR",
+    "u2": 108,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      3,
+      3,
+      3,
+      3,
+      3,
+      3
+    ]
+  },
+  "CLASSIC_YELLOW": {
+    "u1": 2,
+    "quality": 32,
+    "supplier": 12,
+    "name": "Classic Yellow",
+    "price": 240,
+    "bobs": [
+      24,
+      25,
+      26,
+      27
+    ],
+    "category": "CHAIR",
+    "u2": 109,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      3,
+      3,
+      3,
+      2,
+      2,
+      3
+    ]
+  },
+  "CLASSIC_BLUE": {
+    "u1": 2,
+    "quality": 30,
+    "supplier": 12,
+    "name": "Classic Blue",
+    "price": 250,
+    "bobs": [
+      20,
+      21,
+      22,
+      23
+    ],
+    "category": "CHAIR",
+    "u2": 8,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      2,
+      3,
+      4,
+      3,
+      2,
+      2
+    ]
+  },
+  "SIBIRIA": {
+    "u1": 2,
+    "quality": 38,
+    "supplier": 13,
+    "name": "Sibiria",
+    "price": 450,
+    "bobs": [
+      28,
+      29,
+      30,
+      31
+    ],
+    "category": "CHAIR",
+    "u2": 10,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      1,
+      0,
+      0,
+      3,
+      3,
+      4
+    ]
+  },
+  "WESTERN": {
+    "u1": 2,
+    "quality": 40,
+    "supplier": 13,
+    "name": "Western",
+    "price": 400,
+    "bobs": [
+      32,
+      33,
+      34,
+      35
+    ],
+    "category": "CHAIR",
+    "u2": 10,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      1,
+      1,
+      1,
+      3,
+      3,
+      4
+    ]
+  },
+  "STRIP_CHAIR_YELLOW": {
+    "u1": 2,
+    "quality": 95,
+    "supplier": 24,
+    "name": "Strip Chair Yellow",
+    "price": 1300,
+    "bobs": [
+      36,
+      37,
+      38,
+      39
+    ],
+    "category": "CHAIR",
+    "u2": 3,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      -1,
+      -1,
+      0,
+      5,
+      10,
+      12
+    ]
+  },
+  "STRIP_CHAIR_BLUE": {
+    "u1": 2,
+    "quality": 95,
+    "supplier": 24,
+    "name": "Strip Chair Blue",
+    "price": 1300,
+    "bobs": [
+      40,
+      41,
+      42,
+      43
+    ],
+    "category": "CHAIR",
+    "u2": 250,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      -1,
+      -1,
+      0,
+      5,
+      10,
+      12
+    ]
+  },
+  "CAESAR_GREEN": {
+    "u1": 2,
+    "quality": 60,
+    "supplier": 13,
+    "name": "Caesar Green",
+    "price": 590,
+    "bobs": [
+      44,
+      45,
+      44,
+      45
+    ],
+    "category": "CHAIR",
+    "u2": 250,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      0,
+      0,
+      0,
+      3,
+      4,
+      5
+    ]
+  },
+  "CAESAR_YELLOW": {
+    "u1": 2,
+    "quality": 60,
+    "supplier": 13,
+    "name": "Caesar Yellow",
+    "price": 590,
+    "bobs": [
+      46,
+      47,
+      46,
+      47
+    ],
+    "category": "CHAIR",
+    "u2": 250,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      0,
+      0,
+      0,
+      3,
+      3,
+      4
+    ]
+  },
+  "CAESAR_BLUE": {
+    "u1": 2,
+    "quality": 60,
+    "supplier": 13,
+    "name": "Caesar Blue",
+    "price": 590,
+    "bobs": [
+      48,
+      49,
+      48,
+      49
+    ],
+    "category": "CHAIR",
+    "u2": 250,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      0,
+      0,
+      0,
+      3,
+      4,
+      5
+    ]
+  },
+  "BELGRADE_BLUE": {
+    "u1": 2,
+    "quality": 45,
+    "supplier": 22,
+    "name": "Belgrade Blue",
+    "price": 400,
+    "bobs": [
+      50,
+      51,
+      52,
+      53
+    ],
+    "category": "CHAIR",
+    "u2": 6,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      3,
+      3,
+      3,
+      3,
+      3,
+      3
+    ]
+  },
+  "BELGRADE_GREEN": {
+    "u1": 2,
+    "quality": 45,
+    "supplier": 22,
+    "name": "Belgrade Green",
+    "price": 400,
+    "bobs": [
+      54,
+      55,
+      56,
+      57
+    ],
+    "category": "CHAIR",
+    "u2": 2,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      4,
+      3,
+      3,
+      4,
+      3,
+      3
+    ]
+  },
+  "FOUNTAIN": {
+    "u1": 4,
+    "quality": 70,
+    "supplier": 26,
+    "name": "Fountain",
+    "price": 9000,
+    "bobs": [
+      324,
+      324,
+      324,
+      324
+    ],
+    "category": "DECOR",
+    "u2": 250,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      7,
+      3,
+      2,
+      12,
+      20,
+      20
+    ]
+  },
+  "CAPPUCCINO": {
+    "u1": 2,
+    "quality": 46,
+    "supplier": 12,
+    "name": "Cappuccino",
+    "price": 950,
+    "bobs": [
+      62,
+      62,
+      62,
+      62
+    ],
+    "category": "TABLE",
+    "u2": 18,
+    "capacity": 2,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      5,
+      6,
+      6,
+      6,
+      6,
+      5
+    ]
+  },
+  "SIZILIANO": {
+    "u1": 2,
+    "quality": 52,
+    "supplier": 12,
+    "name": "Siziliano",
+    "price": 1400,
+    "bobs": [
+      63,
+      63,
+      63,
+      63
+    ],
+    "category": "TABLE",
+    "u2": 2,
+    "capacity": 2,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      6,
+      8,
+      4,
+      8,
+      8,
+      8
+    ]
+  },
+  "ROUND_GRILL": {
+    "u1": 2,
+    "quality": 20,
+    "supplier": 15,
+    "name": "Round Grill",
+    "price": 100,
+    "bobs": [
+      64,
+      64,
+      64,
+      64
+    ],
+    "category": "TABLE",
+    "u2": 21,
+    "capacity": 2,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+    ]
+  },
+  "CITY_LINE": {
+    "u1": 2,
+    "quality": 46,
+    "supplier": 12,
+    "name": "City Line",
+    "price": 750,
+    "bobs": [
+      65,
+      65,
+      65,
+      65
+    ],
+    "category": "TABLE",
+    "u2": 18,
+    "capacity": 2,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      4,
+      5,
+      5,
+      4,
+      3,
+      2
+    ]
+  },
+  "SKY_LINE": {
+    "u1": 2,
+    "quality": 36,
+    "supplier": 12,
+    "name": "Sky Line",
+    "price": 650,
+    "bobs": [
+      66,
+      66,
+      66,
+      66
+    ],
+    "category": "TABLE",
+    "u2": 20,
+    "capacity": 2,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      4,
+      4,
+      3,
+      3,
+      4,
+      3
+    ]
+  },
+  "FOUR_PLACE_SETTING": {
+    "u1": 2,
+    "quality": 60,
+    "supplier": 13,
+    "name": "Four Place Setting",
+    "price": 3450,
+    "bobs": [
+      67,
+      68,
+      67,
+      68
+    ],
+    "category": "TABLE",
+    "u2": 25,
+    "capacity": 4,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      3,
+      3,
+      4,
+      4,
+      4,
+      4
+    ]
+  },
+  "MARBLE_OVAL": {
+    "u1": 2,
+    "quality": 85,
+    "supplier": 24,
+    "name": "Marble Oval",
+    "price": 15000,
+    "bobs": [
+      69,
+      70,
+      69,
+      70
+    ],
+    "category": "TABLE",
+    "u2": 250,
+    "capacity": 4,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      2,
+      2,
+      7,
+      10,
+      25,
+      30
+    ]
+  },
+  "ROYAL": {
+    "u1": 2,
+    "quality": 90,
+    "supplier": 24,
+    "name": "Royal",
+    "price": 12500,
+    "bobs": [
+      71,
+      71,
+      71,
+      71
+    ],
+    "category": "TABLE",
+    "u2": 250,
+    "capacity": 2,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      5,
+      8,
+      8,
+      12,
+      25,
+      30
+    ]
+  },
+  "OVAL_SETTING": {
+    "u1": 2,
+    "quality": 70,
+    "supplier": 13,
+    "name": "Oval setting",
+    "price": 4500,
+    "bobs": [
+      72,
+      73,
+      72,
+      73
+    ],
+    "category": "TABLE",
+    "u2": 23,
+    "capacity": 6,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      4,
+      4,
+      5,
+      8,
+      8,
+      6
+    ]
+  },
+  "MC_DONUT_SMALL": {
+    "u1": 2,
+    "quality": 50,
+    "supplier": 20,
+    "name": "Mc Donut small",
+    "price": 900,
+    "bobs": [
+      74,
+      74,
+      74,
+      74
+    ],
+    "category": "TABLE",
+    "u2": 111,
+    "capacity": 2,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      6,
+      5,
+      3,
+      2,
+      2,
+      2
+    ]
+  },
+  "WOODEN_CHAIR": {
+    "u1": 2,
+    "quality": 25,
+    "supplier": 14,
+    "name": "Wooden Chair",
+    "price": 80,
+    "bobs": [
+      75,
+      76,
+      77,
+      78
+    ],
+    "category": "CHAIR",
+    "u2": 34,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+    ]
+  },
+  "BAVARIAN_CHAIR": {
+    "u1": 2,
+    "quality": 22,
+    "supplier": 14,
+    "name": "Bavarian Chair",
+    "price": 70,
+    "bobs": [
+      79,
+      80,
+      81,
+      82
+    ],
+    "category": "CHAIR",
+    "u2": 35,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      1,
+      1,
+      2,
+      2,
+      2,
+      2
+    ]
+  },
+  "MODERN_SITTING": {
+    "u1": 2,
+    "quality": 58,
+    "supplier": 23,
+    "name": "Modern Sitting",
+    "price": 1600,
+    "bobs": [
+      83,
+      84,
+      85,
+      86
+    ],
+    "category": "CHAIR",
+    "u2": 80,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      4,
+      4,
+      4,
+      6,
+      10,
+      4
+    ]
+  },
+  "WAITING_ROOM_WHITE": {
+    "u1": 2,
+    "quality": 30,
+    "supplier": 25,
+    "name": "Waiting Room White",
+    "price": 190,
+    "bobs": [
+      87,
+      88,
+      89,
+      90
+    ],
+    "category": "CHAIR",
+    "u2": 89,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      3,
+      3,
+      3,
+      1,
+      1,
+      0
+    ]
+  },
+  "WAITING_ROOM_GREEN": {
+    "u1": 2,
+    "quality": 30,
+    "supplier": 25,
+    "name": "Waiting Room Green",
+    "price": 190,
+    "bobs": [
+      91,
+      92,
+      93,
+      94
+    ],
+    "category": "CHAIR",
+    "u2": 86,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      3,
+      3,
+      3,
+      1,
+      0,
+      -1
+    ]
+  },
+  "WAITING_ROOM_RED": {
+    "u1": 2,
+    "quality": 30,
+    "supplier": 25,
+    "name": "Waiting Room Red",
+    "price": 190,
+    "bobs": [
+      95,
+      96,
+      97,
+      98
+    ],
+    "category": "CHAIR",
+    "u2": 87,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      3,
+      3,
+      4,
+      1,
+      0,
+      -1
+    ]
+  },
+  "WOODEN_BENCH": {
+    "u1": 2,
+    "quality": 20,
+    "supplier": 21,
+    "name": "Wooden Bench",
+    "price": 250,
+    "bobs": [
+      99,
+      100,
+      99,
+      100
+    ],
+    "category": "CHAIR",
+    "u2": 14,
+    "capacity": 2,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      2,
+      2,
+      3,
+      3,
+      1,
+      1
+    ]
+  },
+  "SALOON_RED": {
+    "u1": 2,
+    "quality": 30,
+    "supplier": 14,
+    "name": "Saloon Red",
+    "price": 150,
+    "bobs": [
+      101,
+      102,
+      103,
+      104
+    ],
+    "category": "CHAIR",
+    "u2": 4,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      3,
+      3,
+      3,
+      3,
+      3,
+      3
+    ]
+  },
+  "SALOON_GREEN": {
+    "u1": 2,
+    "quality": 30,
+    "supplier": 14,
+    "name": "Saloon Green",
+    "price": 150,
+    "bobs": [
+      105,
+      106,
+      107,
+      108
+    ],
+    "category": "CHAIR",
+    "u2": 4,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      3,
+      3,
+      3,
+      3,
+      3,
+      3
+    ]
+  },
+  "SALOON_WHITE": {
+    "u1": 2,
+    "quality": 30,
+    "supplier": 14,
+    "name": "Saloon White",
+    "price": 150,
+    "bobs": [
+      109,
+      110,
+      111,
+      112
+    ],
+    "category": "CHAIR",
+    "u2": 4,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+    ]
+  },
+  "HARDCORE": {
+    "u1": 2,
+    "quality": 25,
+    "supplier": 16,
+    "name": "Hardcore",
+    "price": 200,
+    "bobs": [
+      113,
+      114,
+      115,
+      116
+    ],
+    "category": "CHAIR",
+    "u2": 1,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      2,
+      2,
+      4,
+      2,
+      1,
+      1
+    ]
+  },
+  "KITCHEN_WHITE": {
+    "u1": 2,
+    "quality": 20,
+    "supplier": 15,
+    "name": "Kitchen White",
+    "price": 40,
+    "bobs": [
+      117,
+      118,
+      119,
+      120
+    ],
+    "category": "CHAIR",
+    "u2": 30,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+    ]
+  },
+  "KITCHEN_BLUE": {
+    "u1": 2,
+    "quality": 20,
+    "supplier": 15,
+    "name": "Kitchen Blue",
+    "price": 40,
+    "bobs": [
+      121,
+      122,
+      123,
+      124
+    ],
+    "category": "CHAIR",
+    "u2": 31,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+    ]
+  },
+  "KITCHEN_GREEN": {
+    "u1": 2,
+    "quality": 20,
+    "supplier": 15,
+    "name": "Kitchen Green",
+    "price": 40,
+    "bobs": [
+      125,
+      126,
+      127,
+      128
+    ],
+    "category": "CHAIR",
+    "u2": 32,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+    ]
+  },
+  "GARDEN_WHITE": {
+    "u1": 2,
+    "quality": 28,
+    "supplier": 16,
+    "name": "Garden White",
+    "price": 75,
+    "bobs": [
+      129,
+      130,
+      131,
+      132
+    ],
+    "category": "CHAIR",
+    "u2": 30,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      2,
+      2,
+      3,
+      3,
+      1,
+      1
+    ]
+  },
+  "GARDEN_YELLOW": {
+    "u1": 2,
+    "quality": 28,
+    "supplier": 16,
+    "name": "Garden Yellow",
+    "price": 75,
+    "bobs": [
+      133,
+      134,
+      135,
+      136
+    ],
+    "category": "CHAIR",
+    "u2": 31,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      2,
+      2,
+      3,
+      3,
+      1,
+      1
+    ]
+  },
+  "GARDEN_RED": {
+    "u1": 2,
+    "quality": 28,
+    "supplier": 16,
+    "name": "Garden Red",
+    "price": 75,
+    "bobs": [
+      137,
+      138,
+      139,
+      140
+    ],
+    "category": "CHAIR",
+    "u2": 32,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      2,
+      2,
+      3,
+      3,
+      1,
+      1
+    ]
+  },
+  "GARDEN_BLUE": {
+    "u1": 2,
+    "quality": 28,
+    "supplier": 16,
+    "name": "Garden Blue",
+    "price": 75,
+    "bobs": [
+      141,
+      142,
+      143,
+      144
+    ],
+    "category": "CHAIR",
+    "u2": 36,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      2,
+      2,
+      3,
+      3,
+      1,
+      1
+    ]
+  },
+  "BASIC_TABLE_WHITE": {
+    "u1": 2,
+    "quality": 40,
+    "supplier": 14,
+    "name": "Basic Table White",
+    "price": 350,
+    "bobs": [
+      145,
+      145,
+      145,
+      145
+    ],
+    "category": "TABLE",
+    "u2": 110,
+    "capacity": 2,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      4,
+      4,
+      4,
+      4,
+      4,
+      4
+    ]
+  },
+  "BASIC_TABLE_GREEN": {
+    "u1": 2,
+    "quality": 40,
+    "supplier": 14,
+    "name": "Basic Table Green",
+    "price": 350,
+    "bobs": [
+      146,
+      146,
+      146,
+      146
+    ],
+    "category": "TABLE",
+    "u2": 109,
+    "capacity": 2,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      5,
+      5,
+      5,
+      3,
+      3,
+      3
+    ]
+  },
+  "BASIC_TABLE_BLUE": {
+    "u1": 2,
+    "quality": 40,
+    "supplier": 14,
+    "name": "Basic Table Blue",
+    "price": 350,
+    "bobs": [
+      147,
+      147,
+      147,
+      147
+    ],
+    "category": "TABLE",
+    "u2": 110,
+    "capacity": 2,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      4,
+      4,
+      4,
+      4,
+      2,
+      3
+    ]
+  },
+  "SMALL_CHECK_GREEN": {
+    "u1": 2,
+    "quality": 30,
+    "supplier": 25,
+    "name": "Small Check Green",
+    "price": 200,
+    "bobs": [
+      148,
+      148,
+      148,
+      148
+    ],
+    "category": "TABLE",
+    "u2": 26,
+    "capacity": 2,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      3,
+      4,
+      3,
+      3,
+      0,
+      3
+    ]
+  },
+  "SMALL_CHECK_RED": {
+    "u1": 2,
+    "quality": 30,
+    "supplier": 25,
+    "name": "Small Check Red",
+    "price": 200,
+    "bobs": [
+      149,
+      149,
+      149,
+      149
+    ],
+    "category": "TABLE",
+    "u2": 26,
+    "capacity": 2,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      3,
+      3,
+      4,
+      3,
+      0,
+      3
+    ]
+  },
+  "SMALL_CHECK_BLUE": {
+    "u1": 2,
+    "quality": 30,
+    "supplier": 25,
+    "name": "Small Check Blue",
+    "price": 200,
+    "bobs": [
+      150,
+      150,
+      150,
+      150
+    ],
+    "category": "TABLE",
+    "u2": 26,
+    "capacity": 2,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      3,
+      3,
+      3,
+      4,
+      0,
+      3
+    ]
+  },
+  "GARDEN_TABLE_RED": {
+    "u1": 2,
+    "quality": 30,
+    "supplier": 16,
+    "name": "Garden Table Red",
+    "price": 320,
+    "bobs": [
+      151,
+      152,
+      151,
+      152
+    ],
+    "category": "TABLE",
+    "u2": 62,
+    "capacity": 4,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      2,
+      2,
+      2,
+      1,
+      1,
+      1
+    ]
+  },
+  "GARDEN_TABLE_BLUE": {
+    "u1": 2,
+    "quality": 30,
+    "supplier": 16,
+    "name": "Garden Table Blue",
+    "price": 320,
+    "bobs": [
+      153,
+      154,
+      153,
+      154
+    ],
+    "category": "TABLE",
+    "u2": 61,
+    "capacity": 4,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      1,
+      1,
+      1,
+      2,
+      2,
+      2
+    ]
+  },
+  "PLASTIC_BLACK": {
+    "u1": 2,
+    "quality": 20,
+    "supplier": 15,
+    "name": "Plastic Black",
+    "price": 160,
+    "bobs": [
+      155,
+      155,
+      155,
+      155
+    ],
+    "category": "TABLE",
+    "u2": 57,
+    "capacity": 2,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+    ]
+  },
+  "PLASTIC_WHITE": {
+    "u1": 2,
+    "quality": 20,
+    "supplier": 15,
+    "name": "Plastic White",
+    "price": 160,
+    "bobs": [
+      156,
+      156,
+      156,
+      156
+    ],
+    "category": "TABLE",
+    "u2": 45,
+    "capacity": 2,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+    ]
+  },
+  "PLASTIC_RED": {
+    "u1": 2,
+    "quality": 20,
+    "supplier": 15,
+    "name": "Plastic Red",
+    "price": 160,
+    "bobs": [
+      157,
+      157,
+      157,
+      157
+    ],
+    "category": "TABLE",
+    "u2": 57,
+    "capacity": 2,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      2,
+      1,
+      2,
+      1,
+      1,
+      1
+    ]
+  },
+  "PLASTIC_GREEN": {
+    "u1": 2,
+    "quality": 20,
+    "supplier": 15,
+    "name": "Plastic Green",
+    "price": 160,
+    "bobs": [
+      158,
+      158,
+      158,
+      158
+    ],
+    "category": "TABLE",
+    "u2": 46,
+    "capacity": 2,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      2,
+      1,
+      1,
+      2,
+      1,
+      1
+    ]
+  },
+  "WOOD_DARK": {
+    "u1": 2,
+    "quality": 34,
+    "supplier": 14,
+    "name": "Wood dark",
+    "price": 200,
+    "bobs": [
+      159,
+      159,
+      159,
+      159
+    ],
+    "category": "TABLE",
+    "u2": 58,
+    "capacity": 2,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      3,
+      3,
+      3,
+      3,
+      3,
+      3
+    ]
+  },
+  "WOOD_LIGHT": {
+    "u1": 2,
+    "quality": 34,
+    "supplier": 14,
+    "name": "Wood light",
+    "price": 240,
+    "bobs": [
+      160,
+      160,
+      160,
+      160
+    ],
+    "category": "TABLE",
+    "u2": 45,
+    "capacity": 2,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      4,
+      4,
+      3,
+      3,
+      3,
+      4
+    ]
+  },
+  "LARGE_CHECK_RED": {
+    "u1": 2,
+    "quality": 35,
+    "supplier": 25,
+    "name": "Large Check Red",
+    "price": 400,
+    "bobs": [
+      161,
+      162,
+      161,
+      162
+    ],
+    "category": "TABLE",
+    "u2": 117,
+    "capacity": 4,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      4,
+      4,
+      5,
+      4,
+      0,
+      1
+    ]
+  },
+  "LARGE_CHECK_BLUE": {
+    "u1": 2,
+    "quality": 35,
+    "supplier": 25,
+    "name": "Large Check Blue",
+    "price": 400,
+    "bobs": [
+      163,
+      164,
+      163,
+      164
+    ],
+    "category": "TABLE",
+    "u2": 47,
+    "capacity": 4,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      4,
+      4,
+      4,
+      4,
+      0,
+      1
+    ]
+  },
+  "OAK_DARK": {
+    "u1": 2,
+    "quality": 38,
+    "supplier": 21,
+    "name": "Oak dark",
+    "price": 450,
+    "bobs": [
+      165,
+      166,
+      165,
+      166
+    ],
+    "category": "TABLE",
+    "u2": 62,
+    "capacity": 4,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      3,
+      3,
+      4,
+      3,
+      1,
+      4
+    ]
+  },
+  "OAK_LIGHT": {
+    "u1": 2,
+    "quality": 38,
+    "supplier": 21,
+    "name": "Oak light",
+    "price": 550,
+    "bobs": [
+      167,
+      168,
+      167,
+      168
+    ],
+    "category": "TABLE",
+    "u2": 22,
+    "capacity": 4,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      4,
+      3,
+      3,
+      3,
+      2,
+      3
+    ]
+  },
+  "BISTRO_RED": {
+    "u1": 2,
+    "quality": 24,
+    "supplier": 20,
+    "name": "Bistro Red",
+    "price": 1200,
+    "bobs": [
+      169,
+      169,
+      169,
+      169
+    ],
+    "category": "TABLE",
+    "u2": 21,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      5,
+      3,
+      2,
+      2,
+      0,
+      1
+    ]
+  },
+  "BISTRO_BLUE": {
+    "u1": 2,
+    "quality": 24,
+    "supplier": 20,
+    "name": "Bistro Blue",
+    "price": 1200,
+    "bobs": [
+      170,
+      170,
+      170,
+      170
+    ],
+    "category": "TABLE",
+    "u2": 47,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      4,
+      3,
+      2,
+      2,
+      2,
+      1
+    ]
+  },
+  "BISTRO_YELLOW": {
+    "u1": 2,
+    "quality": 24,
+    "supplier": 20,
+    "name": "Bistro Yellow",
+    "price": 1200,
+    "bobs": [
+      171,
+      171,
+      171,
+      171
+    ],
+    "category": "TABLE",
+    "u2": 21,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      4,
+      3,
+      2,
+      2,
+      1,
+      1
+    ]
+  },
+  "MODERN_MIX": {
+    "u1": 2,
+    "quality": 33,
+    "supplier": 17,
+    "name": "Modern Mix",
+    "price": 300,
+    "bobs": [
+      172,
+      173,
+      174,
+      175
+    ],
+    "category": "CHAIR",
+    "u2": 250,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      2,
+      2,
+      2,
+      0,
+      1,
+      0
+    ]
+  },
+  "OFFICE_CHAIR": {
+    "u1": 2,
+    "quality": 24,
+    "supplier": 17,
+    "name": "Office Chair",
+    "price": 150,
+    "bobs": [
+      176,
+      177,
+      178,
+      179
+    ],
+    "category": "CHAIR",
+    "u2": 250,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      1,
+      2,
+      2,
+      3,
+      3,
+      0
+    ]
+  },
+  "STOOL_RED": {
+    "u1": 2,
+    "quality": 35,
+    "supplier": 17,
+    "name": "Stool Red",
+    "price": 180,
+    "bobs": [
+      180,
+      180,
+      180,
+      180
+    ],
+    "category": "CHAIR",
+    "u2": 87,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      3,
+      2,
+      3,
+      2,
+      2,
+      0
+    ]
+  },
+  "STOOL_BLUE": {
+    "u1": 2,
+    "quality": 35,
+    "supplier": 17,
+    "name": "Stool Blue",
+    "price": 180,
+    "bobs": [
+      181,
+      181,
+      181,
+      181
+    ],
+    "category": "CHAIR",
+    "u2": 86,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      2,
+      2,
+      2,
+      2,
+      3,
+      0
+    ]
+  },
+  "STOOL_YELLOW": {
+    "u1": 2,
+    "quality": 35,
+    "supplier": 17,
+    "name": "Stool Yellow",
+    "price": 180,
+    "bobs": [
+      182,
+      182,
+      182,
+      182
+    ],
+    "category": "CHAIR",
+    "u2": 89,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      0
+    ]
+  },
+  "STOOL_GREEN": {
+    "u1": 2,
+    "quality": 35,
+    "supplier": 17,
+    "name": "Stool Green",
+    "price": 180,
+    "bobs": [
+      183,
+      183,
+      183,
+      183
+    ],
+    "category": "CHAIR",
+    "u2": 86,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      2,
+      3,
+      2,
+      2,
+      2,
+      0
+    ]
+  },
+  "STOOL_BLACK": {
+    "u1": 2,
+    "quality": 35,
+    "supplier": 17,
+    "name": "Stool Black",
+    "price": 160,
+    "bobs": [
+      184,
+      184,
+      184,
+      184
+    ],
+    "category": "CHAIR",
+    "u2": 88,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      1,
+      1,
+      2,
+      2,
+      2,
+      0
+    ]
+  },
+  "STOOL_WHITE": {
+    "u1": 2,
+    "quality": 35,
+    "supplier": 17,
+    "name": "Stool White",
+    "price": 160,
+    "bobs": [
+      185,
+      185,
+      185,
+      185
+    ],
+    "category": "CHAIR",
+    "u2": 90,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      1,
+      1,
+      2,
+      2,
+      2,
+      0
+    ]
+  },
+  "NOSTALGICO_YELLOW": {
+    "u1": 2,
+    "quality": 44,
+    "supplier": 18,
+    "name": "Nostalgico Yellow",
+    "price": 250,
+    "bobs": [
+      186,
+      187,
+      188,
+      189
+    ],
+    "category": "CHAIR",
+    "u2": 79,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      1,
+      1,
+      1,
+      3,
+      2,
+      4
+    ]
+  },
+  "NOSTALGICO_GREEN": {
+    "u1": 2,
+    "quality": 44,
+    "supplier": 18,
+    "name": "Nostalgico Green",
+    "price": 250,
+    "bobs": [
+      190,
+      191,
+      192,
+      193
+    ],
+    "category": "CHAIR",
+    "u2": 80,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      1,
+      1,
+      1,
+      3,
+      2,
+      4
+    ]
+  },
+  "STUDIO_BLUE": {
+    "u1": 2,
+    "quality": 80,
+    "supplier": 18,
+    "name": "Studio Blue",
+    "price": 1200,
+    "bobs": [
+      194,
+      195,
+      196,
+      197
+    ],
+    "category": "CHAIR",
+    "u2": 250,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      6,
+      6,
+      6,
+      6,
+      5,
+      2
+    ]
+  },
+  "STUDIO_RED": {
+    "u1": 2,
+    "quality": 80,
+    "supplier": 18,
+    "name": "Studio Red",
+    "price": 1200,
+    "bobs": [
+      198,
+      199,
+      200,
+      201
+    ],
+    "category": "CHAIR",
+    "u2": 250,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      7,
+      6,
+      8,
+      5,
+      2,
+      2
+    ]
+  },
+  "STUDIO_YELLOW": {
+    "u1": 2,
+    "quality": 80,
+    "supplier": 18,
+    "name": "Studio Yellow",
+    "price": 1200,
+    "bobs": [
+      202,
+      203,
+      204,
+      205
+    ],
+    "category": "CHAIR",
+    "u2": 250,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      6,
+      6,
+      6,
+      5,
+      5,
+      2
+    ]
+  },
+  "COMFORT_YELLOW": {
+    "u1": 2,
+    "quality": 90,
+    "supplier": 18,
+    "name": "Comfort Yellow",
+    "price": 2000,
+    "bobs": [
+      206,
+      207,
+      208,
+      209
+    ],
+    "category": "CHAIR",
+    "u2": 250,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      6,
+      6,
+      6,
+      7,
+      8,
+      5
+    ]
+  },
+  "COMFORT_RED": {
+    "u1": 2,
+    "quality": 90,
+    "supplier": 18,
+    "name": "Comfort Red",
+    "price": 2000,
+    "bobs": [
+      210,
+      211,
+      212,
+      213
+    ],
+    "category": "CHAIR",
+    "u2": 250,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      6,
+      6,
+      7,
+      7,
+      7,
+      5
+    ]
+  },
+  "MEDITATION_GREEN": {
+    "u1": 2,
+    "quality": 55,
+    "supplier": 19,
+    "name": "Meditation Green",
+    "price": 480,
+    "bobs": [
+      214,
+      214,
+      214,
+      214
+    ],
+    "category": "CHAIR",
+    "u2": 250,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      4,
+      4,
+      1,
+      3,
+      1,
+      -1
+    ]
+  },
+  "MEDITATION_RED": {
+    "u1": 2,
+    "quality": 55,
+    "supplier": 19,
+    "name": "Meditation Red",
+    "price": 480,
+    "bobs": [
+      215,
+      215,
+      215,
+      215
+    ],
+    "category": "CHAIR",
+    "u2": 250,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      4,
+      4,
+      1,
+      3,
+      1,
+      -1
+    ]
+  },
+  "MEDITATION_BLUE": {
+    "u1": 2,
+    "quality": 55,
+    "supplier": 19,
+    "name": "Meditation Blue",
+    "price": 480,
+    "bobs": [
+      216,
+      216,
+      216,
+      216
+    ],
+    "category": "CHAIR",
+    "u2": 250,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      4,
+      4,
+      1,
+      3,
+      1,
+      -1
+    ]
+  },
+  "BARBECUE_LIGHT": {
+    "u1": 2,
+    "quality": 38,
+    "supplier": 21,
+    "name": "Barbecue light",
+    "price": 250,
+    "bobs": [
+      217,
+      218,
+      217,
+      218
+    ],
+    "category": "CHAIR",
+    "u2": 74,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      1,
+      1,
+      4,
+      4,
+      2,
+      -1
+    ]
+  },
+  "BARBECUE_DARK": {
+    "u1": 2,
+    "quality": 38,
+    "supplier": 21,
+    "name": "Barbecue dark",
+    "price": 250,
+    "bobs": [
+      219,
+      220,
+      219,
+      220
+    ],
+    "category": "CHAIR",
+    "u2": 75,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      1,
+      1,
+      4,
+      4,
+      2,
+      -1
+    ]
+  },
+  "POP_BLUE": {
+    "u1": 2,
+    "quality": 38,
+    "supplier": 19,
+    "name": "Pop Blue",
+    "price": 500,
+    "bobs": [
+      221,
+      222,
+      223,
+      224
+    ],
+    "category": "CHAIR",
+    "u2": 76,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      4,
+      4,
+      4,
+      4,
+      2,
+      1
+    ]
+  },
+  "POP_RED": {
+    "u1": 2,
+    "quality": 38,
+    "supplier": 19,
+    "name": "Pop Red",
+    "price": 500,
+    "bobs": [
+      225,
+      226,
+      227,
+      228
+    ],
+    "category": "CHAIR",
+    "u2": 77,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      4,
+      4,
+      5,
+      4,
+      0,
+      1
+    ]
+  },
+  "POP_BLACK": {
+    "u1": 2,
+    "quality": 38,
+    "supplier": 19,
+    "name": "Pop Black",
+    "price": 500,
+    "bobs": [
+      229,
+      230,
+      231,
+      232
+    ],
+    "category": "CHAIR",
+    "u2": 78,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      2,
+      3,
+      4,
+      4,
+      2,
+      1
+    ]
+  },
+  "POP_WHITE": {
+    "u1": 2,
+    "quality": 38,
+    "supplier": 19,
+    "name": "Pop White",
+    "price": 500,
+    "bobs": [
+      233,
+      234,
+      235,
+      236
+    ],
+    "category": "CHAIR",
+    "u2": 76,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      2,
+      3,
+      4,
+      4,
+      2,
+      1
+    ]
+  },
+  "MODERN_ART_1": {
+    "u1": 2,
+    "quality": 38,
+    "supplier": 17,
+    "name": "Modern Art 1",
+    "price": 650,
+    "bobs": [
+      237,
+      237,
+      237,
+      237
+    ],
+    "category": "TABLE",
+    "u2": 95,
+    "capacity": 2,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      5,
+      5,
+      4,
+      1,
+      0,
+      -1
+    ]
+  },
+  "MODERN_ART_2": {
+    "u1": 2,
+    "quality": 44,
+    "supplier": 17,
+    "name": "Modern Art 2",
+    "price": 700,
+    "bobs": [
+      238,
+      238,
+      238,
+      238
+    ],
+    "category": "TABLE",
+    "u2": 96,
+    "capacity": 2,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      5,
+      5,
+      4,
+      1,
+      0,
+      -1
+    ]
+  },
+  "NOSTALGICA_YELLOW": {
+    "u1": 2,
+    "quality": 64,
+    "supplier": 18,
+    "name": "Nostalgica Yellow",
+    "price": 2590,
+    "bobs": [
+      239,
+      239,
+      239,
+      239
+    ],
+    "category": "TABLE",
+    "u2": 92,
+    "capacity": 2,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      5,
+      5,
+      5,
+      5,
+      5,
+      5
+    ]
+  },
+  "NOSTALGICA_WHITE": {
+    "u1": 2,
+    "quality": 64,
+    "supplier": 18,
+    "name": "Nostalgica White",
+    "price": 2390,
+    "bobs": [
+      240,
+      240,
+      240,
+      240
+    ],
+    "category": "TABLE",
+    "u2": 91,
+    "capacity": 2,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      5,
+      5,
+      5,
+      5,
+      5,
+      5
+    ]
+  },
+  "MODERN_ART_3": {
+    "u1": 2,
+    "quality": 90,
+    "supplier": 18,
+    "name": "Modern Art 3",
+    "price": 5900,
+    "bobs": [
+      241,
+      242,
+      241,
+      242
+    ],
+    "category": "TABLE",
+    "u2": 250,
+    "capacity": 4,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      8,
+      8,
+      4,
+      6,
+      8,
+      1
+    ]
+  },
+  "BANGKOK_BLUE": {
+    "u1": 2,
+    "quality": 50,
+    "supplier": 19,
+    "name": "Bangkok Blue",
+    "price": 1000,
+    "bobs": [
+      243,
+      243,
+      243,
+      243
+    ],
+    "category": "TABLE",
+    "u2": 250,
+    "capacity": 2,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      6,
+      7,
+      6,
+      5,
+      3,
+      -1
+    ]
+  },
+  "BANGKOK_RED": {
+    "u1": 2,
+    "quality": 50,
+    "supplier": 19,
+    "name": "Bangkok Red",
+    "price": 1000,
+    "bobs": [
+      244,
+      244,
+      244,
+      244
+    ],
+    "category": "TABLE",
+    "u2": 250,
+    "capacity": 2,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      7,
+      6,
+      7,
+      5,
+      1,
+      -1
+    ]
+  },
+  "BANGKOK_GREEN": {
+    "u1": 2,
+    "quality": 50,
+    "supplier": 19,
+    "name": "Bangkok Green",
+    "price": 1000,
+    "bobs": [
+      245,
+      245,
+      245,
+      245
+    ],
+    "category": "TABLE",
+    "u2": 250,
+    "capacity": 2,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      6,
+      7,
+      6,
+      6,
+      3,
+      -1
+    ]
+  },
+  "VELVET_RED": {
+    "u1": 2,
+    "quality": 70,
+    "supplier": 20,
+    "name": "Velvet Red",
+    "price": 300,
+    "bobs": [
+      246,
+      247,
+      248,
+      249
+    ],
+    "category": "CHAIR",
+    "u2": 1,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      6,
+      2,
+      2,
+      2,
+      1,
+      2
+    ]
+  },
+  "VELVET_YELLOW": {
+    "u1": 2,
+    "quality": 70,
+    "supplier": 20,
+    "name": "Velvet Yellow",
+    "price": 280,
+    "bobs": [
+      250,
+      251,
+      252,
+      253
+    ],
+    "category": "CHAIR",
+    "u2": 1,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      5,
+      2,
+      2,
+      2,
+      2,
+      2
+    ]
+  },
+  "VELVET_BLUE": {
+    "u1": 2,
+    "quality": 70,
+    "supplier": 20,
+    "name": "Velvet Blue",
+    "price": 260,
+    "bobs": [
+      254,
+      255,
+      256,
+      257
+    ],
+    "category": "CHAIR",
+    "u2": 1,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      3,
+      2,
+      2,
+      2,
+      2,
+      2
+    ]
+  },
+  "BASKET_CHAIR": {
+    "u1": 2,
+    "quality": 66,
+    "supplier": 21,
+    "name": "Basket Chair",
+    "price": 1000,
+    "bobs": [
+      258,
+      259,
+      260,
+      261
+    ],
+    "category": "CHAIR",
+    "u2": 1,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      3,
+      3,
+      4,
+      7,
+      7,
+      6
+    ]
+  },
+  "LEATHER_RED": {
+    "u1": 2,
+    "quality": 78,
+    "supplier": 22,
+    "name": "Leather Red",
+    "price": 900,
+    "bobs": [
+      262,
+      263,
+      264,
+      265
+    ],
+    "category": "CHAIR",
+    "u2": 107,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      4,
+      4,
+      4,
+      4,
+      4,
+      4
+    ]
+  },
+  "LEATHER_BLUE": {
+    "u1": 2,
+    "quality": 78,
+    "supplier": 22,
+    "name": "Leather Blue",
+    "price": 900,
+    "bobs": [
+      266,
+      267,
+      268,
+      269
+    ],
+    "category": "CHAIR",
+    "u2": 106,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      4,
+      4,
+      5,
+      4,
+      2,
+      4
+    ]
+  },
+  "BUSINESS_WHITE": {
+    "u1": 2,
+    "quality": 60,
+    "supplier": 23,
+    "name": "Business White",
+    "price": 1200,
+    "bobs": [
+      270,
+      271,
+      272,
+      273
+    ],
+    "category": "CHAIR",
+    "u2": 29,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      5,
+      5,
+      5,
+      6,
+      8,
+      5
+    ]
+  },
+  "DALLAS": {
+    "u1": 2,
+    "quality": 65,
+    "supplier": 23,
+    "name": "Dallas",
+    "price": 900,
+    "bobs": [
+      274,
+      275,
+      276,
+      277
+    ],
+    "category": "CHAIR",
+    "u2": 108,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      6,
+      6,
+      6,
+      6,
+      7,
+      4
+    ]
+  },
+  "BILLIARD_RED": {
+    "u1": 2,
+    "quality": 80,
+    "supplier": 22,
+    "name": "Billiard Red",
+    "price": 1400,
+    "bobs": [
+      278,
+      279,
+      280,
+      281
+    ],
+    "category": "CHAIR",
+    "u2": 250,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      6,
+      5,
+      6,
+      5,
+      4,
+      5
+    ]
+  },
+  "BILLIARD_GREEN": {
+    "u1": 2,
+    "quality": 80,
+    "supplier": 22,
+    "name": "Billiard Green",
+    "price": 1500,
+    "bobs": [
+      282,
+      283,
+      284,
+      285
+    ],
+    "category": "CHAIR",
+    "u2": 250,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Seating",
+    "popularity": [
+      5,
+      6,
+      5,
+      5,
+      5,
+      5
+    ]
+  },
+  "MARBLE_ROUND": {
+    "u1": 2,
+    "quality": 90,
+    "supplier": 24,
+    "name": "Marble Round",
+    "price": 8800,
+    "bobs": [
+      286,
+      286,
+      286,
+      286
+    ],
+    "category": "TABLE",
+    "u2": 24,
+    "capacity": 2,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      9,
+      9,
+      9,
+      14,
+      15,
+      14
+    ]
+  },
+  "MARBLE_DARK": {
+    "u1": 2,
+    "quality": 90,
+    "supplier": 22,
+    "name": "Marble Dark",
+    "price": 5500,
+    "bobs": [
+      287,
+      287,
+      287,
+      287
+    ],
+    "category": "TABLE",
+    "u2": 116,
+    "capacity": 4,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      7,
+      7,
+      7,
+      7,
+      9,
+      9
+    ]
+  },
+  "MARBLE_LIGHT": {
+    "u1": 2,
+    "quality": 90,
+    "supplier": 22,
+    "name": "Marble Light",
+    "price": 6500,
+    "bobs": [
+      288,
+      288,
+      288,
+      288
+    ],
+    "category": "TABLE",
+    "u2": 24,
+    "capacity": 4,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      8,
+      8,
+      7,
+      7,
+      9,
+      8
+    ]
+  },
+  "MINI_TABLE": {
+    "u1": 2,
+    "quality": 80,
+    "supplier": 20,
+    "name": "Mini Table",
+    "price": 1200,
+    "bobs": [
+      289,
+      289,
+      289,
+      289
+    ],
+    "category": "TABLE",
+    "u2": 250,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      6,
+      3,
+      3,
+      3,
+      3,
+      0
+    ]
+  },
+  "NEW_YORK": {
+    "u1": 2,
+    "quality": 99,
+    "supplier": 23,
+    "name": "New York",
+    "price": 9900,
+    "bobs": [
+      290,
+      290,
+      290,
+      290
+    ],
+    "category": "TABLE",
+    "u2": 250,
+    "capacity": 4,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      7,
+      8,
+      6,
+      8,
+      24,
+      6
+    ]
+  },
+  "TRANSPARENT": {
+    "u1": 2,
+    "quality": 89,
+    "supplier": 23,
+    "name": "Transparent",
+    "price": 7800,
+    "bobs": [
+      291,
+      292,
+      291,
+      292
+    ],
+    "category": "TABLE",
+    "u2": 250,
+    "capacity": 4,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      7,
+      7,
+      5,
+      7,
+      15,
+      4
+    ]
+  },
+  "OCTOPUS": {
+    "u1": 2,
+    "quality": 72,
+    "supplier": 23,
+    "name": "Octopus",
+    "price": 4900,
+    "bobs": [
+      293,
+      294,
+      293,
+      294
+    ],
+    "category": "TABLE",
+    "u2": 113,
+    "capacity": 4,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      7,
+      7,
+      7,
+      7,
+      13,
+      5
+    ]
+  },
+  "ATHENS": {
+    "u1": 2,
+    "quality": 95,
+    "supplier": 13,
+    "name": "Athens",
+    "price": 6500,
+    "bobs": [
+      295,
+      296,
+      295,
+      296
+    ],
+    "category": "TABLE",
+    "u2": 122,
+    "capacity": 4,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      5,
+      5,
+      8,
+      8,
+      9,
+      9
+    ]
+  },
+  "ROME": {
+    "u1": 2,
+    "quality": 95,
+    "supplier": 13,
+    "name": "Rome",
+    "price": 7500,
+    "bobs": [
+      297,
+      298,
+      297,
+      298
+    ],
+    "category": "TABLE",
+    "u2": 23,
+    "capacity": 4,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      8,
+      8,
+      8,
+      8,
+      9,
+      9
+    ]
+  },
+  "LONDON": {
+    "u1": 2,
+    "quality": 82,
+    "supplier": 18,
+    "name": "London",
+    "price": 4900,
+    "bobs": [
+      299,
+      300,
+      299,
+      300
+    ],
+    "category": "TABLE",
+    "u2": 94,
+    "capacity": 4,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      5,
+      7,
+      6,
+      7,
+      11,
+      2
+    ]
+  },
+  "DECORATIVE_WALL": {
+    "u1": 4,
+    "quality": 58,
+    "supplier": 26,
+    "name": "Decorative Wall",
+    "price": 1000,
+    "bobs": [
+      301,
+      302,
+      301,
+      302
+    ],
+    "category": "DECOR",
+    "u2": 250,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      5,
+      5,
+      7,
+      7,
+      8,
+      8
+    ]
+  },
+  "TABLE_PLANT_1": {
+    "u1": 4,
+    "quality": 40,
+    "supplier": 27,
+    "name": "Table Plant 1",
+    "price": 40,
+    "bobs": [
+      303,
+      303,
+      303,
+      303
+    ],
+    "category": "DECOR",
+    "u2": 250,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Top",
+    "popularity": [
+      1,
+      1,
+      2,
+      2,
+      3,
+      3
+    ]
+  },
+  "TABLE_PLANT_2": {
+    "u1": 4,
+    "quality": 36,
+    "supplier": 27,
+    "name": "Table Plant 2",
+    "price": 20,
+    "bobs": [
+      304,
+      304,
+      304,
+      304
+    ],
+    "category": "DECOR",
+    "u2": 250,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Top",
+    "popularity": [
+      1,
+      1,
+      1,
+      2,
+      2,
+      2
+    ]
+  },
+  "FLOOR_PLANT_1": {
+    "u1": 4,
+    "quality": 45,
+    "supplier": 27,
+    "name": "Floor Plant 1",
+    "price": 100,
+    "bobs": [
+      305,
+      305,
+      305,
+      305
+    ],
+    "category": "DECOR",
+    "u2": 123,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+    ]
+  },
+  "FLOOR_PLANT_2": {
+    "u1": 4,
+    "quality": 55,
+    "supplier": 27,
+    "name": "Floor Plant 2",
+    "price": 150,
+    "bobs": [
+      306,
+      306,
+      306,
+      306
+    ],
+    "category": "DECOR",
+    "u2": 121,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      2,
+      2,
+      2,
+      3,
+      3,
+      3
+    ]
+  },
+  "FLOOR_PLANT_3": {
+    "u1": 4,
+    "quality": 65,
+    "supplier": 27,
+    "name": "Floor Plant 3",
+    "price": 200,
+    "bobs": [
+      307,
+      307,
+      307,
+      307
+    ],
+    "category": "DECOR",
+    "u2": 250,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      3,
+      3,
+      4,
+      4,
+      4,
+      5
+    ]
+  },
+  "PLACE_INVADERS": {
+    "u1": 4,
+    "quality": 25,
+    "supplier": 28,
+    "name": "Place Invaders",
+    "price": 2000,
+    "bobs": [
+      308,
+      309,
+      310,
+      311
+    ],
+    "category": "GAMES",
+    "u2": 125,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      10,
+      14,
+      16,
+      2,
+      -1,
+      -4
+    ]
+  },
+  "DARTH_INVADERS": {
+    "u1": 4,
+    "quality": 35,
+    "supplier": 28,
+    "name": "Darth Invaders",
+    "price": 2500,
+    "bobs": [
+      308,
+      309,
+      310,
+      311
+    ],
+    "category": "GAMES",
+    "u2": 127,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      10,
+      9,
+      6,
+      2,
+      -1,
+      -4
+    ]
+  },
+  "T_TRIS_VERSION_598": {
+    "u1": 4,
+    "quality": 50,
+    "supplier": 28,
+    "name": "T-Tris Version 598",
+    "price": 3000,
+    "bobs": [
+      308,
+      309,
+      310,
+      311
+    ],
+    "category": "GAMES",
+    "u2": 131,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      2,
+      4,
+      6,
+      12,
+      14,
+      8
+    ]
+  },
+  "ZURRICANE_8": {
+    "u1": 4,
+    "quality": 45,
+    "supplier": 28,
+    "name": "Zurricane 8",
+    "price": 3500,
+    "bobs": [
+      308,
+      309,
+      310,
+      311
+    ],
+    "category": "GAMES",
+    "u2": 130,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      12,
+      11,
+      20,
+      0,
+      -1,
+      -4
+    ]
+  },
+  "MAD_PIZZA": {
+    "u1": 4,
+    "quality": 10,
+    "supplier": 29,
+    "name": "Mad Pizza",
+    "price": 4000,
+    "bobs": [
+      308,
+      309,
+      310,
+      311
+    ],
+    "category": "GAMES",
+    "u2": 250,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      -9,
+      -9,
+      -9,
+      -9,
+      -9,
+      -9
+    ]
+  },
+  "PIZZA_TYCOON": {
+    "u1": 4,
+    "quality": 65,
+    "supplier": 28,
+    "name": "Pizza Tycoon",
+    "price": 5000,
+    "bobs": [
+      308,
+      309,
+      310,
+      311
+    ],
+    "category": "GAMES",
+    "u2": 250,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      25,
+      20,
+      10,
+      10,
+      5,
+      5
+    ]
+  },
+  "PINBALL_NIGHTMARE": {
+    "u1": 4,
+    "quality": 85,
+    "supplier": 29,
+    "name": "Pinball Nightmare",
+    "price": 6000,
+    "bobs": [
+      308,
+      309,
+      310,
+      311
+    ],
+    "category": "GAMES",
+    "u2": 250,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      14,
+      13,
+      6,
+      2,
+      -1,
+      -2
+    ]
+  },
+  "IMMORTAL_KOMBAT": {
+    "u1": 4,
+    "quality": 95,
+    "supplier": 29,
+    "name": "Immortal Kombat",
+    "price": 8000,
+    "bobs": [
+      308,
+      309,
+      310,
+      311
+    ],
+    "category": "GAMES",
+    "u2": 250,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      5,
+      9,
+      20,
+      20,
+      30,
+      10
+    ]
+  },
+  "PIZZA_TYCOON_2": {
+    "u1": 4,
+    "quality": 99,
+    "supplier": 29,
+    "name": "Pizza Tycoon 2",
+    "price": 9000,
+    "bobs": [
+      308,
+      309,
+      310,
+      311
+    ],
+    "category": "GAMES",
+    "u2": 250,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      9,
+      9,
+      9,
+      9,
+      1,
+      -2
+    ]
+  },
+  "COLONIZATION": {
+    "u1": 4,
+    "quality": 10,
+    "supplier": 29,
+    "name": "Colonization",
+    "price": 9500,
+    "bobs": [
+      308,
+      309,
+      310,
+      311
+    ],
+    "category": "GAMES",
+    "u2": 250,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      5,
+      9,
+      18,
+      16,
+      6,
+      -1
+    ]
+  },
+  "SPACE_DREAM": {
+    "u1": 4,
+    "quality": 25,
+    "supplier": 28,
+    "name": "Space Dream",
+    "price": 2000,
+    "bobs": [
+      312,
+      313,
+      314,
+      315
+    ],
+    "category": "GAMES",
+    "u2": 250,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      5,
+      8,
+      8,
+      2,
+      -1,
+      -2
+    ]
+  },
+  "FINAL_FIGHT": {
+    "u1": 4,
+    "quality": 35,
+    "supplier": 28,
+    "name": "Final Fight",
+    "price": 2500,
+    "bobs": [
+      312,
+      313,
+      314,
+      315
+    ],
+    "category": "GAMES",
+    "u2": 250,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      5,
+      11,
+      10,
+      2,
+      -1,
+      -2
+    ]
+  },
+  "CYBER_DEATH": {
+    "u1": 4,
+    "quality": 45,
+    "supplier": 28,
+    "name": "Cyber Death",
+    "price": 3000,
+    "bobs": [
+      312,
+      313,
+      314,
+      315
+    ],
+    "category": "GAMES",
+    "u2": 250,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      5,
+      8,
+      8,
+      2,
+      -1,
+      -2
+    ]
+  },
+  "MACHO_MAN": {
+    "u1": 4,
+    "quality": 55,
+    "supplier": 29,
+    "name": "Macho Man",
+    "price": 3500,
+    "bobs": [
+      312,
+      313,
+      314,
+      315
+    ],
+    "category": "GAMES",
+    "u2": 250,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      5,
+      11,
+      10,
+      2,
+      -1,
+      -2
+    ]
+  },
+  "JUKEBOX": {
+    "u1": 4,
+    "quality": 60,
+    "supplier": 30,
+    "name": "Jukebox",
+    "price": 5000,
+    "bobs": [
+      316,
+      317,
+      318,
+      319
+    ],
+    "category": "ENTERTAINMENT",
+    "u2": 250,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      6,
+      6,
+      6,
+      5,
+      3,
+      0
+    ],
+    "role": "Jukebox"
+  },
+  "TV_AERIAL": {
+    "u1": 4,
+    "quality": 25,
+    "supplier": 30,
+    "name": "TV (Aerial)",
+    "price": 2000,
+    "bobs": [
+      320,
+      321,
+      322,
+      323
+    ],
+    "category": "ENTERTAINMENT",
+    "u2": 140,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Top",
+    "popularity": [
+      5,
+      5,
+      5,
+      5,
+      5,
+      5
+    ],
+    "role": "Tv"
+  },
+  "TV_CABLE": {
+    "u1": 4,
+    "quality": 35,
+    "supplier": 30,
+    "name": "TV (Cable)",
+    "price": 3000,
+    "bobs": [
+      320,
+      321,
+      322,
+      323
+    ],
+    "category": "ENTERTAINMENT",
+    "u2": 141,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Top",
+    "popularity": [
+      8,
+      8,
+      8,
+      8,
+      8,
+      8
+    ],
+    "role": "Tv"
+  },
+  "TV_SATELLITE": {
+    "u1": 4,
+    "quality": 25,
+    "supplier": 30,
+    "name": "TV (Satellite)",
+    "price": 4000,
+    "bobs": [
+      320,
+      321,
+      322,
+      323
+    ],
+    "category": "ENTERTAINMENT",
+    "u2": 250,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Top",
+    "popularity": [
+      10,
+      10,
+      10,
+      10,
+      10,
+      10
+    ],
+    "role": "Tv"
+  },
+  "CIGARETTE_MACHINE": {
+    "u1": 4,
+    "quality": 50,
+    "supplier": 31,
+    "name": "Cigarette Machine",
+    "price": 2500,
+    "bobs": [
+      332,
+      333,
+      334,
+      335
+    ],
+    "category": "SLOT_MACHINES",
+    "u2": 250,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      0,
+      2,
+      8,
+      2,
+      4,
+      1
+    ]
+  },
+  "CHOCOLATE_MACHINE": {
+    "u1": 4,
+    "quality": 60,
+    "supplier": 31,
+    "name": "Chocolate Machine",
+    "price": 1200,
+    "bobs": [
+      328,
+      329,
+      330,
+      331
+    ],
+    "category": "SLOT_MACHINES",
+    "u2": 250,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      0,
+      11,
+      10,
+      2,
+      4,
+      -3
+    ]
+  },
+  "CHEWING_GUM_MACH": {
+    "u1": 4,
+    "quality": 60,
+    "supplier": 99,
+    "name": "Chewing Gum Mach.",
+    "price": 900,
+    "bobs": [
+      58,
+      58,
+      58,
+      58
+    ],
+    "category": "SLOT_MACHINES",
+    "u2": 250,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Top",
+    "popularity": [
+      10,
+      2,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "TELEPHONE": {
+    "u1": 4,
+    "quality": 60,
+    "supplier": 31,
+    "name": "Telephone",
+    "price": 3500,
+    "bobs": [
+      336,
+      337,
+      338,
+      339
+    ],
+    "category": "SLOT_MACHINES",
+    "u2": 250,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      0,
+      2,
+      2,
+      2,
+      10,
+      2
+    ]
+  },
+  "CANDLE": {
+    "u1": 4,
+    "quality": 60,
+    "supplier": 26,
+    "name": "Candle",
+    "price": 10,
+    "bobs": [
+      61,
+      61,
+      61,
+      61
+    ],
+    "category": "DECOR",
+    "u2": 250,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Top",
+    "popularity": [
+      1,
+      -1,
+      0,
+      2,
+      3,
+      2
+    ]
+  },
+  "ASHES_LARGE": {
+    "u1": 4,
+    "quality": 0,
+    "supplier": 99,
+    "name": "Ashes",
+    "price": 0,
+    "bobs": [
+      326,
+      326,
+      326,
+      326
+    ],
+    "category": "OTHER",
+    "u2": 250,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      -9,
+      -9,
+      -9,
+      -9,
+      -9,
+      -9
+    ],
+    "role": "AshesLarge"
+  },
+  "ASHES_SMALL": {
+    "u1": 4,
+    "quality": 0,
+    "supplier": 99,
+    "name": "Ashes",
+    "price": 0,
+    "bobs": [
+      327,
+      327,
+      327,
+      327
+    ],
+    "category": "OTHER",
+    "u2": 250,
+    "capacity": 1,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      -9,
+      -9,
+      -9,
+      -9,
+      -9,
+      -9
+    ],
+    "role": "AshesSmall"
+  },
+  "GRILL_SMALL": {
+    "u1": 3,
+    "quality": 20,
+    "supplier": 32,
+    "name": "Grill small",
+    "price": 800,
+    "bobs": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "category": "KITCHENWARE",
+    "u2": 8,
+    "capacity": 2,
+    "bake_time": 15,
+    "placement_layer": "Tables",
+    "popularity": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "OVEN_SMALL": {
+    "u1": 3,
+    "quality": 38,
+    "supplier": 32,
+    "name": "Oven small",
+    "price": 1500,
+    "bobs": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "category": "KITCHENWARE",
+    "u2": 8,
+    "capacity": 2,
+    "bake_time": 14,
+    "placement_layer": "Tables",
+    "popularity": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "STONE_OVEN_SMALL": {
+    "u1": 3,
+    "quality": 58,
+    "supplier": 33,
+    "name": "Stone Oven small",
+    "price": 3000,
+    "bobs": [
+      2,
+      2,
+      2,
+      2
+    ],
+    "category": "KITCHENWARE",
+    "u2": 8,
+    "capacity": 2,
+    "bake_time": 12,
+    "placement_layer": "Tables",
+    "popularity": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "EXCLUSIVE_OVEN_1": {
+    "u1": 3,
+    "quality": 85,
+    "supplier": 33,
+    "name": "Exclusive Oven 1",
+    "price": 7000,
+    "bobs": [
+      8,
+      8,
+      8,
+      8
+    ],
+    "category": "KITCHENWARE",
+    "u2": 8,
+    "capacity": 2,
+    "bake_time": 11,
+    "placement_layer": "Tables",
+    "popularity": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "ELECTRIC_SMALL": {
+    "u1": 3,
+    "quality": 70,
+    "supplier": 34,
+    "name": "Electric small",
+    "price": 8000,
+    "bobs": [
+      3,
+      3,
+      3,
+      3
+    ],
+    "category": "KITCHENWARE",
+    "u2": 8,
+    "capacity": 3,
+    "bake_time": 8,
+    "placement_layer": "Tables",
+    "popularity": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "GRILL_LARGE": {
+    "u1": 3,
+    "quality": 20,
+    "supplier": 32,
+    "name": "Grill large",
+    "price": 1500,
+    "bobs": [
+      4,
+      4,
+      4,
+      4
+    ],
+    "category": "KITCHENWARE",
+    "u2": 8,
+    "capacity": 4,
+    "bake_time": 15,
+    "placement_layer": "Tables",
+    "popularity": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "OVEN_LARGE": {
+    "u1": 3,
+    "quality": 38,
+    "supplier": 32,
+    "name": "Oven large",
+    "price": 2800,
+    "bobs": [
+      5,
+      5,
+      5,
+      5
+    ],
+    "category": "KITCHENWARE",
+    "u2": 8,
+    "capacity": 4,
+    "bake_time": 14,
+    "placement_layer": "Tables",
+    "popularity": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "STONE_OVEN_LARGE": {
+    "u1": 3,
+    "quality": 58,
+    "supplier": 33,
+    "name": "Stone Oven large",
+    "price": 5600,
+    "bobs": [
+      6,
+      6,
+      6,
+      6
+    ],
+    "category": "KITCHENWARE",
+    "u2": 8,
+    "capacity": 4,
+    "bake_time": 12,
+    "placement_layer": "Tables",
+    "popularity": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "EXCLUSIVE_OVEN_2": {
+    "u1": 3,
+    "quality": 85,
+    "supplier": 33,
+    "name": "Exclusive Oven 2",
+    "price": 12000,
+    "bobs": [
+      9,
+      9,
+      9,
+      9
+    ],
+    "category": "KITCHENWARE",
+    "u2": 8,
+    "capacity": 4,
+    "bake_time": 11,
+    "placement_layer": "Tables",
+    "popularity": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "ELECTRIC_LARGE": {
+    "u1": 3,
+    "quality": 70,
+    "supplier": 34,
+    "name": "Electric large",
+    "price": 15000,
+    "bobs": [
+      7,
+      7,
+      7,
+      7
+    ],
+    "category": "KITCHENWARE",
+    "u2": 8,
+    "capacity": 6,
+    "bake_time": 8,
+    "placement_layer": "Tables",
+    "popularity": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "HYPER_OVEN": {
+    "u1": 3,
+    "quality": 60,
+    "supplier": 35,
+    "name": "Hyper Oven",
+    "price": 25000,
+    "bobs": [
+      12,
+      12,
+      12,
+      12
+    ],
+    "category": "KITCHENWARE",
+    "u2": 8,
+    "capacity": 5,
+    "bake_time": 5,
+    "placement_layer": "Tables",
+    "popularity": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "BLACK_BOX": {
+    "u1": 3,
+    "quality": 60,
+    "supplier": 35,
+    "name": "Black Box",
+    "price": 35000,
+    "bobs": [
+      11,
+      11,
+      11,
+      11
+    ],
+    "category": "KITCHENWARE",
+    "u2": 8,
+    "capacity": 6,
+    "bake_time": 4,
+    "placement_layer": "Tables",
+    "popularity": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "SUPER_TOASTER": {
+    "u1": 3,
+    "quality": 60,
+    "supplier": 35,
+    "name": "Super Toaster",
+    "price": 50000,
+    "bobs": [
+      10,
+      10,
+      10,
+      10
+    ],
+    "category": "KITCHENWARE",
+    "u2": 8,
+    "capacity": 8,
+    "bake_time": 3,
+    "placement_layer": "Tables",
+    "popularity": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "ASHES_KITCHEN": {
+    "u1": 3,
+    "quality": 0,
+    "supplier": 99,
+    "name": "Ashes",
+    "price": 0,
+    "bobs": [
+      326,
+      326,
+      326,
+      326
+    ],
+    "category": "UNKNOWN3",
+    "u2": 2,
+    "capacity": 0,
+    "bake_time": 0,
+    "placement_layer": "Tables",
+    "popularity": [
+      -9,
+      -9,
+      -9,
+      -9,
+      -9,
+      -9
+    ],
+    "role": "AshesKitchen"
+  }
+}

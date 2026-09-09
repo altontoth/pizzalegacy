@@ -57,17 +57,17 @@ void PlacedFurniture::change_to_ashes() {
   if (is_ashes()) {
     return;
   }
-  FurnitureType ashes = FurnitureType::ASHES_LARGE;
+  FurnitureRole ashes = FurnitureRole::AshesLarge;
   if (furniture_->category() == FurnitureCategory::KITCHENWARE) {
-    ashes = FurnitureType::ASHES_KITCHEN;
+    ashes = FurnitureRole::AshesKitchen;
   }
   else {
     const auto layer = furniture_->placement_layer();
     ashes = (layer == PlacementLayer::Seating || layer == PlacementLayer::Top)
-                ? FurnitureType::ASHES_SMALL
-                : FurnitureType::ASHES_LARGE;
+                ? FurnitureRole::AshesSmall
+                : FurnitureRole::AshesLarge;
   }
-  furniture_ = FurnitureFactory::create_furniture(ashes);
+  furniture_ = FurnitureFactory::furniture_with_role(ashes);
   bob_state_ = 0;
 }
 
@@ -82,10 +82,10 @@ void PlacedFurniture::damage(int amount) {
 }
 
 bool PlacedFurniture::is_ashes() const {
-  switch (furniture_->type()) {
-  case FurnitureType::ASHES_LARGE:
-  case FurnitureType::ASHES_SMALL:
-  case FurnitureType::ASHES_KITCHEN:
+  switch (furniture_->role()) {
+  case FurnitureRole::AshesLarge:
+  case FurnitureRole::AshesSmall:
+  case FurnitureRole::AshesKitchen:
     return true;
   default:
     return false;

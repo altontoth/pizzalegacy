@@ -5,308 +5,43 @@
  */
 #include "core/factories/SupplierFactory.h"
 
+#include "core/factories/DataFile.h"
+#include "core/supply/Supplier.h"
+
 #include <algorithm>
-#include <array>
+#include <cstdint>
+#include <map>
+#include <memory>
 #include <ranges>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 namespace {
 
-// u2 and u3 are unknown to us (so far)
-constexpr auto suppliers = std::to_array<SupplierData>({
-    {.id = SupplierID::FREDS_TILE_EMPORIUM,
-     .type = SupplierType::FLOORING,
-     .quality = 38,
-     .name = "Fred's Tile Emporium",
-     .price_per_tile = 2,
-     .customer_ratings = {2, 2, 2, 2, 2, 2},
-     .introduction_year = 1990,
-     .withdrawal_year = 2200},
-    {.id = SupplierID::USED_TILES,
-     .type = SupplierType::FLOORING,
-     .quality = 20,
-     .name = "Used Tiles",
-     .price_per_tile = 1,
-     .customer_ratings = {0, 0, 0, 0, 0, 0},
-     .introduction_year = 1990,
-     .withdrawal_year = 2200},
-    {.id = SupplierID::APEX_TILE_CENTER,
-     .type = SupplierType::FLOORING,
-     .quality = 50,
-     .name = "Apex Tile Center",
-     .price_per_tile = 4,
-     .customer_ratings = {8, 8, 6, 1, 1, 1},
-     .introduction_year = 1990,
-     .withdrawal_year = 2200},
-    {.id = SupplierID::CARPETS_UNLIMITED,
-     .type = SupplierType::FLOORING,
-     .quality = 68,
-     .name = "Carpets Unlimited",
-     .price_per_tile = 10,
-     .customer_ratings = {0, 2, 2, 9, 9, 9},
-     .introduction_year = 1990,
-     .withdrawal_year = 2200},
-    {.id = SupplierID::EXCLUSIVE_CARPETS,
-     .type = SupplierType::FLOORING,
-     .quality = 88,
-     .name = "Exclusive Carpets",
-     .price_per_tile = 16,
-     .customer_ratings = {6, 4, 5, 3, 2, 1},
-     .introduction_year = 1990,
-     .withdrawal_year = 2200},
-    {.id = SupplierID::USED_CARPET,
-     .type = SupplierType::FLOORING,
-     .quality = 20,
-     .name = "Used Carpet",
-     .price_per_tile = 1,
-     .customer_ratings = {1, 3, 2, 7, 6, 5},
-     .introduction_year = 1990,
-     .withdrawal_year = 2200},
-    {.id = SupplierID::EXCLUSIVE_TILES,
-     .type = SupplierType::FLOORING,
-     .quality = 88,
-     .name = "Exclusive Tiles",
-     .price_per_tile = 20,
-     .customer_ratings = {14, 15, 17, 20, 17, 12},
-     .introduction_year = 1990,
-     .withdrawal_year = 2200},
-    {.id = SupplierID::CRAZY_TILES,
-     .type = SupplierType::FLOORING,
-     .quality = 56,
-     .name = "Crazy Tiles",
-     .price_per_tile = 10,
-     .customer_ratings = {20, 25, 14, 3, -1, -5},
-     .introduction_year = 1990,
-     .withdrawal_year = 2200},
-    {.id = SupplierID::HANNOS_WOODEN_FLOORS,
-     .type = SupplierType::FLOORING,
-     .quality = 80,
-     .name = "Hanno's Wooden Floors",
-     .price_per_tile = 14,
-     .customer_ratings = {6, 5, 10, 12, 18, 15},
-     .introduction_year = 1990,
-     .withdrawal_year = 2200},
-    {.id = SupplierID::MARBLE_FLOORS,
-     .type = SupplierType::FLOORING,
-     .quality = 99,
-     .name = "Marble Floors",
-     .price_per_tile = 28,
-     .customer_ratings = {28, 21, 19, 34, 38, 40},
-     .introduction_year = 1990,
-     .withdrawal_year = 1996},
-    {.id = SupplierID::FOIL_COATING,
-     .type = SupplierType::FLOORING,
-     .quality = 60,
-     .name = "Foil Coating",
-     .price_per_tile = 9,
-     .customer_ratings = {10, 10, 10, 10, 10, 10},
-     .introduction_year = 1996,
-     .withdrawal_year = 2200},
-    {.id = SupplierID::HOUSE_OF_STONE,
-     .type = SupplierType::FLOORING,
-     .quality = 50,
-     .name = "House of Stone",
-     .price_per_tile = 10,
-     .customer_ratings = {8, 8, 5, 8, 5, 6},
-     .introduction_year = 1990,
-     .withdrawal_year = 2200},
-    {.id = SupplierID::RESTAURANT_FURNISHINGS,
-     .type = SupplierType::FURNITURE,
-     .quality = 70,
-     .name = "Restaurant Furnishings",
-     .price_per_tile = 6,
-     .customer_ratings = {2, 3, 2, 1, 1, 1},
-     .introduction_year = 1990,
-     .withdrawal_year = 2200},
-    {.id = SupplierID::CLASSIC_CROWN,
-     .type = SupplierType::FURNITURE,
-     .quality = 80,
-     .name = "Classic Crown",
-     .price_per_tile = 5,
-     .customer_ratings = {2, 3, 2, 1, 1, 1},
-     .introduction_year = 1990,
-     .withdrawal_year = 2200},
-    {.id = SupplierID::BARGAIN_BASEMENT,
-     .type = SupplierType::FURNITURE,
-     .quality = 40,
-     .name = "Bargain Basement",
-     .price_per_tile = 1,
-     .customer_ratings = {2, 3, 2, 1, 1, 1},
-     .introduction_year = 1990,
-     .withdrawal_year = 1996},
-    {.id = SupplierID::SECOND_HAND_FURNITURE,
-     .type = SupplierType::FURNITURE,
-     .quality = 20,
-     .name = "2nd Hand Furniture",
-     .price_per_tile = 1,
-     .customer_ratings = {2, 3, 2, 1, 1, 1},
-     .introduction_year = 1990,
-     .withdrawal_year = 1995},
-    {.id = SupplierID::GARDEN_FURNITURE_LTD,
-     .type = SupplierType::FURNITURE,
-     .quality = 35,
-     .name = "Garden Furniture Ltd",
-     .price_per_tile = 1,
-     .customer_ratings = {2, 3, 2, 1, 1, 1},
-     .introduction_year = 1990,
-     .withdrawal_year = 2200},
-    {.id = SupplierID::MODERN_LIVING,
-     .type = SupplierType::FURNITURE,
-     .quality = 46,
-     .name = "Modern Living",
-     .price_per_tile = 1,
-     .customer_ratings = {2, 3, 2, 1, 1, 1},
-     .introduction_year = 1990,
-     .withdrawal_year = 2200},
-    {.id = SupplierID::MODERN_COMFORT,
-     .type = SupplierType::FURNITURE,
-     .quality = 80,
-     .name = "Modern Comfort",
-     .price_per_tile = 1,
-     .customer_ratings = {2, 3, 2, 1, 1, 1},
-     .introduction_year = 1996,
-     .withdrawal_year = 2200},
-    {.id = SupplierID::TRENDSETTER_STUDIO,
-     .type = SupplierType::FURNITURE,
-     .quality = 70,
-     .name = "Trendsetter Studio",
-     .price_per_tile = 1,
-     .customer_ratings = {2, 3, 2, 1, 1, 1},
-     .introduction_year = 1997,
-     .withdrawal_year = 2200},
-    {.id = SupplierID::SMALL_AND_SUNNY,
-     .type = SupplierType::FURNITURE,
-     .quality = 60,
-     .name = "Small & Sunny",
-     .price_per_tile = 1,
-     .customer_ratings = {2, 3, 2, 1, 1, 1},
-     .introduction_year = 1990,
-     .withdrawal_year = 2200},
-    {.id = SupplierID::PURELY_NATURAL,
-     .type = SupplierType::FURNITURE,
-     .quality = 80,
-     .name = "Purely Natural",
-     .price_per_tile = 1,
-     .customer_ratings = {2, 3, 2, 1, 1, 1},
-     .introduction_year = 1990,
-     .withdrawal_year = 2200},
-    {.id = SupplierID::ELEGANT_AND_EXCLUSIVE,
-     .type = SupplierType::FURNITURE,
-     .quality = 80,
-     .name = "Elegant & Exclusive",
-     .price_per_tile = 1,
-     .customer_ratings = {2, 3, 2, 1, 1, 1},
-     .introduction_year = 1990,
-     .withdrawal_year = 2200},
-    {.id = SupplierID::BUSINESS_CLASS,
-     .type = SupplierType::FURNITURE,
-     .quality = 86,
-     .name = "Business Class",
-     .price_per_tile = 1,
-     .customer_ratings = {2, 3, 2, 1, 1, 1},
-     .introduction_year = 1990,
-     .withdrawal_year = 2200},
-    {.id = SupplierID::LUXURY_FURNISHINGS,
-     .type = SupplierType::FURNITURE,
-     .quality = 99,
-     .name = "Luxury Furnishings",
-     .price_per_tile = 1,
-     .customer_ratings = {2, 3, 2, 1, 1, 1},
-     .introduction_year = 1990,
-     .withdrawal_year = 2200},
-    {.id = SupplierID::YOUNG_ACTION,
-     .type = SupplierType::FURNITURE,
-     .quality = 43,
-     .name = "Young Action",
-     .price_per_tile = 1,
-     .customer_ratings = {2, 3, 2, 1, 1, 1},
-     .introduction_year = 1990,
-     .withdrawal_year = 2200},
-    {.id = SupplierID::DANIELS_DECOR,
-     .type = SupplierType::EXTRAS,
-     .quality = 50,
-     .name = "Daniel's Decor",
-     .price_per_tile = 1,
-     .customer_ratings = {2, 3, 2, 1, 1, 1},
-     .introduction_year = 1990,
-     .withdrawal_year = 2200},
-    {.id = SupplierID::BRUNIS_BLOOMS,
-     .type = SupplierType::EXTRAS,
-     .quality = 50,
-     .name = "Bruni's Blooms",
-     .price_per_tile = 1,
-     .customer_ratings = {2, 3, 2, 1, 1, 1},
-     .introduction_year = 1990,
-     .withdrawal_year = 2200},
-    {.id = SupplierID::VIDEOGAMES_AND_PINBALL,
-     .type = SupplierType::EXTRAS,
-     .quality = 50,
-     .name = "Videogames & Pinball",
-     .price_per_tile = 1,
-     .customer_ratings = {2, 3, 2, 1, 1, 1},
-     .introduction_year = 1990,
-     .withdrawal_year = 2200},
-    {.id = SupplierID::NEW_AGE_VIDEOGAMES,
-     .type = SupplierType::EXTRAS,
-     .quality = 50,
-     .name = "New Age Videogames",
-     .price_per_tile = 1,
-     .customer_ratings = {2, 3, 2, 1, 1, 1},
-     .introduction_year = 1996,
-     .withdrawal_year = 2200},
-    {.id = SupplierID::A_AND_C_ENTERTAINMENT,
-     .type = SupplierType::EXTRAS,
-     .quality = 50,
-     .name = "A&C Entertainment",
-     .price_per_tile = 1,
-     .customer_ratings = {2, 3, 2, 1, 1, 1},
-     .introduction_year = 1990,
-     .withdrawal_year = 2200},
-    {.id = SupplierID::ALIS_SLOT_MACHINES,
-     .type = SupplierType::EXTRAS,
-     .quality = 50,
-     .name = "Ali's Slot Machines",
-     .price_per_tile = 1,
-     .customer_ratings = {2, 3, 2, 1, 1, 1},
-     .introduction_year = 1990,
-     .withdrawal_year = 2200},
-    {.id = SupplierID::OVENS,
-     .type = SupplierType::KITCHENWARE,
-     .quality = 30,
-     .name = "Ovens",
-     .price_per_tile = 1,
-     .customer_ratings = {2, 3, 2, 1, 1, 1},
-     .introduction_year = 1990,
-     .withdrawal_year = 2000},
-    {.id = SupplierID::PIZZA_OVENS,
-     .type = SupplierType::KITCHENWARE,
-     .quality = 50,
-     .name = "Pizza Ovens",
-     .price_per_tile = 1,
-     .customer_ratings = {2, 3, 2, 1, 1, 1},
-     .introduction_year = 1990,
-     .withdrawal_year = 1997},
-    {.id = SupplierID::ELECTRIC_OVENS,
-     .type = SupplierType::KITCHENWARE,
-     .quality = 80,
-     .name = "Electric Ovens",
-     .price_per_tile = 1,
-     .customer_ratings = {2, 3, 2, 1, 1, 1},
-     .introduction_year = 1990,
-     .withdrawal_year = 2200},
-    {.id = SupplierID::RESTAURANT_RATIO_LTD,
-     .type = SupplierType::KITCHENWARE,
-     .quality = 80,
-     .name = "Restaurant Ratio Ltd",
-     .price_per_tile = 1,
-     .customer_ratings = {2, 3, 2, 1, 1, 1},
-     .introduction_year = 1996,
-     .withdrawal_year = 2200},
-});
+std::map<SupplierID, SupplierData> suppliers_;
 
-static_assert(suppliers.size() ==
-                  static_cast<std::size_t>(SupplierID::RESTAURANT_RATIO_LTD) +
-                      1,
-              "suppliers table out of sync with SupplierID enum");
+SupplierData read_supplier(const data_file::json& entry, SupplierID id) {
+  return SupplierData{
+      .id = id,
+      .type = data_file::enum_field<SupplierType>(entry, "type"),
+      .quality = entry.at("quality").get<uint8_t>(),
+      .name = entry.at("name").get<std::string>(),
+      .price_per_tile = entry.at("price_per_tile").get<uint16_t>(),
+      .customer_ratings =
+          data_file::array_field<int8_t, 6>(entry, "customer_ratings"),
+      .introduction_year = entry.at("introduction_year").get<uint16_t>(),
+      .withdrawal_year = entry.at("withdrawal_year").get<uint16_t>(),
+  };
+}
+
+void ensure_loaded() {
+  if (!suppliers_.empty()) {
+    return;
+  }
+  suppliers_ = data_file::load<SupplierData, SupplierID>("suppliers.json",
+                                                         read_supplier);
+}
 
 } // namespace
 
@@ -314,10 +49,11 @@ std::unordered_map<SupplierID, std::unique_ptr<const Supplier>>
     SupplierFactory::cache_ = {};
 
 std::vector<const Supplier*> SupplierFactory::all_suppliers() {
+  ensure_loaded();
   std::vector<const Supplier*> list;
-  list.reserve(suppliers.size());
-  for (const auto& data : suppliers) {
-    list.push_back(create_supplier(data.id));
+  list.reserve(suppliers_.size());
+  for (const auto& [id, data] : suppliers_) {
+    list.push_back(create_supplier(id));
   }
 
   // Sort by group first and then by enum order within
@@ -351,12 +87,12 @@ const Supplier* SupplierFactory::create_supplier(SupplierID supplier_id) {
     return it->second.get();
   }
 
-  for (const auto& data : suppliers) {
-    if (data.id == supplier_id) {
-      auto [pos, _] =
-          cache_.emplace(supplier_id, std::make_unique<Supplier>(data));
-      return pos->second.get();
-    }
+  ensure_loaded();
+  const auto found = suppliers_.find(supplier_id);
+  if (found == suppliers_.end()) {
+    return nullptr;
   }
-  return nullptr;
+  auto [pos, _] =
+      cache_.emplace(supplier_id, std::make_unique<Supplier>(found->second));
+  return pos->second.get();
 }

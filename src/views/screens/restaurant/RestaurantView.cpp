@@ -656,14 +656,12 @@ void RestaurantView::handle_furniture_click(const PlacedFurniture* pf) {
   else if (restaurant_->is_open(state_.time().time_of_day()) &&
            last_clicked_furniture_index_ &&
            *last_clicked_furniture_index_ == prop_id) {
-    const auto ftype = pf->furniture()->type();
-    if (ftype == FurnitureType::JUKEBOX) {
+    const auto role = pf->furniture()->role();
+    if (role == FurnitureRole::Jukebox) {
       context_.popup->origin({66, 72});
       context_.popup->create<JukeboxPopup>(restaurant_);
     }
-    else if (ftype == FurnitureType::TV_AERIAL ||
-             ftype == FurnitureType::TV_CABLE ||
-             ftype == FurnitureType::TV_SATELLITE) {
+    else if (role == FurnitureRole::Tv) {
       context_.popup->origin({66, 72});
       context_.popup->create<TvPopup>(restaurant_);
     }
@@ -1340,8 +1338,8 @@ void RestaurantView::update_status_display(const PlacedFurniture* pf) {
     recipe.add_single("nothing");
   }
   else if (kitchen_view_ &&
-           pf->furniture()->type() != FurnitureType::ASHES_SMALL &&
-           pf->furniture()->type() != FurnitureType::ASHES_LARGE) {
+           pf->furniture()->role() != FurnitureRole::AshesSmall &&
+           pf->furniture()->role() != FurnitureRole::AshesLarge) {
     const auto* furniture = pf->furniture();
     auto category = furniture->category();
     if (category != FurnitureCategory::KITCHENWARE) {

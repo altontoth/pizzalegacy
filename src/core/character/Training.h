@@ -8,7 +8,6 @@
 
 #include <stdint.h>
 #include <string>
-#include <string_view>
 #include <vector>
 #include "core/finance/Money.h"
 
@@ -41,7 +40,7 @@ enum class TrainingType {
 };
 
 struct TrainingData {
-  std::string_view name;
+  std::string name;
   SkillType type;
   int duration;  // days
   int min_level; // score requirement

@@ -13,10 +13,13 @@
 #include <memory>
 #include <optional>
 #include <unordered_map>
+#include <vector>
 
 class FurnitureFactory {
 public:
   static const Furniture* create_furniture(FurnitureType type);
+  // The first entry with this role.
+  static const Furniture* furniture_with_role(FurnitureRole role);
   static std::vector<const Furniture*> all_furniture();
   static std::vector<const Furniture*> all_furniture_by_supplier(SupplierID);
   static std::optional<FurnitureType> get_furniture_type(const Furniture* item);

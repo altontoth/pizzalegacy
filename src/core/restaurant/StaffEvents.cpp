@@ -148,7 +148,7 @@ void StaffEvents::apply_event_effect(StaffEventData::Type type, Staff& staff,
     auto chosen_id = oven_ids[rand_max_n(static_cast<int>(oven_ids.size()))];
     auto removed = layout->remove_by_id(chosen_id, true);
     const auto* ash_furn =
-        FurnitureFactory::create_furniture(FurnitureType::ASHES_LARGE);
+        FurnitureFactory::furniture_with_role(FurnitureRole::AshesLarge);
     if (removed && ash_furn) {
       auto ash = std::make_unique<PlacedFurniture>(
           ash_furn, layout->next_furniture_id(), removed->origin(),

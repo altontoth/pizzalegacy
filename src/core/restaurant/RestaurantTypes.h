@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include <magic_enum/magic_enum.hpp>
+
 enum class FurnitureType {
   TRADITIO_ROMANO = 0,
   NAPOLEON = 1,
@@ -170,6 +172,12 @@ enum class FurnitureType {
   BLACK_BOX = 160,
   SUPER_TOASTER = 161,
   ASHES_KITCHEN = 162,
+};
+
+// FurnitureType runs past magic_enum's default reflection range.
+template <> struct magic_enum::customize::enum_range<FurnitureType> {
+  static constexpr int min = 0;
+  static constexpr int max = 200;
 };
 
 enum class RestaurantViewMode {
