@@ -59,11 +59,11 @@ Examples:
               },
           },
       .handler = [](const CommandContext& ctx) -> CommandResult {
-        const std::string section = ctx.string_arg(0);
-        if (section.empty()) {
+        if (!ctx.has_arg(0)) {
           ctx.state.ui().push<ScreenTag>(ScreenTag::Kind::MenuOptions);
           return CommandResult::success().add_message("Navigated to options");
         }
+        const std::string section = ctx.string_arg(0);
         static const std::pair<std::string_view, OptionsScreen> sections[] = {
             {"audio", OptionsScreen::Audio},
             {"graphics", OptionsScreen::Graphics},

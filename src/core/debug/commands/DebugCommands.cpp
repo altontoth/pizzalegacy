@@ -210,8 +210,8 @@ Examples:
         CommandResult result = CommandResult::success();
         result.add_message(fp.hash);
 
-        const std::string file = ctx.string_arg(0);
-        if (!file.empty()) {
+        if (ctx.has_arg(0)) {
+          const std::string file = ctx.string_arg(0);
           std::ofstream out(file);
           if (!out) {
             return CommandResult::error(
