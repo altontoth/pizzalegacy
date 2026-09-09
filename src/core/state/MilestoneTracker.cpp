@@ -36,6 +36,22 @@ int owned_city_count(GameState& gs, core::PlayerId pid) {
   return static_cast<int>(std::count(cities.begin(), cities.end(), true));
 }
 
+// Perfect deliveries: no orders lost in past week. The original gives
+// you this even if you didn't have any orders, let's optionally prevent
+// that.
+bool perfect_delivery_week(const Restaurant& rest, bool require_orders) {
+  const auto week_days = rest.stats().last_week();
+  if (week_days.size() < 7) {
+    return false;
+  }
+  for (const auto& day : week_days) {
+    if (day.orders_lost > 0 || (require_orders && day.orders_generated == 0)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 } // namespace
 
 void MilestoneTracker::check_milestone_events(Player& player,
@@ -71,6 +87,7 @@ void MilestoneTracker::check_milestone_events(Player& player,
   int total_daily_pizzas = 0;
   Money total_daily_revenue;
   int64_t total_ingredients_today = 0;
+  int perfect_delivery_count = 0;
 
   const auto active_city_id = gs_->active_city_id();
   auto city_restaurants = gs_->restaurants_in_city(pid, active_city_id);
@@ -93,6 +110,16 @@ void MilestoneTracker::check_milestone_events(Player& player,
       gs_->record_milestone(MilestoneId::AverageServiceTimeLessThan4Minutes,
                             pid);
     }
+
+    if (perfect_delivery_week(*rest, gs_->options().fix_legacy_bugs)) {
+      perfect_delivery_count++;
+      gs_->record_milestone(MilestoneId::AbleToMeet100PctDeliveries, pid);
+    }
+  }
+
+  if (perfect_delivery_count >= 5) {
+    gs_->record_milestone(
+        MilestoneId::PerfectDeliveriesFor1WeekAcross5Restaurants, pid);
   }
 
   if (total_ingredients_today >= 1000LL * 1000) {
@@ -144,7 +171,6 @@ void MilestoneTracker::check_milestone_events(Player& player,
 
   // Weekly profit per restaurant and per city
   Money city_weekly_profit;
-  int perfect_delivery_count = 0;
   for (auto* rest : city_restaurants) {
     if (!rest || rest->property().city().id() != active_city_id) {
       continue;
@@ -158,28 +184,6 @@ void MilestoneTracker::check_milestone_events(Player& player,
     if (wp >= 50'000_usd) {
       gs_->record_milestone(MilestoneId::Has50KWeeksProfitInOneRestaurant, pid);
     }
-
-    // Perfect deliveries: no orders lost in past week. The original gives
-    // you this even if you didn't have any orders, let's optionally prevent
-    // that.
-    const auto week_days = rest->stats().last_week();
-    bool perfect_week = !week_days.empty();
-    for (const auto& day : week_days) {
-      if (day.orders_lost > 0 ||
-          (gs_->options().fix_legacy_bugs && day.orders_generated == 0)) {
-        perfect_week = false;
-        break;
-      }
-    }
-    if (perfect_week) {
-      perfect_delivery_count++;
-      gs_->record_milestone(MilestoneId::AbleToMeet100PctDeliveries, pid);
-    }
-  }
-
-  if (perfect_delivery_count >= 5) {
-    gs_->record_milestone(
-        MilestoneId::PerfectDeliveriesFor1WeekAcross5Restaurants, pid);
   }
 
   if (city_weekly_profit >= 500'000_usd) {
