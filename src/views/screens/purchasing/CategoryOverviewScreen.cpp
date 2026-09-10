@@ -15,6 +15,7 @@
 #include "core/state/GameState.h"
 #include "core/state/UIState.h"
 #include "core/util/LegacyConstants.h"
+#include "engine/Fatal.h"
 #include "engine/FormatCompat.h"
 #include "engine/geom/Spaces.h"
 #include "engine/gfx/Blit.h"
@@ -414,8 +415,7 @@ void CategoryOverviewScreen::draw_inventory_box(const RenderContext& ctx) {
                                     FurnitureCategory::ENTERTAINMENT,
                                     FurnitureCategory::SLOT_MACHINES});
     default:
-      Logger::warn("Called furniture_view with an unknown thing!");
-      std::terminate();
+      fatal("Called furniture_view with an unknown thing!");
     }
   }(); // auto deduces type
 
