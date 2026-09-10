@@ -122,7 +122,7 @@ void Property::calculate_demographics(const Restaurant* restaurant) {
   //
   // Edge probability handles fractional radius coverage. Since radius is an
   // integer (sqrt of range_raw), tiles exactly at that radius may be partially
-  // within the true circular range. Instead of hard cutoff, we
+  // within the true diamond-shaped range. Instead of hard cutoff, we
   // probabilistically include edge tiles based on how much range_raw exceeds
   // the integer radius^2.
   //
@@ -173,33 +173,34 @@ void Property::calculate_demographics(const Restaurant* restaurant) {
   // Accumulate population per demographic
   DemographicArray<float> demo_populations{};
 
-  // Scan surrounding tiles, calculate all demographics per tile
-  for (int y = min_y; y <= max_y; y++) {
-    for (int x = min_x; x <= max_x; x++) {
-      int manhattan_dist = abs(prop_x - x) + abs(prop_y - y);
+  // One demographic at a time, so each gets its own roll for the edge tiles.
+  for (auto demographic : ALL_CONSUMER_TYPES) {
+    float accumulated = 0.0f;
 
-      if (manhattan_dist > radius) {
-        continue;
-      }
+    for (int y = min_y; y <= max_y; y++) {
+      for (int x = min_x; x <= max_x; x++) {
+        int manhattan_dist = abs(prop_x - x) + abs(prop_y - y);
 
-      // For tiles exactly at radius, use edge probability
-      if (manhattan_dist == radius) {
-        if (!engine::random::rand_percentage_chance(edge_probability)) {
+        if (manhattan_dist > radius) {
           continue;
         }
-      }
 
-      int tile_index = City::x_y_to_index(x, y);
-      uint8_t tile_type = city_.type(tile_index);
+        // For tiles exactly at radius, use edge probability
+        if (manhattan_dist == radius &&
+            !engine::random::rand_percentage_chance(edge_probability)) {
+          continue;
+        }
 
-      // Calculate contribution for all demographics
-      for (auto demographic : ALL_CONSUMER_TYPES) {
-        float contribution =
+        int tile_index = City::x_y_to_index(x, y);
+        uint8_t tile_type = city_.type(tile_index);
+
+        accumulated +=
             calculate_tile_population(tile_type, static_cast<int>(demographic),
                                       base_multipliers[demographic]);
-        demo_populations[demographic] += contribution;
       }
     }
+
+    demo_populations[demographic] = accumulated;
   }
 
   float total_pop = 0.0f;

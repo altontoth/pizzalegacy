@@ -43,9 +43,6 @@ int calculate_competition_penalty(const Restaurant& competitor,
 bool RestaurantEconomy::update_restaurant_range() {
   int previous_range_tiles = range_tiles_;
 
-  // Calculate range_tiles from range_raw (sqrt)
-  range_tiles_ = static_cast<int>(std::sqrt(range_raw_));
-
   if (range_raw_ < 120) {
     if (engine::random::rand_percentage_chance(50)) {
       range_raw_++;
@@ -55,7 +52,7 @@ bool RestaurantEconomy::update_restaurant_range() {
   // Cap range_raw at 200
   range_raw_ = std::min<int>(range_raw_, 200);
 
-  // Recalculate range_tiles after potential increment
+  // Calculate range_tiles after potential increment
   range_tiles_ = static_cast<int>(std::sqrt(range_raw_));
 
   return range_tiles_ > previous_range_tiles;
