@@ -73,8 +73,8 @@ original which results in more business.
     out (#10).
   * Missing raspberries in the pizza design ingredient list (#13, reported by
     @StephenFluin).
-  * The hiring pool not updating with Automatic Report off, and AI economies
-    freezing as a side effect (#14).
+  * The hiring pool not updating while the daily report screens were shown,
+    and AI economies freezing as a side effect (#14).
   * Milestone messages appearing more than once, and scoring more than once
     with them (#15, reported by @andrewbrereton).
   * Missing DLLs in Windows distribution (#19).
@@ -92,6 +92,8 @@ original which results in more business.
   * Restaurants no longer show their popularity score before opening.
   * Some of the status messages (manager went shopping, food spoiled) didn't
     show up.
+  * The Automatic Report option now shows the daily settlement screen when the
+    option is ON instead of OFF (matching the original).
   * A perfect delivery week now fires on the day the streak completes instead
     of waiting for the end of that week.
 

@@ -215,9 +215,9 @@ void TurnOrchestrator::end_of_turn(EndOfDayCause cause) {
           turn::MonthlyRestaurantInvoice{in_scope_ids[i]});
     }
     // Delay is so that humans can see the amount of cash they have change live,
-    // per restaurant that gets processed. With automatic reports off the
-    // report screens already pace the pipeline.
-    if (interactive && gs_->options().automatic_report &&
+    // per restaurant that gets processed. With automatic reports on,
+    // the report screens already pace the pipeline.
+    if (interactive && !gs_->options().automatic_report &&
         i + 1 < in_scope_ids.size()) {
       turn_pipeline_.emplace_back(
           turn::Delay{delay_frames_between_restaurants});
@@ -276,7 +276,7 @@ TurnOrchestrator::process_restaurant_step(const turn::ProcessRestaurant& step) {
 
   if (step.interactive) {
     // The daily report's dismiss button resumes the pipeline.
-    if (!gs_->options().automatic_report && restaurant->wants_open() &&
+    if (gs_->options().automatic_report && restaurant->wants_open() &&
         !restaurant->is_force_closed()) {
       gs_->ui().push<RestaurantStatsState>(restaurant->id(), std::nullopt,
                                            true);

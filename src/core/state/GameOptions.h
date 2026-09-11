@@ -144,7 +144,8 @@ struct GameOptions {
   bool music = true;
   float sound_volume = 0.9f;
   float music_volume = 1.0f;
-  bool automatic_report = false;
+  // Show the day's turnover report when the turn ends.
+  bool automatic_report = true;
   // Use 640x480 (4:3) CRT aspect ratio instead of 640x400
   bool crt_aspect_ratio = false;
   bool fix_legacy_bugs = true;

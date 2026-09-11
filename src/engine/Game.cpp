@@ -168,7 +168,7 @@ int Game::run() {
     // Don't mess with actual save games in test runs
     loaded_options.autosave_frequency = AutosaveFrequency::Off;
     // Make sure no clicks are required
-    loaded_options.automatic_report = true;
+    loaded_options.automatic_report = false;
   }
 
   const int display_height =

@@ -127,7 +127,9 @@ const auto option_defs = std::to_array({
     bool_option<&GameOptions::load_list_show_autosaves>(
         "load_list_show_autosaves"),
 
-    bool_option<&GameOptions::automatic_report>("automatic_report", "Gameplay"),
+    bool_option<&GameOptions::automatic_report>(
+        "automatic_report", "Gameplay",
+        "show the day's turnover report when the turn ends"),
     bool_option<&GameOptions::fix_legacy_bugs>("fix_legacy_bugs"),
     bool_option<&GameOptions::qol_improvements>("qol_improvements"),
     bool_option<&GameOptions::mafia_shakedowns_target_all_restaurants>(
