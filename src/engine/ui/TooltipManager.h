@@ -6,25 +6,61 @@
 
 #pragma once
 
+#include <cstdint>
 #include <optional>
+#include <utility>
 #include "engine/ui/TooltipRequest.h"
 
 // Game code calls show()/clear(). TooltipLayer reads visible()/current() each
 // frame.
 class TooltipManager {
 public:
+  void delay(int ms) noexcept { delay_ms_ = ms; }
+
   void show(TooltipRequest req) {
-    current_ = std::move(req);
-    touch();
+    if (delay_ms_ <= 0 || req.anchor != TooltipAnchor::Mouse) {
+      current_ = std::move(req);
+      pending_.reset();
+      touch();
+      return;
+    }
+    pending_ = std::move(req);
+    waited_ms_ = 0;
+    if (current_) {
+      current_.reset();
+      touch();
+    }
   }
 
   void clear() {
-    current_.reset();
+    pending_.reset();
+    if (current_) {
+      current_.reset();
+      touch();
+    }
+  }
+
+  void advance(uint32_t dt_ms) {
+    if (!pending_) {
+      return;
+    }
+    waited_ms_ += dt_ms;
+    if (waited_ms_ < static_cast<uint32_t>(delay_ms_)) {
+      return;
+    }
+    current_ = std::move(pending_);
+    pending_.reset();
     touch();
   }
 
   // Update cursor position for mouse-anchored tooltips (e.g. on hover move)
   void update_mouse_pos(ViewPoint p) {
+    if (pending_) {
+      if (pending_->screenPos != p) {
+        waited_ms_ = 0;
+      }
+      pending_->screenPos = p;
+    }
     if (current_ && current_->anchor == TooltipAnchor::Mouse) {
       current_->screenPos = p;
       touch();
@@ -39,5 +75,8 @@ private:
   void touch() { ++revision_; }
 
   std::optional<TooltipRequest> current_;
+  std::optional<TooltipRequest> pending_;
+  uint32_t waited_ms_{0};
+  int delay_ms_{0};
   uint64_t revision_{0};
 };

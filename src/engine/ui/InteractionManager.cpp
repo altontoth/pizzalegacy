@@ -279,10 +279,7 @@ void InteractionManager::handle_tooltip(const InteractionItem& it,
     break;
 
   case InteractionEvent::Type::Hover:
-    if (tt_mgr_.visible() && tt_mgr_.current().anchor == TooltipAnchor::Mouse) {
-      // just update the mouse-anchored position
-      tt_mgr_.update_mouse_pos(ev.pos);
-    }
+    tt_mgr_.update_mouse_pos(ev.pos);
     break;
 
   case InteractionEvent::Type::Leave:

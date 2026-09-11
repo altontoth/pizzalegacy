@@ -55,13 +55,18 @@ public:
                      box.y + req.padding};
       break;
     case TooltipAnchor::Mouse: {
-      // position just above the cursor; screenPos kept current by
-      // InteractionManager::handle_tooltip on every Hover event
+      // position just above the cursor, or below it at the top of the
+      // screen; screenPos kept current by InteractionManager::handle_tooltip
+      // on every Hover event
       int bx = req.screenPos.x;
       if (bx + w > DisplayConstants::SCREEN_WIDTH) {
         bx = DisplayConstants::SCREEN_WIDTH - w;
       }
-      box = {bx, req.screenPos.y - h - 2};
+      int by = req.screenPos.y - h - 2;
+      if (by < 0) {
+        by = req.screenPos.y + 2;
+      }
+      box = {bx, by};
       text_center = {box.x + (w / 2), box.y + req.padding};
       break;
     }
@@ -73,10 +78,8 @@ public:
       gfx::draw::box(*ctx.surface, {box.x, box.y, w, h}, req.border_color);
     }
 
-    // draw line (no wrapping)
-    context_.font->render_line_onto(*ctx.surface, txt, text_center,
-                                    FontFace::CSTANDAR, req.text_color,
-                                    TextAnchor::Middle);
+    context_.font->render_line_onto(*ctx.surface, txt, text_center, req.font,
+                                    req.text_color, TextAnchor::Middle);
   }
   void tick() override {
     auto rev = mgr_.revision();

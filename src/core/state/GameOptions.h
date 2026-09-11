@@ -138,6 +138,8 @@ struct GameOptions {
   static constexpr int KEY_REPEAT_DELAY_MAX = 2000;
   static constexpr int KEY_REPEAT_INTERVAL_MIN = 10;
   static constexpr int KEY_REPEAT_INTERVAL_MAX = 1000;
+  static constexpr int TOOLTIP_DELAY_MIN = 0;
+  static constexpr int TOOLTIP_DELAY_MAX = 5000;
 
   bool map_fx = true;
   bool restaurant_fx = true;
@@ -173,4 +175,5 @@ struct GameOptions {
   // between repeats.
   int key_repeat_delay_ms = 500;
   int key_repeat_interval_ms = 60;
+  int tooltip_delay_ms = 300;
 };

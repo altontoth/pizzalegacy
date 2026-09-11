@@ -116,6 +116,11 @@ const auto option_defs = std::to_array({
                GameOptions::KEY_REPEAT_INTERVAL_MAX>(
         "key_repeat_interval_ms", {},
         "milliseconds between repeats; no options screen entry"),
+    int_option<&GameOptions::tooltip_delay_ms, GameOptions::TOOLTIP_DELAY_MIN,
+               GameOptions::TOOLTIP_DELAY_MAX>(
+        "tooltip_delay_ms", {},
+        "milliseconds the pointer rests on an item before its tooltip shows; "
+        "no options screen entry"),
 
     enum_option<&GameOptions::autosave_frequency,
                 &autosave_frequency_from_config_value>(
