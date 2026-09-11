@@ -104,7 +104,7 @@ const auto option_defs = std::to_array({
     float_option<&GameOptions::music_volume>("music_volume", {}, "0.0 to 1.0"),
 
     bool_option<&GameOptions::rmb_drag_inverted>("rmb_drag_inverted", "Input"),
-    bool_option<&GameOptions::scroll_zoom_inverted>("scroll_zoom_inverted"),
+    bool_option<&GameOptions::scroll_wheel_inverted>("scroll_wheel_inverted"),
     int_option<&GameOptions::key_repeat_delay_ms,
                GameOptions::KEY_REPEAT_DELAY_MIN,
                GameOptions::KEY_REPEAT_DELAY_MAX>(

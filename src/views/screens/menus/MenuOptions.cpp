@@ -179,9 +179,9 @@ void MenuOptions::build_controls(GameState& state) {
       }));
   add_menu_item(std::make_unique<ToggleMenuItem>(
       context_, "Invert scroll wheel direction",
-      state.options().scroll_zoom_inverted, [&state, this] {
-        state.options().scroll_zoom_inverted =
-            !state.options().scroll_zoom_inverted;
+      state.options().scroll_wheel_inverted, [&state, this] {
+        state.options().scroll_wheel_inverted =
+            !state.options().scroll_wheel_inverted;
         mark_dirty();
       }));
   add_menu_item(std::make_unique<ToggleMenuItem>(

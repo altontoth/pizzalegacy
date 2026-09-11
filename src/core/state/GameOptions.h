@@ -159,7 +159,7 @@ struct GameOptions {
   // Number of rotating autosave slot files.
   int autosave_count = 3;
   bool rmb_drag_inverted = false;
-  bool scroll_zoom_inverted = false;
+  bool scroll_wheel_inverted = false;
   bool software_cursor = true;
   FpsOption render_fps = FpsOption::Fps60;
   bool vsync = true;
