@@ -125,10 +125,8 @@ std::string bindings_for(const InputManager& in, Action a) {
     joined += token;
   };
 
-  for (const auto& [chord, action] : in.button_bindings()) {
-    if (action == a) {
-      append(chord_to_string(chord));
-    }
+  for (const Binding& chord : in.button_bindings_for(a)) {
+    append(chord_to_string(chord));
   }
   for (const auto& [button, action] : in.gamepad_button_bindings()) {
     if (action == a) {

@@ -6,6 +6,11 @@
 
 #include "views/base/Menu.h"
 
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
+#include <string>
+
 #include "core/state/GameState.h"
 #include "engine/DisplayConstants.h"
 #include "engine/Geometry.h"
@@ -13,6 +18,7 @@
 #include "engine/gfx/Blit.h"
 #include "engine/gfx/Draw.h"
 #include "engine/gfx/Surface.h"
+#include "engine/ui/InteractionManager.h"
 #include "engine/ui/TooltipRequest.h"
 #include "resources/FontManager.h"
 #include "views/ui/PopupManager.h"
@@ -20,6 +26,16 @@
 
 using DisplayConstants::SCREEN_HEIGHT;
 using DisplayConstants::SCREEN_WIDTH;
+
+namespace {
+constexpr uint8_t line_gray = 198;
+constexpr int line_from_x = 20;
+constexpr int line_to_x = 620;
+// The line and the help text, measured down from the last item.
+constexpr int help_line_gap = 14;
+constexpr int help_text_gap = 30;
+constexpr int help_text_width = 480;
+} // namespace
 
 Menu::Menu(GameContext& context, GameState& state, ViewPoint origin,
            int line_spacing)
@@ -289,11 +305,41 @@ void Menu::render(const RenderContext& ctx) {
   for (auto& e : layout_) {
     e.item->draw(*ctx.surface, e.pos, e.item == selected_option_);
   }
+  render_help_text(*ctx.surface);
 }
 
-void Menu::add_menu_item(std::unique_ptr<MenuItem> item) {
+void Menu::render_help_text(Surface& surface) {
+  if (!state_.options().qol_improvements || layout_.empty()) {
+    return;
+  }
+  const bool any_help = std::ranges::any_of(
+      menu_items_, [](const auto& item) { return !item->help_text().empty(); });
+  if (!any_help) {
+    return;
+  }
+
+  const ViewRect& last = layout_.back().rect;
+  const int bottom = last.y + last.h;
+  gfx::draw::line(surface, ViewPoint{line_from_x, bottom + help_line_gap},
+                  ViewPoint{line_to_x, bottom + help_line_gap}, line_gray);
+
+  if (!selected_option_) {
+    return;
+  }
+  const std::string& help = selected_option_->help_text();
+  if (help.empty()) {
+    return;
+  }
+  context_.font->render_into_rect(
+      surface, help,
+      {origin_in_view_.x, bottom + help_text_gap, help_text_width, 0},
+      FontFace::PIZ_NUMB, TextStyle{.color = 240});
+}
+
+MenuItem& Menu::add_menu_item(std::unique_ptr<MenuItem> item) {
   menu_items_.push_back(std::move(item));
   ui_layout_dirty_ = true;
+  return *menu_items_.back();
 }
 
 void Menu::handle_menu_selection(MenuItem* selected_item) {
@@ -313,18 +359,17 @@ Surface Menu::default_background(const std::string& title) const {
   background.blit_masked(bg_color_bob, ViewPoint{44, 0});
 
   constexpr int line_y = 110;
-  const uint8_t gray_index = 198;
 
   struct LineSegment {
     int from_x;
     int to_x;
   };
 
-  for (LineSegment seg : {LineSegment{.from_x = 20, .to_x = 130},
+  for (LineSegment seg : {LineSegment{.from_x = line_from_x, .to_x = 130},
                           LineSegment{.from_x = 140, .to_x = 145},
-                          LineSegment{.from_x = 158, .to_x = 620}}) {
+                          LineSegment{.from_x = 158, .to_x = line_to_x}}) {
     gfx::draw::line(background, ViewPoint{seg.from_x, line_y},
-                    ViewPoint{seg.to_x, line_y}, gray_index);
+                    ViewPoint{seg.to_x, line_y}, line_gray);
   }
   constexpr int text_color = 1;
   context_.font->render_text_onto(background, title, ViewPoint{280, 76},

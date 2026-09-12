@@ -620,6 +620,16 @@ void InputManager::remove_bindings(Action a) {
                 [a](const auto& entry) { return entry.second == a; });
 }
 
+std::vector<Binding> InputManager::button_bindings_for(Action a) const {
+  std::vector<Binding> chords;
+  for (const auto& [chord, action] : button_bindings_) {
+    if (action == a) {
+      chords.push_back(chord);
+    }
+  }
+  return chords;
+}
+
 void InputManager::clear_bindings() {
   button_bindings_.clear();
   gamepad_button_bindings_.clear();

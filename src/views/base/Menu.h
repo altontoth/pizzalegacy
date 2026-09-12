@@ -30,7 +30,7 @@ protected:
   void update_interactions();
   void handle_menu_selection(MenuItem* item);
   void update_selection(MenuItem* item);
-  void add_menu_item(std::unique_ptr<MenuItem> item);
+  MenuItem& add_menu_item(std::unique_ptr<MenuItem> item);
   virtual Surface background() const = 0;
   Surface default_background(const std::string& title) const;
   Bob& menu_bobs;
@@ -57,6 +57,7 @@ private:
     return ViewPoint{p.x - origin.x, p.y - origin.y};
   }
   [[nodiscard]] std::optional<std::size_t> index_of_selected() const;
+  void render_help_text(Surface& surface);
   // Move keyboard focus to the next focusable item in insertion order
   // (dir is -1 or +1), wrapping at both ends.
   void move_focus(int dir);

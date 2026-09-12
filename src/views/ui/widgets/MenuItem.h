@@ -7,6 +7,7 @@
 #pragma once
 
 #include <optional>
+#include <string>
 #include <utility>
 
 #include "core/util/GameContext.h"
@@ -60,6 +61,8 @@ public:
     return std::nullopt;
   }
   virtual std::string tooltip_text() const { return ""; }
+  const std::string& help_text() const { return help_text_; }
+  void help_text(std::string text) { help_text_ = std::move(text); }
   virtual void begin_keyboard_session(input::InputManager*,
                                       std::function<void()>) {};
 
@@ -70,5 +73,6 @@ protected:
   int x_pos_ = -1;
   FontFace font_face_;
   std::string text_;
+  std::string help_text_;
   HAlign alignment_{HAlign::Left};
 };

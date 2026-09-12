@@ -5,11 +5,18 @@
  */
 
 #include "views/screens/menus/MenuOptions.h"
+
+#include <string>
+#include <vector>
+
 #include "core/state/GameOptions.h"
 #include "core/state/GameState.h"
 #include "core/util/ConfigManager.h"
 #include "engine/DisplayConstants.h"
 #include "engine/audio/AudioManager.h"
+#include "engine/input/Action.h"
+#include "engine/input/InputManager.h"
+#include "engine/input/Key.h"
 #include "views/ui/widgets/EnumMenuItem.h"
 #include "views/ui/widgets/IntSliderMenuItem.h"
 #include "views/ui/widgets/SliderMenuItem.h"
@@ -25,6 +32,18 @@ const TextStyle style{
 const TextStyle sel_style{
     .color = 29,
 };
+
+// "Ctrl+F or F11", or empty when nothing is bound.
+std::string chord_list(const std::vector<input::Binding>& chords) {
+  std::string joined;
+  for (const input::Binding& chord : chords) {
+    if (!joined.empty()) {
+      joined += " or ";
+    }
+    joined += input::chord_to_string(chord);
+  }
+  return joined;
+}
 } // anonymous namespace
 
 MenuOptions::MenuOptions(GameContext& context, GameState& state)
@@ -86,15 +105,20 @@ void MenuOptions::build_chooser(GameState& state) {
 
 void MenuOptions::build_audio(GameState& state) {
   add_menu_item(std::make_unique<ToggleMenuItem>(
-      context_, "Map FX", state.options().map_fx, [&state, this] {
-        state.options().map_fx = !state.options().map_fx;
-        mark_dirty();
-      }));
+                    context_, "Map FX", state.options().map_fx,
+                    [&state, this] {
+                      state.options().map_fx = !state.options().map_fx;
+                      mark_dirty();
+                    }))
+      .help_text("Background sounds on the city map.");
   add_menu_item(std::make_unique<ToggleMenuItem>(
-      context_, "Restaurant FX", state.options().restaurant_fx, [&state, this] {
-        state.options().restaurant_fx = !state.options().restaurant_fx;
-        mark_dirty();
-      }));
+                    context_, "Restaurant FX", state.options().restaurant_fx,
+                    [&state, this] {
+                      state.options().restaurant_fx =
+                          !state.options().restaurant_fx;
+                      mark_dirty();
+                    }))
+      .help_text("Background sounds inside a restaurant.");
   add_menu_item(std::make_unique<ToggleMenuItem>(
       context_, "Music", state.options().music, [&state, this] {
         state.options().music = !state.options().music;
@@ -110,60 +134,93 @@ void MenuOptions::build_audio(GameState& state) {
 }
 
 void MenuOptions::build_graphics(GameState& state) {
-  add_menu_item(std::make_unique<ToggleMenuItem>(
-      context_, "CRT Aspect Ratio (4:3)", state.options().crt_aspect_ratio,
-      [&state, this] {
-        state.options().crt_aspect_ratio = !state.options().crt_aspect_ratio;
-        state.request_crt_change(state.options().crt_aspect_ratio);
-        mark_dirty();
-      }));
-  add_menu_item(std::make_unique<ToggleMenuItem>(
-      context_, "Double Size", state.options().double_size, [&state, this] {
-        state.options().double_size = !state.options().double_size;
-        state.request_double_size_change(state.options().double_size);
-        mark_dirty();
-      }));
-  add_menu_item(std::make_unique<ToggleMenuItem>(
+  add_menu_item(
+      std::make_unique<ToggleMenuItem>(
+          context_, "CRT Aspect Ratio (4:3)", state.options().crt_aspect_ratio,
+          [&state, this] {
+            state.options().crt_aspect_ratio =
+                !state.options().crt_aspect_ratio;
+            state.request_crt_change(state.options().crt_aspect_ratio);
+            mark_dirty();
+          }))
+      .help_text("The game draws 640x400, and a nineties monitor stretched "
+                 "that to 4:3; this does the same.");
+  add_menu_item(
+      std::make_unique<ToggleMenuItem>(
+          context_, "Double Size", state.options().double_size,
+          [&state, this] {
+            state.options().double_size = !state.options().double_size;
+            state.request_double_size_change(state.options().double_size);
+            mark_dirty();
+          }))
+      .help_text("Show the window at twice the size. You can also just resize "
+                 "it by grabbing a corner.");
+  MenuItem& fullscreen = add_menu_item(std::make_unique<ToggleMenuItem>(
       context_, "Fullscreen", state.options().fullscreen, [&state, this] {
         state.options().fullscreen = !state.options().fullscreen;
         state.request_fullscreen_change(state.options().fullscreen);
         mark_dirty();
       }));
-  add_menu_item(std::make_unique<EnumMenuItem<FpsOption>>(
-      context_, "Render FPS", state.options().render_fps,
-      std::vector{FpsOption::Fps30, FpsOption::Fps60, FpsOption::Fps120},
-      [this] { mark_dirty(); }, face));
+  if (const std::string keys = chord_list(
+          context_.input->button_bindings_for(input::Action::ToggleFullscreen));
+      !keys.empty()) {
+    fullscreen.help_text("You can also toggle it any time with " + keys + ".");
+  }
+  add_menu_item(
+      std::make_unique<EnumMenuItem<FpsOption>>(
+          context_, "Render FPS", state.options().render_fps,
+          std::vector{FpsOption::Fps30, FpsOption::Fps60, FpsOption::Fps120},
+          [this] { mark_dirty(); }, face))
+      .help_text("How often the screen is redrawn. The game itself animates "
+                 "30 times a second at normal speed, so a higher number "
+                 "mainly smooths the cursor.");
   add_menu_item(std::make_unique<ToggleMenuItem>(
-      context_, "VSync", state.options().vsync, [&state, this] {
-        state.options().vsync = !state.options().vsync;
-        mark_dirty();
-      }));
+                    context_, "VSync", state.options().vsync,
+                    [&state, this] {
+                      state.options().vsync = !state.options().vsync;
+                      mark_dirty();
+                    }))
+      .help_text("Synchronize drawing with the screen's refresh rate to prevent"
+                 " tearing.");
 }
 
 void MenuOptions::build_gameplay(GameState& state) {
-  add_menu_item(std::make_unique<ToggleMenuItem>(
-      context_, "Automatic Report", state.options().automatic_report,
-      [&state, this] {
-        state.options().automatic_report = !state.options().automatic_report;
-        mark_dirty();
-      }));
-  add_menu_item(std::make_unique<ToggleMenuItem>(
-      context_, "Fix original bugs", state.options().fix_legacy_bugs,
-      [&state, this] {
-        state.options().fix_legacy_bugs = !state.options().fix_legacy_bugs;
-        mark_dirty();
-      }));
-  add_menu_item(std::make_unique<ToggleMenuItem>(
-      context_, "Quality of Life improvements",
-      state.options().qol_improvements, [&state, this] {
-        state.options().qol_improvements = !state.options().qol_improvements;
-        mark_dirty();
-      }));
-  add_menu_item(std::make_unique<EnumMenuItem<AutosaveFrequency>>(
-      context_, "Auto save", state.options().autosave_frequency,
-      std::vector{AutosaveFrequency::Off, AutosaveFrequency::Daily,
-                  AutosaveFrequency::Weekly, AutosaveFrequency::Monthly},
-      [this] { mark_dirty(); }, face));
+  add_menu_item(
+      std::make_unique<ToggleMenuItem>(context_, "Automatic Report",
+                                       state.options().automatic_report,
+                                       [&state, this] {
+                                         state.options().automatic_report =
+                                             !state.options().automatic_report;
+                                         mark_dirty();
+                                       }))
+      .help_text("Automatically show the daily turnover report at the end of "
+                 "the turn.");
+  add_menu_item(
+      std::make_unique<ToggleMenuItem>(
+          context_, "Fix original bugs", state.options().fix_legacy_bugs,
+          [&state, this] {
+            state.options().fix_legacy_bugs = !state.options().fix_legacy_bugs;
+            mark_dirty();
+          }))
+      .help_text("Fix various bugs from the original; see "
+                 "docs/MODERNIZATIONS.md for details.");
+  add_menu_item(
+      std::make_unique<ToggleMenuItem>(context_, "Quality of Life improvements",
+                                       state.options().qol_improvements,
+                                       [&state, this] {
+                                         state.options().qol_improvements =
+                                             !state.options().qol_improvements;
+                                         mark_dirty();
+                                       }))
+      .help_text("Enable various modernizations of the UI and mouse behavior.");
+  add_menu_item(
+      std::make_unique<EnumMenuItem<AutosaveFrequency>>(
+          context_, "Auto save", state.options().autosave_frequency,
+          std::vector{AutosaveFrequency::Off, AutosaveFrequency::Daily,
+                      AutosaveFrequency::Weekly, AutosaveFrequency::Monthly},
+          [this] { mark_dirty(); }, face))
+      .help_text("Automatically save the game at the end of the day, week or "
+                 "month.");
   add_menu_item(std::make_unique<IntSliderMenuItem>(
       context_, "Auto save slots", state.options().autosave_count,
       GameOptions::AUTOSAVE_COUNT_MIN, GameOptions::AUTOSAVE_COUNT_MAX,
@@ -171,26 +228,35 @@ void MenuOptions::build_gameplay(GameState& state) {
 }
 
 void MenuOptions::build_controls(GameState& state) {
+  add_menu_item(
+      std::make_unique<ToggleMenuItem>(context_, "Invert map scrolling",
+                                       state.options().rmb_drag_inverted,
+                                       [&state, this] {
+                                         state.options().rmb_drag_inverted =
+                                             !state.options().rmb_drag_inverted;
+                                         mark_dirty();
+                                       }))
+      .help_text("Which way the map moves when you drag it with the right "
+                 "mouse button.");
   add_menu_item(std::make_unique<ToggleMenuItem>(
-      context_, "Invert map scrolling", state.options().rmb_drag_inverted,
-      [&state, this] {
-        state.options().rmb_drag_inverted = !state.options().rmb_drag_inverted;
-        mark_dirty();
-      }));
-  add_menu_item(std::make_unique<ToggleMenuItem>(
-      context_, "Invert scroll wheel direction",
-      state.options().scroll_wheel_inverted, [&state, this] {
-        state.options().scroll_wheel_inverted =
-            !state.options().scroll_wheel_inverted;
-        mark_dirty();
-      }));
-  add_menu_item(std::make_unique<ToggleMenuItem>(
-      context_, "Use software cursor", state.options().software_cursor,
-      [&state, this] {
-        state.options().software_cursor = !state.options().software_cursor;
-        context_.cursor->software_mode(state.options().software_cursor);
-        mark_dirty();
-      }));
+                    context_, "Invert scroll wheel direction",
+                    state.options().scroll_wheel_inverted,
+                    [&state, this] {
+                      state.options().scroll_wheel_inverted =
+                          !state.options().scroll_wheel_inverted;
+                      mark_dirty();
+                    }))
+      .help_text("Reverse the direction of the scroll wheel.");
+  add_menu_item(
+      std::make_unique<ToggleMenuItem>(
+          context_, "Use software cursor", state.options().software_cursor,
+          [&state, this] {
+            state.options().software_cursor = !state.options().software_cursor;
+            context_.cursor->software_mode(state.options().software_cursor);
+            mark_dirty();
+          }))
+      .help_text("Draw the cursor with the game so it stays in sync with the "
+                 "game.");
 }
 
 void MenuOptions::add_save_and_back(GameState& state) {

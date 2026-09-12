@@ -125,6 +125,7 @@ public:
   const std::vector<std::pair<Binding, Action>>& button_bindings() const {
     return button_bindings_;
   }
+  std::vector<Binding> button_bindings_for(Action a) const;
   const std::vector<std::pair<GamepadButton, Action>>&
   gamepad_button_bindings() const {
     return gamepad_button_bindings_;

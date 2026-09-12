@@ -54,6 +54,8 @@ original which results in more business.
   * On days that no humans can take actions (due to being in prison or on
     holiday) we skip the autosave.
   * Fullscreen is an option in the graphics section as well as Ctrl+F.
+  * In the menu we now show a line of help text to give more context on some of
+    the menu options.
   * settings.conf now documents every option and its default in comments, so
     the ones with no entry in the options screen can be found and edited. Only
     the options you change are saved.
