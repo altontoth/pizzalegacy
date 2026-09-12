@@ -18,6 +18,7 @@
 #include "engine/Fatal.h"
 #include "engine/Logger.h"
 #include "engine/PlatformPaths.h"
+#include "engine/StringUtil.h"
 #if PLEGACY_EMULATE_CASE_INSENSITIVE_FS
 #include <string.h>
 #endif
@@ -28,15 +29,6 @@
 namespace {
 std::string game_data_path_;
 }
-namespace {
-bool iequals(std::string_view a, std::string_view b) {
-  return std::ranges::equal(a, b, [](char x, char y) {
-    return std::tolower(static_cast<unsigned char>(x)) ==
-           std::tolower(static_cast<unsigned char>(y));
-  });
-}
-} // anonymous namespace
-
 namespace fileutils {
 
 std::optional<std::filesystem::path>
@@ -174,7 +166,7 @@ case_insensitive_lookup(const std::filesystem::path& base,
 
     bool matched = false;
     for (const auto& entry : fs::directory_iterator(current)) {
-      if (iequals(entry.path().filename().string(), part.string())) {
+      if (util::iequals(entry.path().filename().string(), part.string())) {
         current /= entry.path().filename();
         matched = true;
         break;

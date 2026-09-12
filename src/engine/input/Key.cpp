@@ -6,50 +6,46 @@
 
 #include "engine/input/Key.h"
 
-#include <algorithm>
+#include "engine/StringUtil.h"
+
+#include <array>
 
 namespace input {
 namespace {
-
-inline std::string lower(std::string_view sv) {
-  std::string s(sv);
-  std::ranges::transform(s, s.begin(),
-                         [](unsigned char c) { return std::tolower(c); });
-  return s;
-}
 
 struct KeyAlias {
   std::string_view name;
   Key key;
 };
-constexpr KeyAlias key_names[] = {
+// First entry for a key is the name key_to_string returns.
+constexpr auto key_names = std::to_array<KeyAlias>({
     // letters
-    {"a", Key::A},
-    {"b", Key::B},
-    {"c", Key::C},
-    {"d", Key::D},
-    {"e", Key::E},
-    {"f", Key::F},
-    {"g", Key::G},
-    {"h", Key::H},
-    {"i", Key::I},
-    {"j", Key::J},
-    {"k", Key::K},
-    {"l", Key::L},
-    {"m", Key::M},
-    {"n", Key::N},
-    {"o", Key::O},
-    {"p", Key::P},
-    {"q", Key::Q},
-    {"r", Key::R},
-    {"s", Key::S},
-    {"t", Key::T},
-    {"u", Key::U},
-    {"v", Key::V},
-    {"w", Key::W},
-    {"x", Key::X},
-    {"y", Key::Y},
-    {"z", Key::Z},
+    {"A", Key::A},
+    {"B", Key::B},
+    {"C", Key::C},
+    {"D", Key::D},
+    {"E", Key::E},
+    {"F", Key::F},
+    {"G", Key::G},
+    {"H", Key::H},
+    {"I", Key::I},
+    {"J", Key::J},
+    {"K", Key::K},
+    {"L", Key::L},
+    {"M", Key::M},
+    {"N", Key::N},
+    {"O", Key::O},
+    {"P", Key::P},
+    {"Q", Key::Q},
+    {"R", Key::R},
+    {"S", Key::S},
+    {"T", Key::T},
+    {"U", Key::U},
+    {"V", Key::V},
+    {"W", Key::W},
+    {"X", Key::X},
+    {"Y", Key::Y},
+    {"Z", Key::Z},
 
     // digits
     {"0", Key::Num0},
@@ -64,105 +60,108 @@ constexpr KeyAlias key_names[] = {
     {"9", Key::Num9},
 
     // punctuation (aliases included)
-    {"minus", Key::Minus},
+    {"Minus", Key::Minus},
     {"hyphen", Key::Minus},
     {"dash", Key::Minus},
     {"-", Key::Minus},
-    {"equals", Key::Equals},
+    {"Equals", Key::Equals},
     {"=", Key::Equals},
-    {"leftbracket", Key::LeftBracket},
+    {"LeftBracket", Key::LeftBracket},
     {"lbracket", Key::LeftBracket},
     {"[", Key::LeftBracket},
-    {"rightbracket", Key::RightBracket},
+    {"RightBracket", Key::RightBracket},
     {"rbracket", Key::RightBracket},
     {"]", Key::RightBracket},
-    {"semicolon", Key::Semicolon},
+    {"Semicolon", Key::Semicolon},
     {";", Key::Semicolon},
-    {"quote", Key::Quote},
+    {"Quote", Key::Quote},
     {"apostrophe", Key::Quote},
     {"'", Key::Quote},
-    {"backslash", Key::Backslash},
+    {"Backslash", Key::Backslash},
     {"\\", Key::Backslash},
-    {"comma", Key::Comma},
+    {"Comma", Key::Comma},
     {",", Key::Comma},
-    {"period", Key::Period},
+    {"Period", Key::Period},
     {"dot", Key::Period},
     {".", Key::Period},
-    {"slash", Key::Slash},
+    {"Slash", Key::Slash},
     {"/", Key::Slash},
+    {"Backquote", Key::Grave},
     {"grave", Key::Grave},
-    {"backquote", Key::Grave},
     {"`", Key::Grave},
     {"backtick", Key::Grave},
 
     // control
-    {"space", Key::Space},
-    {"tab", Key::Tab},
-    {"return", Key::Return},
+    {"Space", Key::Space},
+    {"Tab", Key::Tab},
+    {"Return", Key::Return},
     {"enter", Key::Return},
-    {"backspace", Key::Backspace},
-    {"escape", Key::Escape},
+    {"Backspace", Key::Backspace},
+    {"Escape", Key::Escape},
     {"esc", Key::Escape},
 
     // nav
-    {"left", Key::Left},
-    {"right", Key::Right},
-    {"up", Key::Up},
-    {"down", Key::Down},
-    {"pageup", Key::PageUp},
-    {"pagedown", Key::PageDown},
-    {"home", Key::Home},
-    {"end", Key::End},
-    {"insert", Key::Insert},
-    {"delete", Key::Delete},
+    {"Left", Key::Left},
+    {"Right", Key::Right},
+    {"Up", Key::Up},
+    {"Down", Key::Down},
+    {"PageUp", Key::PageUp},
+    {"PageDown", Key::PageDown},
+    {"Home", Key::Home},
+    {"End", Key::End},
+    {"Insert", Key::Insert},
+    {"Delete", Key::Delete},
 
     // function
-    {"f1", Key::F1},
-    {"f2", Key::F2},
-    {"f3", Key::F3},
-    {"f4", Key::F4},
-    {"f5", Key::F5},
-    {"f6", Key::F6},
-    {"f7", Key::F7},
-    {"f8", Key::F8},
-    {"f9", Key::F9},
-    {"f10", Key::F10},
-    {"f11", Key::F11},
-    {"f12", Key::F12},
+    {"F1", Key::F1},
+    {"F2", Key::F2},
+    {"F3", Key::F3},
+    {"F4", Key::F4},
+    {"F5", Key::F5},
+    {"F6", Key::F6},
+    {"F7", Key::F7},
+    {"F8", Key::F8},
+    {"F9", Key::F9},
+    {"F10", Key::F10},
+    {"F11", Key::F11},
+    {"F12", Key::F12},
 
     // modifiers as keys
-    {"lshift", Key::LShift},
-    {"rshift", Key::RShift},
-    {"lctrl", Key::LCtrl},
-    {"rctrl", Key::RCtrl},
-    {"lalt", Key::LAlt},
-    {"ralt", Key::RAlt},
-    {"lgui", Key::LMeta},
-    {"rgui", Key::RMeta},
-};
+    {"LShift", Key::LShift},
+    {"RShift", Key::RShift},
+    {"LCtrl", Key::LCtrl},
+    {"RCtrl", Key::RCtrl},
+    {"LAlt", Key::LAlt},
+    {"RAlt", Key::RAlt},
+    {"LGui", Key::LMeta},
+    {"RGui", Key::RMeta},
+});
 
 struct ModAlias {
   std::string_view name;
   Mod mod;
 };
-constexpr ModAlias mod_names[] = {{"shift", Mod::Shift},  {"ctrl", Mod::Ctrl},
-                                  {"control", Mod::Ctrl}, {"alt", Mod::Alt},
-                                  {"gui", Mod::Meta},     {"meta", Mod::Meta},
-                                  {"cmd", Mod::Meta},     {"super", Mod::Meta}};
+constexpr auto mod_names = std::to_array<ModAlias>({{"shift", Mod::Shift},
+                                                    {"ctrl", Mod::Ctrl},
+                                                    {"control", Mod::Ctrl},
+                                                    {"alt", Mod::Alt},
+                                                    {"gui", Mod::Meta},
+                                                    {"meta", Mod::Meta},
+                                                    {"cmd", Mod::Meta},
+                                                    {"super", Mod::Meta}});
 
-inline std::optional<Mod> mod_from_name(std::string_view sv) {
-  const auto s = lower(sv);
+inline std::optional<Mod> mod_from_name(std::string_view s) {
   Mod acc = Mod::None;
   size_t start = 0;
   // support "Ctrl+Shift" or comma-separated
   while (start <= s.size()) {
     size_t end = s.find_first_of("+,", start);
-    auto token =
-        s.substr(start, (end == std::string::npos ? s.size() : end) - start);
+    auto token = s.substr(
+        start, (end == std::string_view::npos ? s.size() : end) - start);
     if (!token.empty()) {
       bool hit = false;
-      for (auto& m : mod_names) {
-        if (token == m.name) {
+      for (const auto& m : mod_names) {
+        if (util::iequals(token, m.name)) {
           acc = acc | m.mod;
           hit = true;
           break;
@@ -172,7 +171,7 @@ inline std::optional<Mod> mod_from_name(std::string_view sv) {
         return std::nullopt;
       }
     }
-    if (end == std::string::npos) {
+    if (end == std::string_view::npos) {
       break;
     }
     start = end + 1;
@@ -183,9 +182,8 @@ inline std::optional<Mod> mod_from_name(std::string_view sv) {
 } // namespace
 
 std::optional<Key> key_from_string(std::string_view sv) {
-  const auto s = lower(sv);
   for (const auto& a : key_names) {
-    if (s == a.name) {
+    if (util::iequals(sv, a.name)) {
       return a.key;
     }
   }
@@ -195,7 +193,7 @@ std::optional<Key> key_from_string(std::string_view sv) {
 std::string_view key_to_string(Key k) {
   for (const auto& a : key_names) {
     if (a.key == k) {
-      return a.name; // returns lower-case
+      return a.name;
     }
   }
   return "unknown";
@@ -203,16 +201,15 @@ std::string_view key_to_string(Key k) {
 
 std::optional<std::pair<Mod, Key>> chord_split(std::string_view s) {
   // find last '+' and split "mods + key"
-  auto ls = lower(s);
-  auto pos = ls.rfind('+');
+  const auto pos = s.rfind('+');
   std::string_view key_part;
   std::string_view mod_part;
-  if (pos == std::string::npos) {
+  if (pos == std::string_view::npos) {
     key_part = s;
   }
   else {
-    mod_part = std::string_view(s.data(), pos);
-    key_part = std::string_view(s.data() + pos + 1, s.size() - pos - 1);
+    mod_part = s.substr(0, pos);
+    key_part = s.substr(pos + 1);
   }
   auto k = key_from_string(key_part);
   if (!k) {

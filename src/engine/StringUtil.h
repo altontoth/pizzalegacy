@@ -6,10 +6,18 @@
 
 #pragma once
 
+#include <algorithm>
 #include <cctype>
 #include <string_view>
 
 namespace util {
+
+// Compare two strings ignoring case.
+inline bool iequals(std::string_view a, std::string_view b) {
+  return std::ranges::equal(a, b, [](unsigned char x, unsigned char y) {
+    return std::tolower(x) == std::tolower(y);
+  });
+}
 
 inline std::string_view trim_front(std::string_view sv) {
   while (!sv.empty() && std::isspace(static_cast<unsigned char>(sv.front()))) {
