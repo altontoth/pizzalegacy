@@ -196,6 +196,23 @@ the city would keep the same trend for 256 weeks instead.
 With fixes enabled the countdown is always at least one week, so it never
 wraps.
 
+### Failed haggle with a realtor lowers a tenant’s price
+
+When a realtor refuses your attempt to haggle (after you say “the price is too
+high”), the price of the property goes up by 10% permanently. In the original
+it does that by storing the price it just quoted you (original + 10%). But, if
+you are already the tenant of the shop it gives you a 70% discount to start
+with. This means that after a refusal the shop is quoted at 77% of its value.
+And it stores this value, so if you try multiple times to negotiate, the 70%
+discount is applied again and again. The same works in reverse when the realtor
+is trying to rip you off: the doubled price gets stored, so it is inflated
+again on the next call.
+
+With the fix enabled, a refusal still permanently raises the property’s stored
+price by 10%, but the 70% tenant discount is applied only when calculating the
+price shown to the tenant; it is no longer included in the price that gets
+stored.
+
 ## Config file only
 
 Some of what I think were bugs have a big impact on the gameplay; given that

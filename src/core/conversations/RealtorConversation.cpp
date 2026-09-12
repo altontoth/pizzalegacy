@@ -20,6 +20,7 @@
 #include "core/finance/Ledger.h"
 #include "core/finance/Money.h"
 #include "core/restaurant/Restaurant.h"
+#include "core/state/GameOptions.h"
 #include "engine/FormatCompat.h"
 #include "engine/Random.h"
 
@@ -135,7 +136,14 @@ bool RealtorConversation::advance_line_choice(RealtorLine choice) {
     }
     else {
       price_ = Money(static_cast<int64_t>(price_.cents * negotiate_plus));
-      property->purchase_price(price_);
+      // The original stores the quote, tenant discount or rip-off included.
+      if (state_.options().fix_legacy_bugs) {
+        property->purchase_price(Money(static_cast<int64_t>(
+            property->purchase_price().cents * negotiate_plus)));
+      }
+      else {
+        property->purchase_price(price_);
+      }
       current_line(RealtorLine::SORRY_BUT_AT_THAT_PRICE_NO_FAVOR);
     }
     break;
