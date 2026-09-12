@@ -67,7 +67,10 @@ public:
   void add_contract(ActiveContract contract);
   const std::vector<ActiveContract>& contracts() const { return contracts_; }
   std::vector<ActiveContract>& contracts() { return contracts_; }
-  void remove_contract(size_t index);
+  // Ends a contract early for the unexpired share of its penalty.
+  void cancel_contract(class GameState& game_state, size_t index);
+  void cancel_restaurant_contracts(class GameState& game_state,
+                                   core::RestaurantId restaurant_id);
   int recipe_count() const {
     return static_cast<int>(recipes_.recipe_count());
   };

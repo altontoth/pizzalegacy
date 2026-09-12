@@ -12,12 +12,10 @@
 #include "core/character/Actor.h"
 #include "core/character/Player.h"
 #include "core/character/SocialStatus.h"
-#include "core/character/Staff.h"
 #include "core/city/City.h"
 #include "core/city/CityTypes.h"
 #include "core/city/Property.h"
 #include "core/conversations/RealtorLine.h"
-#include "core/finance/Ledger.h"
 #include "core/finance/Money.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/state/GameOptions.h"
@@ -297,75 +295,11 @@ bool RealtorConversation::advance_proposal(bool agree) {
   case RealtorLine::ARE_YOU_SURE:
     if (agree) {
       current_line(RealtorLine::OK);
-      auto owner = active_property()->owner_or_tenant();
-      auto* player = state_.player(*owner);
-      if (active_property()->has_restaurant()) {
-        Money furniture_amount;
-        Money oven_amount;
-        auto* restaurant =
-            state_.restaurant(*active_property()->restaurant_id());
-
-        // Closing the restaurant means firing the entire staff.
-        if (auto* city = state_.active_city()) {
-          auto fire_staff = [&](const Staff& staff) {
-            uint8_t char_id = staff.character().id();
-            city->blacklist_staff(char_id, player->id());
-            city->job_market().set_status(
-                char_id,
-                static_cast<core::character::MarketStatus>(staff.job_role()));
-          };
-          for (const auto& cook : restaurant->cooks()) {
-            if (cook.has_value()) {
-              fire_staff(*cook);
-            }
-          }
-          for (const auto& waiter : restaurant->waiters()) {
-            if (waiter.has_value()) {
-              fire_staff(*waiter);
-            }
-          }
-          if (restaurant->manager().has_value()) {
-            fire_staff(*restaurant->manager());
-          }
-        }
-
-        const auto& furniture = restaurant->layout()->placed_furniture();
-        const auto& kitchen = restaurant->layout()->placed_kitchen_furniture();
-        for (const auto& item : furniture) {
-          furniture_amount += item->furniture()->price() / 2;
-        }
-        for (const auto& item : kitchen) {
-          oven_amount += item->furniture()->price() / 2;
-        }
-
-        if (furniture_amount > 0_usd || oven_amount > 0_usd) {
-          state_.status().post_direct({
-              .payload = compat::format(
-                  "Articles to a total of {:w}, were left in your restaurant. "
-                  "The scrapdealer is happy now!!",
-                  furniture_amount + oven_amount),
-              .scope = StatusScope::Global,
-          });
-
-          auto date = state_.time().current_date();
-          if (furniture_amount > 0_usd) {
-            player->financials().transfer(
-                date, Account::Furniture, Account::ProfitAndLoss,
-                furniture_amount, AccountingScope::Operational);
-          }
-          if (oven_amount > 0_usd) {
-            player->financials().transfer(date, Account::Machines,
-                                          Account::ProfitAndLoss, oven_amount,
-                                          AccountingScope::Operational);
-          }
-        }
-        state_.adjust_social_score(*player, -50);
-      }
-      else { // depot
+      auto* player = state_.active_player();
+      if (!active_property()->has_restaurant()) { // depot
         state_.adjust_social_score(*player, -170);
       }
-      state_.real_estate().end_property_lease(*active_property(),
-                                              *state_.active_player());
+      state_.real_estate().end_property_lease(*active_property(), *player);
     }
     else {
       current_line(RealtorLine::I_WANT_TO_BUY_THIS_SHOP);

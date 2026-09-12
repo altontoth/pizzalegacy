@@ -9,7 +9,7 @@
 #include "core/character/Player.h"
 #include "core/city/City.h"
 #include "core/factories/IngredientFactory.h"
-#include "core/finance/Ledger.h"
+#include "core/finance/Money.h"
 #include "core/food/IngredientCategory.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/state/GameState.h"
@@ -263,31 +263,7 @@ void Contracts::cancel_current() {
     return;
   }
   size_t contract_idx = contract_indices_[static_cast<size_t>(current_pos_)];
-  auto* player = state_.active_player();
-  auto& contracts = player->contracts();
-  if (contract_idx >= contracts.size()) {
-    return;
-  }
-
-  const auto& c = contracts[contract_idx];
-  if (c.original_term > 0 && c.cancellation_penalty.cents > 0) {
-    Money fee = (c.cancellation_penalty * c.remaining_term) / c.original_term;
-    if (!state_.spend_cash(Account::Stock, fee)) {
-      City* city = state_.city(c.city_id);
-      if (city) {
-        ActorType atype =
-            core::food::CategoryRegistry::supplier_type(c.category);
-        for (const auto& s_ptr : city->suppliers()) {
-          if (s_ptr->id() == c.supplier_id && s_ptr->actor_type() == atype) {
-            s_ptr->relationship(player->id()).outstanding_debt += fee;
-            break;
-          }
-        }
-      }
-    }
-  }
-
-  player->remove_contract(contract_idx);
+  state_.active_player()->cancel_contract(state_, contract_idx);
   update_contract_list();
   show_back_ = false;
   mark_dirty();

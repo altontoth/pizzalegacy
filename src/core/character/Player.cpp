@@ -731,9 +731,52 @@ void Player::add_contract(ActiveContract contract) {
   contracts_.push_back(std::move(contract));
 }
 
-void Player::remove_contract(size_t index) {
-  if (index < contracts_.size()) {
-    contracts_.erase(contracts_.begin() + static_cast<ptrdiff_t>(index));
+void Player::cancel_contract(GameState& game_state, size_t index) {
+  if (index >= contracts_.size()) {
+    return;
+  }
+  const auto& c = contracts_[index];
+
+  FoodSupplier* supplier = nullptr;
+  if (City* city = game_state.city(c.city_id)) {
+    auto type = core::food::CategoryRegistry::supplier_type(c.category);
+    for (auto* s : city->food_suppliers(type)) {
+      if (s->id() == c.supplier_id) {
+        supplier = s;
+        break;
+      }
+    }
+  }
+
+  bool paid = true;
+  if (c.original_term > 0 && c.cancellation_penalty.cents > 0) {
+    Money fee = (c.cancellation_penalty * c.remaining_term) / c.original_term;
+    paid = spend_cash(game_state.time().current_date(), Account::Stock, fee,
+                      c.restaurant_id);
+    if (!paid && supplier) {
+      supplier->relationship(id_).outstanding_debt += fee;
+    }
+  }
+
+  if (supplier) {
+    game_state.status().post(StatusMsg{
+        .payload = compat::format(
+            "Contract with {} cancelled.{}", supplier->name(),
+            paid ? ""
+                 : " Because of insolvency the amount will be credited "
+                   "to the supplier's current account."),
+        .severity = StatusSeverity::Info,
+    });
+  }
+  contracts_.erase(contracts_.begin() + static_cast<ptrdiff_t>(index));
+}
+
+void Player::cancel_restaurant_contracts(GameState& game_state,
+                                         core::RestaurantId restaurant_id) {
+  for (size_t i = contracts_.size(); i > 0; --i) {
+    if (contracts_[i - 1].restaurant_id == restaurant_id) {
+      cancel_contract(game_state, i - 1);
+    }
   }
 }
 

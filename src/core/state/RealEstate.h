@@ -53,6 +53,7 @@ private:
   Restaurant* furnish_new_restaurant(Player& player, Property& property,
                                      std::unique_ptr<RestaurantLayout> layout,
                                      Tenure tenure);
+  void close_restaurant(Player& player, Property& property);
 
   GameState* gs_;
 };

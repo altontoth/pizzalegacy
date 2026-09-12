@@ -12,15 +12,21 @@
 #include <utility>
 
 #include "core/character/Player.h"
+#include "core/character/Staff.h"
 #include "core/city/City.h"
+#include "core/city/JobMarket.h"
 #include "core/city/Property.h"
 #include "core/factories/RestaurantLayoutFactory.h"
 #include "core/finance/Ledger.h"
+#include "core/finance/Money.h"
 #include "core/finance/PlayerFinancials.h"
 #include "core/restaurant/AIEconomy.h"
+#include "core/restaurant/Furniture.h"
+#include "core/restaurant/PlacedFurniture.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/restaurant/RestaurantLayout.h"
 #include "core/state/GameState.h"
+#include "core/status/StatusHub.h"
 #include "engine/FormatCompat.h"
 #include "engine/Random.h"
 
@@ -141,14 +147,19 @@ bool RealEstate::buy_depot(Property& property, Player& buyer, Money price) {
   buyer.financials().transfer(today, Account::Cash, Account::Property, price,
                               AccountingScope::Capital);
 
+  // A tenant buying the depot they rent already has its capacity and score.
+  const bool was_tenant =
+      property.is_rented() && property.owner_or_tenant() == buyer.id();
   property.buy(buyer.id());
 
-  // Add depot capacity to player's central depot in this city
-  auto& city = property.city();
-  city.central_depot(buyer.id()).add_capacity(depot_capacity_kg(property));
+  if (!was_tenant) {
+    // Add depot capacity to player's central depot in this city
+    auto& city = property.city();
+    city.central_depot(buyer.id()).add_capacity(depot_capacity_kg(property));
+    gs_->adjust_social_score(buyer, 180);
+  }
 
   gs_->milestones().check_depot_milestones(buyer);
-  gs_->adjust_social_score(buyer, 180);
 
   return true;
 }
@@ -167,6 +178,7 @@ bool RealEstate::rent_depot(Property& property, Player& player, bool free) {
   city.central_depot(player.id()).add_capacity(depot_capacity_kg(property));
 
   gs_->milestones().check_depot_milestones(player);
+  gs_->adjust_social_score(player, 180);
 
   return true;
 }
@@ -231,7 +243,7 @@ bool RealEstate::sell_property(Property& property, Player& seller,
   }
 
   if (property.has_restaurant()) {
-    gs_->remove_restaurant(*property.restaurant_id());
+    close_restaurant(seller, property);
   }
 
   property.clear_owner();
@@ -258,12 +270,75 @@ bool RealEstate::end_property_lease(Property& property, Player& player) {
 
   if (property.has_restaurant()) {
     gs_->adjust_social_score(player, -50);
-    gs_->remove_restaurant(*property.restaurant_id());
+    close_restaurant(player, property);
   }
 
   property.clear_owner();
   property.status(PremiseStatus::NOT_AVAILABLE);
   return true;
+}
+
+void RealEstate::close_restaurant(Player& player, Property& property) {
+  const auto restaurant_id = *property.restaurant_id();
+  auto* restaurant = gs_->restaurant(restaurant_id);
+  if (restaurant && player.is_human_controlled()) {
+    // Closing the restaurant means firing the entire staff.
+    auto& city = property.city();
+    auto fire_staff = [&](const Staff& staff) {
+      uint8_t char_id = staff.character().id();
+      city.blacklist_staff(char_id, player.id());
+      city.job_market().set_status(
+          char_id,
+          static_cast<core::character::MarketStatus>(staff.job_role()));
+    };
+    for (const auto& cook : restaurant->cooks()) {
+      if (cook.has_value()) {
+        fire_staff(*cook);
+      }
+    }
+    for (const auto& waiter : restaurant->waiters()) {
+      if (waiter.has_value()) {
+        fire_staff(*waiter);
+      }
+    }
+    if (restaurant->manager().has_value()) {
+      fire_staff(*restaurant->manager());
+    }
+
+    player.cancel_restaurant_contracts(*gs_, restaurant_id);
+
+    Money furniture_amount;
+    Money oven_amount;
+    for (const auto& item : restaurant->layout()->placed_furniture()) {
+      furniture_amount += item->furniture()->price() / 2;
+    }
+    for (const auto& item : restaurant->layout()->placed_kitchen_furniture()) {
+      oven_amount += item->furniture()->price() / 2;
+    }
+
+    if (furniture_amount > 0_usd || oven_amount > 0_usd) {
+      gs_->status().post_direct({
+          .payload = compat::format(
+              "Articles to a total of {:w}, were left in your restaurant. "
+              "The scrapdealer is happy now!!",
+              furniture_amount + oven_amount),
+          .scope = StatusScope::Global,
+      });
+
+      auto date = gs_->time().current_date();
+      if (furniture_amount > 0_usd) {
+        player.financials().transfer(date, Account::Furniture,
+                                     Account::ProfitAndLoss, furniture_amount,
+                                     AccountingScope::Operational);
+      }
+      if (oven_amount > 0_usd) {
+        player.financials().transfer(date, Account::Machines,
+                                     Account::ProfitAndLoss, oven_amount,
+                                     AccountingScope::Operational);
+      }
+    }
+  }
+  gs_->remove_restaurant(restaurant_id);
 }
 
 Restaurant* RealEstate::create_ai_starting_restaurant(Player& player,
