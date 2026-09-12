@@ -755,6 +755,9 @@ void Player::cancel_contract(GameState& game_state, size_t index) {
                       c.restaurant_id);
     if (!paid && supplier) {
       supplier->relationship(id_).outstanding_debt += fee;
+      financials_.transfer(game_state.time().current_date(),
+                           Account::DeliveryDebts, Account::Stock, fee,
+                           AccountingScope::Capital);
     }
   }
 
