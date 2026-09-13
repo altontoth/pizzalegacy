@@ -62,7 +62,29 @@ public:
   bool is_settled() const { return months_left_ == 0; }
   int months_left() const { return months_left_; }
 
-  Money repay_amount() const { return months_left_ * monthly_repayment(); }
+  Money repay_amount(bool settle_rounding) const {
+    return repay_principal(settle_rounding) +
+           (months_left_ * monthly_interest_);
+  }
+  Money repay_principal(bool settle_rounding) const {
+    if (settle_rounding) {
+      return remaining_principal();
+    }
+    return months_left_ * monthly_principal_;
+  }
+
+  Money principal_due(bool settle_rounding) const {
+    if (settle_rounding && months_left_ == 1) {
+      return remaining_principal();
+    }
+    return monthly_principal_;
+  }
+
+  // Includes the dollars lost by rounding the monthly principal down.
+  Money remaining_principal() const {
+    return start_amount_ -
+           ((start_months_ - months_left_) * monthly_principal_);
+  }
 
   void repay() { months_left_ = 0; }
 

@@ -871,12 +871,14 @@ Examples:
                            date);
         }
         else if (action == "month") {
-          player->apply_monthly_loan_payments(date);
+          player->apply_monthly_loan_payments(
+              date, ctx.state.options().fix_legacy_bugs);
         }
         else {
           for (auto& loan : player->loans_in_city(ctx.state.active_city_id())) {
             if (!loan.is_settled()) {
-              player->repay_loan(loan, date);
+              player->repay_loan(loan, date,
+                                 ctx.state.options().fix_legacy_bugs);
             }
           }
         }

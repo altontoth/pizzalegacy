@@ -213,6 +213,14 @@ price by 10%, but the 70% tenant discount is applied only when calculating the
 price shown to the tenant; it is no longer included in the price that gets
 stored.
 
+### Paid-off loans stay on the balance sheet
+The monthly loan payment is rounded down to whole dollars, so a loan is paid
+off a few dollars short (a $5000 loan over 12 months leaves $8). That remainder
+is never charged and stays under loans on the balance sheet for good.
+
+With the fix enabled, the last monthly payment or an early repayment also pays
+the remainder.
+
 ## Config file only
 
 Some of what I think were bugs have a big impact on the gameplay; given that

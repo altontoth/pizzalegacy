@@ -291,9 +291,10 @@ void Player::add_loan(core::CityId city_id, Loan loan, GameDate date) {
                        AccountingScope::Operational);
 }
 
-void Player::repay_loan(Loan& loan, const GameDate& date) {
+void Player::repay_loan(Loan& loan, const GameDate& date,
+                        bool fix_legacy_bugs) {
   financials_.transfer(date, Account::Cash, Account::Loan,
-                       loan.months_left() * loan.monthly_principal(),
+                       loan.repay_principal(fix_legacy_bugs),
                        AccountingScope::Capital);
   financials_.transfer(date, Account::Cash, Account::Repayment,
                        loan.months_left() * loan.monthly_interest(),
@@ -522,12 +523,13 @@ int Player::negotiation_skill() const {
   return (character_.charisma() + character_.intelligence()) / 2;
 }
 
-Player::MonthlyLoanCosts Player::monthly_loan_costs() const {
+Player::MonthlyLoanCosts
+Player::monthly_loan_costs(bool fix_legacy_bugs) const {
   MonthlyLoanCosts result{};
   for (const auto& [city_id, loans] : loans_) {
     for (const auto& loan : loans) {
       if (!loan.is_settled()) {
-        result.repayment += loan.monthly_principal();
+        result.repayment += loan.principal_due(fix_legacy_bugs);
         result.interest += loan.monthly_interest();
       }
     }
@@ -535,12 +537,13 @@ Player::MonthlyLoanCosts Player::monthly_loan_costs() const {
   return result;
 }
 
-void Player::apply_monthly_loan_payments(const GameDate& date) {
+void Player::apply_monthly_loan_payments(const GameDate& date,
+                                         bool fix_legacy_bugs) {
   for (auto& [city_id, loans] : loans_) {
     for (auto& loan : loans) {
       if (!loan.is_settled()) {
-        financials_.pay_loan_installment(date, loan.monthly_principal(),
-                                         loan.monthly_interest());
+        financials_.pay_loan_installment(
+            date, loan.principal_due(fix_legacy_bugs), loan.monthly_interest());
         loan.end_of_month();
       }
     }
