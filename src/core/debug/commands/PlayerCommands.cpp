@@ -14,6 +14,7 @@
 #include "core/factories/PizzaFactory.h"
 #include "core/finance/BalanceSheet.h"
 #include "core/finance/Ledger.h"
+#include "core/finance/Loan.h"
 #include "core/finance/Money.h"
 #include "core/food/Pizza.h"
 #include "core/inventory/Inventory.h"
@@ -820,6 +821,73 @@ Examples:
   };
 }
 
+static CommandDef make_player_loan() {
+  return CommandDef{
+      .name = "loan",
+      .description = "Take, pay or repay a bank loan",
+      .help_text = R"(Usage: player loan <take|month|repay> [amount]
+
+Works on the active player's loans in the active city.
+  take <amount>  books a 12 month loan at 10% from bank 0
+  month          books one monthly payment on every open loan
+  repay          pays off every open loan at once, interest included
+
+Examples:
+  player loan take 5000
+  player loan month
+  player loan repay
+)",
+      .args =
+          {
+              ArgSpec{
+                  .name = "action",
+                  .type = ArgType::String,
+                  .optional = false,
+                  .default_provider = DefaultProvider::None,
+                  .description = "take, month or repay",
+                  .allowed_values =
+                      std::vector<std::string>{"take", "month", "repay"},
+              },
+              ArgSpec::optional_with_default("amount", ArgType::Money,
+                                             DefaultProvider::None,
+                                             "Loan amount for take"),
+          },
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        auto* player = ctx.state.active_player();
+        if (!player) {
+          return CommandResult::error("No active player");
+        }
+        const auto date = ctx.state.time().current_date();
+        const auto action = ctx.string_arg(0);
+        if (action == "take") {
+          if (!ctx.has_arg(1)) {
+            return CommandResult::error("take needs an amount");
+          }
+          constexpr uint8_t interest_percentage = 10;
+          constexpr uint8_t months = 12;
+          player->add_loan(ctx.state.active_city_id(),
+                           Loan{core::BankId{0}, ctx.money_arg(1),
+                                interest_percentage, months},
+                           date);
+        }
+        else if (action == "month") {
+          player->apply_monthly_loan_payments(date);
+        }
+        else {
+          for (auto& loan : player->loans_in_city(ctx.state.active_city_id())) {
+            if (!loan.is_settled()) {
+              player->repay_loan(loan, date);
+            }
+          }
+        }
+        return CommandResult::success().add_message(
+            compat::format("Loan account {:i}, repayment account {:i}",
+                           player->financials().balance(Account::Loan),
+                           player->financials().balance(Account::Repayment)));
+      },
+  };
+}
+
 static CommandDef make_player_holiday() {
   return CommandDef{
       .name = "holiday",
@@ -964,9 +1032,10 @@ CommandDef make_player_commands() {
       .name = "player",
       .aliases = {"p"},
       .description = "Player management commands",
-      .help_text = "Manage player state: info, active, money, inventory, "
-                   "recipes, weapon_profit, competition, campaigns, balance, "
-                   "ad_effectiveness, holiday, startofday, jail",
+      .help_text =
+          "Manage player state: info, active, money, inventory, "
+          "recipes, weapon_profit, competition, campaigns, balance, loan, "
+          "ad_effectiveness, holiday, startofday, jail",
   }
       .add_subcommand(make_player_info())
       .add_subcommand(make_player_active())
@@ -977,6 +1046,7 @@ CommandDef make_player_commands() {
       .add_subcommand(make_player_competition())
       .add_subcommand(make_player_campaigns())
       .add_subcommand(make_player_balance())
+      .add_subcommand(make_player_loan())
       .add_subcommand(make_player_ad_effectiveness())
       .add_subcommand(make_player_holiday())
       .add_subcommand(make_player_startofday())

@@ -45,6 +45,22 @@ void PlayerFinancials::transfer(const GameDate& date, Account from, Account to,
       },
   });
 }
+
+void PlayerFinancials::pay_loan_installment(const GameDate& date,
+                                            Money principal, Money interest) {
+  using enum AccountingScope;
+  post({
+      date,
+      {
+          {Account::Loan, principal, std::nullopt, Capital},
+          {Account::Repayment, principal, std::nullopt, Operational},
+          {Account::Repayment, -principal, std::nullopt, Capital},
+          {Account::Repayment, interest, std::nullopt, Operational},
+          {Account::Cash, -(principal + interest), std::nullopt, Operational},
+      },
+  });
+}
+
 void PlayerFinancials::close_year(const GameDate& date) {
   int64_t profit = 0; // ledger_.balance(Account::ProfitAndLoss);
   if (profit == 0) {

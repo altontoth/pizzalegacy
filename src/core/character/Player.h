@@ -93,6 +93,7 @@ public:
   void on_supplier_visit();
   void on_city_travel();
   void add_loan(core::CityId city_id, Loan loan, GameDate date);
+  void repay_loan(Loan& loan, const GameDate& date);
   std::vector<Loan>& loans_in_city(core::CityId city_id);
   const std::vector<Loan>& loans_in_city(core::CityId city_id) const;
   const std::map<core::CityId, std::vector<Loan>>& loans() const {

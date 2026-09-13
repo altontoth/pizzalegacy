@@ -205,7 +205,8 @@ void MafiaConversation::apply_npc_effects(GameState& state, MafiaMode mm) {
   case MafiaMode::LoanRepaymentDue: {
     auto& loan = player->mafia_state().loan;
     if (loan && player->cash_balance() >= loan->amount) {
-      player->financials().spend_cash(date, Account::Repayment, loan->amount);
+      player->financials().transfer(date, Account::Cash, Account::ProfitAndLoss,
+                                    loan->amount, AccountingScope::Capital);
       player->mafia_state().loan = std::nullopt;
     }
     else if (loan) {
@@ -473,8 +474,8 @@ bool MafiaConversation::advance_proposal(bool agree) {
 
   case MafiaLine::LOAN_OFFER:
     if (agree) {
-      // Player receives the loan amount
-      player->financials().spend_cash(date, Account::Loan, -loan_amount_);
+      player->financials().transfer(date, Account::ProfitAndLoss, Account::Cash,
+                                    loan_amount_, AccountingScope::Capital);
       // Must repay the repayment amount (loan + interest) in 90 days
       player->mafia_state().loan = MafiaLoan{.amount = loan_repayment_,
                                              .due_date = date.add_days(90),

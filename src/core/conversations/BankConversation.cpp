@@ -138,11 +138,9 @@ bool BankConversation::advance_proposal(bool agree) {
     break;
   case BankLine::ARE_YOU_SURE_YOU_WANT_TO_REPAY:
     if (agree) {
-      Money amount = repaying_loan_->repay_amount();
-      // Money already checked in advance_line_choice, so this won't fail
-      (void)state_.active_player()->spend_cash(state_.time().current_date(),
-                                               Account::Loan, amount);
-      repaying_loan_->repay();
+      // advance_line_choice already checked the player can afford this
+      state_.active_player()->repay_loan(*repaying_loan_,
+                                         state_.time().current_date());
     }
     current_line(BankLine::I_NEED_LOAN);
     break;

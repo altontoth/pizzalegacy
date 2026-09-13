@@ -36,6 +36,9 @@ public:
   void transfer(const GameDate& date, Account from, Account to, Money amount,
                 core::RestaurantId restaurant_id, AccountingScope scope);
 
+  void pay_loan_installment(const GameDate& date, Money principal,
+                            Money interest);
+
   void close_year(const GameDate& date);
 
   // Static methods for account categorization

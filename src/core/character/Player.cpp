@@ -291,6 +291,16 @@ void Player::add_loan(core::CityId city_id, Loan loan, GameDate date) {
                        AccountingScope::Operational);
 }
 
+void Player::repay_loan(Loan& loan, const GameDate& date) {
+  financials_.transfer(date, Account::Cash, Account::Loan,
+                       loan.months_left() * loan.monthly_principal(),
+                       AccountingScope::Capital);
+  financials_.transfer(date, Account::Cash, Account::Repayment,
+                       loan.months_left() * loan.monthly_interest(),
+                       AccountingScope::Capital);
+  loan.repay();
+}
+
 bool Player::spend_cash(const GameDate& date, Account to, Money amount,
                         std::optional<core::RestaurantId> restaurant_id) {
   if (cash_balance() >= amount) {
@@ -529,9 +539,8 @@ void Player::apply_monthly_loan_payments(const GameDate& date) {
   for (auto& [city_id, loans] : loans_) {
     for (auto& loan : loans) {
       if (!loan.is_settled()) {
-        financials_.transfer(date, Account::Cash, Account::Repayment,
-                             loan.monthly_repayment(),
-                             AccountingScope::Operational);
+        financials_.pay_loan_installment(date, loan.monthly_principal(),
+                                         loan.monthly_interest());
         loan.end_of_month();
       }
     }
