@@ -47,6 +47,16 @@ done
 dylibbundler -od -b -x "$BIN" -d "$FRAMEWORKS" -p @executable_path/../Frameworks/ \
     "${DYLIBBUNDLER_SEARCH[@]}"
 
+# dylibbundler rewrites every rpath to the same path, and dyld refuses a binary
+# that lists an rpath twice.
+rpath_count() {
+    otool -l "$BIN" | grep -A2 LC_RPATH | grep -c "path @executable_path/../Frameworks/ " || true
+}
+while (( $(rpath_count) > 1 )); do
+    install_name_tool -delete_rpath @executable_path/../Frameworks/ "$BIN" 2>/dev/null
+done
+codesign --force --sign - "$BIN"
+
 cp -r "LICENSES" "$RESOURCES/LICENSES"
 cp "LICENSES/GPL-3.0-or-later.txt" "$RESOURCES/LICENSE.txt"
 
