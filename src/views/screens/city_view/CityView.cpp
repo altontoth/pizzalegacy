@@ -29,6 +29,7 @@
 #include "core/restaurant/RestaurantTypes.h"
 #include "core/state/EndOfDayCause.h"
 #include "core/state/TurnOrchestrator.h"
+#include "core/status/StatusHub.h"
 #include "core/time/GameTime.h"
 #include "core/util/Constants.h"
 #include "engine/Random.h"
@@ -562,15 +563,19 @@ void CityView::handle_mouse_click_zoom_close(WorldPoint p) {
     if (property && property->type() == PropertyType::BUSINESS_PREMISE &&
         property->has_restaurant()) {
       auto r_id = property->restaurant_id();
+      const bool own = current_player->id() == *property->owner_or_tenant();
+      if (!own && state_.restaurant(*r_id)->is_force_closed()) {
+        state_.status().post_direct(StatusMsg{
+            .payload = "This store is closed at the moment.",
+            .scope = StatusScope::City,
+        });
+        return;
+      }
       state_.active_restaurant(*r_id);
 
-      RestaurantViewMode map_mode;
-      if (current_player->id() == *property->owner_or_tenant()) {
-        map_mode = RestaurantViewMode::PLAYER_DEFAULT;
-      }
-      else {
-        map_mode = RestaurantViewMode::OPPONENT_VIEW;
-      }
+      const RestaurantViewMode map_mode =
+          own ? RestaurantViewMode::PLAYER_DEFAULT
+              : RestaurantViewMode::OPPONENT_VIEW;
 
       state_.ui().push<RestaurantViewState>(*r_id, map_mode);
       return;
