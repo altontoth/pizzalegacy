@@ -755,8 +755,8 @@ void Game::handle_resize_event(const SDL_Event& event, LoopState& loop_state) {
     float window_x = 0.0f;
     float window_y = 0.0f;
     SDL_RenderCoordinatesToWindow(
-        sdl_.renderer.get(), static_cast<float>(last_mouse_pos_.x),
-        static_cast<float>(last_mouse_pos_.y), &window_x, &window_y);
+        sdl_.renderer.get(), static_cast<float>(pointer_->position().x),
+        static_cast<float>(pointer_->position().y), &window_x, &window_y);
     SDL_WarpMouseInWindow(sdl_.window.get(), window_x, window_y);
   }
 }
