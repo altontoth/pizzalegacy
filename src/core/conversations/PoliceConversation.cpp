@@ -56,8 +56,9 @@ PoliceConversation::PoliceConversation(GameState& state, const Actor* actor,
 
     int raw_bribe = (engine::random::rand_max_n(500) + 500) *
                     (sentence_days_ + player->criminal_record());
-    bribe_or_fine_cost_ = Money::from_dollars(
-        std::max(math::round_up_to_next_power10<3>(raw_bribe), int64_t{4000}));
+    bribe_or_fine_cost_ = std::clamp(
+        Money::from_dollars(math::round_up_to_next_power10<3>(raw_bribe)),
+        4000_usd, 500'000_usd);
 
     player->increment_criminal_record();
     apply_confiscation();
