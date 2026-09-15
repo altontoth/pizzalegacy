@@ -212,6 +212,9 @@ private:
   // Gives control to the next player once their turn card is gone. If that
   // player is AI their turn ends here.
   void on_player_turn_card_finished();
+  // A day the player is in prison or on holiday. The mayor's winner
+  // announcements still reach them.
+  void run_away_day();
 
   void raid_depots(core::PlayerId player_id);
   turn::StepResult execute_pipeline_step(const turn::Step& step);

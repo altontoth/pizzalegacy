@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include "core/city/MayorOffice.h"
 #include "core/common/Ids.h"
 #include "core/finance/TurnInvoices.h"
 #include "core/time/GameDate.h"
@@ -49,6 +50,10 @@ public:
                                     const core::finance::MonthlyCosts& costs,
                                     std::function<void()> on_done) = 0;
 
+  // The mayor's call naming an award's winner, or that nobody won.
+  virtual void show_winner_announcement(const MayorAwardEvent& award,
+                                        std::function<void()> on_done) = 0;
+
   // The steps queued behind the turn card keep running while it is being shown.
   virtual void show_player_turn_card(core::PlayerId player,
                                      const GameDate& date,
@@ -87,6 +92,10 @@ public:
   void show_monthly_invoice(core::PlayerId /*player_id*/,
                             const core::finance::MonthlyCosts& /*costs*/,
                             std::function<void()> on_done) override {
+    on_done();
+  }
+  void show_winner_announcement(const MayorAwardEvent& /*award*/,
+                                std::function<void()> on_done) override {
     on_done();
   }
   // Held until the next tick so the steps queued behind the card run first.

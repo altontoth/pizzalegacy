@@ -740,14 +740,15 @@ void GameState::score_and_grant_mayor_award(MayorAwardEvent& award_event,
   }
 }
 
-void GameState::process_mayor_award_event(const MayorAwardEvent& award_event) {
+std::optional<MayorState>
+GameState::mayor_award_call(const MayorAwardEvent& award_event) const {
   auto* city = active_city();
   if (!city) {
-    return;
+    return std::nullopt;
   }
   auto mayor_actors = city->actors(ActorType::MAYOR);
   if (mayor_actors.empty()) {
-    return;
+    return std::nullopt;
   }
   core::ActorId mayor_id = mayor_actors[0]->id();
 
@@ -759,7 +760,7 @@ void GameState::process_mayor_award_event(const MayorAwardEvent& award_event) {
         (award_event.type == MayorAwardType::BestImitator ||
          award_event.type == MayorAwardType::TransAtlanticTrade);
     if (!award_winner.has_value() && !has_nobody_dialog) {
-      return;
+      return std::nullopt;
     }
   }
 
@@ -787,14 +788,20 @@ void GameState::process_mayor_award_event(const MayorAwardEvent& award_event) {
     conv_type = MayorConversationType::TransAtlanticTradeAward;
     break;
   case MayorAwardType::None:
-    return;
+    return std::nullopt;
   }
 
-  ui_.push<MayorState>(MayorState{.id = mayor_id,
-                                  .type = conv_type,
-                                  .restaurant_id = std::nullopt,
-                                  .is_first_inspection = std::nullopt,
-                                  .award_winner_player_id = award_winner});
+  return MayorState{.id = mayor_id,
+                    .type = conv_type,
+                    .restaurant_id = std::nullopt,
+                    .is_first_inspection = std::nullopt,
+                    .award_winner_player_id = award_winner};
+}
+
+void GameState::process_mayor_award_event(const MayorAwardEvent& award_event) {
+  if (auto call = mayor_award_call(award_event)) {
+    ui_.push<MayorState>(std::move(*call));
+  }
 }
 
 void GameState::show_staff_event_dialog(

@@ -32,6 +32,8 @@ public:
   void show_monthly_invoice(core::PlayerId player_id,
                             const core::finance::MonthlyCosts& costs,
                             std::function<void()> on_done) override;
+  void show_winner_announcement(const MayorAwardEvent& award,
+                                std::function<void()> on_done) override;
   void show_player_turn_card(core::PlayerId player, const GameDate& date,
                              std::function<void()> on_closed) override;
 

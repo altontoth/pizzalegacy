@@ -812,7 +812,34 @@ void TurnOrchestrator::on_player_turn_card_finished() {
   gs_->status().suppress(false);
 
   auto* player = gs_->active_player();
-  if (player && player->is_in_jail()) {
+  if (player && (player->is_in_jail() || player->is_on_holiday())) {
+    run_away_day();
+    return;
+  }
+  StatusMsg m{
+      .payload = "Please wait...",
+      .scope = StatusScope::Global,
+  };
+  gs_->status().post_direct(m);
+}
+
+void TurnOrchestrator::run_away_day() {
+  auto* player = gs_->active_player();
+
+  auto announcement =
+      std::ranges::find_if(deferred_calls_, [player](const DeferredCall& call) {
+        return call.kind == DeferredCall::Kind::MayorAward &&
+               call.award.announces_winner && call.player_id == player->id();
+      });
+  if (announcement != deferred_calls_.end()) {
+    const MayorAwardEvent award = announcement->award;
+    deferred_calls_.erase(announcement);
+    gs_->turn_presenter().show_winner_announcement(award,
+                                                   [this] { run_away_day(); });
+    return;
+  }
+
+  if (player->is_in_jail()) {
     player->decrement_jail_day();
     if (player->is_in_jail()) {
       end_of_turn(EndOfDayCause::Away);
@@ -823,21 +850,13 @@ void TurnOrchestrator::on_player_turn_card_finished() {
     }
     return;
   }
-  if (player && player->is_on_holiday()) {
-    player->decrement_holiday_day();
-    if (player->is_on_holiday()) {
-      end_of_turn(EndOfDayCause::Away);
-    }
-    else {
-      skip_to_next_player();
-    }
-    return;
+  player->decrement_holiday_day();
+  if (player->is_on_holiday()) {
+    end_of_turn(EndOfDayCause::Away);
   }
-  StatusMsg m{
-      .payload = "Please wait...",
-      .scope = StatusScope::Global,
-  };
-  gs_->status().post_direct(m);
+  else {
+    skip_to_next_player();
+  }
 }
 
 void TurnOrchestrator::build_turn_pipeline(

@@ -24,6 +24,7 @@
 #include "core/state/MilestoneTracker.h"
 #include "core/state/RealEstate.h"
 #include "core/state/TurnOrchestrator.h"
+#include "core/state/UIState.h"
 #include "core/state/UIStateStack.h"
 #include "core/status/StatusHub.h"
 #include "core/time/GameTime.h"
@@ -443,6 +444,9 @@ public:
 
   void score_and_grant_mayor_award(MayorAwardEvent& award_event, City& city);
 
+  // The mayor's call for an award, if there is one to make.
+  std::optional<MayorState>
+  mayor_award_call(const MayorAwardEvent& award_event) const;
   // Push a mayor award dialog to the UI.
   void process_mayor_award_event(const MayorAwardEvent& award_event);
 
