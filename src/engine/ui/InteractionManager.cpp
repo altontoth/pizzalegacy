@@ -229,8 +229,8 @@ void InteractionManager::process(const SDL_Event& e) {
     const ItemID normal_id = hit.normal;
     const auto& background_ids = hit.background;
 
-    int scroll_delta = static_cast<int>(e.wheel.y);
-    int scroll_delta_x = static_cast<int>(e.wheel.x);
+    int scroll_delta = e.wheel.integer_y;
+    int scroll_delta_x = e.wheel.integer_x;
 
     if (normal_id != 0) {
       auto* item = lookup_item(normal_id);

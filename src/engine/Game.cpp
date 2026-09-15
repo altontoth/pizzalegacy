@@ -695,6 +695,8 @@ void Game::handle_events(LoopState& loop_state) {
           loop_state.game_state.options().scroll_wheel_inverted) {
         event.wheel.y = -event.wheel.y;
         event.wheel.x = -event.wheel.x;
+        event.wheel.integer_y = -event.wheel.integer_y;
+        event.wheel.integer_x = -event.wheel.integer_x;
       }
       interaction_manager_->process(event);
       input_manager_->process(event);
