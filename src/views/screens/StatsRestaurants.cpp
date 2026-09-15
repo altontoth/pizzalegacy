@@ -76,7 +76,8 @@ void StatsRestaurants::render(const RenderContext& ctx) {
   context_.font->render_text_onto(*ctx.surface, "restaurant overview",
                                   ViewPoint{56, 24}, FontFace::ASTANDAR, ts);
 
-  auto restaurants = state_.restaurants_for(player_id_);
+  auto restaurants =
+      state_.restaurants_in_city(player_id_, state_.active_city_id());
   max_pages_ =
       restaurants.empty() ? 0 : (static_cast<int>(restaurants.size()) - 1) / 2;
 

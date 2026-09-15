@@ -70,7 +70,8 @@ bool crowds_an_ai_restaurant(GameState& game_state, const Property& premise) {
     if (!player || player->is_human_controlled()) {
       continue;
     }
-    for (const auto* rest : game_state.restaurants_for(player->id())) {
+    for (const auto* rest :
+         game_state.restaurants_in_city(player->id(), premise.city().id())) {
       const Property& standing = rest->property();
       const int dx = std::abs(City::index_to_x(standing.index()) - x);
       const int dy = std::abs(City::index_to_y(standing.index()) - y);
@@ -648,8 +649,8 @@ void Player::check_ai_expansion(GameState& game_state) {
     ai_expansion_cooldown_--;
   }
 
-  auto restaurants = game_state.restaurants_for(id_);
-  int count = static_cast<int>(restaurants.size());
+  const auto city_id = game_state.active_city_id();
+  int count = game_state.restaurant_count_for_player_in_city(id_, city_id);
 
   if (count > 20) {
     return;
@@ -662,8 +663,8 @@ void Player::check_ai_expansion(GameState& game_state) {
       int random_idx = engine::random::rand_max_n(human_count);
       auto* other = all_players[random_idx];
       if (other) {
-        int other_count =
-            static_cast<int>(game_state.restaurants_for(other->id()).size());
+        int other_count = game_state.restaurant_count_for_player_in_city(
+            other->id(), city_id);
         if (count > other_count + 3) {
           return;
         }

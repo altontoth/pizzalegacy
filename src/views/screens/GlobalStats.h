@@ -65,4 +65,5 @@ private:
   Bob& stanbobs_;
   Blitmap<Blitmap2Icon>& blitmap2_;
   MonthlyPopupState popup_state_;
+  int property_scroll_offset_{0};
 };

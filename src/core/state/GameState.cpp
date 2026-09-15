@@ -1103,19 +1103,10 @@ void GameState::add_restaurant(std::unique_ptr<Restaurant> restaurant) {
   restaurants_.push_back(std::move(restaurant));
 }
 
-void GameState::remove_restaurant(core::RestaurantId r_id) {
+void GameState::remove_restaurant(Property& property) {
+  const auto r_id = *property.restaurant_id();
   // Clear the property link
-  for (auto& city_ptr : cities_) {
-    if (!city_ptr) {
-      continue;
-    }
-    for (auto* property : city_ptr->properties()) {
-      if (property && property->has_restaurant() &&
-          property->restaurant_id() == r_id) {
-        property->clear_restaurant();
-      }
-    }
-  }
+  property.clear_restaurant();
   // Clear active restaurant
   if (active_restaurant_ && *active_restaurant_ == r_id) {
     active_restaurant_.reset();

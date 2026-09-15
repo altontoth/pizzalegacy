@@ -14,12 +14,18 @@
 #include "core/finance/Scale.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/state/GameState.h"
+#include "engine/FormatCompat.h"
 #include "engine/gfx/Draw.h"
 #include "engine/ui/TextAnchor.h"
 #include "resources/BlitmapManager.h"
 #include "views/base/ViewDefs.h"
 #include "views/ui/PageDecoration.h"
 #include "views/ui/finance/FinanceComponents.h"
+
+#include <algorithm>
+#include <limits>
+#include <string>
+#include <vector>
 
 namespace {
 // The Balance page labels four accounts differently from the rest of the game,
@@ -106,6 +112,7 @@ void GlobalStats::create_buttons() {
           }
           else {
             current_screen_ = screen;
+            property_scroll_offset_ = 0;
             mark_dirty();
             Logger::debug("Switched to screen: {}", static_cast<int>(screen));
           }
@@ -206,7 +213,8 @@ void GlobalStats::render_month_overview(const RenderContext& ctx) {
   gfx::draw::line(*ctx.surface, {14, 346}, {376, 346}, line_color, line_width);
 
   auto& financials = state_.active_player()->financials();
-  auto restaurants = state_.restaurants_for(state_.active_player()->id());
+  auto restaurants = state_.restaurants_in_city(state_.active_player()->id(),
+                                                state_.active_city_id());
 
   // Value columns, right-aligned against the panel edge.
   const int right_edge = ctx.surface->rect().right();
@@ -792,30 +800,40 @@ void GlobalStats::render_property(const RenderContext& ctx) {
   context_.font->render_text_onto(*ctx.surface, "property", {22, 60},
                                   FontFace::ASTANDAR);
 
-  auto* player = state_.active_player();
-  auto player_id = player->id();
-  auto cities = state_.visited_cities(*player);
+  auto player_id = state_.active_player()->id();
+  const City* city = state_.active_city();
 
-  struct PropEntry {
-    Property* prop;
-    const City* city;
-  };
-  std::vector<PropEntry> owned;
-  std::vector<PropEntry> rented;
-  for (auto* city : cities) {
-    for (auto* prop : city->properties()) {
-      auto tenant = prop->owner_or_tenant();
-      if (!tenant.has_value() || *tenant != player_id) {
-        continue;
-      }
-      if (prop->is_owned()) {
-        owned.push_back({prop, city});
-      }
-      else if (prop->is_rented()) {
-        rented.push_back({prop, city});
-      }
+  std::vector<Property*> owned;
+  std::vector<Property*> rented;
+  for (auto* prop : city->properties()) {
+    auto tenant = prop->owner_or_tenant();
+    if (!tenant.has_value() || *tenant != player_id) {
+      continue;
+    }
+    if (prop->is_owned()) {
+      owned.push_back(prop);
+    }
+    else if (prop->is_rented()) {
+      rented.push_back(prop);
     }
   }
+
+  // Restaurants in the order they were opened, then warehouses, then empty
+  // premises.
+  auto sort_rank = [](const Property* prop) {
+    if (prop->has_restaurant()) {
+      return prop->restaurant_id()->value;
+    }
+    if (prop->type() == PropertyType::DEPOT) {
+      return std::numeric_limits<int>::max() - 1;
+    }
+    return std::numeric_limits<int>::max();
+  };
+  auto by_rank = [&](const Property* a, const Property* b) {
+    return sort_rank(a) < sort_rank(b);
+  };
+  std::ranges::stable_sort(owned, by_rank);
+  std::ranges::stable_sort(rented, by_rank);
 
   auto venue_name = [&](Property* prop) -> std::string {
     if (prop->type() == PropertyType::DEPOT) {
@@ -828,45 +846,93 @@ void GlobalStats::render_property(const RenderContext& ctx) {
     return "empty";
   };
 
+  struct PropertyRow {
+    enum class Kind { Entry, Gap, RentedHeader };
+    Kind kind;
+    Property* prop = nullptr;
+  };
+  std::vector<PropertyRow> rows;
+  for (auto* prop : owned) {
+    rows.push_back({PropertyRow::Kind::Entry, prop});
+  }
+  rows.push_back({PropertyRow::Kind::Gap});
+  rows.push_back({PropertyRow::Kind::RentedHeader});
+  for (auto* prop : rented) {
+    rows.push_back({PropertyRow::Kind::Entry, prop});
+  }
+  const int total_rows = static_cast<int>(rows.size());
+  const int total_entries = static_cast<int>(owned.size() + rented.size());
+
   constexpr int header_x = 14;
   constexpr int data_x = 4;
   constexpr int venue_x = 152;
   constexpr int entry_y0 = 120;
   constexpr int row_height = 18;
-  constexpr int cutoff_y = 344;
-  constexpr int rented_header_cutoff = 332;
+  const bool scrollable = state_.options().qol_improvements;
+  const int visible_rows = scrollable ? 12 : 13;
+
+  const int max_scroll =
+      scrollable ? std::max(0, total_rows - visible_rows) : 0;
+  property_scroll_offset_ = std::min(property_scroll_offset_, max_scroll);
 
   context_.font->render_text_onto(*ctx.surface, "property:", {header_x, 78},
                                   FontFace::PIZ_NUMB);
 
-  int y = entry_y0;
-  for (auto& e : owned) {
-    if (y > cutoff_y) {
-      break;
-    }
-    context_.font->render_text_onto(*ctx.surface, e.prop->district().name(),
-                                    {data_x, y}, FontFace::PIZ_NUMB, 240);
-    context_.font->render_text_onto(*ctx.surface, venue_name(e.prop),
-                                    {venue_x, y}, FontFace::PIZ_NUMB, 240);
-    y += row_height;
-  }
-  y += row_height;
-
-  if (y < rented_header_cutoff) {
-    context_.font->render_text_onto(*ctx.surface, "rented:", {header_x, y - 4},
-                                    FontFace::PIZ_NUMB);
-    y += row_height;
-    for (auto& e : rented) {
-      if (y > cutoff_y) {
-        break;
+  int entries_above = 0;
+  int entries_shown = 0;
+  const int end_row =
+      std::min(total_rows, property_scroll_offset_ + visible_rows);
+  for (int i = 0; i < end_row; ++i) {
+    const PropertyRow& row = rows[i];
+    if (i < property_scroll_offset_) {
+      if (row.kind == PropertyRow::Kind::Entry) {
+        ++entries_above;
       }
-      context_.font->render_text_onto(*ctx.surface, e.prop->district().name(),
+      continue;
+    }
+    const int y = entry_y0 + ((i - property_scroll_offset_) * row_height);
+    if (row.kind == PropertyRow::Kind::RentedHeader) {
+      context_.font->render_text_onto(
+          *ctx.surface, "rented:", {header_x, y - 4}, FontFace::PIZ_NUMB);
+    }
+    else if (row.kind == PropertyRow::Kind::Entry) {
+      ++entries_shown;
+      context_.font->render_text_onto(*ctx.surface, row.prop->district().name(),
                                       {data_x, y}, FontFace::PIZ_NUMB, 240);
-      context_.font->render_text_onto(*ctx.surface, venue_name(e.prop),
+      context_.font->render_text_onto(*ctx.surface, venue_name(row.prop),
                                       {venue_x, y}, FontFace::PIZ_NUMB, 240);
-      y += row_height;
     }
   }
+
+  if (max_scroll == 0) {
+    return;
+  }
+
+  constexpr int info_y = 336;
+  std::string scroll_info =
+      compat::format("{}-{} of {}", entries_above + 1,
+                     entries_above + entries_shown, total_entries);
+  context_.font->render_text_onto(
+      *ctx.surface, scroll_info,
+      ViewPoint{views::base::MAIN_PANEL_WIDTH / 2, info_y}, FontFace::MINI, 240,
+      TextAnchor::Middle);
+
+  interactions_.create_frame_item(
+      ViewRect{0, entry_y0 - 4, views::base::MAIN_PANEL_WIDTH,
+               visible_rows * row_height},
+      "property_list", [this, max_scroll](auto& ie) {
+        if (ie.type != views::ui::InteractionEvent::Type::Scroll) {
+          return;
+        }
+        if (ie.scroll_delta > 0 && property_scroll_offset_ > 0) {
+          property_scroll_offset_--;
+          mark_dirty();
+        }
+        else if (ie.scroll_delta < 0 && property_scroll_offset_ < max_scroll) {
+          property_scroll_offset_++;
+          mark_dirty();
+        }
+      });
 }
 
 void GlobalStats::render_balance(const RenderContext& ctx) {

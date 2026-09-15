@@ -338,7 +338,7 @@ void RealEstate::close_restaurant(Player& player, Property& property) {
       }
     }
   }
-  gs_->remove_restaurant(restaurant_id);
+  gs_->remove_restaurant(property);
 }
 
 Restaurant* RealEstate::create_ai_starting_restaurant(Player& player,

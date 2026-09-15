@@ -41,6 +41,7 @@
 class GameContext;
 class TurnPresenter;
 class FadePresenter;
+class Property;
 
 constexpr int simulation_ticks_per_second = 30;
 constexpr uint32_t simulation_tick_ms = 1000 / simulation_ticks_per_second;
@@ -246,7 +247,7 @@ public:
   prev_restaurant(core::PlayerId pid, core::RestaurantId from) const;
   // For save/load:
   void add_restaurant(std::unique_ptr<Restaurant> restaurant);
-  void remove_restaurant(core::RestaurantId r_id);
+  void remove_restaurant(Property& property);
   void reset_for_load();
 
   // Property transactions and restaurant creation.
