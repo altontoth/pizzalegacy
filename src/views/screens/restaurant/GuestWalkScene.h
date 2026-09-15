@@ -67,7 +67,7 @@ struct WalkingGuest {
 #endif
 };
 
-// Ambient walkers in the dining room: guests arriving/departing and waiters
+// Ambient walkers in the restaurant: guests arriving/departing and waiters
 // delivering pizzas. Owns spawning, path following, the seating handoff into
 // the view's guest controllers, and walker sprite rendering. Friend of
 // RestaurantView (same pattern as AttackScene).

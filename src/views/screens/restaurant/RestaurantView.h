@@ -136,7 +136,7 @@ private:
   void zoom_out_of_restaurant_view();
   void update_status_display(const PlacedFurniture* pf);
   void update_restaurant_noise();
-  // Cached navigation grid for the dining room (see WalkNavigation.h);
+  // Cached navigation grid for the restaurant (see WalkNavigation.h);
   // invalidated whenever furniture changes.
   [[nodiscard]] const views::screens::restaurant::NavGrid&
   navigation_grid() const;

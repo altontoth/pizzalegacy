@@ -1603,7 +1603,7 @@ void RestaurantView::challenge_start(CompetitionFlow flow) {
 
 const NavGrid& RestaurantView::navigation_grid() const {
   if (!nav_grid_cache_) {
-    // Rasterize the current dining-room furniture into obstacle rects.
+    // Rasterize the restaurant's furniture into obstacle rects.
     const auto& furniture = restaurant_->layout()->placed_furniture();
     std::vector<WorldRect> obstacles;
     obstacles.reserve(furniture.size());

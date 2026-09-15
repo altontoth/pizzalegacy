@@ -35,7 +35,7 @@ struct WalkingPath {
   int grid_h{0};
 };
 
-// Rasterize the dining room onto the walker grid: walls and furniture
+// Rasterize the restaurant onto the walker grid: walls and furniture
 // blocked, customer entrance carved through the bottom wall. room_size is the
 // interior size in tiles; obstacles are furniture rects in world coordinates.
 [[nodiscard]] NavGrid
