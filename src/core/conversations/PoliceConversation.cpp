@@ -531,7 +531,7 @@ void PoliceConversation::apply_confiscation() {
 
   switch (*arrest_reason_) {
   case ArrestReason::WeaponsDealing:
-    sentence_days_ = std::max(sentence_days_, 8);
+    sentence_days_ = 8;
     seize_carried_weapons(state_, *player);
     break;
   case ArrestReason::LaunderingMoney:
@@ -539,10 +539,10 @@ void PoliceConversation::apply_confiscation() {
     break;
   // The weapons went when the police searched the depot.
   case ArrestReason::WarehouseWeapons:
-    sentence_days_ = std::max(sentence_days_, 20);
+    sentence_days_ = 20;
     break;
   case ArrestReason::PosessingWeapons:
-    sentence_days_ = std::max(sentence_days_, 4);
+    sentence_days_ = 4;
     seize_carried_weapons(state_, *player);
     break;
   default:
