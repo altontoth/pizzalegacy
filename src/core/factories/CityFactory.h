@@ -67,7 +67,7 @@ private:
   std::array<uint8_t, 300> district_bez_;
   IngredientPrices ingredient_base_prices_;
 
-  void load_map_data(int city_id);
+  void load_map_data(int city_id, bool fix_legacy_bugs);
   void load_city_data(int city_id);
 
   void load_building_names(std::ifstream& is);

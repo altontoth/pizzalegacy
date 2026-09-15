@@ -125,15 +125,11 @@ bool City::is_business_premise_by_type(uint8_t type) {
   if (is_named_building(type)) {
     return false;
   }
-  // We want to check if type is one of: 0x8a, 0x9a, 0xaa, 0xba, 0xca, 0xda,
-  // 0xea, 0xfa That means:
-  //   - The low nibble is 10:     (type & 0x0F) == 0x0A
-  //   - The high nibble is 8..F: (type & 0xF0) is between 0x8A and 0xFA
+  // A low nibble of 10 is a shop, whatever the high nibble holds.
   char landsym_row = (type & 0x0F);
   char landsym_col = (type >> 4);
 
-  return (landsym_row == 0x0A && landsym_col >= 0x08) ||
-         (landsym_row == 0x08 && landsym_col > 0x08);
+  return landsym_row == 0x0A || (landsym_row == 0x08 && landsym_col > 0x08);
 }
 
 bool City::is_business_premise_by_index(int index) const {

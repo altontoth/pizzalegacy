@@ -74,7 +74,7 @@ std::unique_ptr<City> CityFactory::create_city(
   factory.load_color_definition();
   factory.load_city_data(id);
   factory.load_district_bez(id);
-  factory.load_map_data(id);
+  factory.load_map_data(id, fix_legacy_bugs);
   factory.populate_types();
 
   auto city = std::make_unique<City>(core::CityId{id});
@@ -90,7 +90,7 @@ void CityFactory::load_color_definition() {
                           0x18, 0x11, 0x01, 0x03, 0x13, 0x0B};
 }
 
-void CityFactory::load_map_data(int city_id) {
+void CityFactory::load_map_data(int city_id, bool fix_legacy_bugs) {
   char filename[15];
   snprintf(filename, sizeof(filename), "dat/map%d.dat", city_id);
   std::string path(filename);
@@ -127,6 +127,15 @@ void CityFactory::load_map_data(int city_id) {
   }
 
   is.close();
+
+  // MAP1.DAT draws one premise as a player's shop front; draw it like the
+  // premise to its right.
+  constexpr int stray_front_city = 1;
+  constexpr int stray_front_index = 11589;
+  if (fix_legacy_bugs && city_id == stray_front_city &&
+      data_length_ > stray_front_index + 1) {
+    map_data_[stray_front_index] = map_data_[stray_front_index + 1];
+  }
 }
 
 void CityFactory::load_city_data(int city_id) {
