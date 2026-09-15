@@ -599,34 +599,24 @@ int Player::criminal_record() const { return criminal_record_; }
 void Player::increment_criminal_record() { criminal_record_++; }
 
 void Player::jail(int days) {
-  jail_days_left_ = std::min(days, 99);
-  jail_time_ = *jail_days_left_;
+  away_days_left_ = std::min(days, 99);
+  jail_time_ = away_days_left_;
   status_ = PlayerStatus::InPrison;
 }
 
 bool Player::is_in_jail() const { return status_ == PlayerStatus::InPrison; }
 
-std::optional<int> Player::jail_days_left() const { return jail_days_left_; }
-
-void Player::decrement_jail_day() {
-  Logger::debug("Player {} decrement jail time", name());
-  if (jail_days_left_) {
-    --(*jail_days_left_);
-    if (*jail_days_left_ <= 0) {
-      jail_days_left_.reset();
-      if (status_ == PlayerStatus::InPrison) {
-        status_ = PlayerStatus::Active;
-      }
-    }
-  }
+void Player::holiday(int days) {
+  away_days_left_ = days;
+  status_ = PlayerStatus::OnHoliday;
 }
 
-void Player::decrement_holiday_day() {
-  if (holiday_days_left_) {
-    --(*holiday_days_left_);
-    if (*holiday_days_left_ <= 0) {
-      holiday_days_left_.reset();
-    }
+void Player::decrement_away_day() {
+  Logger::debug("Player {} decrement away time", name());
+  --away_days_left_;
+  if (away_days_left_ <= 0) {
+    away_days_left_ = 0;
+    status_ = PlayerStatus::Active;
   }
 }
 

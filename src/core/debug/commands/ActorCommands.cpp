@@ -711,7 +711,7 @@ Example:
             compat::format("Criminal record: {}", player->criminal_record()));
         if (player->is_in_jail()) {
           result.add_message(
-              compat::format("Jail days left: {}", *player->jail_days_left()));
+              compat::format("Jail days left: {}", player->away_days_left()));
         }
         else {
           result.add_message("Jail: free");

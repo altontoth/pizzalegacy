@@ -81,11 +81,11 @@ Examples:
 
         if (player->is_on_holiday()) {
           lines.push_back(compat::format("Holiday days left: {}",
-                                         *player->holiday_days_left()));
+                                         player->away_days_left()));
         }
         if (player->is_in_jail()) {
-          lines.push_back(compat::format("Jail days left: {}",
-                                         player->jail_days_left().value_or(0)));
+          lines.push_back(
+              compat::format("Jail days left: {}", player->away_days_left()));
         }
 
         return CommandResult::success(lines);
@@ -1024,7 +1024,7 @@ Examples:
 
         return CommandResult::success().add_message(
             compat::format("{} is in prison for {} days", player->name(),
-                           player->jail_days_left().value_or(0)));
+                           player->away_days_left()));
       },
   };
 }

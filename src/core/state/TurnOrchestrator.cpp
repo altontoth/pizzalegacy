@@ -70,7 +70,7 @@ bool all_human_players_away(const GameState& state) {
       continue;
     }
     found_human = true;
-    if (!player->is_on_holiday() && !player->is_in_jail()) {
+    if (!player->is_away()) {
       return false;
     }
   }
@@ -136,8 +136,7 @@ void TurnOrchestrator::end_of_turn(EndOfDayCause cause) {
   auto* current_player = gs_->active_player();
 
   bool interactive = current_player->is_human_controlled() &&
-                     !current_player->is_on_holiday() &&
-                     !current_player->is_in_jail() &&
+                     !current_player->is_away() &&
                      !suppress_end_of_turn_reports_;
 
   // Calls the player never received are dropped at the end of the day.
@@ -812,7 +811,7 @@ void TurnOrchestrator::on_player_turn_card_finished() {
   gs_->status().suppress(false);
 
   auto* player = gs_->active_player();
-  if (player && (player->is_in_jail() || player->is_on_holiday())) {
+  if (player && player->is_away()) {
     run_away_day();
     return;
   }
@@ -839,19 +838,8 @@ void TurnOrchestrator::run_away_day() {
     return;
   }
 
-  if (player->is_in_jail()) {
-    player->decrement_jail_day();
-    if (player->is_in_jail()) {
-      end_of_turn(EndOfDayCause::Away);
-    }
-    else {
-      // Released from prison, just advance to next player
-      skip_to_next_player();
-    }
-    return;
-  }
-  player->decrement_holiday_day();
-  if (player->is_on_holiday()) {
+  player->decrement_away_day();
+  if (player->is_away()) {
     end_of_turn(EndOfDayCause::Away);
   }
   else {

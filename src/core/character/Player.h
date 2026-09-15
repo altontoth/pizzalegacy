@@ -31,7 +31,7 @@
 #include "core/time/TimeOfDay.h"
 #include "core/util/Constants.h"
 
-enum class PlayerStatus { Active, InPrison, Eliminated };
+enum class PlayerStatus { Active, InPrison, OnHoliday, Eliminated };
 
 inline constexpr int ai_initial_expansion_cooldown = 3;
 
@@ -80,8 +80,11 @@ public:
   void increment_criminal_record();
   void jail(int days);
   bool is_in_jail() const;
-  std::optional<int> jail_days_left() const;
-  void decrement_jail_day();
+  void holiday(int days);
+  bool is_on_holiday() const { return status_ == PlayerStatus::OnHoliday; }
+  bool is_away() const { return is_in_jail() || is_on_holiday(); }
+  int away_days_left() const { return away_days_left_; }
+  void decrement_away_day();
   PlayerStatus status() const { return status_; }
   void eliminate() { status_ = PlayerStatus::Eliminated; }
   void restore_active() { status_ = PlayerStatus::Active; }
@@ -222,12 +225,6 @@ public:
   uint8_t competition_win_count() const { return competition_win_count_; }
   void competition_win_count(uint8_t count) { competition_win_count_ = count; }
   void increment_competition_win_count() { competition_win_count_++; }
-  void holiday(int days) { holiday_days_left_ = days; }
-  bool is_on_holiday() const {
-    return holiday_days_left_.has_value() && *holiday_days_left_ > 0;
-  }
-  std::optional<int> holiday_days_left() const { return holiday_days_left_; }
-  void decrement_holiday_day();
 
   // Pending notifications to be shown at the start of this player's next turn.
   void queue_notification(StatusMsg m);
@@ -243,7 +240,8 @@ private:
   PlayerStatus status_{PlayerStatus::Active};
   int jail_time_{0};
   int criminal_record_{0};
-  std::optional<int> jail_days_left_;
+  // Days left in prison or on holiday.
+  int away_days_left_{0};
   std::string name_;
   std::map<core::CityId, std::vector<Loan>> loans_;
   std::array<std::optional<Investment>, max_investment_count> investments_;
@@ -252,7 +250,6 @@ private:
   bool is_human_{true};
   int score_{0};
   Awards awards_{};
-  std::optional<int> holiday_days_left_;
   uint8_t start_of_day_hour_{default_start_of_day_hour};
   int end_of_day_block_{0};
 

@@ -30,7 +30,7 @@ void CompetitionCoordinator::run_monthly_competition() {
   std::vector<core::PlayerId> humans;
   for (int slot = 0; slot < gs_->human_player_count(); ++slot) {
     auto* p = gs_->players()[slot];
-    if (p->status() != PlayerStatus::Active || p->is_on_holiday()) {
+    if (p->status() != PlayerStatus::Active) {
       continue;
     }
     humans.push_back(p->id());

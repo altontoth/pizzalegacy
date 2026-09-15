@@ -178,15 +178,15 @@ json player_to_json(const Player& player) {
   j["start_of_day_hour"] = player.start_of_day_hour();
   j["end_of_day_block"] = player.end_of_day_block();
   j["ai_expansion_cooldown"] = player.ai_expansion_cooldown();
-  if (player.holiday_days_left().has_value()) {
-    j["holiday_days_left"] = *player.holiday_days_left();
+  if (player.is_on_holiday()) {
+    j["holiday_days_left"] = player.away_days_left();
   }
   j["criminal_record"] = player.criminal_record();
   if (player.status() == PlayerStatus::Eliminated) {
     j["eliminated"] = true;
   }
-  if (player.jail_days_left().has_value()) {
-    j["jail_days_left"] = *player.jail_days_left();
+  if (player.is_in_jail()) {
+    j["jail_days_left"] = player.away_days_left();
   }
 
   // Save AI menu slots (only meaningful for AI players, but always written for
@@ -360,7 +360,6 @@ json_to_player(const json& j, GameContext& context,
 
   auto player = std::make_unique<Player>(pid, character, human);
   player->name(j["name"].get<std::string>());
-  player->jail_time(j["jail_time"].get<uint8_t>());
 
   // Restore recipes
   if (j.contains("recipes")) {
@@ -396,6 +395,7 @@ json_to_player(const json& j, GameContext& context,
   if (j.contains("jail_days_left")) {
     player->jail(j["jail_days_left"].get<int>());
   }
+  player->jail_time(j["jail_time"].get<uint8_t>());
 
   // Restore AI menu slots
   if (j.contains("ai_menu_slots")) {
