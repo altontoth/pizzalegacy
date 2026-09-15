@@ -172,6 +172,7 @@ struct GameOptions {
   // Config file only, with no entry in the options screen.
   // The mafia shakes down a random restaurant instead of always the first.
   bool mafia_shakedowns_target_all_restaurants = false;
+  bool demand_fulfillment_popularity = true;
   WinCondition win_condition = WinCondition::AnyCity;
   // How long a held key waits before it starts repeating, and the gap
   // between repeats.

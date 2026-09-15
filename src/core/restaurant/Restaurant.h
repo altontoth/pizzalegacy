@@ -504,7 +504,8 @@ public:
   // Calculates all 8 popularity components. Component 7 (UnexpectedEvents)
   // flows into total_popularity() => competitive_strength => customer demand.
   void calculate_popularity(const class Player& player, const class City& city,
-                            const class District& district);
+                            const class District& district,
+                            bool demand_fulfillment_popularity);
 
   // Re-reads reputation slots into popularity_.unexpected_events so mid-day
   // changes (e.g. forced closure) are captured before daily decay.

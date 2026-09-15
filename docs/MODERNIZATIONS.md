@@ -237,6 +237,16 @@ requests for the other restaurants. With this option on it doesn't just target
 the first restaurant but picks a random restaurant so all your restaurants have
 a chance to be the target of a shakedown.
 
+### demand_fulfillment_popularity
+Popularity is supposed to take a hit when a restaurant couldn't fill its orders
+the day before, up to -12. The DOS version clears that number right before it
+reads it, so every restaurant gets the -12 punishment, no matter what the
+actual fulfillment was. This option (on by default) fixes it, which increases
+popularity and thus the number of customers a bit.
+
+In the original the popularity thermometer screen also doesn't animate a
+reduction in numbers, ours does (regardless of this option).
+
 ### win_condition
 This can take one of three options; the German release requires >= 5% market
 share in all ten cities to win the game (`all_cities`), the English version

@@ -251,6 +251,9 @@ static const OptionDef option_defs[] = {
      .member = &GameOptions::mafia_shakedowns_target_all_restaurants,
      .description = "Shake down a random restaurant instead of always the "
                     "first"},
+    {.name = "demand_fulfillment_popularity",
+     .member = &GameOptions::demand_fulfillment_popularity,
+     .description = "Fix bug in order fulfillment popularity"},
     {.name = "win_condition",
      .member = &GameOptions::win_condition,
      .description = "Cities to dominate to win: paris, any_city or "

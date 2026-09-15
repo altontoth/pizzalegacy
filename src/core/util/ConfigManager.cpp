@@ -141,6 +141,9 @@ const auto option_defs = std::to_array({
         "mafia_shakedowns_target_all_restaurants", {},
         "shake down a random restaurant instead of always the first; no "
         "options screen entry"),
+    bool_option<&GameOptions::demand_fulfillment_popularity>(
+        "demand_fulfillment_popularity", {},
+        "fix bug in order fulfillment popularity; no options screen entry"),
     enum_option<&GameOptions::win_condition, &win_condition_from_config_value>(
         "win_condition", {},
         "paris, any_city or all_cities; no options screen entry"),

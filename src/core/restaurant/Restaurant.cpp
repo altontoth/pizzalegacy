@@ -1708,7 +1708,8 @@ void Restaurant::recalculate_economy_metrics(GameState& game_state) {
   }
   const auto& city = property_.city();
   const auto& district = property_.district();
-  calculate_popularity(*player, city, district);
+  calculate_popularity(*player, city, district,
+                       game_state.options().demand_fulfillment_popularity);
   economy_.total_popularity(popularity_.total());
   update_demographics(player->recipes());
 }
@@ -1798,7 +1799,8 @@ void Restaurant::calculate_daily_pizza_sales_distribution(
 }
 
 void Restaurant::calculate_popularity(const Player& player, const City& city,
-                                      const District& district) {
+                                      const District& district,
+                                      bool demand_fulfillment_popularity) {
   auto service_data = calculate_service_time_data();
   service_time_minutes_ = service_data.service_time_minutes;
 
@@ -1855,15 +1857,13 @@ void Restaurant::calculate_popularity(const Player& player, const City& city,
   // Furnishing: also seems disabled in the original
   popularity_.furnishing = 0;
 
-  // DemandFulfillment: the original computes -((100 - fulfillment) >> 3), but
-  // the daily tick zeroes the fulfillment byte before popularity is computed
-  // and only rewrites it after order fulfillment, so the input is always 0.
-  // I verrified in bochs that the stored component is -12.
-  // The one exception is the player-initiated re-open dialog, which recomputes
-  // with the last operating day's rate until the next daily tick overwrites
-  // it; not replicating that because the effect is tiny.
-  constexpr int ambient_penalty = -12;
-  popularity_.demand_fulfillment = ambient_penalty;
+  // DemandFulfillment: -((100 - fulfillment) >> 3). The original's daily tick
+  // zeroes the fulfillment byte before this reads it, so it always stores -12.
+  int fulfillment = 0;
+  if (demand_fulfillment_popularity) {
+    fulfillment = std::clamp(fulfillment_rate_, 0, 100);
+  }
+  popularity_.demand_fulfillment = -((100 - fulfillment) >> 3);
 
   // UnexpectedEvents: last non-zero penalty from the 4 event slots
   int last_nonzero_penalty = 0;
