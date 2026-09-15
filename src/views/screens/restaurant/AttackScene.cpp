@@ -12,6 +12,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
+#include <utility>
 
 #include "core/GameTypes.h"
 #include "core/character/Character.h"
@@ -20,15 +21,15 @@
 #include "core/events/MilestoneId.h"
 #include "core/restaurant/Furniture.h"
 #include "core/restaurant/PlacedFurniture.h"
+#include "core/restaurant/RestaurantLayout.h"
 #include "core/restaurant/RestaurantTypes.h"
+#include "core/state/GameOptions.h"
 #include "core/state/GameState.h"
 #include "core/util/LegacyConstants.h"
 #include "engine/FormatCompat.h"
 #include "engine/Random.h"
 #include "engine/Size.h"
 #include "engine/audio/AudioManager.h"
-#include "engine/gfx/ColorIndex.h"
-#include "engine/gfx/Draw.h"
 #include "engine/input/Action.h"
 #include "engine/input/InputManager.h"
 #include "resources/Bob.h"
@@ -44,7 +45,7 @@ namespace views::screens::restaurant {
 namespace {
 
 constexpr int attack_move_speed_from_dexterity(int dexterity) {
-  return (dexterity / 34) + 2;
+  return ((dexterity / 34) + 2) * 2;
 }
 
 std::optional<Orientation> orientation_from_axis(float ax, float ay) {
@@ -59,132 +60,231 @@ std::optional<Orientation> orientation_from_axis(float ax, float ay) {
   return (ay > 0) ? Orientation::S : Orientation::N;
 }
 
-constexpr int ATTACK_MOVE_RATE_THRESHOLD = 6;
+// Weapon tables, at our 2x scale. Values are directions in Orientation order.
 
-// Weapon tables. All values are at original 1x scale, they get doubled at
-// rendering. Values are directions in Orientation order.
+namespace spray {
 
-constexpr std::array<int, ORIENTATION_COUNT> FLAME_REACH = {22, 23, 28, 40};
+// How far ahead of the fighter's center a flame or spray reaches, per frame.
+constexpr std::array<int, 10> REACH = {0,  44,  46,  56,  80,
+                                       96, 124, 140, 150, 160};
 
 constexpr std::array<std::array<int, ORIENTATION_COUNT>, 10> FLAME_OFF_X = {{
-    {16, -4, 6, 37},
-    {16, -4, 7, 37},
-    {15, -7, 4, 37},
-    {15, -11, 4, 37},
-    {12, -23, 3, 37},
-    {10, -35, 1, 37},
-    {9, -45, 0, 49},
-    {7, -52, -3, 61},
-    {6, -58, -4, 74},
-    {5, -62, -1, 82},
+    {32, -8, 12, 74},
+    {32, -8, 14, 74},
+    {30, -14, 8, 74},
+    {30, -22, 8, 74},
+    {24, -46, 6, 74},
+    {20, -70, 2, 74},
+    {18, -90, 0, 98},
+    {14, -104, -6, 122},
+    {12, -116, -8, 148},
+    {10, -124, -2, 164},
 }};
 constexpr std::array<std::array<int, ORIENTATION_COUNT>, 10> FLAME_OFF_Y = {{
-    {29, -6, -20, 8},
-    {29, 11, -20, 9},
-    {29, 12, -23, 6},
-    {29, 11, -27, 6},
-    {29, 8, -39, 5},
-    {29, 6, -51, 3},
-    {37, 5, -63, 2},
-    {48, 3, -72, -1},
-    {63, 2, -78, -2},
-    {70, 2, -83, -2},
+    {58, -12, -40, 16},
+    {58, 22, -40, 18},
+    {58, 24, -46, 12},
+    {58, 22, -54, 12},
+    {58, 16, -78, 10},
+    {58, 12, -102, 6},
+    {74, 10, -126, 4},
+    {96, 6, -144, -2},
+    {126, 4, -156, -4},
+    {140, 4, -166, -4},
 }};
 
 constexpr std::array<std::array<int, ORIENTATION_COUNT>, 10> CHEM_OFF_X = {{
-    {4, 18, 6, 35},
-    {16, 2, 5, 35},
-    {17, -1, 4, 35},
-    {14, -12, 2, 35},
-    {9, -15, 0, 35},
-    {8, -28, -2, 37},
-    {7, -31, -6, 45},
-    {5, -36, -7, 55},
-    {3, -36, -3, 55},
+    {8, 36, 12, 70},
+    {32, 4, 10, 70},
+    {34, -2, 8, 70},
+    {28, -24, 4, 70},
+    {18, -30, 0, 70},
+    {16, -56, -4, 74},
+    {14, -62, -12, 90},
+    {10, -72, -14, 110},
+    {6, -72, -6, 110},
     {0, 0, 0, 0},
 }};
 constexpr std::array<std::array<int, ORIENTATION_COUNT>, 10> CHEM_OFF_Y = {{
-    {21, 8, -18, 9},
-    {21, 14, -19, 8},
-    {21, 13, -21, 7},
-    {21, 11, -34, 5},
-    {21, 6, -35, 3},
-    {29, 5, -46, 0},
-    {35, 4, -52, -3},
-    {39, 2, -64, -4},
-    {40, 2, -70, -4},
+    {42, 16, -36, 18},
+    {42, 28, -38, 16},
+    {42, 26, -42, 14},
+    {42, 22, -68, 10},
+    {42, 12, -70, 6},
+    {58, 10, -92, 0},
+    {70, 8, -104, -6},
+    {78, 4, -128, -8},
+    {80, 4, -140, -8},
     {0, 0, 0, 0},
 }};
 
-constexpr std::array<std::array<int, ORIENTATION_COUNT>, 3> HELD_OFF_X = {{
-    {8, 3, 3, 8},   // flamethrower
-    {12, 8, 4, 7},  // chemical
-    {19, -1, 2, 4}, // bazooka
+// A held flame ramps up to this frame and then alternates with the one below.
+constexpr int FLAME_SUSTAIN_FRAME = 5;
+// A released flame burns out through the frames after the sustain.
+constexpr int FLAME_BURNOUT_LAST = 9;
+constexpr int FLAME_DIRECTIONAL_LAST = 7;
+constexpr int FLAME_FADE_FRAME_BASE = 24;
+constexpr int CHEM_STEPS = 8;
+
+} // namespace spray
+
+namespace held_weapon {
+
+using Offsets = std::array<std::array<int, ORIENTATION_COUNT>, 3>;
+// Attacker then defender; the defender holds the chemicals differently.
+constexpr std::array<Offsets, 2> OFF_X = {{
+    {{
+        {16, 6, 6, 16},  // flamethrower
+        {24, 16, 8, 14}, // chemical
+        {38, -2, 4, 8},  // bazooka
+    }},
+    {{
+        {16, 6, 6, 16},
+        {24, 12, 8, 14},
+        {38, -2, 4, 8},
+    }},
 }};
-constexpr std::array<std::array<int, ORIENTATION_COUNT>, 3> HELD_OFF_Y = {{
-    {-6, 2, -12, -1},   // flamethrower
-    {-5, 7, -13, 2},    // chemical
-    {-14, 12, -16, -2}, // bazooka
+constexpr std::array<Offsets, 2> OFF_Y = {{
+    {{
+        {-12, 4, -24, -2},  // flamethrower
+        {-10, 14, -26, 4},  // chemical
+        {-28, 24, -32, -4}, // bazooka
+    }},
+    {{
+        {-12, 4, -24, -2},
+        {-10, 10, -26, 4},
+        {-28, 24, -32, -4},
+    }},
 }};
 
-constexpr std::array<int, ORIENTATION_COUNT> BAZOOKA_MUZZLE_X = {6, -20, -10,
-                                                                 7};
-constexpr std::array<int, ORIENTATION_COUNT> BAZOOKA_MUZZLE_Y = {-4, -1, -28,
+} // namespace held_weapon
+
+namespace bazooka {
+
+// From the fighter's center.
+constexpr std::array<int, ORIENTATION_COUNT> MUZZLE_X = {12, -40, -20, 14};
+constexpr std::array<int, ORIENTATION_COUNT> MUZZLE_Y = {-8, -2, -56, -32};
+// A shot is traced this far at a time, and its flight speeds up by this much
+// every update.
+constexpr int STEP = 12;
+// Trace a shot for at most this many steps.
+constexpr int TRACE_STEPS = 64;
+constexpr int SHOT_FRAME = 8; // + dir
+// The shot with its rocket lit, drawn on odd steps of the flight.
+constexpr int SHOT_LIT_FRAME = 12; // + dir
+constexpr int BURST_FRAME = 16;    // + dir
+// Explosion frames after the burst are the frame counter plus this.
+constexpr int TAIL_FRAME_OFFSET = 18;
+constexpr int DAMAGE_FRAME = 4;
+constexpr int LAST_FRAME = 6;
+
+} // namespace bazooka
+
+namespace bomb {
+
+// Where each explosion frame sits, from the point the bomb was dropped.
+constexpr std::array<int, 10> EXPLODE_DX = {0,   0,   0,   0,   8,
+                                            -10, -28, -34, -44, -42};
+constexpr std::array<int, 10> EXPLODE_DY = {0,   0,   0,   -2,  -16,
+                                            -34, -44, -56, -62, -62};
+// How far from where a bomb was dropped its blast reaches, on both axes.
+constexpr int BLAST = 120;
+// A blast runs the contact roll this many times against every fighter in range.
+constexpr int DAMAGE_ROLLS = 40;
+constexpr int FUSE = 20;
+// The fuse burns down one on every fourth update.
+constexpr int FUSE_UPDATES = 4;
+constexpr int EXPLOSION_FIRST_FRAME = 1;
+constexpr int EXPLOSION_LAST_FRAME = 8;
+
+} // namespace bomb
+
+namespace fighter {
+
+constexpr int WEAPON_CONTACT_RANGE = 24;
+// Half the size of the box around a fighter that the other cannot walk into.
+constexpr int BLOCK_HALF = 32;
+// The fighters block each other at a point this far ahead of the one moving.
+constexpr int BLOCK_LOOKAHEAD = 10;
+// A walker tests two points this far ahead, one either side of its line.
+constexpr int OBSTACLE_CHECK_AHEAD = 12;
+constexpr int OBSTACLE_CHECK_SIDE = 6;
+
+} // namespace fighter
+
+// In the original's restaurant coordinates.
+namespace room {
+
+// Where the fighters spawn, the attacker at the door it leaves by.
+constexpr int ATTACKER_SPAWN_X_OFFSET = 60;
+constexpr int ATTACKER_SPAWN_Y = 500;
+constexpr int DEFENDER_SPAWN_X = 64;
+constexpr int DEFENDER_SPAWN_ROW_BASE = 23;
+constexpr int DEFENDER_SPAWN_Y_OFFSET = 60;
+// The walls a walker stops at.
+constexpr int WALK_LEFT = 52;
+constexpr int WALK_RIGHT_MARGIN = 44;
+constexpr int WALK_FRONT = 530;
+constexpr int WALK_BACK_BASE = 540;
+// The walls a weapon hits.
+constexpr int HIT_LEFT = 46;
+constexpr int HIT_RIGHT_MARGIN = 48;
+constexpr int HIT_BACK_BASE = 516;
+constexpr int HIT_FRONT = 516;
+// How far from the door's center the attacker can still leave through it.
+constexpr int DOOR_HALF_WIDTH = 32;
+
+} // namespace room
+
+// NIGHTP frames: 0-11 attacker, 12-23 defender (dir*3 + walk_cycle); 24-27 /
+// 28-31 are the per-direction head frames.
+namespace sprite {
+
+constexpr int ATTACKER_BODY_FRAME0 = 0;
+constexpr int DEFENDER_BODY_FRAME0 = 12;
+constexpr int ATTACKER_HEAD_FRAME0 = 24;
+constexpr int DEFENDER_HEAD_FRAME0 = 28;
+constexpr int ATTACKER_CORPSE_FRAME0 = 32;
+constexpr int DEFENDER_CORPSE_FRAME0 = 39;
+constexpr std::array<int, ORIENTATION_COUNT> ATTACKER_HEAD_DX = {14, 22, 16,
+                                                                 24};
+constexpr std::array<int, ORIENTATION_COUNT> ATTACKER_HEAD_DY = {-6, -6, -10,
+                                                                 0};
+constexpr std::array<int, ORIENTATION_COUNT> DEFENDER_HEAD_DX = {26, 24, 24,
+                                                                 26};
+constexpr std::array<int, ORIENTATION_COUNT> DEFENDER_HEAD_DY = {-14, -16, -14,
                                                                  -16};
-constexpr std::array<int, ORIENTATION_COUNT> BAZOOKA_PROJ_OFF_X = {13, 9, 12,
-                                                                   7};
-constexpr std::array<int, ORIENTATION_COUNT> BAZOOKA_PROJ_OFF_Y = {0, 13, 2,
-                                                                   14};
+
+} // namespace sprite
+
+namespace death {
+
+constexpr int SPIN_LAST = 10;
+constexpr int POLICE_CTR = 16;
+constexpr int FROZEN_CTR = 17;
+
+} // namespace death
 
 constexpr int ATTACK_SCROLL_MARGIN_TILES = 4;
 
-// Explosion sprite Y nudge per frame
-[[maybe_unused]] constexpr std::array<int, 11> BOMB_EXPLODE_DY = {
-    0, 0, 0, -1, -8, -17, -22, -28, -31, -31, 0};
+// Updates between police_coming and the arrest.
+constexpr int POLICE_ARREST_UPDATES = 100;
+// Updates before an attack with no defender can set off the alarm.
+constexpr int BURGLARY_ALARM_UPDATES = 250;
 
-constexpr int BOMB_BLAST = 60;
-// A bomb blast runs the contact roll this many times against every fighter in
-// range.
-constexpr int BOMB_DAMAGE_ROLLS = 40;
+constexpr uint32_t MICROSECONDS_PER_SECOND = 1000000;
 
-// The blit offset is half the sprite size plus these margins, so the logical
-// position sits at the body center and the anchor (position - offset) lands at
-// the sprite top-left. The weapon offset tables are measured from that top-left
-// corner, so subtracting half the sprite puts the anchor in their frame.
-constexpr int ATTACKER_ANCHOR_MARGIN_X = 10;
-constexpr int ATTACKER_ANCHOR_MARGIN_Y = 16;
+// Half a sprite dimension, rounded down at the original's scale.
+int half_size(int doubled_size) { return (doubled_size / 4) * 2; }
 
-constexpr int FLAME_FIRE_STEPS = 7;
-constexpr int FLAME_FADE_LAST = 9;
-// Fade frames are indexed off a base so phase 8/9 land on BOB frames 32/33.
-constexpr int FLAME_FADE_FRAME_BASE = 24;
-constexpr int CHEM_SPRAY_STEPS = 8;
-constexpr int BAZOOKA_FLIGHT_FRAME = 8; // + dir
-constexpr int BAZOOKA_BURST_FRAME = 12; // + dir
-constexpr int BAZOOKA_TAIL_FRAME = 16;
-
-constexpr int BOMB_FUSE_TICKS = 40;
-constexpr int BOMB_PULSE_DIVISOR = 4;
-constexpr int BOMB_EXPLOSION_FIRST_FRAME = 2;
-constexpr int BOMB_EXPLOSION_LAST_FRAME = 9;
-
-constexpr int WEAPON_CONTACT_RANGE = 12 * 2;
-constexpr int PLAYER_COLLISION_HALF_X = 16;
-constexpr int PLAYER_COLLISION_HALF_Y = 16;
-constexpr int DEATH_SPIN_LAST = 10;
-constexpr int DEATH_POLICE_CTR = 16;
-constexpr int DEATH_FROZEN_CTR = 17;
-constexpr int ATTACKER_CORPSE_FRAME0 = 32;
-constexpr int DEFENDER_CORPSE_FRAME0 = 39;
-
-// Ticks between police_coming and the arrest.
-constexpr int POLICE_ARREST_TICKS = 100;
+bool in_blast(WorldPoint p, WorldPoint bomb_pos) {
+  return std::abs(p.x - bomb_pos.x) < bomb::BLAST &&
+         std::abs(p.y - bomb_pos.y) < bomb::BLAST;
+}
 
 } // namespace
 
 void AttackScene::begin_attack(core::item::Item weapon) {
-  constexpr int tile_w = RESTAURANT_TILE_WIDTH;
-  constexpr int tile_h = RESTAURANT_TILE_HEIGHT;
   const auto room_size = view_.restaurant_->size();
 
   attack_weapon_ = weapon;
@@ -196,22 +296,13 @@ void AttackScene::begin_attack(core::item::Item weapon) {
     attacker_char = &player->character();
   }
 
-  const auto& body = context_.bob->get("bob/nightp.bob");
-  const int blit_off_x = (body.width(0) / 2) + ATTACKER_ANCHOR_MARGIN_X;
-  const int blit_off_y = (body.height(0) / 2) + ATTACKER_ANCHOR_MARGIN_Y;
-
   // Attacker spawns just inside the doorway, facing in; leaves by walking back
   // south out the entrance gap.
-  const int entrance_offset = view_.restaurant_->layout()->entrance_offset();
-  const int logical_x = (entrance_offset * tile_w) + (3 * tile_w / 2);
-  const int spawn_y = (room_size.h * tile_h) + (tile_h / 2);
   attacker_ = AttackSprite{
-      .position = {logical_x, spawn_y},
+      .position = door_point(),
       .direction = Orientation::N,
       .move_speed = attack_move_speed_from_dexterity(
           attacker_char ? attacker_char->dexterity() : 0),
-      .sprite_blit_offset_x = blit_off_x,
-      .sprite_blit_offset_y = blit_off_y,
       .is_defender = false,
       .combatant = attacker_char,
   };
@@ -223,16 +314,16 @@ void AttackScene::begin_attack(core::item::Item weapon) {
     if (victim && victim->is_human_controlled()) {
       const int entrance_row =
           view_.restaurant_->layout()->kitchen_entry_offset();
-      const int kitchen_y =
-          ((entrance_row + 1 + KITCHEN_ENTRANCE_ROWS / 2) * tile_h) +
-          (tile_h / 2);
+      const int legacy_y =
+          ((entrance_row + room::DEFENDER_SPAWN_ROW_BASE - room_size.h) *
+           RESTAURANT_TILE_HEIGHT) +
+          room::DEFENDER_SPAWN_Y_OFFSET;
       defender_ = AttackSprite{
-          .position = {tile_w, kitchen_y},
+          .position = restaurant_point_from_legacy(room::DEFENDER_SPAWN_X,
+                                                   legacy_y, room_size.h),
           .direction = Orientation::E,
           .move_speed =
               attack_move_speed_from_dexterity(victim->character().dexterity()),
-          .sprite_blit_offset_x = blit_off_x,
-          .sprite_blit_offset_y = blit_off_y,
           .is_defender = true,
           .combatant = &victim->character(),
       };
@@ -249,104 +340,124 @@ void AttackScene::begin_attack(core::item::Item weapon) {
   view_.mark_dirty();
 }
 
-void AttackScene::tick() {
-  if (!attacker_) {
-    return;
+void AttackScene::advance(uint32_t dt_ms) {
+  const uint32_t update_us =
+      MICROSECONDS_PER_SECOND /
+      static_cast<uint32_t>(state_.options().attack_scene_hz);
+  update_accumulator_us_ += dt_ms * 1000;
+  while (update_accumulator_us_ >= update_us) {
+    update_accumulator_us_ -= update_us;
+    if (!update()) {
+      return;
+    }
   }
+}
 
-  // Half-rate gate for weapon animation
-  attack_anim_step_ = !attack_anim_step_;
-  const bool advance_anim = attack_anim_step_;
+bool AttackScene::update() {
+  if (!attacker_) {
+    return false;
+  }
+  ++update_count_;
+
+  const auto walk = [](AttackSprite& s, Orientation dir) {
+    step_walker(s.position, s.walk_cycle, dir, s.move_speed);
+  };
 
   // Returns true if the attacker walked out
-  const auto step_sprite = [&](AttackSprite& s, input::Action move_act,
-                               input::Action fire_act) -> bool {
-    // Holding the fire key keeps firing
-    const bool fire_held = context_.input->is_pressed(fire_act);
-    fire_weapon(s, fire_held);
-    tick_weapon(s, advance_anim);
-
-    s.move_gate += s.move_speed;
-    if (s.move_gate < ATTACK_MOVE_RATE_THRESHOLD) {
+  const auto update_sprite = [&](AttackSprite& s, input::Action move_act,
+                                 input::Action fire_act) -> bool {
+    if (walking_out_ && !s.is_defender) {
+      stop_firing(s);
+      tick_weapon(s);
+      s.direction = Orientation::S;
+      walk(s, Orientation::S);
+      if (body_top_left(s).y >= view_.background_height_) {
+        end_attack();
+        state_.ui().pop();
+        return true;
+      }
       return false;
     }
-    s.move_gate -= ATTACK_MOVE_RATE_THRESHOLD;
-
-    // tick_weapon above can invalidate the cached grid, so get the current
-    // reference.
-    const auto& [blocked, grid_w, grid_h] = view_.navigation_grid();
 
     const auto [ax, ay] = context_.input->axis(move_act);
     const auto dir = orientation_from_axis(ax, ay);
+
+    if (dir) {
+      stop_firing(s);
+    }
+    else {
+      fire_weapon(s, context_.input->is_pressed(fire_act));
+    }
+    tick_weapon(s);
+
     if (!dir) {
       return false; // dead zone
     }
-    s.direction = *dir;
-
-    const int nx = (s.position.x / WALK_CELL_SIZE) + walk_dx(*dir);
-    const int ny = (s.position.y / WALK_CELL_SIZE) + walk_dy(*dir);
-
-    // The attacker leaves by walking south off the bottom edge of the grid.
-    if (!s.is_defender && *dir == Orientation::S && ny >= grid_h) {
-      end_attack();
-      state_.ui().pop();
-      return true;
-    }
-
-    if (nx < 0 || nx >= grid_w || ny < 0 || ny >= grid_h ||
-        blocked[(ny * grid_w) + nx]) {
+    // Pressing a new direction first only turns the fighter.
+    if (*dir != s.direction) {
+      s.direction = *dir;
       return false;
     }
 
-    // CD between players. A step shifts one axis by one cell,
-    // which is smaller than the collision box, so this can never reach an
-    // overlapping state.
     if (auto* opp = opponent_of(s); opp && opp->death_ctr == 0) {
-      const WorldPoint cand{s.position.x + (walk_dx(*dir) * WALK_CELL_SIZE),
-                            s.position.y + (walk_dy(*dir) * WALK_CELL_SIZE)};
-      if (std::abs(cand.x - opp->position.x) < PLAYER_COLLISION_HALF_X &&
-          std::abs(cand.y - opp->position.y) < PLAYER_COLLISION_HALF_Y) {
+      const WorldPoint ahead =
+          point_ahead(s.position, *dir, fighter::BLOCK_LOOKAHEAD);
+      if (std::abs(ahead.x - opp->position.x) < fighter::BLOCK_HALF &&
+          std::abs(ahead.y - opp->position.y) < fighter::BLOCK_HALF) {
         return false;
       }
     }
 
-    step_one_cell(s.position, s.walk_cycle, *dir);
+    switch (obstacle_ahead(s, *dir)) {
+    case Obstacle::None:
+      break;
+    case Obstacle::FrontWall:
+      // Only the attacker leaves, and only through the door.
+      if (s.is_defender ||
+          std::abs(s.position.x - door_point().x) >= room::DOOR_HALF_WIDTH) {
+        return false;
+      }
+      walking_out_ = true;
+      break;
+    case Obstacle::Furniture:
+    case Obstacle::OtherWall:
+      return false;
+    }
+    walk(s, *dir);
     return false;
   };
 
   if (attacker_->death_ctr > 0) {
-    advance_death(*attacker_, advance_anim);
+    advance_death(*attacker_);
   }
-  else if (step_sprite(*attacker_, input::Action::MoveVec2,
-                       input::Action::Fire)) {
-    return; // attacker walked out
+  else if (update_sprite(*attacker_, input::Action::MoveVec2,
+                         input::Action::Fire)) {
+    return false; // attacker walked out
   }
   follow_attacker_camera(attacker_->position);
 
   if (defender_) {
     if (defender_->death_ctr > 0) {
-      advance_death(*defender_, advance_anim);
+      advance_death(*defender_);
     }
     else {
-      step_sprite(*defender_, input::Action::P2_MoveVec2,
-                  input::Action::P2_Fire);
+      update_sprite(*defender_, input::Action::P2_MoveVec2,
+                    input::Action::P2_Fire);
     }
   }
 
-  if (defender_ && attacker_->death_ctr == 0 && defender_->death_ctr == 0) {
+  if (defender_ && !walking_out_ && attacker_->death_ctr == 0 &&
+      defender_->death_ctr == 0) {
     const auto strikes = [&](const AttackSprite& shooter,
                              const AttackSprite& victim) -> bool {
       const auto reach = weapon_reach_point(shooter);
       if (!reach) {
         return false;
       }
-      const WorldPoint body =
-          attack_weapon_ == core::item::Item::Bazooka
-              ? victim.position
-              : WorldPoint{victim.position.x - victim.sprite_blit_offset_x,
-                           victim.position.y - victim.sprite_blit_offset_y};
-      return std::abs(reach->x - body.x) < WEAPON_CONTACT_RANGE &&
-             std::abs(reach->y - body.y) < WEAPON_CONTACT_RANGE;
+      return std::abs(reach->x - victim.position.x) <
+                 fighter::WEAPON_CONTACT_RANGE &&
+             std::abs(reach->y - victim.position.y) <
+                 fighter::WEAPON_CONTACT_RANGE;
     };
     if (strikes(*attacker_, *defender_) && defender_->combatant &&
         weapon_contact_roll(*defender_->combatant)) {
@@ -359,28 +470,25 @@ void AttackScene::tick() {
   }
   update_status_display();
 
-  // Solo burglary timer.
-  if (!defender_ && police_window_ == 0) {
-    ++attack_elapsed_ticks_;
-    // The original scales this by a counter it only ever reads as zero.
-    constexpr int burglary_alarm_level = 0;
-    const int threshold = 250 - ((burglary_alarm_level / 34) + 2);
-    if (attack_elapsed_ticks_ > threshold &&
+  // As soon as the attacker starts walking out, the escape has succeeded.
+  if (police_window_ > 0 && !walking_out_) {
+    if (++police_window_ > POLICE_ARREST_UPDATES) {
+      run_police_arrest(); // pops this view
+      return false;
+    }
+  }
+
+  if (!defender_ && !walking_out_ && state_.options().police) {
+    if (update_count_ > BURGLARY_ALARM_UPDATES &&
         engine::random::rand_percentage_chance(4) &&
         engine::random::rand_percentage_chance(4)) {
       police_coming();
     }
   }
 
-  if (police_window_ > 0) {
-    if (++police_window_ > POLICE_ARREST_TICKS) {
-      run_police_arrest(); // pops this view
-      return;
-    }
-  }
-
   update_attack_sound();
   view_.mark_dirty();
+  return true;
 }
 
 void AttackScene::follow_attacker_camera(WorldPoint p) {
@@ -407,80 +515,89 @@ void AttackScene::render() {
   if (!attack_active_ || view_.kitchen_view_) {
     return;
   }
-  // NIGHTP frames: 0-11 attacker, 12-23 defender (dir*3 + walk_cycle); 24-27 /
-  // 28-31 are the per-direction head frames.
   const auto& body = context_.bob->get("bob/nightp.bob");
 
-  static constexpr std::array<int, ORIENTATION_COUNT> attacker_head_dx = {
-      7, 11, 8, 12};
-  static constexpr std::array<int, ORIENTATION_COUNT> attacker_head_dy = {
-      -3, -3, -5, 0};
-  static constexpr std::array<int, ORIENTATION_COUNT> defender_head_dx = {
-      13, 12, 12, 13};
-  static constexpr std::array<int, ORIENTATION_COUNT> defender_head_dy = {
-      -7, -8, -7, -8};
-
-  const auto draw = [&](const AttackSprite& s) {
-    const int dir = static_cast<int>(s.direction);
-    const ViewPoint blit_pos{s.position.x - s.sprite_blit_offset_x,
-                             s.position.y - s.sprite_blit_offset_y};
-
-    if (s.death_ctr > DEATH_SPIN_LAST) {
-      const int corpse0 =
-          s.is_defender ? DEFENDER_CORPSE_FRAME0 : ATTACKER_CORPSE_FRAME0;
-      view_.background_.blit_masked(
-          body.frame(corpse0 + (s.death_ctr - (DEATH_SPIN_LAST + 1))),
-          blit_pos);
-      return;
+  const auto for_each_fighter = [&](auto&& draw) {
+    if (defender_) {
+      draw(*defender_);
     }
-
-    const int body_base = s.is_defender ? 12 : 0;
-    const int frame = body_base + walk_frame_for(s.direction, s.walk_cycle);
-    view_.background_.blit_masked(body.frame(frame), blit_pos);
-
-    const int widx = attack_weapon_index();
-    if (widx >= 0 && widx <= 2) {
-      const auto& weapon_bob =
-          context_.bob->get(compat::format("bob/nightw{}.bob", widx));
-      view_.background_.blit_masked(
-          weapon_bob.frame(dir),
-          ViewPoint{blit_pos.x + (HELD_OFF_X[widx][dir] * 2),
-                    blit_pos.y + (HELD_OFF_Y[widx][dir] * 2)});
+    if (attacker_) {
+      draw(*attacker_);
     }
+  };
 
-    // The bomb renders under the fighters (floor pass below); everything else
-    // renders over the body here.
+  // The bomb lies under everything.
+  if (attack_weapon_ == core::item::Item::Bomb) {
+    for_each_fighter([&](const AttackSprite& s) { render_weapon_effects(s); });
+  }
+
+  for_each_fighter([&](const AttackSprite& s) {
+    const WorldPoint tl = body_top_left(s);
+    view_.background_.blit_masked(
+        body.frame(static_cast<std::size_t>(body_frame(s))),
+        ViewPoint{tl.x, tl.y});
+  });
+
+  const int widx = attack_weapon_index();
+  if (widx >= 0 && widx <= 2) {
+    const auto& weapon_bob =
+        context_.bob->get(compat::format("bob/nightw{}.bob", widx));
+    for_each_fighter([&](const AttackSprite& s) {
+      if (s.death_ctr != 0) {
+        return;
+      }
+      const int dir = static_cast<int>(s.direction);
+      const auto& off_x = held_weapon::OFF_X[s.is_defender ? 1 : 0][widx];
+      const auto& off_y = held_weapon::OFF_Y[s.is_defender ? 1 : 0][widx];
+      const WorldPoint tl = body_top_left(s);
+      view_.background_.blit_masked(
+          weapon_bob.frame(static_cast<std::size_t>(dir)),
+          ViewPoint{tl.x + off_x[dir], tl.y + off_y[dir]});
+    });
+  }
+
+  // The firing sprite goes under the head.
+  for_each_fighter([&](const AttackSprite& s) {
     if (attack_weapon_ != core::item::Item::Bomb) {
       render_weapon_effects(s);
     }
-
-    // Head last, over the held weapon and firing sprite.
-    const int head_base = s.is_defender ? 28 : 24;
-    const int head_dx =
-        (s.is_defender ? defender_head_dx : attacker_head_dx)[dir];
-    const int head_dy =
-        (s.is_defender ? defender_head_dy : attacker_head_dy)[dir];
+    if (s.death_ctr > death::SPIN_LAST) {
+      return;
+    }
+    const int dir = static_cast<int>(s.direction);
+    const int head_base = s.is_defender ? sprite::DEFENDER_HEAD_FRAME0
+                                        : sprite::ATTACKER_HEAD_FRAME0;
+    const int head_dx = (s.is_defender ? sprite::DEFENDER_HEAD_DX
+                                       : sprite::ATTACKER_HEAD_DX)[dir];
+    const int head_dy = (s.is_defender ? sprite::DEFENDER_HEAD_DY
+                                       : sprite::ATTACKER_HEAD_DY)[dir];
+    const WorldPoint tl = body_top_left(s);
     view_.background_.blit_masked(
-        body.frame(head_base + dir),
-        ViewPoint{blit_pos.x + (head_dx * 2), blit_pos.y + (head_dy * 2)});
-  };
+        body.frame(static_cast<std::size_t>(head_base + dir)),
+        ViewPoint{tl.x + head_dx, tl.y + head_dy});
+  });
+}
 
-  // render bombs before any fighter body so the bodies always draw on top.
-  if (attack_weapon_ == core::item::Item::Bomb) {
-    if (attacker_) {
-      render_weapon_effects(*attacker_);
-    }
-    if (defender_) {
-      render_weapon_effects(*defender_);
-    }
+int AttackScene::body_frame(const AttackSprite& s) const {
+  if (s.death_ctr > death::SPIN_LAST) {
+    const int corpse0 = s.is_defender ? sprite::DEFENDER_CORPSE_FRAME0
+                                      : sprite::ATTACKER_CORPSE_FRAME0;
+    return corpse0 + (s.death_ctr - (death::SPIN_LAST + 1));
   }
+  const int body_base = s.is_defender ? sprite::DEFENDER_BODY_FRAME0
+                                      : sprite::ATTACKER_BODY_FRAME0;
+  return body_base + walk_frame_for(s.direction, s.walk_cycle);
+}
 
-  if (attacker_) {
-    draw(*attacker_);
-  }
-  if (defender_) {
-    draw(*defender_);
-  }
+WorldPoint AttackScene::body_top_left(const AttackSprite& s) const {
+  return body_top_left(s, body_frame(s));
+}
+
+WorldPoint AttackScene::body_top_left(const AttackSprite& s, int frame) const {
+  const auto& body = context_.bob->get("bob/nightp.bob");
+  const auto index = static_cast<std::size_t>(frame);
+  return WorldPoint{s.position.x - half_size(body.width(index)),
+                    s.position.y - half_size(body.height(index))};
 }
 
 int AttackScene::attack_weapon_index() const {
@@ -495,15 +612,11 @@ AttackScene::weapon_reach_point(const AttackSprite& s) const {
   if (s.weapon_frame == 0) {
     return std::nullopt;
   }
-  const WorldPoint anchor{s.position.x - s.sprite_blit_offset_x,
-                          s.position.y - s.sprite_blit_offset_y};
-  const int dir = static_cast<int>(s.fire_dir);
   switch (attack_weapon_) {
   case Item::FlameThrower:
   case Item::Chemicals: {
-    const int reach = FLAME_REACH[std::min(s.weapon_frame, 3)] * 2;
-    return WorldPoint{anchor.x + (WALK_DX[dir] * reach),
-                      anchor.y + (WALK_DY[dir] * reach)};
+    const int reach = spray::REACH[static_cast<std::size_t>(s.weapon_frame)];
+    return point_ahead(s.position, s.fire_dir, reach);
   }
   case Item::Bazooka:
     return s.projectile_active ? s.projectile_pos : s.projectile_impact;
@@ -534,36 +647,96 @@ AttackSprite* AttackScene::opponent_of(const AttackSprite& s) {
   return defender_ ? &*defender_ : nullptr;
 }
 
-void AttackScene::advance_death(AttackSprite& s, bool advance_anim) {
-  if (!advance_anim) {
-    return;
+WorldPoint AttackScene::door_point() const {
+  const int door = view_.restaurant_->layout()->entrance_offset();
+  return restaurant_point_from_legacy(
+      (door * RESTAURANT_TILE_WIDTH) + room::ATTACKER_SPAWN_X_OFFSET,
+      room::ATTACKER_SPAWN_Y, view_.restaurant_->size().h);
+}
+
+std::pair<WorldPoint, WorldPoint> AttackScene::room_corners(int left,
+                                                            int right_margin,
+                                                            int back_base,
+                                                            int front) const {
+  const auto room_size = view_.restaurant_->size();
+  return {restaurant_point_from_legacy(
+              left, back_base - (room_size.h * RESTAURANT_TILE_HEIGHT),
+              room_size.h),
+          restaurant_point_from_legacy((room_size.w * RESTAURANT_TILE_WIDTH) +
+                                           right_margin,
+                                       front, room_size.h)};
+}
+
+PlacedFurniture* AttackScene::furniture_at(WorldPoint p) const {
+  // The first piece in layout order wins, ashes included.
+  for (const auto& pf : view_.restaurant_->layout()->placed_furniture()) {
+    const Size sz = view_.bob_renderer_for(*pf).size(*pf);
+    const WorldPoint o = pf->origin();
+    if (p.x >= o.x && p.x <= o.x + sz.w && p.y >= o.y && p.y <= o.y + sz.h) {
+      return pf.get();
+    }
   }
-  if (s.death_ctr == DEATH_POLICE_CTR) {
-    police_coming();
-    s.death_ctr = DEATH_FROZEN_CTR;
+  return nullptr;
+}
+
+AttackScene::Obstacle AttackScene::obstacle_at(WorldPoint p) const {
+  const auto [top_left, bottom_right] =
+      room_corners(room::WALK_LEFT, room::WALK_RIGHT_MARGIN,
+                   room::WALK_BACK_BASE, room::WALK_FRONT);
+  if (p.x < top_left.x || p.x > bottom_right.x || p.y < top_left.y) {
+    return Obstacle::OtherWall;
+  }
+  if (p.y > bottom_right.y) {
+    return Obstacle::FrontWall;
+  }
+  // Destroyed furniture still blocks.
+  if (furniture_at(p)) {
+    return Obstacle::Furniture;
+  }
+  return Obstacle::None;
+}
+
+AttackScene::Obstacle AttackScene::obstacle_ahead(const AttackSprite& s,
+                                                  Orientation dir) const {
+  const int side_x = walk_dy(dir) * fighter::OBSTACLE_CHECK_SIDE;
+  const int side_y = walk_dx(dir) * fighter::OBSTACLE_CHECK_SIDE;
+  const WorldPoint ahead =
+      point_ahead(s.position, dir, fighter::OBSTACLE_CHECK_AHEAD);
+  const Obstacle left =
+      obstacle_at(WorldPoint{ahead.x - side_x, ahead.y - side_y});
+  const Obstacle right =
+      obstacle_at(WorldPoint{ahead.x + side_x, ahead.y + side_y});
+  return std::min(left, right);
+}
+
+bool AttackScene::odd_update() const { return (update_count_ & 1) != 0; }
+
+void AttackScene::advance_death(AttackSprite& s) {
+  if (s.death_ctr == death::POLICE_CTR) {
+    if (state_.options().police) {
+      police_coming();
+    }
+    s.death_ctr = death::FROZEN_CTR;
     return;
   }
 
-  // Spin +90 each tick
+  // Spin a quarter turn clockwise
   s.direction = static_cast<Orientation>((static_cast<int>(s.direction) + 1) %
                                          ORIENTATION_COUNT);
 
-  if (s.death_ctr >= DEATH_FROZEN_CTR) {
+  if (s.death_ctr >= death::FROZEN_CTR) {
     return;
   }
   // Hold the last spin frame until the rotation lands facing S, so the collapse
   // always begins from the same pose.
-  if (s.death_ctr == DEATH_SPIN_LAST && s.direction != Orientation::S) {
+  if (s.death_ctr == death::SPIN_LAST && s.direction != Orientation::S) {
     return;
   }
   ++s.death_ctr;
 }
 
 void AttackScene::police_coming() {
-  // Starts the 100-tick escape window.
-  if (police_window_ > 0) {
-    return; // already counting down
-  }
+  // Starts the escape window, or restarts it if the police are already coming.
   police_window_ = 1;
   // So our siren doesn't play over the music:
   context_.audio->stop_music();
@@ -590,6 +763,8 @@ void AttackScene::run_police_arrest() {
   }
 
   end_attack(AttackEndReason::Arrested);
+  view_.status_controller_.show_city_default(
+      {.state = &state_, .city = state_.active_city()});
 
   state_.active_player(caught);
   state_.ui().pop();
@@ -671,6 +846,7 @@ void AttackScene::update_status_display() {
     sd->set_attack_status(std::nullopt, std::nullopt);
   }
 
+  sd->set_attack_damage(destroyed_furniture_value_);
   sd->set_attack_contamination(
       attack_weapon_ == core::item::Item::Chemicals
           ? std::optional<int>(view_.restaurant_->contamination())
@@ -679,28 +855,15 @@ void AttackScene::update_status_display() {
 
 PlacedFurniture* AttackScene::furniture_at_world(WorldPoint wp,
                                                  bool& is_wall) const {
-  is_wall = false;
-  const auto room_size = view_.restaurant_->size();
-  constexpr int tw = RESTAURANT_TILE_WIDTH;
-  constexpr int th = RESTAURANT_TILE_HEIGHT;
-  const WorldRect interior{tw, th, room_size.w * tw, room_size.h * th};
-  if (!interior.contains(wp)) {
-    is_wall = true;
+  const auto [top_left, bottom_right] =
+      room_corners(room::HIT_LEFT, room::HIT_RIGHT_MARGIN, room::HIT_BACK_BASE,
+                   room::HIT_FRONT);
+  is_wall = wp.x < top_left.x || wp.x > bottom_right.x || wp.y < top_left.y ||
+            wp.y > bottom_right.y;
+  if (is_wall) {
     return nullptr;
   }
-  for (const auto& up : view_.current_furniture_list()) {
-    const PlacedFurniture* pf = up.get();
-    if (pf->is_ashes()) {
-      continue; // ashes is shoot-through
-    }
-    const Size sz = view_.bob_renderer_for(*pf).size(*pf);
-    const WorldRect r{pf->origin().x, pf->origin().y, sz.w, sz.h};
-    if (r.contains(wp)) {
-      return view_.restaurant_->layout()->find_by_id(pf->id(),
-                                                     view_.kitchen_view_);
-    }
-  }
-  return nullptr;
+  return furniture_at(wp);
 }
 
 void AttackScene::destroy_furniture(PlacedFurniture& pf, bool refresh_view) {
@@ -715,77 +878,40 @@ void AttackScene::destroy_furniture(PlacedFurniture& pf, bool refresh_view) {
   }
 }
 
-WorldPoint AttackScene::flame_probe_point(const AttackSprite& s) const {
-  const WorldPoint anchor{s.position.x - s.sprite_blit_offset_x,
-                          s.position.y - s.sprite_blit_offset_y};
-  const int dir = static_cast<int>(s.fire_dir);
-  // Probe the center of the flame BOB frame so the hit lines up with the
-  // visible nozzle flame (same anchor + offset render_weapon_effects blits at).
-  const int widx = attack_weapon_index();
-  const auto& w = context_.bob->get(compat::format("bob/nightw{}.bob", widx));
-  const int wf = s.weapon_frame;
-  const int frame = (wf <= 7) ? ((wf * 4) + dir) : (FLAME_FADE_FRAME_BASE + wf);
-  const WorldPoint tl{anchor.x + (FLAME_OFF_X[wf][dir] * 2),
-                      anchor.y + (FLAME_OFF_Y[wf][dir] * 2)};
-  const Size fsz = w.size(static_cast<std::size_t>(frame));
-  return WorldPoint{tl.x + (fsz.w / 2), tl.y + (fsz.h / 2)};
-}
-
 void AttackScene::fire_weapon(AttackSprite& s, bool held) {
   using core::item::Item;
 
-  const WorldPoint anchor{s.position.x - s.sprite_blit_offset_x,
-                          s.position.y - s.sprite_blit_offset_y};
-
   switch (attack_weapon_) {
-  case Item::FlameThrower: {
+  case Item::FlameThrower:
+  case Item::Chemicals:
     s.firing = held;
-    if (!held) {
-      return;
-    }
-    s.fire_dir = s.direction;
     break;
-  }
-  case Item::Chemicals: {
-    s.firing = held;
-    if (!held) {
-      return;
-    }
-    s.fire_dir = s.direction;
-    // One fire tick in five raises contamination.
-    if (engine::random::rand_percentage_chance(20)) {
-      view_.restaurant_->add_contamination(1);
-    }
-    break;
-  }
   case Item::Bazooka: {
-    // Auto-fire when fire is held, but only when no shot is in
-    // flight/exploding. TODO: Figure out how the original decided the fire
-    // rate, I think it can have more than one projectile active
+    // Holding fire fires again once the last shot has exploded.
     if (!held || s.projectile_active || s.weapon_frame != 0) {
       break;
     }
     s.fire_dir = s.direction;
     const int dir = static_cast<int>(s.fire_dir);
-    const WorldPoint launch{
-        anchor.x + ((BAZOOKA_MUZZLE_X[dir] + BAZOOKA_PROJ_OFF_X[dir]) * 2),
-        anchor.y + ((BAZOOKA_MUZZLE_Y[dir] + BAZOOKA_PROJ_OFF_Y[dir]) * 2)};
+    const WorldPoint launch{s.position.x + bazooka::MUZZLE_X[dir],
+                            s.position.y + bazooka::MUZZLE_Y[dir]};
     const AttackSprite* opp = opponent_of(s);
     const WorldPoint opp_body = opp ? opp->position : WorldPoint{};
     // Trace the shot forward until it hits the opponent, furniture, or a wall.
     WorldPoint p = launch;
     WorldPoint impact = launch;
-    for (int i = 0; i < 64; ++i) {
-      p.x += WALK_DX[dir] * WALK_CELL_SIZE;
-      p.y += WALK_DY[dir] * WALK_CELL_SIZE;
+    for (int i = 0; i < bazooka::TRACE_STEPS; ++i) {
+      p = point_ahead(p, s.fire_dir, bazooka::STEP);
       impact = p;
       if (opp && opp->death_ctr == 0 &&
-          std::abs(p.x - opp_body.x) < WEAPON_CONTACT_RANGE &&
-          std::abs(p.y - opp_body.y) < WEAPON_CONTACT_RANGE) {
+          std::abs(p.x - opp_body.x) < fighter::WEAPON_CONTACT_RANGE &&
+          std::abs(p.y - opp_body.y) < fighter::WEAPON_CONTACT_RANGE) {
         break;
       }
+      // The shot flies over ashes.
       bool wall = false;
-      if (furniture_at_world(p, wall) != nullptr || wall) {
+      const auto* f = furniture_at_world(p, wall);
+      if (wall || (f && !f->is_ashes())) {
         break;
       }
     }
@@ -801,8 +927,8 @@ void AttackScene::fire_weapon(AttackSprite& s, bool held) {
       break;
     }
     s.bomb_active = true;
-    s.bomb_pos = anchor;
-    s.bomb_fuse = BOMB_FUSE_TICKS;
+    s.bomb_pos = s.position;
+    s.bomb_fuse = bomb::FUSE;
     break;
   }
   default:
@@ -810,7 +936,17 @@ void AttackScene::fire_weapon(AttackSprite& s, bool held) {
   }
 }
 
-void AttackScene::tick_weapon(AttackSprite& s, bool advance_anim) {
+void AttackScene::stop_firing(AttackSprite& s) {
+  using core::item::Item;
+
+  s.firing = false;
+  if (attack_weapon_ == Item::FlameThrower ||
+      attack_weapon_ == Item::Chemicals) {
+    s.weapon_frame = 0;
+  }
+}
+
+void AttackScene::tick_weapon(AttackSprite& s) {
   using core::item::Item;
 
   switch (attack_weapon_) {
@@ -821,10 +957,10 @@ void AttackScene::tick_weapon(AttackSprite& s, bool advance_anim) {
     tick_chemicals(s);
     break;
   case Item::Bazooka:
-    tick_bazooka(s, advance_anim);
+    tick_bazooka(s);
     break;
   case Item::Bomb:
-    tick_bomb(s, advance_anim);
+    tick_bomb(s);
     break;
   default:
     break;
@@ -832,47 +968,82 @@ void AttackScene::tick_weapon(AttackSprite& s, bool advance_anim) {
 }
 
 void AttackScene::tick_flamethrower(AttackSprite& s) {
-  // Hold loops frames 1..7; on release play fade frames 8,9 then snap to 0.
   if (s.firing) {
-    s.weapon_frame = (s.weapon_frame == 0 || s.weapon_frame >= FLAME_FIRE_STEPS)
-                         ? 1
-                         : s.weapon_frame + 1;
-    // Damage furniture under the flame, now that weapon_frame is current.
-    bool wall = false;
-    if (auto* f = furniture_at_world(flame_probe_point(s), wall)) {
-      f->damage(2);
-      if (f->durability() <= 0) {
-        destroy_furniture(*f);
-      }
+    if (s.weapon_frame <= spray::FLAME_SUSTAIN_FRAME) {
+      s.fire_dir = s.direction;
+    }
+    if (s.weapon_frame == spray::FLAME_SUSTAIN_FRAME) {
+      --s.weapon_frame;
+    }
+    else if (odd_update()) {
+      ++s.weapon_frame;
     }
   }
-  else if (s.weapon_frame != 0) {
-    s.weapon_frame =
-        (s.weapon_frame >= FLAME_FADE_LAST) ? 0 : s.weapon_frame + 1;
+  else if (s.weapon_frame >= spray::FLAME_BURNOUT_LAST) {
+    s.weapon_frame = 0;
+  }
+  else if (s.weapon_frame >= spray::FLAME_SUSTAIN_FRAME) {
+    if (odd_update()) {
+      ++s.weapon_frame;
+    }
+  }
+  else if (s.weapon_frame > 0) {
+    --s.weapon_frame;
+  }
+  if (s.weapon_frame > spray::FLAME_BURNOUT_LAST) {
+    s.weapon_frame = 0;
+  }
+
+  if (s.weapon_frame == 0) {
+    return;
+  }
+  // Damage the furniture at the tip of the flame, now that weapon_frame is
+  // current. Ashes in front of a piece shield it.
+  bool wall = false;
+  if (auto* f = furniture_at_world(*weapon_reach_point(s), wall)) {
+    f->damage(2);
+    if (f->durability() <= 0) {
+      destroy_furniture(*f);
+    }
   }
 }
 
 void AttackScene::tick_chemicals(AttackSprite& s) {
-  if (!s.firing) {
+  if (s.firing) {
+    if (s.weapon_frame == 0) {
+      s.fire_dir = s.direction;
+      // The cloud stays where it started.
+      s.spray_anchor = body_top_left(s, static_cast<int>(s.fire_dir));
+    }
+    if (s.weapon_frame >= spray::CHEM_STEPS) {
+      s.weapon_frame = 1;
+    }
+    else if (odd_update()) {
+      ++s.weapon_frame;
+    }
+  }
+  // If you release fire the spray animation finishes.
+  else if (s.weapon_frame >= spray::CHEM_STEPS) {
     s.weapon_frame = 0;
   }
-  else if (s.weapon_frame == 0) {
-    s.weapon_frame = 1;
+  else if (s.weapon_frame > 0 && odd_update()) {
+    ++s.weapon_frame;
   }
-  else {
-    s.weapon_frame = (s.weapon_frame % CHEM_SPRAY_STEPS) + 1;
+
+  // One update in five of spraying raises contamination.
+  if (s.weapon_frame != 0 && view_.restaurant_->contamination() < 100 &&
+      engine::random::rand_percentage_chance(20)) {
+    view_.restaurant_->add_contamination(1);
   }
 }
 
-void AttackScene::tick_bazooka(AttackSprite& s, bool advance_anim) {
+void AttackScene::tick_bazooka(AttackSprite& s) {
   if (s.projectile_active && s.weapon_frame == 0) {
-    const int dir = static_cast<int>(s.fire_dir);
     ++s.projectile_ctr;
-    const int step = WALK_CELL_SIZE * s.projectile_ctr;
-    const int dx = WALK_DX[dir];
-    const int dy = WALK_DY[dir];
-    s.projectile_pos.x += dx * step;
-    s.projectile_pos.y += dy * step;
+    s.projectile_pos = point_ahead(s.projectile_pos, s.fire_dir,
+                                   bazooka::STEP * s.projectile_ctr);
+    const int dx = walk_dx(s.fire_dir);
+    const int dy = walk_dy(s.fire_dir);
 
     const int distance_past_impact =
         ((s.projectile_pos.x - s.projectile_impact.x) * dx) +
@@ -880,17 +1051,18 @@ void AttackScene::tick_bazooka(AttackSprite& s, bool advance_anim) {
     if (distance_past_impact >= 0) {
       s.projectile_pos = s.projectile_impact;
       s.weapon_frame = 1; // begin explosion
+    }
+    view_.mark_dirty();
+  }
+  else if (s.weapon_frame >= 1 && odd_update()) {
+    ++s.weapon_frame;
+    if (s.weapon_frame == bazooka::DAMAGE_FRAME) {
       bool wall = false;
       if (auto* f = furniture_at_world(s.projectile_impact, wall)) {
         destroy_furniture(*f);
       }
     }
-    view_.mark_dirty();
-  }
-  else if (s.weapon_frame >= 1 && advance_anim) {
-    // Explosion frames 1..6 (gated)
-    ++s.weapon_frame;
-    if (s.weapon_frame > 6) {
+    if (s.weapon_frame > bazooka::LAST_FRAME) {
       s.weapon_frame = 0;
       s.projectile_active = false;
     }
@@ -898,77 +1070,65 @@ void AttackScene::tick_bazooka(AttackSprite& s, bool advance_anim) {
   }
 }
 
-void AttackScene::tick_bomb(AttackSprite& s, bool advance_anim) {
+void AttackScene::tick_bomb(AttackSprite& s) {
   if (!s.bomb_active) {
     return;
   }
   if (s.bomb_fuse > 0) {
-    --s.bomb_fuse;
-    if (s.bomb_fuse == 0) {
-      s.weapon_frame = BOMB_EXPLOSION_FIRST_FRAME; // fuse done: explode
+    if (update_count_ % bomb::FUSE_UPDATES == 0) {
+      --s.bomb_fuse;
+      view_.mark_dirty();
     }
-    view_.mark_dirty();
-    return;
+    if (s.bomb_fuse > 0) {
+      return;
+    }
+    s.weapon_frame = bomb::EXPLOSION_FIRST_FRAME;
   }
-  // Advance the explosion at the half rate (unlike the fuse)
-  if (!advance_anim) {
+  if (odd_update()) {
     return;
-  }
-  if (s.weapon_frame == BOMB_EXPLOSION_FIRST_FRAME) {
-    // Destroy every non-ashes piece whose center is within the blast box.
-    const int dbl_blast = BOMB_BLAST * 2;
-    WorldPoint blast_center = s.bomb_pos;
-    const int widx = attack_weapon_index();
-    if (widx >= 0 && widx <= 3) {
-      const auto& w =
-          context_.bob->get(compat::format("bob/nightw{}.bob", widx));
-      const Size placed = w.frame(0).size();
-      blast_center.x += placed.w / 2;
-      blast_center.y += placed.h / 2;
-    }
-    bool any_destroyed = false;
-    for (const auto& up : view_.current_furniture_list()) {
-      PlacedFurniture* pf = up.get();
-      if (pf->is_ashes()) {
-        continue;
-      }
-      const Size sz = view_.bob_renderer_for(*pf).size(*pf);
-      const WorldPoint c{pf->origin().x + (sz.w / 2),
-                         pf->origin().y + (sz.h / 2)};
-      if (std::abs(c.x - blast_center.x) < dbl_blast &&
-          std::abs(c.y - blast_center.y) < dbl_blast) {
-        if (auto* m = view_.restaurant_->layout()->find_by_id(
-                pf->id(), view_.kitchen_view_)) {
-          destroy_furniture(*m, /*refresh_view=*/false);
-          any_destroyed = true;
-        }
-      }
-    }
-    if (any_destroyed) {
-      view_.invalidate_nav_grid();
-    }
-    // Reduce energy for any fighter caught in the blast
-    const auto wound_if_in_blast = [&](AttackSprite* fighter) {
-      if (!fighter || !fighter->combatant) {
-        return;
-      }
-      if (std::abs(fighter->position.x - blast_center.x) < dbl_blast &&
-          std::abs(fighter->position.y - blast_center.y) < dbl_blast) {
-        for (int i = 0; i < BOMB_DAMAGE_ROLLS; ++i) {
-          // Bombs can't kill anyone, only reduce energy
-          (void)weapon_contact_roll(*fighter->combatant);
-        }
-      }
-    };
-    wound_if_in_blast(attacker_ ? &*attacker_ : nullptr);
-    wound_if_in_blast(defender_ ? &*defender_ : nullptr);
   }
   ++s.weapon_frame;
-  if (s.weapon_frame > BOMB_EXPLOSION_LAST_FRAME) {
+  if (s.weapon_frame > bomb::EXPLOSION_LAST_FRAME) {
+    // The blast does its damage once the explosion has played out.
+    detonate_bomb(s);
     s.weapon_frame = 0;
     s.bomb_active = false;
   }
   view_.mark_dirty();
+}
+
+void AttackScene::detonate_bomb(const AttackSprite& s) {
+  // Destroy all non-ashes pieces whose top-left corner is within the blast.
+  bool any_destroyed = false;
+  for (const auto& up : view_.current_furniture_list()) {
+    PlacedFurniture* pf = up.get();
+    if (pf->is_ashes()) {
+      continue;
+    }
+    if (in_blast(pf->origin(), s.bomb_pos)) {
+      if (auto* m = view_.restaurant_->layout()->find_by_id(
+              pf->id(), view_.kitchen_view_)) {
+        destroy_furniture(*m, /*refresh_view=*/false);
+        any_destroyed = true;
+      }
+    }
+  }
+  if (any_destroyed) {
+    view_.invalidate_nav_grid();
+  }
+  const auto reduce_energy_if_in_blast = [&](AttackSprite* fighter) {
+    if (!fighter || !fighter->combatant) {
+      return;
+    }
+    if (in_blast(fighter->position, s.bomb_pos)) {
+      for (int i = 0; i < bomb::DAMAGE_ROLLS; ++i) {
+        // Bombs can't kill anyone, only reduce energy
+        (void)weapon_contact_roll(*fighter->combatant);
+      }
+    }
+  };
+  reduce_energy_if_in_blast(attacker_ ? &*attacker_ : nullptr);
+  reduce_energy_if_in_blast(defender_ ? &*defender_ : nullptr);
 }
 
 void AttackScene::render_weapon_effects(const AttackSprite& s) {
@@ -980,8 +1140,7 @@ void AttackScene::render_weapon_effects(const AttackSprite& s) {
   }
   const auto& w = context_.bob->get(compat::format("bob/nightw{}.bob", widx));
   const int dir = static_cast<int>(s.fire_dir);
-  const WorldPoint anchor{s.position.x - s.sprite_blit_offset_x,
-                          s.position.y - s.sprite_blit_offset_y};
+  const WorldPoint anchor = body_top_left(s);
 
   switch (attack_weapon_) {
   case Item::FlameThrower: {
@@ -990,42 +1149,40 @@ void AttackScene::render_weapon_effects(const AttackSprite& s) {
     if (s.weapon_frame == 0) {
       break;
     }
-    // wf is the flame animation phase (see tick_flamethrower): 1..7 = fire
-    // loop, 8..9 = fade-out. Fire uses 4 frames per phase (one per direction)
-    // -> BOB frames 4..31; fade uses one non-directional frame per phase ->
-    // 32, 33.
+    // Phases 1 to 7 have a frame per direction, BOB frames 4 to 31; phases 8
+    // and 9 have one frame each, 32 and 33.
     const int wf = s.weapon_frame;
-    const int frame =
-        (wf <= 7) ? ((wf * 4) + dir) : (FLAME_FADE_FRAME_BASE + wf);
+    const int frame = (wf <= spray::FLAME_DIRECTIONAL_LAST)
+                          ? ((wf * 4) + dir)
+                          : (spray::FLAME_FADE_FRAME_BASE + wf);
     view_.background_.blit_masked(
-        w.frame(frame), ViewPoint{anchor.x + (FLAME_OFF_X[wf][dir] * 2),
-                                  anchor.y + (FLAME_OFF_Y[wf][dir] * 2)});
+        w.frame(frame), ViewPoint{anchor.x + spray::FLAME_OFF_X[wf][dir],
+                                  anchor.y + spray::FLAME_OFF_Y[wf][dir]});
     break;
   }
   case Item::Chemicals: {
-    if (!s.firing) {
+    if (s.weapon_frame == 0) {
       break;
     }
     const int wf = s.weapon_frame;
     view_.background_.blit_masked(
         w.frame((wf * 4) + dir),
-        ViewPoint{anchor.x + (CHEM_OFF_X[wf][dir] * 2),
-                  anchor.y + (CHEM_OFF_Y[wf][dir] * 2)});
+        ViewPoint{s.spray_anchor.x + spray::CHEM_OFF_X[wf][dir],
+                  s.spray_anchor.y + spray::CHEM_OFF_Y[wf][dir]});
     break;
   }
   case Item::Bazooka: {
     if (s.projectile_active && s.weapon_frame == 0) {
-      // In-flight grenade (frames 8-11, per dir)
+      const int shot_frame = (s.projectile_ctr & 1) ? bazooka::SHOT_LIT_FRAME
+                                                    : bazooka::SHOT_FRAME;
       view_.background_.blit_masked(
-          w.frame(BAZOOKA_FLIGHT_FRAME + dir),
+          w.frame(shot_frame + dir),
           ViewPoint{s.projectile_pos.x, s.projectile_pos.y});
     }
     else if (s.weapon_frame >= 1) {
-      // Explosion: wf 1 the directional burst (12-15); wf 2..6 the tail
-      // (16-20).
       const int frame = (s.weapon_frame == 1)
-                            ? (BAZOOKA_BURST_FRAME + dir)
-                            : (BAZOOKA_TAIL_FRAME + (s.weapon_frame - 2));
+                            ? (bazooka::BURST_FRAME + dir)
+                            : (s.weapon_frame + bazooka::TAIL_FRAME_OFFSET);
       view_.background_.blit_masked(
           w.frame(frame),
           ViewPoint{s.projectile_impact.x, s.projectile_impact.y});
@@ -1036,57 +1193,19 @@ void AttackScene::render_weapon_effects(const AttackSprite& s) {
     if (!s.bomb_active) {
       break;
     }
-    const Size placed = w.frame(0).size();
-    const WorldPoint center{s.bomb_pos.x + (placed.w / 2),
-                            s.bomb_pos.y + (placed.h / 2)};
+    const WorldPoint center = s.bomb_pos;
     if (s.bomb_fuse > 0) {
       // Pulse between frame 0 and 1
-      const int pulse = (s.bomb_fuse / BOMB_PULSE_DIVISOR) & 1;
-      const auto& bf = w.frame(pulse);
-      const Size bs = bf.size();
-      int x = center.x - (bs.w / 2);
-      int y = center.y - (bs.h / 2);
-      view_.background_.blit_masked(bf, ViewPoint{x, y});
+      const int pulse = s.bomb_fuse & 1;
+      view_.background_.blit_masked(w.frame(pulse),
+                                    ViewPoint{center.x, center.y});
     }
     else {
-      // Explosion frames 2..9. The legacy rise (BOMB_EXPLODE_DY) is a top-left
-      // compensation, so in centered mode it is dropped.
-      const auto& ef = w.frame(s.weapon_frame);
-      const Size es = ef.size();
-      int x = center.x - (es.w / 2);
-      int y = center.y - (es.h / 2);
-      view_.background_.blit_masked(ef, ViewPoint{x, y});
+      const int wf = s.weapon_frame;
+      view_.background_.blit_masked(w.frame(wf),
+                                    ViewPoint{center.x + bomb::EXPLODE_DX[wf],
+                                              center.y + bomb::EXPLODE_DY[wf]});
     }
-#ifndef NDEBUG
-    if (show_blast_debug_) {
-      // Show detonation check: the box is the destruction area (a piece is hit
-      // when its center is inside), each piece's center is a marker (red = in
-      // range, green = safe).
-      static constexpr gfx::ColorIndex BOX_COLOR = 68;
-      static constexpr gfx::ColorIndex IN_COLOR = 68;
-      static constexpr gfx::ColorIndex OUT_COLOR = 80;
-      static constexpr int MARK = 4;
-      // Must equal tick_bomb calculation, double blast
-      const int half = BOMB_BLAST * 2;
-      gfx::draw::box(
-          view_.background_, ViewPoint{center.x - half, center.y - half},
-          ViewPoint{center.x + half - 1, center.y + half - 1}, BOX_COLOR, 2);
-      for (const auto& up : view_.current_furniture_list()) {
-        const PlacedFurniture* pf = up.get();
-        if (pf->is_ashes()) {
-          continue;
-        }
-        const Size sz = view_.bob_renderer_for(*pf).size(*pf);
-        const WorldPoint c{pf->origin().x + (sz.w / 2),
-                           pf->origin().y + (sz.h / 2)};
-        const bool inside =
-            std::abs(c.x - center.x) < half && std::abs(c.y - center.y) < half;
-        gfx::draw::box(view_.background_, ViewPoint{c.x - MARK, c.y - MARK},
-                       ViewPoint{c.x + MARK, c.y + MARK},
-                       inside ? IN_COLOR : OUT_COLOR, 1);
-      }
-    }
-#endif
     break;
   }
   default:

@@ -1217,6 +1217,10 @@ void GameState::initiate_arrest(ArrestReason reason,
 }
 
 bool GameState::check_police_events() {
+  if (!options_.police) {
+    return false;
+  }
+
   // Only reached on a human player's turn.
   auto* player = active_player();
 

@@ -9,6 +9,32 @@
 #include <algorithm>
 #include <cassert>
 #include "core/restaurant/Furniture.h"
+#include "core/util/LegacyConstants.h"
+
+WorldPoint restaurant_point_from_legacy(int x, int y, int room_height) {
+  const int tile_w_px = LegacyConstants::RESTAURANT_TILE_WIDTH;
+  const int tile_h_px = LegacyConstants::RESTAURANT_TILE_HEIGHT;
+  // Legacy coordinates are based on what's in view when we are scrolled
+  // at the bottom left of the restaurant, and then from the top left
+  // coordinate, ignoring the border and any wall tiles. Because of the
+  // -88 they did you could have restaurants that were a bit bigger than
+  // the screen and still put furniture there.
+
+  // In our coordinate system, WorldPoint (0,0) is the TOP-LEFT WALL.
+  // Interior starts at (tile_w, tile_h). So we convert legacy coords to
+  // interior-relative, then add tile offsets to make them wall-relative.
+  WorldPoint interior_relative{
+      x - LegacyConstants::WOOD_BORDER_WIDTH_LEFT -
+          LegacyConstants::RESTAURANT_TILE_WIDTH,
+      y - LegacyConstants::RESTAURANT_LEGACY_Y_BIAS +
+          ((room_height - LegacyConstants::RESTAURANT_VISIBLE_Y_TILES) *
+           tile_h_px) -
+          LegacyConstants::WOOD_BORDER_HEIGHT_TOP -
+          LegacyConstants::RESTAURANT_TILE_HEIGHT};
+  // Add wall offset to convert to world coordinates
+  return WorldPoint{interior_relative.x + tile_w_px,
+                    interior_relative.y + tile_h_px};
+}
 
 RestaurantLayout::RestaurantLayout(Size rest_size, Size kitchen_size,
                                    int entrance_offset,

@@ -144,6 +144,11 @@ const auto option_defs = std::to_array({
     enum_option<&GameOptions::win_condition, &win_condition_from_config_value>(
         "win_condition", {},
         "paris, any_city or all_cities; no options screen entry"),
+    int_option<&GameOptions::attack_scene_hz, GameOptions::ATTACK_SCENE_HZ_MIN,
+               GameOptions::ATTACK_SCENE_HZ_MAX>(
+        "attack_scene_hz", {},
+        "attack scene updates per second, 70 for a fast 486 or 35 for a slower "
+        "machine; no options screen entry"),
 });
 
 // Where the original game lives.

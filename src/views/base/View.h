@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <map>
 #include "core/state/ClockRate.h"
 #include "core/state/InterruptionRate.h"
@@ -39,6 +40,10 @@ public:
 
   // How the clock runs while this screen is up.
   virtual ClockRate clock_rate() const { return ClockRate::Running; }
+
+  // Called with the milliseconds since the previous render frame.
+  // A view that runs at a rate other than the simulation tick advances here.
+  virtual void advance(uint32_t /*dt_ms*/) {}
 
   // Background preservation control for overlay views
   void set_preserve_background(bool preserve) {

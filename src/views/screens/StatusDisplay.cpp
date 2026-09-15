@@ -7,9 +7,11 @@
 #include "views/screens/StatusDisplay.h"
 
 #include <algorithm>
+#include <string>
 
 #include "core/character/Player.h"
 #include "core/state/GameState.h"
+#include "engine/FormatCompat.h"
 #include "engine/geom/Spaces.h"
 #include "resources/FontManager.h"
 #include "views/base/ViewDefs.h"
@@ -221,31 +223,26 @@ void StatusDisplay::render_attack_bars(const RenderContext& ctx) {
     draw_bar(defender_x, *attack_defender_energy_, defender_color);
   }
 
-  if (attack_contamination_) {
-    constexpr int contamination_text_y = 162;
-    constexpr uint8_t contamination_color = 14; // white
-    const TextStyle ts{
-        .color = contamination_color,
-        .align = TextAnchor::Middle,
-    };
-    context_.font->render_line_onto(
-        *ctx.surface,
-        compat::format("Contamination: {}%", *attack_contamination_),
-        ViewPoint{ctx.surface->width() / 2, contamination_text_y},
-        FontFace::SUPERSMA, ts);
+  std::string attack_line;
+  if (attack_damage_ > Money{}) {
+    attack_line = compat::format("damage {:w}", attack_damage_);
+  }
+  else if (attack_contamination_) {
+    attack_line = compat::format("contamination {}%", *attack_contamination_);
+  }
+  if (!attack_line.empty()) {
+    constexpr ViewPoint attack_line_pos{8, 44};
+    constexpr uint8_t attack_line_color = 15;
+    context_.font->render_line_onto(*ctx.surface, attack_line, attack_line_pos,
+                                    FontFace::SUPERSMA, attack_line_color);
   }
 
   if (police_coming_) {
-    constexpr uint8_t police_text_color = 18;
-    constexpr int police_text_y = 4;
-    const TextStyle ts{
-        .color = police_text_color,
-        .align = TextAnchor::Middle,
-    };
-    context_.font->render_line_onto(
-        *ctx.surface, "POLICE COMING!",
-        ViewPoint{ctx.surface->width() / 2, police_text_y}, FontFace::SUPERSMA,
-        ts);
+    constexpr ViewPoint police_text_pos{0, 20};
+    constexpr uint8_t police_text_color = 1;
+    context_.font->render_line_onto(*ctx.surface, "Police coming!",
+                                    police_text_pos, FontFace::SUPERSMA,
+                                    police_text_color);
   }
 }
 
@@ -275,6 +272,14 @@ void StatusDisplay::set_attack_contamination(
   mark_dirty();
 }
 
+void StatusDisplay::set_attack_damage(Money damage) {
+  if (attack_damage_ == damage) {
+    return;
+  }
+  attack_damage_ = damage;
+  mark_dirty();
+}
+
 void StatusDisplay::clear_attack_status() {
   if (!attack_mode_) {
     return;
@@ -283,6 +288,7 @@ void StatusDisplay::clear_attack_status() {
   attack_attacker_energy_.reset();
   attack_defender_energy_.reset();
   attack_contamination_.reset();
+  attack_damage_ = Money{};
   police_coming_ = false;
   mark_dirty();
 }

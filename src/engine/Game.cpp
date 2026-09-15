@@ -542,6 +542,10 @@ int Game::run() {
       }
     }
 
+    if (!view_frozen() && !renderer.is_fading()) {
+      current_view_->advance(context.clock.dt_ms);
+    }
+
     // If we hit the catch-up cap, drop the backlog rather than replaying it
     // forever.
     if (tick_accumulator_ms >= simulation_tick_ms) {

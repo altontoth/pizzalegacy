@@ -22,6 +22,7 @@ public:
   void clear_attack_status();
   void set_police_coming();
   void set_attack_contamination(std::optional<int> contamination_pct);
+  void set_attack_damage(Money damage);
 
 private:
   void clear(const RenderContext& ctx);
@@ -41,5 +42,7 @@ private:
   std::optional<int> attack_attacker_energy_;
   std::optional<int> attack_defender_energy_;
   std::optional<int> attack_contamination_;
+  // Takes the contamination line's place once any furniture is destroyed.
+  Money attack_damage_;
   bool police_coming_{false};
 };

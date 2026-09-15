@@ -620,13 +620,18 @@ void RestaurantView::calculate_background_dimensions() {
   background_height_ = (room_size.h + 2) * RESTAURANT_TILE_HEIGHT;
 }
 
+void RestaurantView::advance(uint32_t dt_ms) {
+  if (attack_.active()) {
+    attack_.advance(dt_ms);
+  }
+}
+
 void RestaurantView::tick() {
   if (attack_.active()) {
     // In attack mode by default the arrow keys move the attacker, not the
     // camera, so we have to skip camctrl_ here since it's bound to the same
     // keys. The attack scene moves the camera when they get close to the edge
-    // so regardless of key bindings we just return after ticking the attack.
-    attack_.tick();
+    // so regardless of key bindings we just return.
     return;
   }
 

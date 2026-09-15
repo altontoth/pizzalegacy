@@ -117,49 +117,27 @@ RestaurantLayoutFactory::create_layout(std::span<const uint8_t> bytes) {
   uint8_t furniture_count = is.get();
   uint8_t oven_count = is.get();
 
-  // Original just did -88 at some point:
-  constexpr int y_offset_from_original = 88 * 2;
   const int tile_w_px = LegacyConstants::RESTAURANT_TILE_WIDTH;
   const int tile_h_px = LegacyConstants::RESTAURANT_TILE_HEIGHT;
-  constexpr int VISIBLE_X_TILES = 16;
-  constexpr int VISIBLE_Y_TILES = 14;
-  // Legacy coordinates are based on what's in view when we are scrolled
-  // at the bottom left of the restaurant, and then from the top left
-  // coordinate, ignoring the border and any wall tiles. Because of the
-  // -88 they did you could have restaurants that were a bit bigger than
-  // the screen and still put furniture there.
-
-  // In our coordinate system, WorldPoint (0,0) is the TOP-LEFT WALL.
-  // Interior starts at (tile_w, tile_h). So we convert legacy coords to
-  // interior-relative, then add tile offsets to make them wall-relative.
-  auto legacy_coords_to_map = [height](int x, int y) -> WorldPoint {
-    WorldPoint interior_relative{x - LegacyConstants::WOOD_BORDER_WIDTH_LEFT -
-                                     LegacyConstants::RESTAURANT_TILE_WIDTH,
-                                 y - y_offset_from_original +
-                                     ((height - VISIBLE_Y_TILES) * tile_h_px) -
-                                     LegacyConstants::WOOD_BORDER_HEIGHT_TOP -
-                                     LegacyConstants::RESTAURANT_TILE_HEIGHT};
-    // Add wall offset to convert to world coordinates
-    return WorldPoint{interior_relative.x + tile_w_px,
-                      interior_relative.y + tile_h_px};
-  };
-
   auto legacy_kitchen_coords_to_map = [k_width, k_height](int x,
                                                           int y) -> WorldPoint {
     // Kitchen view is right-aligned (X) and bottom-aligned (Y). The world
     // background has k_width+2 / k_height+2 tiles (interior + walls added by
-    // calculate_background_dimensions). The viewport shows VISIBLE_X/Y tiles.
-    // The offset is (background_tiles - viewport_tiles) in each axis.
-    const int scroll_x_px = (k_width + 2 - VISIBLE_X_TILES) * tile_w_px;
-    const int scroll_y_px = (k_height - VISIBLE_Y_TILES) * tile_h_px;
+    // calculate_background_dimensions). The viewport shows
+    // RESTAURANT_VISIBLE_X/Y_TILES tiles. The offset is
+    // (background_tiles - viewport_tiles) in each axis.
+    const int scroll_x_px =
+        (k_width + 2 - LegacyConstants::RESTAURANT_VISIBLE_X_TILES) * tile_w_px;
+    const int scroll_y_px =
+        (k_height - LegacyConstants::RESTAURANT_VISIBLE_Y_TILES) * tile_h_px;
 
-    WorldPoint interior_relative{x - LegacyConstants::WOOD_BORDER_WIDTH_LEFT -
-                                     LegacyConstants::RESTAURANT_TILE_WIDTH +
-                                     scroll_x_px,
+    WorldPoint interior_relative{
+        x - LegacyConstants::WOOD_BORDER_WIDTH_LEFT -
+            LegacyConstants::RESTAURANT_TILE_WIDTH + scroll_x_px,
 
-                                 y - y_offset_from_original + scroll_y_px -
-                                     LegacyConstants::WOOD_BORDER_HEIGHT_TOP -
-                                     LegacyConstants::RESTAURANT_TILE_HEIGHT};
+        y - LegacyConstants::RESTAURANT_LEGACY_Y_BIAS + scroll_y_px -
+            LegacyConstants::WOOD_BORDER_HEIGHT_TOP -
+            LegacyConstants::RESTAURANT_TILE_HEIGHT};
 
     // Add wall offset to convert to world coordinates
     return WorldPoint{interior_relative.x + tile_w_px,
@@ -180,7 +158,8 @@ RestaurantLayoutFactory::create_layout(std::span<const uint8_t> bytes) {
     const Furniture* f =
         FurnitureFactory::create_furniture((FurnitureType)furniture_id);
     auto pf = std::make_unique<PlacedFurniture>(
-        f, core::FurnitureId{i}, legacy_coords_to_map(x_coord, y_coord),
+        f, core::FurnitureId{i},
+        restaurant_point_from_legacy(x_coord, y_coord, height),
         core::FurnitureId{linked_id}, decode_rotation(rotation));
     rl->place_furniture(std::move(pf));
   }

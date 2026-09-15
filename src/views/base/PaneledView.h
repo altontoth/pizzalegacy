@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include <cstdint>
+
 #include "engine/DebugLabel.h"
 #include "views/base/MainPanelView.h"
 #include "views/base/PanelContainerView.h"
@@ -17,6 +19,7 @@ public:
   PaneledView(GameContext& context, GameState& state,
               std::unique_ptr<View> inner);
   void tick() override;
+  void advance(uint32_t dt_ms) override;
   void render(const RenderContext& ctx) override;
   InterruptionRate interruption_rate() const override {
     return main_panel_view_->interruption_rate();

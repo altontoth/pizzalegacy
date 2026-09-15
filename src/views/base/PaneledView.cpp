@@ -65,6 +65,12 @@ void PaneledView::tick() {
   status_panel_->view->tick();
 }
 
+void PaneledView::advance(uint32_t dt_ms) {
+  main_panel_view_->advance(dt_ms);
+  input_panel_->view->advance(dt_ms);
+  status_panel_->view->advance(dt_ms);
+}
+
 // Returns multiple layers to the renderer
 std::vector<LayerInfo> PaneledView::get_layers() {
   std::vector<LayerInfo> layers;

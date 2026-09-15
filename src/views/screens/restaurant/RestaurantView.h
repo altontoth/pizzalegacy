@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -63,6 +64,7 @@ public:
                  RestaurantViewState r_state);
   ~RestaurantView();
   void tick() override;
+  void advance(uint32_t dt_ms) override;
   void render(const RenderContext& ctx) override;
   bool on_action(const input::ActionEvent& ev) override;
   InterruptionRate interruption_rate() const override;

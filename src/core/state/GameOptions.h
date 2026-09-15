@@ -140,6 +140,8 @@ struct GameOptions {
   static constexpr int KEY_REPEAT_INTERVAL_MAX = 1000;
   static constexpr int TOOLTIP_DELAY_MIN = 0;
   static constexpr int TOOLTIP_DELAY_MAX = 5000;
+  static constexpr int ATTACK_SCENE_HZ_MIN = 1;
+  static constexpr int ATTACK_SCENE_HZ_MAX = 70;
 
   bool map_fx = true;
   bool restaurant_fx = true;
@@ -176,4 +178,11 @@ struct GameOptions {
   int key_repeat_delay_ms = 500;
   int key_repeat_interval_ms = 60;
   int tooltip_delay_ms = 300;
+  // Attack scene updates per second. The original updates once for every frame
+  // it draws, which is 70 on a fast 486 and 35 or less on a slower machine.
+  int attack_scene_hz = 35;
+
+  // Console only, for this run.
+  // Off stops the police turning up by themselves.
+  bool police = true;
 };

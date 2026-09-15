@@ -35,18 +35,32 @@ constexpr Orientation opposite(Orientation o) {
   return static_cast<Orientation>(turned);
 }
 
-// Advance a walker one grid cell in the given direction and bump its
-// animation phase.
-inline void step_one_cell(WorldPoint& position, int& walk_cycle,
-                          Orientation dir) {
-  position.x += walk_dx(dir) * WALK_CELL_SIZE;
-  position.y += walk_dy(dir) * WALK_CELL_SIZE;
-  walk_cycle = (walk_cycle + 1) % 4;
+constexpr WorldPoint point_ahead(WorldPoint p, Orientation dir, int distance) {
+  return WorldPoint{p.x + (walk_dx(dir) * distance),
+                    p.y + (walk_dy(dir) * distance)};
 }
 
 // Maps the 4-phase walk cycle onto the 3 sprite frames per direction:
 // neutral, left-step, neutral, right-step.
 constexpr std::array<int, 4> WALK_CYCLE_TO_FRAME = {0, 1, 0, 2};
+
+// Move a walker distance pixels in the given direction and bump its animation
+// phase.
+inline void step_walker(WorldPoint& position, int& walk_cycle, Orientation dir,
+                        int distance) {
+  position = point_ahead(position, dir, distance);
+  ++walk_cycle;
+  if (walk_cycle >= static_cast<int>(WALK_CYCLE_TO_FRAME.size())) {
+    walk_cycle = 0;
+  }
+}
+
+// Advance a walker one grid cell in the given direction and bump its
+// animation phase.
+inline void step_one_cell(WorldPoint& position, int& walk_cycle,
+                          Orientation dir) {
+  step_walker(position, walk_cycle, dir, WALK_CELL_SIZE);
+}
 
 // Frame index into a walk bob for a facing and walk-cycle phase.
 constexpr int walk_frame_for(Orientation dir, int walk_cycle) {

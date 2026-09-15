@@ -11,6 +11,11 @@
 #include "core/restaurant/FloorPattern.h"
 #include "core/restaurant/PlacedFurniture.h"
 #include "engine/Size.h"
+#include "engine/geom/Spaces.h"
+
+// A point in the original's restaurant coordinates, at our 2x scale, as a
+// world point in a restaurant room_height tiles deep.
+WorldPoint restaurant_point_from_legacy(int x, int y, int room_height);
 
 class RestaurantLayout {
 public:
