@@ -328,7 +328,6 @@ void GameState::advance_time_block() {
   time_.advance_10_minutes();
 
   const auto now = time_.time_of_day();
-  Logger::debug("Clock advanced to {:02d}:{:02d}", now.hour, now.minute);
 
   if (now == Restaurant::DEFAULT_OPENING_TIME) {
     status_hub_.post_direct(StatusMsg{
