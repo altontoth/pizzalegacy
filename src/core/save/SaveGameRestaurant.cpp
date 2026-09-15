@@ -417,6 +417,7 @@ json restaurant_to_json(const Restaurant& restaurant) {
   j["total_popularity"] = restaurant.economy().total_popularity();
   j["quality_rating"] = restaurant.economy().quality_rating();
   j["rejection_rate"] = restaurant.economy().rejection_rate();
+  j["fulfillment_rate"] = restaurant.fulfillment_rate();
   j["range_raw"] = restaurant.economy().range_raw();
   j["range_tiles"] = restaurant.economy().range_tiles();
 
@@ -618,6 +619,9 @@ std::unique_ptr<Restaurant> json_to_restaurant(const json& j,
 
   if (j.contains("rejection_rate")) {
     restaurant->economy().rejection_rate(j["rejection_rate"].get<int>());
+  }
+  if (j.contains("fulfillment_rate")) {
+    restaurant->fulfillment_rate(j["fulfillment_rate"].get<int>());
   }
 
   if (j.contains("range_raw")) {
