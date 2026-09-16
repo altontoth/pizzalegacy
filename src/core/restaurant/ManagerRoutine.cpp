@@ -409,15 +409,14 @@ bool ManagerRoutine::do_turnover_monitoring() {
       swapped ? settings.turnover_increase : settings.turnover_decrease;
 
   if (rise_setting == ManagerReaction::CallMe && revenue_diff > strong_rise) {
-    queue_alert(compat::format("Boss! In restaurant no. {} the {} is going up.",
-                               restaurant_.id().value, trend_word));
+    queue_alert(compat::format("Boss! In restaurant {} the {} is going up.",
+                               restaurant_.name(), trend_word));
     return true;
   }
 
   if (fall_setting == ManagerReaction::CallMe && revenue_diff < weak_growth) {
-    queue_alert(
-        compat::format("Boss! In restaurant no. {} the {} is going down.",
-                       restaurant_.id().value, trend_word));
+    queue_alert(compat::format("Boss! In restaurant {} the {} is going down.",
+                               restaurant_.name(), trend_word));
     return true;
   }
 
