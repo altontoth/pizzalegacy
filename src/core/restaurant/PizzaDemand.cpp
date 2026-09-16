@@ -141,7 +141,7 @@ int PizzaDemand::calculate_price_income_modifier(Money price,
 
   // The curve is truncated to an integer before the cheap-pizza bonus, and the
   // result of that subtraction is truncated again.
-  double penalty = std::trunc(std::pow(income_exp, price_norm));
+  double penalty = std::trunc(std::pow(price_norm, income_exp));
 
   // When price_norm <= income_curve, cheap pizzas get a demand bonus
   if (price_norm <= income_curve) {
@@ -149,13 +149,7 @@ int PizzaDemand::calculate_price_income_modifier(Money price,
     penalty = std::trunc(penalty - adjustment);
   }
 
-  // The original converts the overflowing x87 result to INT_MIN, which is then
-  // absorbed by the final demand clamp. Avoid undefined double-to-int
-  // conversion in C++ while preserving the same observable result for extreme
-  // prices. I doubt we can get here with the $50 price limit on pizzas but just
-  // to be sure.
-  constexpr double penalty_limit = 100'000.0;
-  return static_cast<int>(std::clamp(penalty, -penalty_limit, penalty_limit));
+  return static_cast<int>(penalty);
 }
 
 } // namespace core::restaurant
