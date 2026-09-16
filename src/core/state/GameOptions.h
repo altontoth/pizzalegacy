@@ -179,6 +179,7 @@ struct GameOptions {
   int key_repeat_delay_ms = 500;
   int key_repeat_interval_ms = 60;
   int tooltip_delay_ms = 300;
+  bool show_player_color_in_dropdown = true;
   // Attack scene updates per second. The original updates once for every frame
   // it draws, which is 70 on a fast 486 and 35 or less on a slower machine.
   int attack_scene_hz = 35;

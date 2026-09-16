@@ -7,6 +7,7 @@
 #include "views/screens/city_view/CityView.h"
 #include <algorithm>
 #include <cassert>
+#include <cstdint>
 #include <cstdlib>
 #include <ctime>
 #include <functional>
@@ -1271,19 +1272,29 @@ void CityView::create_dropdowns() {
   for (auto* player : state_.players()) {
     const auto pid = player->id();
     const std::string& pname = player->name();
+    std::optional<uint8_t> swatch;
+    if (state_.options().show_player_color_in_dropdown) {
+      swatch = PLAYER_CONTROL_COLORS[pid.value];
+    }
 
-    dropdowns_.add_item(Dropdown::PLAYER, pname, [this, pid] {
-      highlight_mode(CityViewHighlight{
-          .mode = HighlightMode::PLAYER,
-          .data = pid,
-      });
-    });
-    dropdowns_.add_item(Dropdown::RANGE, pname, [this, pid] {
-      highlight_mode(CityViewHighlight{
-          .mode = HighlightMode::PLAYER_RANGE,
-          .data = pid,
-      });
-    });
+    dropdowns_.add_item(
+        Dropdown::PLAYER, pname,
+        [this, pid] {
+          highlight_mode(CityViewHighlight{
+              .mode = HighlightMode::PLAYER,
+              .data = pid,
+          });
+        },
+        swatch);
+    dropdowns_.add_item(
+        Dropdown::RANGE, pname,
+        [this, pid] {
+          highlight_mode(CityViewHighlight{
+              .mode = HighlightMode::PLAYER_RANGE,
+              .data = pid,
+          });
+        },
+        swatch);
   }
 
   // Building / location filters

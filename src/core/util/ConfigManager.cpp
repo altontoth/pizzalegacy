@@ -121,6 +121,10 @@ const auto option_defs = std::to_array({
         "tooltip_delay_ms", {},
         "milliseconds the pointer rests on an item before its tooltip shows; "
         "no options screen entry"),
+    bool_option<&GameOptions::show_player_color_in_dropdown>(
+        "show_player_color_in_dropdown", {},
+        "mark players in the city map dropdowns with their player color; "
+        "no options screen entry"),
 
     enum_option<&GameOptions::autosave_frequency,
                 &autosave_frequency_from_config_value>(

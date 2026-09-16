@@ -6,6 +6,9 @@
 
 #include "views/ui/DropdownList.h"
 
+#include <cstdint>
+#include <optional>
+#include <string>
 #include <utility>
 #include "engine/geom/Spaces.h"
 #include "views/ui/DropdownDecoration.h"
@@ -49,6 +52,18 @@ void DropdownList::render(Surface& target_surface, FontManager* font) {
                           ? text_color_highlight
                           : text_color_regular;
 
+    if (entries_[i].swatch_color) {
+      constexpr int swatch_size = 6;
+      constexpr int swatch_gap = 6;
+      const int line_height =
+          font->size_text(entries_[i].label, FontFace::CSTANDAR).height;
+      target_surface.fill_rect(
+          ViewRect{text_x, text_y + ((line_height - swatch_size) / 2),
+                   swatch_size, swatch_size},
+          *entries_[i].swatch_color);
+      text_x += swatch_size + swatch_gap;
+    }
+
     font->render_text_onto(target_surface, entries_[i].label,
                            ViewPoint{text_x, text_y}, FontFace::CSTANDAR,
                            text_color);
@@ -73,9 +88,11 @@ bool DropdownList::tick() {
 }
 
 void DropdownList::add_entry(std::string_view label,
-                             std::function<void()> on_click) {
+                             std::function<void()> on_click,
+                             std::optional<uint8_t> swatch_color) {
   entries_.push_back(DropdownEntry{.label = std::string(label),
-                                   .on_click = std::move(on_click)});
+                                   .on_click = std::move(on_click),
+                                   .swatch_color = swatch_color});
 }
 
 std::optional<int> DropdownList::entry_index_at(ViewPoint p) const {

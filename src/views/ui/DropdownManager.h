@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <functional>
 #include <optional>
 #include <unordered_map>
@@ -28,7 +29,8 @@ public:
       DropdownType type, ViewRect header, ViewPoint origin,
       std::optional<std::function<void()>> /*on_activate*/ = std::nullopt);
   void add_item(DropdownType type, std::string_view text,
-                std::function<void()> on_click);
+                std::function<void()> on_click,
+                std::optional<uint8_t> swatch_color = std::nullopt);
   void render(Surface& target_surface, FontManager* font);
   bool tick();
   void set_expanded(DropdownList* expanded);

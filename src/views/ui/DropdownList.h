@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <functional>
 #include <optional>
 #include <vector>
@@ -22,7 +23,8 @@ public:
   bool tick();
   bool handle_hover(ViewPoint position);
   ClickResult handle_click(ViewPoint position);
-  void add_entry(std::string_view, std::function<void()>);
+  void add_entry(std::string_view, std::function<void()>,
+                 std::optional<uint8_t> swatch_color = std::nullopt);
   bool is_expanded() const;
   void add_interactions(views::ui::InteractionContext&,
                         std::function<void()> on_pick);
@@ -33,6 +35,8 @@ private:
   struct DropdownEntry {
     std::string label;
     std::function<void()> on_click;
+    // Drawn as a small square before the label
+    std::optional<uint8_t> swatch_color;
   };
   std::optional<int> entry_index_at(ViewPoint p) const;
 

@@ -255,6 +255,10 @@ popularity and thus the number of customers a bit.
 In the original the popularity thermometer screen also doesn't animate a
 reduction in numbers, ours does (regardless of this option).
 
+### show_player_color_in_dropdown
+The Player and Range dropdowns on the city map show each player's control
+map color in front of their name. On by default.
+
 ### win_condition
 This can take one of three options; the German release requires >= 5% market
 share in all ten cities to win the game (`all_cities`), the English version

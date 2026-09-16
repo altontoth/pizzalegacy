@@ -4,7 +4,9 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+#include <cstdint>
 #include <magic_enum/magic_enum.hpp>
+#include <optional>
 #include "views/base/ViewDefs.h"
 
 template <typename DropdownType>
@@ -15,10 +17,10 @@ void DropdownManager<DropdownType>::add_dropdown(
 }
 
 template <typename DropdownType>
-void DropdownManager<DropdownType>::add_item(DropdownType type,
-                                             std::string_view text,
-                                             std::function<void()> on_click) {
-  dropdowns_.at(type).add_entry(text, std::move(on_click));
+void DropdownManager<DropdownType>::add_item(
+    DropdownType type, std::string_view text, std::function<void()> on_click,
+    std::optional<uint8_t> swatch_color) {
+  dropdowns_.at(type).add_entry(text, std::move(on_click), swatch_color);
 }
 
 template <typename DropdownType> bool DropdownManager<DropdownType>::tick() {

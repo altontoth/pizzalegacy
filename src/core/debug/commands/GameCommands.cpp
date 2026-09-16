@@ -277,6 +277,10 @@ static const OptionDef option_defs[] = {
     {.name = "load_list_show_autosaves",
      .member = &GameOptions::load_list_show_autosaves,
      .description = "List the autosave slots on the game load screen"},
+    {.name = "show_player_color_in_dropdown",
+     .member = &GameOptions::show_player_color_in_dropdown,
+     .description = "Mark players in the city map dropdowns with their "
+                    "control map color"},
     {.name = "load_list_sort_by_date",
      .member = &GameOptions::load_list_sort_by_date,
      .description = "Sort the game load screen by date rather than name"},
