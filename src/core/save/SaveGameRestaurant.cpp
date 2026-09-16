@@ -7,6 +7,7 @@
 #include "core/save/SaveGameRestaurant.h"
 
 #include <ctime>
+#include <utility>
 
 #include "core/character/Staff.h"
 #include "core/character/Training.h"
@@ -133,9 +134,9 @@ json menu_to_json(const core::restaurant::Menu& menu) {
     for (const auto& mult : entry.popularity_multiplier) {
       multipliers.push_back(mult);
     }
-    entry_json["popularity_multiplier"] = multipliers;
+    entry_json["popularity_multiplier"] = std::move(multipliers);
 
-    j.push_back(entry_json);
+    j.push_back(std::move(entry_json));
   }
   return j;
 }
@@ -262,20 +263,20 @@ json restaurant_layout_to_json(const RestaurantLayout& layout) {
   for (const auto& pf : layout.placed_furniture()) {
     auto pf_json = placed_furniture_to_json(*pf);
     if (!pf_json.empty()) { // Skip furniture that failed type lookup
-      furniture_array.push_back(pf_json);
+      furniture_array.push_back(std::move(pf_json));
     }
   }
-  j["placed_furniture"] = furniture_array;
+  j["placed_furniture"] = std::move(furniture_array);
 
   // Save kitchen furniture
   json kitchen_furniture_array = json::array();
   for (const auto& pf : layout.placed_kitchen_furniture()) {
     auto pf_json = placed_furniture_to_json(*pf);
     if (!pf_json.empty()) { // Skip furniture that failed type lookup
-      kitchen_furniture_array.push_back(pf_json);
+      kitchen_furniture_array.push_back(std::move(pf_json));
     }
   }
-  j["placed_kitchen_furniture"] = kitchen_furniture_array;
+  j["placed_kitchen_furniture"] = std::move(kitchen_furniture_array);
 
   return j;
 }
@@ -338,7 +339,7 @@ json restaurant_to_json(const Restaurant& restaurant) {
   for (const auto& chosen : restaurant.preferred_suppliers()) {
     suppliers.push_back(chosen ? json(*chosen) : json(nullptr));
   }
-  j["preferred_suppliers"] = suppliers;
+  j["preferred_suppliers"] = std::move(suppliers);
   j["kitchen_size"] = {{"w", restaurant.kitchen_size().w},
                        {"h", restaurant.kitchen_size().h}};
 
@@ -359,7 +360,7 @@ json restaurant_to_json(const Restaurant& restaurant) {
       cooks_array.push_back(nullptr);
     }
   }
-  j["cooks"] = cooks_array;
+  j["cooks"] = std::move(cooks_array);
 
   json waiters_array = json::array();
   for (const auto& waiter_opt : restaurant.waiters()) {
@@ -370,7 +371,7 @@ json restaurant_to_json(const Restaurant& restaurant) {
       waiters_array.push_back(nullptr);
     }
   }
-  j["waiters"] = waiters_array;
+  j["waiters"] = std::move(waiters_array);
 
   // Save manager
   if (restaurant.manager().has_value()) {
@@ -803,14 +804,14 @@ json daily_stats_to_json(const core::restaurant::DailyStats& stats) {
   for (const auto& cost : stats.ingredient_costs_by_category) {
     costs_by_category.push_back(cost.cents);
   }
-  j["ingredient_costs_by_category"] = costs_by_category;
+  j["ingredient_costs_by_category"] = std::move(costs_by_category);
 
   // Ingredient purchases by category (cash basis tracking)
   json purchases_by_category = json::array();
   for (const auto& cost : stats.ingredient_purchases_by_category) {
     purchases_by_category.push_back(cost.cents);
   }
-  j["ingredient_purchases_by_category"] = purchases_by_category;
+  j["ingredient_purchases_by_category"] = std::move(purchases_by_category);
 
   // Total ingredient purchases
   j["ingredient_purchases"] = stats.ingredient_purchases.cents;
@@ -831,7 +832,7 @@ json daily_stats_to_json(const core::restaurant::DailyStats& stats) {
     pizza_sales_obj[std::to_string(pizza_id.value)] =
         pizza_sales_data_to_json(sales_data);
   }
-  j["pizza_sales"] = pizza_sales_obj;
+  j["pizza_sales"] = std::move(pizza_sales_obj);
 
   // Demand value tracking
   j["total_order_value"] = stats.total_order_value.cents;
@@ -926,7 +927,7 @@ json restaurant_stats_to_json(const core::restaurant::RestaurantStats& stats) {
   for (const auto& day_stats : stats.history) {
     history_array.push_back(daily_stats_to_json(day_stats));
   }
-  j["history"] = history_array;
+  j["history"] = std::move(history_array);
 
   return j;
 }

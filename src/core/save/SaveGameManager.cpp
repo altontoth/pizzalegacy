@@ -17,6 +17,7 @@
 #include <vector>
 
 #include <cstring>
+#include <utility>
 
 #include <zlib.h>
 // zlib.h defines FAR as a macro for legacy DOS far-pointer compat, which
@@ -81,7 +82,7 @@ json metadata_from_save_json(const json& j) {
       names.push_back(p.is_null() ? "" : p.value("name", ""));
     }
   }
-  meta["player_names"] = names;
+  meta["player_names"] = std::move(names);
   meta["active_player"] = j.value("active_player", -1);
   meta["active_city"] = j.value("active_city", -1);
   return meta;
@@ -575,7 +576,7 @@ json SaveGameManager::state_to_json(const GameState& state,
                              {"hot", tp.hot},
                              {"spicy", tp.spicy}});
     }
-    j["customer_taste_profiles"] = taste_array;
+    j["customer_taste_profiles"] = std::move(taste_array);
   }
 
   // Save the underworld price walk for every city
@@ -589,7 +590,7 @@ json SaveGameManager::state_to_json(const GameState& state,
                                 {"rising", market.rising(city_id, column)}});
       }
     }
-    j["weapon_market"] = market_array;
+    j["weapon_market"] = std::move(market_array);
   }
 
   // Save players
@@ -603,7 +604,7 @@ json SaveGameManager::state_to_json(const GameState& state,
       players_array.push_back(nullptr);
     }
   }
-  j["players"] = players_array;
+  j["players"] = std::move(players_array);
 
   // Save visited cities only
   json cities_array = json::array();
@@ -611,7 +612,7 @@ json SaveGameManager::state_to_json(const GameState& state,
   for (City* city : visited) {
     cities_array.push_back(city_to_json(*city));
   }
-  j["cities"] = cities_array;
+  j["cities"] = std::move(cities_array);
 
   // Save restaurants
   json restaurants_array = json::array();
@@ -628,7 +629,7 @@ json SaveGameManager::state_to_json(const GameState& state,
       }
     }
   }
-  j["restaurants"] = restaurants_array;
+  j["restaurants"] = std::move(restaurants_array);
 
   // Save deferred staff events (queued at EOD, delivered at 10am next day)
   {
@@ -639,7 +640,7 @@ json SaveGameManager::state_to_json(const GameState& state,
                              {"job_role", static_cast<int>(ev.event.job_role)},
                              {"slot_index", ev.event.slot_index}});
     }
-    j["deferred_staff_events"] = staff_array;
+    j["deferred_staff_events"] = std::move(staff_array);
   }
 
   // The mayor's and police's deferred calls, in the order they go out
@@ -668,9 +669,9 @@ json SaveGameManager::state_to_json(const GameState& state,
       case Kind::DepotRaid:
         break;
       }
-      queued_array.push_back(entry);
+      queued_array.push_back(std::move(entry));
     }
-    j["deferred_calls"] = queued_array;
+    j["deferred_calls"] = std::move(queued_array);
   }
 
   // Save deferred protection racket offers (rolled at EOD, delivered on the
@@ -682,7 +683,7 @@ json SaveGameManager::state_to_json(const GameState& state,
                               {"restaurant_id", offer.restaurant_id.value},
                               {"first_contact", offer.first_contact}});
     }
-    j["deferred_racket_offers"] = racket_array;
+    j["deferred_racket_offers"] = std::move(racket_array);
   }
 
   {
@@ -692,7 +693,7 @@ json SaveGameManager::state_to_json(const GameState& state,
                              {"message", alert.message},
                              {"display_block", alert.display_block}});
     }
-    j["deferred_manager_alerts"] = alert_array;
+    j["deferred_manager_alerts"] = std::move(alert_array);
   }
 
   j["floor_editing_bonus_shown"] = state.turn().floor_editing_bonus_shown();
@@ -706,7 +707,7 @@ json SaveGameManager::state_to_json(const GameState& state,
   for (const auto& city_id : state.player_cities()) {
     player_cities.push_back(city_id ? json(city_id->value) : json(nullptr));
   }
-  j["player_cities"] = player_cities;
+  j["player_cities"] = std::move(player_cities);
 
   // Save shown message history with dates (for CV display and deduplication)
   json shown_msgs;
@@ -723,11 +724,11 @@ json SaveGameManager::state_to_json(const GameState& state,
                                  {"d", entry.date.day()},
                                  {"shown", entry.shown}});
         }
-        shown_msgs[std::to_string(pid)] = entry_array;
+        shown_msgs[std::to_string(pid)] = std::move(entry_array);
       }
     }
   }
-  j["shown_messages"] = shown_msgs;
+  j["shown_messages"] = std::move(shown_msgs);
 
   return j;
 }

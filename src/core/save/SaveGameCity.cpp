@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <array>
+#include <utility>
 
 #include "core/city/CentralDepot.h"
 #include "core/city/City.h"
@@ -144,7 +145,7 @@ json supplier_to_json(const FoodSupplier& supplier) {
        core::food::CategoryRegistry::range(supplier.category())) {
     stock_array.push_back(supplier.stock(ing_type));
   }
-  j["stock"] = stock_array;
+  j["stock"] = std::move(stock_array);
 
   // Save per-player relationships
   json relationships = json::array();
@@ -162,9 +163,9 @@ json supplier_to_json(const FoodSupplier& supplier) {
     rel_j["outstanding_debt"] = rel.outstanding_debt.cents;
     rel_j["last_contract_sum"] = rel.last_contract_sum.cents;
     rel_j["missed_payment_penalty"] = rel.missed_payment_penalty;
-    relationships.push_back(rel_j);
+    relationships.push_back(std::move(rel_j));
   }
-  j["relationships"] = relationships;
+  j["relationships"] = std::move(relationships);
 
   return j;
 }
@@ -256,7 +257,7 @@ json pizza_charts_to_json(const PizzaCharts& charts) {
   for (const auto& entry : charts.entries()) {
     entries_array.push_back(pizza_chart_entry_to_json(entry));
   }
-  j["entries"] = entries_array;
+  j["entries"] = std::move(entries_array);
   return j;
 }
 
@@ -277,7 +278,7 @@ json control_map_to_json(const ControlMap& cm) {
     auto owner = cm.cell_owner(i);
     owners.push_back(owner.has_value() ? owner->value : -1);
   }
-  j["cell_owners"] = owners;
+  j["cell_owners"] = std::move(owners);
   j["player_percentages"] = cm.player_percentages();
   return j;
 }
@@ -354,16 +355,16 @@ json mayor_office_to_json(const MayorOffice& mo) {
     trade.push_back(mo.trade_activity(i));
     fee_paid.push_back(mo.fee_paid(i));
   }
-  j["favor_score"] = favor;
-  j["investment_activity"] = investment;
-  j["trade_activity"] = trade;
-  j["fee_paid"] = fee_paid;
+  j["favor_score"] = std::move(favor);
+  j["investment_activity"] = std::move(investment);
+  j["trade_activity"] = std::move(trade);
+  j["fee_paid"] = std::move(fee_paid);
 
   json competition_wins = json::array();
   for (int i = 0; i < NUMBER_OF_PLAYERS; ++i) {
     competition_wins.push_back(mo.pizza_competition_wins(i));
   }
-  j["pizza_competition_wins"] = competition_wins;
+  j["pizza_competition_wins"] = std::move(competition_wins);
 
   j["public_bank_account"] = mo.public_bank_account();
   j["private_bank_account"] = mo.private_bank_account();
@@ -451,16 +452,16 @@ static json depot_to_json(const core::city::CentralDepot& depot) {
       s["quality"] = stock.weighted_avg_quality;
       s["cost"] = stock.weighted_avg_cost.cents;
       s["last_price"] = stock.last_price.cents;
-      stocks_array.push_back(s);
+      stocks_array.push_back(std::move(s));
     }
   }
-  j["stocks"] = stocks_array;
+  j["stocks"] = std::move(stocks_array);
 
   json prio_array = json::array();
   for (auto id : depot.delivery_priorities()) {
     prio_array.push_back(id.value);
   }
-  j["delivery_priorities"] = prio_array;
+  j["delivery_priorities"] = std::move(prio_array);
 
   if (auto stolen = depot.stock_stolen()) {
     j["stock_stolen"] = static_cast<int>(*stolen);
@@ -515,7 +516,7 @@ json city_to_json(const City& city) {
   for (const auto* property : city.properties()) {
     properties_array.push_back(property_to_json(*property));
   }
-  j["properties"] = properties_array;
+  j["properties"] = std::move(properties_array);
 
   // Save staff hiring blacklist
   json blacklist = json::object();
@@ -524,23 +525,23 @@ json city_to_json(const City& city) {
     for (core::PlayerId p : players) {
       players_array.push_back(p.value);
     }
-    blacklist[std::to_string(char_id)] = players_array;
+    blacklist[std::to_string(char_id)] = std::move(players_array);
   }
-  j["blacklist"] = blacklist;
+  j["blacklist"] = std::move(blacklist);
 
   // Save job market status array
   json market_array = json::array();
   for (const auto& s : city.job_market().slots()) {
     market_array.push_back(static_cast<uint8_t>(s));
   }
-  j["job_market"] = market_array;
+  j["job_market"] = std::move(market_array);
 
   // Save all suppliers
   json suppliers_array = json::array();
   for (const auto& supplier : city.suppliers()) {
     suppliers_array.push_back(supplier_to_json(*supplier));
   }
-  j["suppliers"] = suppliers_array;
+  j["suppliers"] = std::move(suppliers_array);
 
   // A slot with no mode but a non-zero value counts as active; see
   // IngredientTrendSystem::static_value.
@@ -558,9 +559,9 @@ json city_to_json(const City& city) {
     slot_j["target"] = trend_sys.targets()[i];
     slot_j["duration"] = static_cast<int>(durations[i]);
     slot_j["approaching"] = trend_sys.approaching_flags()[i];
-    trends_array.push_back(slot_j);
+    trends_array.push_back(std::move(slot_j));
   }
-  j["ingredient_trends"] = trends_array;
+  j["ingredient_trends"] = std::move(trends_array);
 
   // Save pizza charts (current + previous entries for rank-change arrows)
   j["pizza_charts"] = pizza_charts_to_json(city.pizza_charts());
@@ -571,13 +572,13 @@ json city_to_json(const City& city) {
   for (core::ActorId actor_id : city.refused_call_actors()) {
     refused_calls.push_back(actor_id.value);
   }
-  j["refused_call_actors"] = refused_calls;
+  j["refused_call_actors"] = std::move(refused_calls);
 
   json embargoes = json::array();
   for (auto cat : ALL_INGREDIENT_CATEGORIES) {
     embargoes.push_back(city.trade_embargo_counter(cat));
   }
-  j["trade_embargoes"] = embargoes;
+  j["trade_embargoes"] = std::move(embargoes);
 
   // The rates are rolled per city when it is first built, so a reload would
   // otherwise offer the player different prices than the ones they saved on.
@@ -587,7 +588,7 @@ json city_to_json(const City& city) {
     poster_rates.push_back(
         {{"effectiveness", poster.effectiveness}, {"cost", poster.cost.cents}});
   }
-  j["poster_rates"] = poster_rates;
+  j["poster_rates"] = std::move(poster_rates);
 
   json tv_ad_rates = json::array();
   for (int i = 0; i < NUMBER_OF_TV_ADS; ++i) {
@@ -595,7 +596,7 @@ json city_to_json(const City& city) {
     tv_ad_rates.push_back(
         {{"effectiveness", tv_ad.effectiveness}, {"cost", tv_ad.cost.cents}});
   }
-  j["tv_ad_rates"] = tv_ad_rates;
+  j["tv_ad_rates"] = std::move(tv_ad_rates);
 
   json vendor_spending = json::array();
   for (int player_idx = 0; player_idx < NUMBER_OF_PLAYERS; ++player_idx) {
@@ -604,9 +605,9 @@ json city_to_json(const City& city) {
          city.weekly_vendor_spending(core::PlayerId{player_idx})) {
       per_player[std::to_string(vendor_id)] = spent.cents;
     }
-    vendor_spending.push_back(per_player);
+    vendor_spending.push_back(std::move(per_player));
   }
-  j["weekly_vendor_spending"] = vendor_spending;
+  j["weekly_vendor_spending"] = std::move(vendor_spending);
 
   // Save known arms dealers per player
   json known_arms_dealers_array = json::array();
@@ -619,11 +620,11 @@ json city_to_json(const City& city) {
     for (core::ActorId actor_id : city.known_arms_dealers(player_id)) {
       actor_ids_array.push_back(actor_id.value);
     }
-    player_data["known_actor_ids"] = actor_ids_array;
+    player_data["known_actor_ids"] = std::move(actor_ids_array);
 
-    known_arms_dealers_array.push_back(player_data);
+    known_arms_dealers_array.push_back(std::move(player_data));
   }
-  j["known_arms_dealers"] = known_arms_dealers_array;
+  j["known_arms_dealers"] = std::move(known_arms_dealers_array);
 
   // Save newspaper state
   const auto& ns = city.newspaper_state();
@@ -638,7 +639,7 @@ json city_to_json(const City& city) {
   else {
     newspaper_j["target_ingredient"] = nullptr;
   }
-  j["newspaper_state"] = newspaper_j;
+  j["newspaper_state"] = std::move(newspaper_j);
 
   // Save mayor office state
   j["mayor_office"] = mayor_office_to_json(city.mayor_office());
@@ -649,7 +650,7 @@ json city_to_json(const City& city) {
     depots_array.push_back(
         depot_to_json(city.central_depot(core::PlayerId{player_idx})));
   }
-  j["central_depots"] = depots_array;
+  j["central_depots"] = std::move(depots_array);
 
   // Save scheduled newspaper events
   const auto& event_sys = city.newspaper_event_system();
@@ -663,7 +664,7 @@ json city_to_json(const City& city) {
                                  {"countdown", sched_countdowns[i]}});
     }
   }
-  j["newspaper_scheduled"] = scheduled_array;
+  j["newspaper_scheduled"] = std::move(scheduled_array);
 
   j["spoilage_rate"] = city.spoilage_rate();
   j["spoilage_duration_counter"] = city.spoilage_duration_counter();

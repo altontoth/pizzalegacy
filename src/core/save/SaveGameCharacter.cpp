@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <ctime>
 #include <string>
+#include <utility>
 #include <vector>
 #include "core/character/Awards.h"
 #include "core/character/InsurancePlayerState.h"
@@ -128,9 +129,9 @@ static json insurance_state_to_json(const InsurancePlayerState& state) {
     p["company_name"] = policy.company_name;
     p["monthly_premium"] = policy.monthly_premium.cents;
     p["max_coverage"] = policy.max_coverage.cents;
-    policies_array.push_back(p);
+    policies_array.push_back(std::move(p));
   }
-  j["policies"] = policies_array;
+  j["policies"] = std::move(policies_array);
   if (state.pending_claim) {
     j["pending_claim"] = static_cast<int>(*state.pending_claim);
   }
@@ -202,10 +203,10 @@ json player_to_json(const Player& player) {
     for (int value : slot.history) {
       history_array.push_back(value);
     }
-    slot_j["history"] = history_array;
-    ai_menu_array.push_back(slot_j);
+    slot_j["history"] = std::move(history_array);
+    ai_menu_array.push_back(std::move(slot_j));
   }
-  j["ai_menu_slots"] = ai_menu_array;
+  j["ai_menu_slots"] = std::move(ai_menu_array);
 
   // Save loans (map<CityId, vector<Loan>>)
   json loans_obj = json::object();
@@ -214,9 +215,9 @@ json player_to_json(const Player& player) {
     for (const auto& loan : city_loans) {
       loans_array.push_back(loan_to_json(loan));
     }
-    loans_obj[std::to_string(city_id.value)] = loans_array;
+    loans_obj[std::to_string(city_id.value)] = std::move(loans_array);
   }
-  j["loans"] = loans_obj;
+  j["loans"] = std::move(loans_obj);
 
   // Save investments (array of up to 4 optional slots)
   json inv_array = json::array();
@@ -225,7 +226,7 @@ json player_to_json(const Player& player) {
       inv_array.push_back(investment_to_json(*slot));
     }
   }
-  j["investments"] = inv_array;
+  j["investments"] = std::move(inv_array);
 
   // Sorted, so the same game always writes the same document.
   std::vector<int> visited_cities;
@@ -248,7 +249,7 @@ json player_to_json(const Player& player) {
       weapon_costs_obj[std::string(core::item::to_string(item))] = unit.cents;
     }
   }
-  j["weapon_unit_costs"] = weapon_costs_obj;
+  j["weapon_unit_costs"] = std::move(weapon_costs_obj);
   j["competition_willingness"] = player.competition_willingness();
   j["competition_win_count"] = player.competition_win_count();
 
@@ -257,14 +258,14 @@ json player_to_json(const Player& player) {
     ad_effectiveness_array.push_back(
         json{{"city_id", city_id.value}, {"channels", channels}});
   }
-  j["ad_effectiveness"] = ad_effectiveness_array;
+  j["ad_effectiveness"] = std::move(ad_effectiveness_array);
 
   j["score"] = player.score();
   json awards_array = json::array();
   for (const auto& level : player.awards()) {
     awards_array.push_back(static_cast<int>(level));
   }
-  j["awards"] = awards_array;
+  j["awards"] = std::move(awards_array);
 
   j["mafia_state"] = mafia_state_to_json(player.mafia_state());
   j["insurance_state"] = insurance_state_to_json(player.insurance_state());
@@ -289,10 +290,10 @@ json player_to_json(const Player& player) {
       items_array.push_back({{"type", static_cast<int>(item.type)},
                              {"kg_per_day", item.kg_per_day}});
     }
-    cj["items"] = items_array;
-    contracts_array.push_back(cj);
+    cj["items"] = std::move(items_array);
+    contracts_array.push_back(std::move(cj));
   }
-  j["contracts"] = contracts_array;
+  j["contracts"] = std::move(contracts_array);
 
   json pending_notifications_array = json::array();
   for (const auto& msg : player.pending_notifications()) {
@@ -301,10 +302,10 @@ json player_to_json(const Player& player) {
       mj["text"] = *text;
       mj["severity"] = static_cast<int>(msg.severity);
       mj["scope"] = static_cast<int>(msg.scope);
-      pending_notifications_array.push_back(mj);
+      pending_notifications_array.push_back(std::move(mj));
     }
   }
-  j["pending_notifications"] = pending_notifications_array;
+  j["pending_notifications"] = std::move(pending_notifications_array);
 
   // Save active advertising campaigns.
   json campaigns_array = json::array();
@@ -335,10 +336,10 @@ json player_to_json(const Player& player) {
       if (c.tv_ad_id) {
         cj["tv_ad_id"] = *c.tv_ad_id;
       }
-      campaigns_array.push_back(cj);
+      campaigns_array.push_back(std::move(cj));
     }
   }
-  j["campaigns"] = campaigns_array;
+  j["campaigns"] = std::move(campaigns_array);
 
   // Per-city gross turnover accumulator (backs the competitor turnover chart;
   // the ledger only tracks the human, so this must persist for all players).
@@ -346,7 +347,7 @@ json player_to_json(const Player& player) {
   for (int c = 0; c < NUMBER_OF_CITIES; ++c) {
     turnover_array.push_back(player.turnover_in_city(core::CityId{c}).cents);
   }
-  j["turnover_by_city"] = turnover_array;
+  j["turnover_by_city"] = std::move(turnover_array);
 
   return j;
 }
@@ -629,8 +630,8 @@ static json mission_to_json(const MafiaMission& m) {
     banks.push_back(m.bank_accounts[i]);
     launder.push_back(m.launder_done[i]);
   }
-  j["bank_accounts"] = banks;
-  j["launder_done"] = launder;
+  j["bank_accounts"] = std::move(banks);
+  j["launder_done"] = std::move(launder);
   j["contamination_pct"] = m.contamination_pct;
   j["profit"] = m.profit.cents;
   return j;
@@ -734,14 +735,14 @@ json player_recipes_to_json(const core::food::PlayerRecipes& recipes) {
       canonical_array.push_back(nullptr);
     }
   }
-  j["canonical"] = canonical_array;
+  j["canonical"] = std::move(canonical_array);
 
   // Save user recipes
   json user_array = json::array();
   for (const auto& recipe : recipes.user) {
     user_array.push_back(recipe_to_json(recipe));
   }
-  j["user"] = user_array;
+  j["user"] = std::move(user_array);
 
   return j;
 }
@@ -887,7 +888,7 @@ json journal_entry_to_json(const JournalEntry& entry) {
   for (const auto& posting : entry.lines) {
     postings_array.push_back(posting_to_json(posting));
   }
-  j["lines"] = postings_array;
+  j["lines"] = std::move(postings_array);
 
   return j;
 }

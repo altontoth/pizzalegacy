@@ -6,6 +6,8 @@
 
 #include "core/save/SaveGameFood.h"
 
+#include <utility>
+
 #include "engine/geom/Spaces.h"
 
 namespace save {
@@ -39,7 +41,7 @@ json pizza_to_json(const core::food::Pizza& pizza) {
   for (const auto& topping : pizza.toppings()) {
     toppings_array.push_back(topping_to_json(*topping));
   }
-  j["toppings"] = toppings_array;
+  j["toppings"] = std::move(toppings_array);
 
   // Save scores (5 judges)
   j["scores"] = pizza.scores();
@@ -50,7 +52,7 @@ json pizza_to_json(const core::food::Pizza& pizza) {
   for (size_t i = 0; i < static_cast<size_t>(ConsumerType::Count); ++i) {
     popularity_array.push_back(pop.values[i]);
   }
-  j["popularity"] = popularity_array;
+  j["popularity"] = std::move(popularity_array);
 
   // Save flavors
   auto flavors = pizza.flavors();
