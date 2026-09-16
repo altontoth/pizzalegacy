@@ -1068,11 +1068,16 @@ void AnimatedStats::calculate_capacity_stats() {
   Logger::debug("[AnimatedStats Capacity] Stock capacity (raw): {}",
                 analysis.stock_cap);
 
-  // Scale values to bar range
-  auto scale_to_bar = [](int value) {
-    // Divide by 8
-    int scaled = value >> 3;
-    return std::min(scaled, 139);
+  static constexpr int bar_max = 139;
+  int divisor = 8;
+  // Widen the scale so demand still fits on its bar
+  if (state_.options().qol_improvements &&
+      analysis.demand > bar_max * divisor) {
+    divisor = (analysis.demand + bar_max - 1) / bar_max;
+  }
+
+  auto scale_to_bar = [divisor](int value) {
+    return std::min(value / divisor, bar_max);
   };
 
   capacity_demand_value_ = scale_to_bar(analysis.demand);

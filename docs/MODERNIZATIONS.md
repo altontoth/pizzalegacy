@@ -125,6 +125,12 @@ Original started at $10,000, with this setting on it starts at $1,000 so you
 can see more detail early on in the game. It also shows a tooltip when hovering
 over the player icon that shows the exact amount.
 
+### Capacity bars rescale with demand
+In the original the capacity screen's bars stop growing once demand passes a
+fixed limit, so any shortages could be hidden if demand and supply were high
+enough. Now the scale widens to fit demand, so you can always see if one of the
+things in that screen is a bottleneck.
+
 ### Euromap destination selection
 When selecting destinations in the original, after clicking on the city you
 have to click the box with the text that tells you what the costs are; with the
