@@ -119,6 +119,7 @@ bool CameraController::apply_drag_delta(int dx, int dy,
   precise_x_ = static_cast<float>(after.x);
   precise_y_ = static_cast<float>(after.y);
   aligning_ = false;
+  glide_.reset();
   // Signal tick() that motion happened so it triggers snap-to-grid on the next
   // idle frame. Direction tracks which way scroll moved for correct rounding.
   had_user_input_ = true;
@@ -135,6 +136,24 @@ bool CameraController::apply_drag_delta(int dx, int dy,
   return after.x != before.x || after.y != before.y;
 }
 
+void CameraController::glide_to(WorldPoint target, int ticks) noexcept {
+  const Size world = camera_.world_size();
+  const int view_w = camera_.view_size().w * camera_.zoom();
+  const int view_h = camera_.view_size().h * camera_.zoom();
+  glide_ = Glide{
+      .from_x = precise_x_,
+      .from_y = precise_y_,
+      .to_x = tile_align_target(static_cast<float>(target.x), view_w, world.w,
+                                tile_w_, 0),
+      .to_y = tile_align_target(static_cast<float>(target.y), view_h, world.h,
+                                tile_h_, 0),
+      .tick = 0,
+      .ticks = std::max(1, ticks),
+  };
+  aligning_ = false;
+  had_user_input_ = false;
+}
+
 void CameraController::reset() noexcept {
   precise_x_ = static_cast<float>(camera_.scroll().x);
   precise_y_ = static_cast<float>(camera_.scroll().y);
@@ -142,6 +161,7 @@ void CameraController::reset() noexcept {
   last_dir_x_ = last_dir_y_ = 0;
   last_step_px_x_ = last_step_px_y_ = 0.f;
   had_user_input_ = false;
+  glide_.reset();
 }
 
 bool CameraController::tick() {
@@ -190,7 +210,11 @@ bool CameraController::tick() {
   const int old_y = scroll.y;
 
   if (dx != 0.0f || dy != 0.0f) {
+    glide_.reset();
     tick_active(dx, dy, x_vel, y_vel, max_xf, max_yf, scroll);
+  }
+  else if (glide_) {
+    tick_glide(scroll);
   }
   else {
     tick_idle(base_step_x, base_step_y, max_xf, max_yf, scroll);
@@ -266,4 +290,23 @@ void CameraController::tick_idle(float base_step_x, float base_step_y,
   }
 
   had_user_input_ = false;
+}
+
+void CameraController::tick_glide(WorldPoint& scroll) {
+  auto& g = *glide_;
+  ++g.tick;
+  const float t = static_cast<float>(g.tick) / static_cast<float>(g.ticks);
+  // Cubic ease-out: quick start, soft landing
+  const float inv = 1.0f - t;
+  const float e = 1.0f - inv * inv * inv;
+  precise_x_ = g.from_x + (g.to_x - g.from_x) * e;
+  precise_y_ = g.from_y + (g.to_y - g.from_y) * e;
+  if (g.tick >= g.ticks) {
+    precise_x_ = g.to_x;
+    precise_y_ = g.to_y;
+    glide_.reset();
+  }
+  scroll.x = static_cast<int>(std::lround(precise_x_));
+  scroll.y = static_cast<int>(std::lround(precise_y_));
+  camera_.scroll(scroll);
 }

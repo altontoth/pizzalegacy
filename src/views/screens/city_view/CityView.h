@@ -7,6 +7,7 @@
 #pragma once
 
 #include <map>
+#include <optional>
 #include <vector>
 
 #include "core/city/CarManager.h"
@@ -18,6 +19,9 @@
 #include "engine/geom/Camera.h"
 #include "engine/geom/Spaces.h"
 #include "engine/gfx/PaletteCycleController.h"
+#include "engine/input/InputListener.h"
+#include "engine/input/InputManager.h"
+#include "engine/input/ListenerToken.h"
 #include "views/base/MainPanelView.h"
 #include "views/helpers/camera/CameraController.h"
 #include "views/helpers/camera/RmbDragScroller.h"
@@ -27,8 +31,9 @@
 #include "views/ui/status/StatusController.h"
 
 class City;
+class Restaurant;
 
-class CityView final : public MainPanelView {
+class CityView final : public MainPanelView, public input::InputListener {
 public:
   CityView(GameContext& context, GameState& state, core::CityId id);
   ~CityView();
@@ -37,6 +42,7 @@ public:
   InterruptionRate interruption_rate() const override {
     return InterruptionRate::Full;
   }
+  bool on_action(const input::ActionEvent& ev) override;
 
 private:
   enum class Dropdown { PLAYER, RANGE, LOCATIONS, PROPERTIES };
@@ -122,6 +128,9 @@ private:
   void move_cars();
   void place_cars();
 
+  // Restaurant cycling
+  void glide_to_restaurant(const Restaurant& rest);
+
   // Status display
   void build_default_city_status_recipe();
   void build_property_status_recipe(int clicked_index);
@@ -175,4 +184,8 @@ private:
   gfx::PaletteOverride water_ovr_;
   std::vector<gfx::Color> water_buf_;
   bool should_save_map_state_on_exit_ = true;
+  // After a keyboard jump, district hover waits until the cursor moves
+  bool hold_district_hover_ = false;
+  std::optional<ViewPoint> held_hover_pos_;
+  input::ListenerToken listener_;
 };

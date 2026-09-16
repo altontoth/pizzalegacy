@@ -12,6 +12,7 @@
 #include <functional>
 #include <magic_enum/magic_enum.hpp>
 #include <memory>
+#include <optional>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -37,6 +38,8 @@
 #include "engine/geom/Spaces.h"
 #include "engine/gfx/Draw.h"
 #include "engine/gfx/Surface.h"
+#include "engine/input/Action.h"
+#include "engine/input/InputManager.h"
 #include "engine/ui/ICursorManager.h"
 #include "views/base/ViewDefs.h"
 #include "views/screens/StatusDisplay.h"
@@ -98,7 +101,8 @@ CityView::CityView(GameContext& context, GameState& state, core::CityId id)
                                               ZOOM_BOX_HEIGHT_MEDIUM,
                                               ZOOM_BOX_BORDER_WIDTH)),
       palette_(palette_for_season(state.time().season())),
-      status_controller_(state.status()), camctrl_{context.input, camera_} {
+      status_controller_(state.status()), camctrl_{context.input, camera_},
+      listener_(context.input->register_listener(*this)) {
 
   state_.active_city(id);
   city_ = state_.active_city();
@@ -214,11 +218,20 @@ void CityView::register_map_interactions_viewport() {
         case views::ui::InteractionEvent::Type::Hover:
         case views::ui::InteractionEvent::Type::Enter: {
           if (zoom_ == ZoomLevel::MEDIUM || zoom_ == ZoomLevel::FAR) {
+            if (hold_district_hover_) {
+              if (!held_hover_pos_) {
+                held_hover_pos_ = ie.local;
+              }
+              if (ie.local != *held_hover_pos_) {
+                hold_district_hover_ = false;
+              }
+            }
             // Convert screen coordinates to viewport coordinates accounting for
             // offset
             const auto viewport_coords = camera_.view_to_world(ie.local);
             const auto did = district_at(viewport_coords);
-            if (did != state_.active_district_index()) {
+            if (!hold_district_hover_ &&
+                did != state_.active_district_index()) {
               state_.active_district_index(did);
               build_default_city_status_recipe();
               context_.status_panel->mark_dirty();
@@ -1584,6 +1597,48 @@ void CityView::build_property_status_recipe(int clicked_index) {
     status_controller_.show_city_type_name({.state = &state_, .city = city_},
                                            clicked_index);
   }
+}
+
+bool CityView::on_action(const input::ActionEvent& ev) {
+  if (!ev.state.pressed) {
+    return false;
+  }
+  const bool forward = ev.action == input::Action::NextRestaurant;
+  if (!forward && ev.action != input::Action::PreviousRestaurant) {
+    return false;
+  }
+
+  const auto* player = state_.active_player();
+  if (!player) {
+    return true;
+  }
+  std::optional<core::RestaurantId> selected;
+  if (const auto index = state_.last_clicked_property_index()) {
+    if (const auto* property = city_->property_by_index(*index)) {
+      selected = property->restaurant_id();
+    }
+  }
+  const auto target = forward ? state_.next_restaurant(player->id(), selected)
+                              : state_.prev_restaurant(player->id(), selected);
+  if (target) {
+    glide_to_restaurant(*state_.restaurant(*target));
+  }
+  return true;
+}
+
+void CityView::glide_to_restaurant(const Restaurant& rest) {
+  constexpr int glide_ticks = 8;
+
+  const int index = rest.property().index();
+  camctrl_.glide_to(city_view_scroll_centered_on(index, zoom_), glide_ticks);
+
+  state_.last_clicked_property_index(index);
+  state_.active_district_index(district_at(city_tile_center(index)));
+  property_info_toggle_ = std::nullopt;
+  build_property_status_recipe(index);
+  hold_district_hover_ = true;
+  held_hover_pos_.reset();
+  mark_dirty();
 }
 
 void CityView::build_default_city_status_recipe() {

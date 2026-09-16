@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include <optional>
+
 #include "engine/DebugLabel.h"
 #include "engine/geom/Camera.h"
 #include "engine/geom/Spaces.h"
@@ -60,6 +62,10 @@ public:
   // the camera scroll position actually changed
   [[nodiscard]] bool apply_drag_delta(int dx, int dy, bool inverted) noexcept;
 
+  // Glide the camera to `target` over `ticks` ticks, snapped to the tile grid.
+  // Scroll input cancels it.
+  void glide_to(WorldPoint target, int ticks) noexcept;
+
   // Reset controller internal state (after view/world resize, map swap, etc.).
   // Does not change camera; it re-syncs to camera.scroll().
   void reset() noexcept;
@@ -75,6 +81,7 @@ private:
   // tick() sub-routines: active motion and idle alignment
   void tick_active(float dx, float dy, float x_vel, float y_vel, float max_xf,
                    float max_yf, WorldPoint& scroll);
+  void tick_glide(WorldPoint& scroll);
   void tick_idle(float base_step_x, float base_step_y, float max_xf,
                  float max_yf, WorldPoint& scroll);
 
@@ -117,6 +124,16 @@ private:
 
   // Detect boundaries between "had input this frame" and "idle"
   bool had_user_input_{false};
+
+  struct Glide {
+    float from_x;
+    float from_y;
+    float to_x;
+    float to_y;
+    int tick;
+    int ticks;
+  };
+  std::optional<Glide> glide_;
 
   input::ListenerToken listener_;
 };

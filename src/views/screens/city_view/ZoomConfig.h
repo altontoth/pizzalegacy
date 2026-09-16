@@ -10,6 +10,7 @@
 #include "core/city/CityViewMapState.h"
 #include "core/util/Constants.h"
 #include "core/util/LegacyConstants.h"
+#include "engine/geom/Spaces.h"
 #include "views/base/ViewDefs.h"
 
 constexpr int ZOOM_BOX_WIDTH_MEDIUM = 96;
@@ -83,16 +84,26 @@ struct ZoomConfig {
   }
 };
 
+// World position of the center of a map tile
+inline WorldPoint city_tile_center(int tile_index) {
+  using namespace LegacyConstants;
+  constexpr int tile_w = BASE_MAP_TILE_WIDTH * BASE_MAP_ZOOM_MULTIPLIER;
+  constexpr int tile_h = BASE_MAP_TILE_HEIGHT * BASE_MAP_ZOOM_MULTIPLIER;
+  const int tx = tile_index % MAP_TILES_PER_ROW;
+  const int ty = tile_index / MAP_TILES_PER_ROW;
+  return WorldPoint{tx * tile_w + tile_w / 2, ty * tile_h + tile_h / 2};
+}
+
+// Scroll position that centers the given tile at the given zoom level
+inline WorldPoint city_view_scroll_centered_on(int tile_index, ZoomLevel zoom) {
+  const WorldPoint center = city_tile_center(tile_index);
+  const auto cfg = ZoomConfig::for_zoom_level(zoom);
+  return WorldPoint{center.x - (cfg.viewport_width * cfg.zoom_multiplier) / 2,
+                    center.y - (cfg.viewport_height * cfg.zoom_multiplier) / 2};
+}
+
 // Update scroll so the camera will be centered on the given tile index
 // when returning to the city view.
 inline void center_city_view_on_index(CityViewMapState& state, int tile_index) {
-  using namespace LegacyConstants;
-  int tx = tile_index % MAP_TILES_PER_ROW;
-  int ty = tile_index / MAP_TILES_PER_ROW;
-  int wx = tx * BASE_MAP_TILE_WIDTH * BASE_MAP_ZOOM_MULTIPLIER;
-  int wy = ty * BASE_MAP_TILE_HEIGHT * BASE_MAP_ZOOM_MULTIPLIER;
-
-  auto cfg = ZoomConfig::for_zoom_level(state.zoom);
-  state.scroll.x = wx - (cfg.viewport_width * cfg.zoom_multiplier) / 2;
-  state.scroll.y = wy - (cfg.viewport_height * cfg.zoom_multiplier) / 2;
+  state.scroll = city_view_scroll_centered_on(tile_index, state.zoom);
 }
