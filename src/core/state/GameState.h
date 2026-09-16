@@ -240,12 +240,12 @@ public:
   Restaurant* restaurant(core::RestaurantId r_id) const;
   std::vector<Restaurant*> restaurants_in_city(core::PlayerId pid,
                                                core::CityId city) const;
-  std::vector<Restaurant*> restaurant_cycle(core::PlayerId pid,
-                                            core::RestaurantId from) const;
   std::optional<core::RestaurantId>
-  next_restaurant(core::PlayerId pid, core::RestaurantId from) const;
+  next_restaurant(core::PlayerId pid,
+                  std::optional<core::RestaurantId> from) const;
   std::optional<core::RestaurantId>
-  prev_restaurant(core::PlayerId pid, core::RestaurantId from) const;
+  prev_restaurant(core::PlayerId pid,
+                  std::optional<core::RestaurantId> from) const;
   // For save/load:
   void add_restaurant(std::unique_ptr<Restaurant> restaurant);
   void remove_restaurant(Property& property);
@@ -502,6 +502,7 @@ private:
   std::array<std::unique_ptr<City>, NUMBER_OF_CITIES> cities_;
   CityInitFlags city_initialised_{};
   City& city_or_create(core::CityId city_id);
+  void clear_city_selection();
   void initialise_city_for_ai(City& city);
   std::array<std::unique_ptr<Player>, NUMBER_OF_PLAYERS> players_;
   std::deque<std::unique_ptr<Restaurant>> restaurants_;

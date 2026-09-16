@@ -748,6 +748,7 @@ TurnOrchestrator::finish_end_of_turn(const turn::FinishTurn& step) {
   if (gs_->active_player()->is_human_controlled()) {
     if (auto next_city = gs_->player_city_[gs_->active_player_.value]) {
       if (*next_city != gs_->active_city_) {
+        gs_->clear_city_selection();
         gs_->active_city_ = *next_city;
         gs_->ui().push<CityViewState>(*next_city);
       }

@@ -274,6 +274,9 @@ core::CityId GameState::default_city_id() const {
 
 void GameState::active_city(core::CityId city_id) {
   assert(is_valid_city_id(city_id));
+  if (city_id != active_city_) {
+    clear_city_selection();
+  }
   active_city_ = city_id;
   City& city = city_or_create(city_id);
   if (!city_initialised_[city_id.value]) {
@@ -989,6 +992,12 @@ void GameState::active_district_index(core::DistrictIndex id) {
 
 void GameState::clear_active_district() { active_district_index_.reset(); }
 
+void GameState::clear_city_selection() {
+  active_restaurant_.reset();
+  last_clicked_property_index_.reset();
+  active_district_index_.reset();
+}
+
 std::optional<core::DistrictIndex> GameState::active_district_index() const {
   return active_district_index_;
 }
@@ -1316,9 +1325,12 @@ namespace {
 // Index of `from` in `list`, or nullopt when absent.
 std::optional<std::size_t>
 restaurant_index(const std::vector<Restaurant*>& list,
-                 core::RestaurantId from) {
+                 std::optional<core::RestaurantId> from) {
+  if (!from) {
+    return std::nullopt;
+  }
   for (std::size_t i = 0; i < list.size(); ++i) {
-    if (list[i]->id() == from) {
+    if (list[i]->id() == *from) {
       return i;
     }
   }
@@ -1337,16 +1349,10 @@ GameState::restaurants_in_city(core::PlayerId pid, core::CityId city) const {
   return list;
 }
 
-std::vector<Restaurant*>
-GameState::restaurant_cycle(core::PlayerId pid, core::RestaurantId from) const {
-  const auto* current = restaurant(from);
-  return restaurants_in_city(pid, current ? current->property().city().id()
-                                          : active_city_);
-}
-
 std::optional<core::RestaurantId>
-GameState::next_restaurant(core::PlayerId pid, core::RestaurantId from) const {
-  auto list = restaurant_cycle(pid, from);
+GameState::next_restaurant(core::PlayerId pid,
+                           std::optional<core::RestaurantId> from) const {
+  auto list = restaurants_in_city(pid, active_city_);
   if (list.empty()) {
     return std::nullopt;
   }
@@ -1358,14 +1364,17 @@ GameState::next_restaurant(core::PlayerId pid, core::RestaurantId from) const {
 }
 
 std::optional<core::RestaurantId>
-GameState::prev_restaurant(core::PlayerId pid, core::RestaurantId from) const {
-  auto list = restaurant_cycle(pid, from);
+GameState::prev_restaurant(core::PlayerId pid,
+                           std::optional<core::RestaurantId> from) const {
+  auto list = restaurants_in_city(pid, active_city_);
   if (list.empty()) {
     return std::nullopt;
   }
 
+  // if `from` is not found, just take the last
   auto idx = restaurant_index(list, from);
-  const std::size_t prev_idx = idx ? (*idx + list.size() - 1) % list.size() : 0;
+  const std::size_t prev_idx =
+      idx ? (*idx + list.size() - 1) % list.size() : list.size() - 1;
   return list[prev_idx]->id();
 }
 

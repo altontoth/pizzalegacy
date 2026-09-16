@@ -5,8 +5,11 @@
  */
 
 #include "core/debug/commands/NavCommands.h"
+#include "core/city/City.h"
+#include "core/city/Property.h"
 #include "core/debug/command/CommonArgs.h"
 #include "core/food/IngredientCategoryType.h"
+#include "core/restaurant/Restaurant.h"
 #include "core/state/GameState.h"
 #include "core/state/UIState.h"
 #include "engine/Logger.h"
@@ -135,6 +138,18 @@ Examples:
       .handler = [](const CommandContext& ctx) -> CommandResult {
         auto rid = ctx.restaurant_id(0);
         ctx.state.bootstrap_minimal_playable_world(ctx.context);
+        auto* rest = ctx.state.restaurant(rid);
+        if (!rest) {
+          return CommandResult::error(
+              compat::format("Restaurant {} does not exist", rid.value));
+        }
+        const auto city_id = rest->property().city().id();
+        if (city_id != ctx.state.active_city_id()) {
+          ctx.state.active_city(city_id);
+          if (auto* player = ctx.state.active_player()) {
+            ctx.state.on_city_entered(city_id, *player);
+          }
+        }
         // The screen itself does this when it is built, which a run without
         // the loop never gets to.
         ctx.state.active_restaurant(rid);
