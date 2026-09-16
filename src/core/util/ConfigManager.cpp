@@ -105,26 +105,6 @@ const auto option_defs = std::to_array({
 
     bool_option<&GameOptions::rmb_drag_inverted>("rmb_drag_inverted", "Input"),
     bool_option<&GameOptions::scroll_wheel_inverted>("scroll_wheel_inverted"),
-    int_option<&GameOptions::key_repeat_delay_ms,
-               GameOptions::KEY_REPEAT_DELAY_MIN,
-               GameOptions::KEY_REPEAT_DELAY_MAX>(
-        "key_repeat_delay_ms", {},
-        "milliseconds before a key you're holding down starts repeating; no "
-        "options screen entry"),
-    int_option<&GameOptions::key_repeat_interval_ms,
-               GameOptions::KEY_REPEAT_INTERVAL_MIN,
-               GameOptions::KEY_REPEAT_INTERVAL_MAX>(
-        "key_repeat_interval_ms", {},
-        "milliseconds between repeats; no options screen entry"),
-    int_option<&GameOptions::tooltip_delay_ms, GameOptions::TOOLTIP_DELAY_MIN,
-               GameOptions::TOOLTIP_DELAY_MAX>(
-        "tooltip_delay_ms", {},
-        "milliseconds the pointer rests on an item before its tooltip shows; "
-        "no options screen entry"),
-    bool_option<&GameOptions::show_player_color_in_dropdown>(
-        "show_player_color_in_dropdown", {},
-        "mark players in the city map dropdowns with their player color; "
-        "no options screen entry"),
 
     enum_option<&GameOptions::autosave_frequency,
                 &autosave_frequency_from_config_value>(
@@ -141,21 +121,36 @@ const auto option_defs = std::to_array({
         "show the day's turnover report when the turn ends"),
     bool_option<&GameOptions::fix_legacy_bugs>("fix_legacy_bugs"),
     bool_option<&GameOptions::qol_improvements>("qol_improvements"),
+    bool_option<&GameOptions::show_player_color_in_dropdown>(
+        "show_player_color_in_dropdown", {},
+        "mark players in the city map dropdowns with their player color"),
+
     bool_option<&GameOptions::mafia_shakedowns_target_all_restaurants>(
-        "mafia_shakedowns_target_all_restaurants", {},
-        "shake down a random restaurant instead of always the first; no "
-        "options screen entry"),
+        "mafia_shakedowns_target_all_restaurants", "Advanced",
+        "shake down a random restaurant instead of always the first"),
     bool_option<&GameOptions::demand_fulfillment_popularity>(
         "demand_fulfillment_popularity", {},
-        "fix bug in order fulfillment popularity; no options screen entry"),
+        "fix bug in order fulfillment popularity"),
     enum_option<&GameOptions::win_condition, &win_condition_from_config_value>(
-        "win_condition", {},
-        "paris, any_city or all_cities; no options screen entry"),
+        "win_condition", {}, "paris, any_city or all_cities"),
     int_option<&GameOptions::attack_scene_hz, GameOptions::ATTACK_SCENE_HZ_MIN,
                GameOptions::ATTACK_SCENE_HZ_MAX>(
         "attack_scene_hz", {},
         "attack scene updates per second, 70 for a fast 486 or 35 for a slower "
-        "machine; no options screen entry"),
+        "machine"),
+    int_option<&GameOptions::key_repeat_delay_ms,
+               GameOptions::KEY_REPEAT_DELAY_MIN,
+               GameOptions::KEY_REPEAT_DELAY_MAX>(
+        "key_repeat_delay_ms", {},
+        "milliseconds before a key you're holding down starts repeating"),
+    int_option<&GameOptions::key_repeat_interval_ms,
+               GameOptions::KEY_REPEAT_INTERVAL_MIN,
+               GameOptions::KEY_REPEAT_INTERVAL_MAX>(
+        "key_repeat_interval_ms", {}, "milliseconds between repeats"),
+    int_option<&GameOptions::tooltip_delay_ms, GameOptions::TOOLTIP_DELAY_MIN,
+               GameOptions::TOOLTIP_DELAY_MAX>(
+        "tooltip_delay_ms", {},
+        "milliseconds the pointer rests on an item before its tooltip shows"),
 });
 
 // Where the original game lives.

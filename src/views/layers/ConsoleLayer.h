@@ -16,6 +16,7 @@
 #include "engine/input/TextSession.h"
 #include "views/base/OverlayBehavior.h"
 #include "views/base/View.h"
+#include "views/ui/widgets/ScrollBar.h"
 
 class ConsoleLayer : public View,
                      public OverlayBehavior<ConsoleLayer>,
@@ -37,7 +38,7 @@ private:
   void scroll_line(int delta);
   bool on_text(const input::TextEvent& ev) override;
   bool on_action(const input::ActionEvent& ev) override;
-  bool has_older_content() const;
+  ScrollBar::Extent scroll_extent() const;
 
   DebugConsole& console_;
   std::string input_;
@@ -46,6 +47,13 @@ private:
   std::size_t cmd_hist_index_ = 0;
   // First visible line index
   std::size_t scroll_ = 0;
+  ScrollBar scroll_bar_{
+      {.color = 244, .hover_color = 255, .margin = 2, .bottom_anchored = true}};
+  // Where the output area was last drawn, how many of the oldest lines fit
+  // in it, and so how far back the view can scroll.
+  ViewRect scroll_track_;
+  int scroll_visible_ = 0;
+  std::size_t max_scroll_ = 0;
   std::optional<input::TextSession> text_session_;
   input::ListenerToken listener_;
 

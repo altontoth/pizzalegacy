@@ -17,7 +17,7 @@ public:
   IntSliderMenuItem(GameContext& context, const std::string& text, int& value,
                     int min_value, int max_value,
                     std::function<void(int)> on_change,
-                    FontFace font_face = FontFace::PIZ_NUMB);
+                    FontFace font_face = FontFace::PIZ_NUMB, int step = 1);
 
 protected:
   float fraction() const override;
@@ -32,5 +32,7 @@ private:
   int& value_;
   int min_value_;
   int max_value_;
+  // Values land on multiples of this, counted from min_value.
+  int step_;
   std::function<void(int)> on_change_;
 };

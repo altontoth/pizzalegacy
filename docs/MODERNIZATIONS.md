@@ -2,8 +2,8 @@
 
 This document lists intentional differences from the original game. Some are
 life quality improvements gated by an option, others are bug fixes for original
-bugs (gated by a separate option), a couple are set in the config file only,
-and then there are some that are just always in effect.
+bugs (gated by a separate option), a couple are advanced options, and then
+there are some that are just always in effect.
 
 ## Always in effect
 
@@ -229,13 +229,17 @@ is never charged and stays under loans on the balance sheet for good.
 With the fix enabled, the last monthly payment or an early repayment also pays
 the remainder.
 
-## Config file only
+## Advanced options
 
 Some of what I think were bugs have a big impact on the gameplay; given that
 the game was balanced with those bugs in it, the game might suddenly be too
-difficult with them fixed. To allow play testing with the new behavior I've
-created some options that can only be changed by editing the config file, there
-is no UI for these. All options are listed in the plegacy.conf file.
+difficult with them fixed. To allow play testing with the new behavior these
+options, along with a few timing and display settings, are hidden on the
+options screens until you tick "Show advanced options" in the bottom left
+corner. That checkbox is not saved, so it is off again every time the game
+starts. The balance options and the player colors are on the Gameplay screen,
+the timing options on Controls. settings.conf carries a commented list of every
+option and its default as well.
 
 ### mafia_shakedowns_target_all_restaurants
 The original iterates over all restaurants but never assigns the result to
@@ -246,14 +250,14 @@ the first restaurant but picks a random restaurant so all your restaurants have
 a chance to be the target of a shakedown.
 
 ### demand_fulfillment_popularity
-Popularity is supposed to take a hit when a restaurant couldn't fill its orders
+Popularity is supposed to take a hit when a restaurant couldn’t fill its orders
 the day before, up to -12. The DOS version clears that number right before it
-reads it, so every restaurant gets the -12 punishment, no matter what the
-actual fulfillment was. This option (on by default) fixes it, which increases
-popularity and thus the number of customers a bit.
+reads it, so every restaurant gets the full -12 penalty. This option (on by
+default) fixes it, increasing popularity and thus the number of customers a
+bit.
 
-In the original the popularity thermometer screen also doesn't animate a
-reduction in numbers, ours does (regardless of this option).
+The original popularity thermometer also doesn’t animate reductions in
+popularity; ours does, regardless of this option.
 
 ### show_player_color_in_dropdown
 The Player and Range dropdowns on the city map show each player's control

@@ -5,6 +5,7 @@
  */
 
 #include "core/debug/DebugConsole.h"
+#include <string>
 #include "core/debug/command/CommandDef.h"
 #include "core/debug/command/CommandRegistry.h"
 #include "core/debug/command/CommandResult.h"
@@ -84,10 +85,20 @@ void DebugConsole::report_result(const debug::command::CommandResult& result) {
 }
 
 void DebugConsole::add_line(ConsoleLineType t, std::string text) {
-  if (lines_.size() >= max_lines) {
-    lines_.pop_front();
+  // One console line per line of text
+  std::size_t start = 0;
+  while (true) {
+    const std::size_t end = text.find('\n', start);
+    if (lines_.size() >= max_lines) {
+      lines_.pop_front();
+    }
+    lines_.push_back(
+        ConsoleLine{.type = t, .text = text.substr(start, end - start)});
+    if (end == std::string::npos) {
+      break;
+    }
+    start = end + 1;
   }
-  lines_.push_back(ConsoleLine{.type = t, .text = std::move(text)});
 }
 
 void DebugConsole::log(LogLevel lvl, const std::string& msg) {

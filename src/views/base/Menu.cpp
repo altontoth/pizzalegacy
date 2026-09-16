@@ -34,7 +34,10 @@ constexpr int line_to_x = 620;
 // The line and the help text, measured down from the last item.
 constexpr int help_line_gap = 14;
 constexpr int help_text_gap = 30;
-constexpr int help_text_width = 480;
+constexpr int help_text_width = 400;
+// Where the thumb of a scrolling menu runs, at the right of its items.
+constexpr int scroll_track_x = 606;
+constexpr int scroll_track_w = 14;
 } // namespace
 
 Menu::Menu(GameContext& context, GameState& state, ViewPoint origin,
@@ -64,9 +67,35 @@ void Menu::update_interactions() {
 
     int x = origin_in_view_.x;
     int y = origin_in_view_.y;
-    int i = 0;
-    for (auto& menu_item_ptr : menu_items_) {
-      auto* menu_item = menu_item_ptr.get();
+
+    const bool scrolling = scrolls();
+    const std::size_t visible_end = scrolling ? fit_end(scroll_first_) : 0;
+    if (scrolling) {
+      const ViewRect area{origin_in_view_.x, origin_in_view_.y,
+                          scroll_track_x - origin_in_view_.x, scroll_height_};
+      scroll_track_ = ViewRect{scroll_track_x, origin_in_view_.y,
+                               scroll_track_w, scroll_height_};
+      // Created first so the items on top of it take precedence.
+      interactions_.create_persistent_item(
+          area, "menu_scroll_area", [this](views::ui::InteractionEvent ie) {
+            if (ie.type == views::ui::InteractionEvent::Type::Scroll) {
+              scroll_by(ie.scroll_delta);
+            }
+          });
+    }
+    else {
+      scroll_track_ = {};
+    }
+
+    for (std::size_t index = 0; index < menu_items_.size(); ++index) {
+      auto* menu_item = menu_items_[index].get();
+      if (scrolling && index < *pinned_from_ &&
+          (index < scroll_first_ || index >= visible_end)) {
+        continue;
+      }
+      if (scrolling && index == *pinned_from_) {
+        y = origin_in_view_.y + scroll_height_;
+      }
       if (dynamic_cast<PositionMarkerMenuItem*>(menu_item) != nullptr) {
         // Encountered a column marker, move to the next column, use
         // width and height as x and y (yes, hacky):
@@ -95,7 +124,6 @@ void Menu::update_interactions() {
       });
       if (!menu_item->interactive()) {
         y += size.h + line_spacing_;
-        ++i;
         continue;
       }
       views::ui::TooltipCb ttcb;
@@ -116,7 +144,7 @@ void Menu::update_interactions() {
         }
       }
       interactions_.create_persistent_item(
-          r, "menu_item_" + std::to_string(i),
+          r, "menu_item_" + std::to_string(index),
           [this, menu_item](views::ui::InteractionEvent ie) {
             // Hover fires every frame while the pointer rests on an item;
             // forward it only when the pointer actually moved, so it can't
@@ -134,6 +162,11 @@ void Menu::update_interactions() {
               mark_dirty();
               return;
             }
+            if (ie.type == views::ui::InteractionEvent::Type::Scroll &&
+                scrolls()) {
+              scroll_by(ie.scroll_delta);
+              return;
+            }
             if (ie.type == views::ui::InteractionEvent::Type::ButtonDown &&
                 ie.button == views::ui::MouseButton::Left) {
 
@@ -145,7 +178,9 @@ void Menu::update_interactions() {
                 handle_menu_selection(menu_item);
               }
             }
-            else if (ie.type == views::ui::InteractionEvent::Type::Enter) {
+            // A rebuilt item under a resting pointer also gets Enter.
+            else if (ie.type == views::ui::InteractionEvent::Type::Enter &&
+                     last_hover_pos_ != ie.pos) {
               selected_option_ = menu_item;
               mark_dirty();
             }
@@ -156,8 +191,95 @@ void Menu::update_interactions() {
           {.tooltip = std::move(ttcb),
            .drag_button = menu_item->drag_button()});
       y += size.h + line_spacing_;
-      ++i;
     }
+
+    if (scrolling) {
+      interactions_.create_persistent_item(
+          scroll_track_, "menu_scroll_bar",
+          [this](views::ui::InteractionEvent ie) {
+            int first = static_cast<int>(scroll_first_);
+            if (scroll_bar_.on_interaction(ie, ie.pos, scroll_track_,
+                                           scroll_extent(), first)) {
+              scroll_to(first);
+              mark_dirty();
+            }
+          },
+          {.drag_button = views::ui::MouseButton::Left});
+    }
+  }
+}
+
+void Menu::end_scrolling_items(int max_height) {
+  pinned_from_ = menu_items_.size();
+  scroll_height_ = max_height;
+}
+
+std::size_t Menu::scrolling_item_count() const {
+  return pinned_from_.value_or(0);
+}
+
+std::size_t Menu::fit_end(std::size_t first) const {
+  int height = 0;
+  std::size_t end = first;
+  for (; end < scrolling_item_count(); ++end) {
+    const int item_height = menu_items_[end]->measure().h;
+    if (height + item_height > scroll_height_ && end > first) {
+      break;
+    }
+    height += item_height + line_spacing_;
+  }
+  return end;
+}
+
+bool Menu::scrolls() const {
+  return pinned_from_ && fit_end(0) < scrolling_item_count();
+}
+
+std::size_t Menu::max_scroll() const {
+  const std::size_t count = scrolling_item_count();
+  std::size_t first = count - 1;
+  while (first > 0 && fit_end(first - 1) == count) {
+    --first;
+  }
+  return first;
+}
+
+ScrollBar::Extent Menu::scroll_extent() const {
+  const auto count = static_cast<int>(scrolling_item_count());
+  return {.offset = static_cast<int>(scroll_first_),
+          .visible = count - static_cast<int>(max_scroll()),
+          .total = count};
+}
+
+void Menu::scroll_to(int first) {
+  const auto target = static_cast<std::size_t>(
+      std::clamp(first, 0, static_cast<int>(max_scroll())));
+  if (target != scroll_first_) {
+    scroll_first_ = target;
+    ui_layout_dirty_ = true;
+    mark_dirty();
+  }
+}
+
+void Menu::scroll_by(int wheel_delta) {
+  scroll_to(static_cast<int>(scroll_first_) - (wheel_delta > 0 ? 1 : -1));
+}
+
+void Menu::keep_visible(const MenuItem* item) {
+  if (!scrolls()) {
+    return;
+  }
+  const std::size_t count = scrolling_item_count();
+  for (std::size_t index = 0; index < count; ++index) {
+    if (menu_items_[index].get() != item) {
+      continue;
+    }
+    std::size_t first = std::min(scroll_first_, index);
+    while (fit_end(first) <= index) {
+      ++first;
+    }
+    scroll_to(static_cast<int>(first));
+    return;
   }
 }
 
@@ -305,6 +427,9 @@ void Menu::render(const RenderContext& ctx) {
   for (auto& e : layout_) {
     e.item->draw(*ctx.surface, e.pos, e.item == selected_option_);
   }
+  if (scroll_track_.h > 0) {
+    scroll_bar_.draw(*ctx.surface, scroll_track_, scroll_extent());
+  }
   render_help_text(*ctx.surface);
 }
 
@@ -318,8 +443,12 @@ void Menu::render_help_text(Surface& surface) {
     return;
   }
 
-  const ViewRect& last = layout_.back().rect;
-  const int bottom = last.y + last.h;
+  // Below the scrolling items when there are any, else below the last item
+  int bottom = origin_in_view_.y + scroll_height_;
+  if (!pinned_from_) {
+    const ViewRect& last = layout_.back().rect;
+    bottom = last.y + last.h;
+  }
   gfx::draw::line(surface, ViewPoint{line_from_x, bottom + help_line_gap},
                   ViewPoint{line_to_x, bottom + help_line_gap}, line_gray);
 
@@ -333,7 +462,7 @@ void Menu::render_help_text(Surface& surface) {
   context_.font->render_into_rect(
       surface, help,
       {origin_in_view_.x, bottom + help_text_gap, help_text_width, 0},
-      FontFace::PIZ_NUMB, TextStyle{.color = 240});
+      FontFace::CSTANDAR, TextStyle{.color = 240});
 }
 
 MenuItem& Menu::add_menu_item(std::unique_ptr<MenuItem> item) {
@@ -380,6 +509,7 @@ Surface Menu::default_background(const std::string& title) const {
 void Menu::update_selection(MenuItem* item) {
   if (item != selected_option_) {
     selected_option_ = item;
+    keep_visible(item);
   }
   mark_dirty();
 }

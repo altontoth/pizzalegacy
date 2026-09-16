@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <utility>
@@ -63,10 +64,19 @@ public:
   virtual std::string tooltip_text() const { return ""; }
   const std::string& help_text() const { return help_text_; }
   void help_text(std::string text) { help_text_ = std::move(text); }
+  // Advanced items are drawn in gray while not selected.
+  bool advanced() const { return advanced_; }
+  MenuItem& advanced(bool advanced) {
+    advanced_ = advanced;
+    return *this;
+  }
   virtual void begin_keyboard_session(input::InputManager*,
                                       std::function<void()>) {};
 
 protected:
+  // Text color while not selected.
+  uint8_t idle_color() const { return advanced_ ? 246 : 240; }
+
   GameContext& context_;
   int width_ = 0;
   int height_ = 0;
@@ -75,4 +85,5 @@ protected:
   std::string text_;
   std::string help_text_;
   HAlign alignment_{HAlign::Left};
+  bool advanced_ = false;
 };

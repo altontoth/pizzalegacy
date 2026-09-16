@@ -12,7 +12,6 @@
 #include "engine/geom/Spaces.h"
 #include "engine/gfx/Draw.h"
 #include "resources/FontManager.h"
-#include "views/ui/widgets/ScrollThumb.h"
 
 constexpr int SAVE_BOX_W = 224;
 constexpr int SAVE_BOX_H = 216;
@@ -71,8 +70,8 @@ void SaveFileListBox::draw(Surface& screen, ViewPoint p, bool is_selected) {
     y += LINE_HEIGHT;
   }
 
-  draw_scroll_thumb(block, Size{SAVE_BOX_W, SAVE_BOX_H}, *scroll_offset_,
-                    MAX_VISIBLE_FILES, static_cast<int>(save_files_.size()));
+  scroll_bar_.draw(block, ViewRect{0, 0, SAVE_BOX_W, SAVE_BOX_H},
+                   scroll_extent());
 
   screen.blit_raw(block, p);
   if (is_selected) {
@@ -80,6 +79,12 @@ void SaveFileListBox::draw(Surface& screen, ViewPoint p, bool is_selected) {
                    FOCUS_COLOR, 2);
   }
   height_ = block.height();
+}
+
+ScrollBar::Extent SaveFileListBox::scroll_extent() const {
+  return {.offset = *scroll_offset_,
+          .visible = MAX_VISIBLE_FILES,
+          .total = static_cast<int>(save_files_.size())};
 }
 
 Size SaveFileListBox::measure() const { return Size{SAVE_BOX_W, SAVE_BOX_H}; }
@@ -113,6 +118,11 @@ int SaveFileListBox::file_at(int local_y) const {
 }
 
 bool SaveFileListBox::on_interaction(views::ui::InteractionEvent ie) {
+  if (scroll_bar_.on_interaction(ie, ie.local,
+                                 ViewRect{0, 0, SAVE_BOX_W, SAVE_BOX_H},
+                                 scroll_extent(), *scroll_offset_)) {
+    return true;
+  }
   // Consume the press; mouse behavior happens on Click.
   if (ie.type == views::ui::InteractionEvent::Type::ButtonDown) {
     return true;

@@ -6,7 +6,9 @@
 
 #include "views/screens/menus/MenuOptions.h"
 
+#include <functional>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "core/state/GameOptions.h"
@@ -17,10 +19,11 @@
 #include "engine/input/Action.h"
 #include "engine/input/InputManager.h"
 #include "engine/input/Key.h"
+#include "views/ui/widgets/CheckboxMenuItem.h"
 #include "views/ui/widgets/EnumMenuItem.h"
 #include "views/ui/widgets/IntSliderMenuItem.h"
+#include "views/ui/widgets/PositionMarkerMenuItem.h"
 #include "views/ui/widgets/SliderMenuItem.h"
-#include "views/ui/widgets/SpacerMenuItem.h"
 #include "views/ui/widgets/TextMenuItem.h"
 #include "views/ui/widgets/ToggleMenuItem.h"
 
@@ -53,7 +56,7 @@ MenuOptions::MenuOptions(GameContext& context, GameState& state)
 }
 
 MenuOptions::MenuOptions(GameContext& context, GameState& state,
-                         OptionsScreen screen)
+                         OptionsScreen screen, bool focus_advanced_toggle)
     : Menu(context, state, ViewPoint{120, 140}, 3) {
   switch (screen) {
   case OptionsScreen::Audio:
@@ -73,8 +76,8 @@ MenuOptions::MenuOptions(GameContext& context, GameState& state,
     build_gameplay(state);
     break;
   }
-  add_save_and_back(state);
-  update_selection(nullptr);
+  MenuItem* advanced_toggle = add_save_and_back(state, screen);
+  update_selection(focus_advanced_toggle ? advanced_toggle : nullptr);
 }
 
 void MenuOptions::build_chooser(GameState& state) {
@@ -97,10 +100,17 @@ void MenuOptions::build_chooser(GameState& state) {
 
   // Sub-screens save their own changes when leaving, so from the main screen we
   // can just pop.
-  add_menu_item(std::make_unique<SpacerMenuItem>(context_, 30));
+  add_back([&state] { state.ui().pop(); });
+}
+
+void MenuOptions::add_back(std::function<void()> action) {
+  // The bottom right corner, where the other menus have theirs
+  constexpr int back_x = 426;
+  constexpr int back_y = 230;
+  add_menu_item(
+      std::make_unique<PositionMarkerMenuItem>(context_, back_x, back_y));
   add_menu_item(std::make_unique<TextMenuItem>(
-      context_, "Back", [&state] { state.ui().pop(); }, face, style,
-      sel_style));
+      context_, "Back", std::move(action), FontFace::RUBY, style, sel_style));
 }
 
 void MenuOptions::build_audio(GameState& state) {
@@ -225,6 +235,47 @@ void MenuOptions::build_gameplay(GameState& state) {
       context_, "Auto save slots", state.options().autosave_count,
       GameOptions::AUTOSAVE_COUNT_MIN, GameOptions::AUTOSAVE_COUNT_MAX,
       [this](int) { mark_dirty(); }));
+
+  if (!state.options().show_advanced_options) {
+    return;
+  }
+  auto& options = state.options();
+  auto toggle = [this](const std::string& label, bool& value) -> MenuItem& {
+    return add_menu_item(std::make_unique<ToggleMenuItem>(context_, label,
+                                                          value,
+                                                          [&value, this] {
+                                                            value = !value;
+                                                            mark_dirty();
+                                                          }))
+        .advanced(true);
+  };
+  toggle("Random shakedown target",
+         options.mafia_shakedowns_target_all_restaurants)
+      .help_text("On: the mafia can shake down any of your restaurants. Off: "
+                 "only your first one, as in the original.");
+  toggle("Fulfillment affects popularity",
+         options.demand_fulfillment_popularity)
+      .help_text("On: popularity reflects unmet orders. "
+                 "Off: it always takes the full drop, as in the DOS original.");
+  add_menu_item(std::make_unique<EnumMenuItem<WinCondition>>(
+                    context_, "Win condition", options.win_condition,
+                    std::vector{WinCondition::Paris, WinCondition::AnyCity,
+                                WinCondition::AllCities},
+                    [this] { mark_dirty(); }, face))
+      .advanced(true)
+      .help_text("Paris: win with enough market share in Paris. "
+                 "Any: win in any city. All: win in every city.");
+  add_menu_item(std::make_unique<IntSliderMenuItem>(
+                    context_, "Attack scene speed", options.attack_scene_hz,
+                    GameOptions::ATTACK_SCENE_HZ_MIN,
+                    GameOptions::ATTACK_SCENE_HZ_MAX,
+                    [this](int) { mark_dirty(); }, face, 5))
+      .advanced(true)
+      .help_text("Updates per second in burglaries. The original ran at 70 "
+                 "on a fast 486 and 35 or less on slower machines.");
+  toggle("Player colors in dropdowns", options.show_player_color_in_dropdown)
+      .help_text("On: the Player and Range lists on the city map show each "
+                 "player's color.");
 }
 
 void MenuOptions::build_controls(GameState& state) {
@@ -257,19 +308,63 @@ void MenuOptions::build_controls(GameState& state) {
           }))
       .help_text("Draw the cursor with the game so it stays in sync with the "
                  "game.");
+
+  if (!state.options().show_advanced_options) {
+    return;
+  }
+  auto& options = state.options();
+  auto changed = [this](int) { mark_dirty(); };
+  add_menu_item(std::make_unique<IntSliderMenuItem>(
+                    context_, "Key repeat delay", options.key_repeat_delay_ms,
+                    GameOptions::KEY_REPEAT_DELAY_MIN,
+                    GameOptions::KEY_REPEAT_DELAY_MAX, changed, face, 50))
+      .advanced(true)
+      .help_text("Milliseconds before a key starts repeating when held down.");
+  add_menu_item(std::make_unique<IntSliderMenuItem>(
+                    context_, "Key repeat interval",
+                    options.key_repeat_interval_ms,
+                    GameOptions::KEY_REPEAT_INTERVAL_MIN,
+                    GameOptions::KEY_REPEAT_INTERVAL_MAX, changed, face, 10))
+      .advanced(true)
+      .help_text("Milliseconds between repeats while a key is held down.");
+  add_menu_item(std::make_unique<IntSliderMenuItem>(
+                    context_, "Tooltip delay", options.tooltip_delay_ms,
+                    GameOptions::TOOLTIP_DELAY_MIN,
+                    GameOptions::TOOLTIP_DELAY_MAX, changed, face, 100))
+      .advanced(true)
+      .help_text("Milliseconds the pointer rests on something before its "
+                 "tooltip shows.");
 }
 
-void MenuOptions::add_save_and_back(GameState& state) {
-  add_menu_item(std::make_unique<SpacerMenuItem>(context_, 30));
+MenuItem* MenuOptions::add_save_and_back(GameState& state,
+                                         OptionsScreen screen) {
+  // Leaves room below for the help text.
+  constexpr int scroll_height = 170;
+  end_scrolling_items(scroll_height);
+
+  MenuItem* advanced_toggle = nullptr;
+  if (screen == OptionsScreen::Controls || screen == OptionsScreen::Gameplay) {
+    // The bottom left corner, level with Back
+    constexpr int toggle_y = 238;
+    add_menu_item(
+        std::make_unique<PositionMarkerMenuItem>(context_, 0, toggle_y));
+    advanced_toggle = &add_menu_item(std::make_unique<CheckboxMenuItem>(
+        context_, "Show advanced options",
+        state.options().show_advanced_options, [&state, screen] {
+          bool& show = state.options().show_advanced_options;
+          show = !show;
+          state.ui().replace_top<OptionsMenuState>(OptionsMenuState{
+              .screen = screen, .focus_advanced_toggle = true});
+        }));
+  }
+
   // There is no way to leave the options without saving, so "Back" saves the
   // current settings and returns to the main screen.
-  add_menu_item(std::make_unique<TextMenuItem>(
-      context_, "Back",
-      [this, &state] {
-        context_.config->save_options(state.options());
-        state.ui().pop();
-      },
-      face, style, sel_style));
+  add_back([this, &state] {
+    context_.config->save_options(state.options());
+    state.ui().pop();
+  });
+  return advanced_toggle;
 }
 
 Surface MenuOptions::background() const { return default_background(title_); }

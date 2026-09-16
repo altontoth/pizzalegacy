@@ -70,6 +70,8 @@ struct CityViewState {
 };
 struct OptionsMenuState {
   OptionsScreen screen;
+  // Reopened by the advanced options checkbox, which keeps the focus.
+  bool focus_advanced_toggle = false;
 };
 struct RestaurantMenuState {
   core::RestaurantId id;

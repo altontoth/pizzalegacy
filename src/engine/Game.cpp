@@ -354,9 +354,6 @@ int Game::run() {
 
   Renderer renderer(sdl_, display_height_);
   renderer.set_cursor_manager(cursor_manager_.get());
-  input_manager_->key_repeat(state.options().key_repeat_delay_ms,
-                             state.options().key_repeat_interval_ms);
-  tooltip_manager_->delay(state.options().tooltip_delay_ms);
   if (!SDL_SetRenderVSync(
           sdl_.renderer.get(),
           state.options().vsync ? 1 : SDL_RENDERER_VSYNC_DISABLED)) {
@@ -415,6 +412,10 @@ int Game::run() {
     }
 
     handle_events(loop_state);
+    // Options can change at any time, from the options screen or console
+    input_manager_->key_repeat(state.options().key_repeat_delay_ms,
+                               state.options().key_repeat_interval_ms);
+    tooltip_manager_->delay(state.options().tooltip_delay_ms);
     input_manager_->advance_key_repeat(context.clock.dt_ms);
     tooltip_manager_->advance(context.clock.dt_ms);
 

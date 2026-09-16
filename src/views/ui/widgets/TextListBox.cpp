@@ -11,7 +11,6 @@
 #include "engine/geom/Spaces.h"
 #include "engine/gfx/Draw.h"
 #include "resources/FontManager.h"
-#include "views/ui/widgets/ScrollThumb.h"
 
 constexpr int LINE_HEIGHT = 18;
 constexpr int TEXT_COLOR = 1;
@@ -33,6 +32,12 @@ int TextListBox::visible_lines() const { return size_.h / LINE_HEIGHT; }
 
 int TextListBox::max_scroll() const {
   return std::max(0, static_cast<int>(lines_.size()) - visible_lines());
+}
+
+ScrollBar::Extent TextListBox::scroll_extent() const {
+  return {.offset = *scroll_offset_,
+          .visible = visible_lines(),
+          .total = static_cast<int>(lines_.size())};
 }
 
 // The clickable line under the given widget-local y, or -1.
@@ -81,7 +86,7 @@ void TextListBox::draw(Surface& screen, ViewPoint p, bool is_selected) {
   }
 
   if (scroll_thumb_) {
-    draw_scroll_thumb(block, size_, *scroll_offset_, visible_lines(), count);
+    scroll_bar_.draw(block, ViewRect{{0, 0}, size_}, scroll_extent());
   }
 
   screen.blit_raw(block, p);
@@ -117,6 +122,11 @@ bool TextListBox::on_adjust(AdjustAxis axis, int delta) {
 }
 
 bool TextListBox::on_interaction(views::ui::InteractionEvent ie) {
+  if (scroll_thumb_ &&
+      scroll_bar_.on_interaction(ie, ie.local, ViewRect{{0, 0}, size_},
+                                 scroll_extent(), *scroll_offset_)) {
+    return true;
+  }
   // Consume the press; mouse behavior happens on Click.
   if (ie.type == views::ui::InteractionEvent::Type::ButtonDown) {
     return true;

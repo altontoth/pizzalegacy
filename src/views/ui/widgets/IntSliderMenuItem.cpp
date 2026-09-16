@@ -17,9 +17,9 @@ IntSliderMenuItem::IntSliderMenuItem(GameContext& context,
                                      const std::string& text, int& value,
                                      int min_value, int max_value,
                                      std::function<void(int)> on_change,
-                                     FontFace font_face)
+                                     FontFace font_face, int step)
     : SliderMenuItemBase(context, text, font_face), value_(value),
-      min_value_(min_value), max_value_(max_value),
+      min_value_(min_value), max_value_(max_value), step_(step),
       on_change_(std::move(on_change)) {}
 
 float IntSliderMenuItem::fraction() const {
@@ -30,13 +30,14 @@ float IntSliderMenuItem::fraction() const {
 
 void IntSliderMenuItem::set_fraction(float frac) {
   const float clamped = std::clamp(frac, 0.0f, 1.0f);
-  set_value(min_value_ +
-            static_cast<int>(std::lround(
-                clamped * static_cast<float>(max_value_ - min_value_))));
+  const auto steps = static_cast<int>(
+      std::lround(clamped * static_cast<float>(max_value_ - min_value_) /
+                  static_cast<float>(step_)));
+  set_value(std::min(min_value_ + (steps * step_), max_value_));
 }
 
 void IntSliderMenuItem::step(int delta) {
-  set_value(std::clamp(value_ + delta, min_value_, max_value_));
+  set_value(std::clamp(value_ + (delta * step_), min_value_, max_value_));
 }
 
 void IntSliderMenuItem::set_value(int v) {

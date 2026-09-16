@@ -445,7 +445,8 @@ ViewFactory::Result ViewFactory::create(GameContext& context, GameState& gs) {
           },
           [&](const OptionsMenuState& oms) {
             ui_mode = UiMode::Menu;
-            view = std::make_unique<MenuOptions>(context, gs, oms.screen);
+            view = std::make_unique<MenuOptions>(context, gs, oms.screen,
+                                                 oms.focus_advanced_toggle);
           },
           [&](const RestaurantMenuState& rms) {
             view = std::make_unique<RestaurantMenu>(context, gs, rms.id);

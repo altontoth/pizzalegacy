@@ -13,6 +13,7 @@
 #include "engine/geom/Spaces.h"
 #include "engine/ui/InteractionEvent.h"
 #include "views/ui/widgets/MenuItem.h"
+#include "views/ui/widgets/TrackDrag.h"
 
 // A menu row with a label on the left and a draggable horizontal slider in the
 // value column. Subclasses can map the track position (float between 0 and 1)
@@ -46,13 +47,7 @@ protected:
   virtual std::string widest_value_text() const = 0;
 
 private:
-  static bool point_on_track(int local_x);
-  // Set the value from a row-local pointer x, clamped to 0..1.
-  void seek_to(int local_x);
-
-  bool dragging_ = false;
-  // A press landed on the track and may still turn into a drag.
-  bool armed_ = false;
+  TrackDrag track_drag_;
 };
 
 // Continuous slider for a float (between 0 and 1), shown as a percentage.

@@ -58,10 +58,27 @@ void ConsoleLayer::render(const RenderContext& ctx) {
   const int text_width =
       DisplayConstants::SCREEN_WIDTH - 8; // 4px margin each side
 
+  auto line_height = [&](std::size_t i) {
+    int num_wrapped = context_.font->count_wrapped_lines(
+        lines[i].text, FontFace::MINI, text_width);
+    return std::max(1, num_wrapped) * font_line_height_;
+  };
+
+  // How many of the oldest lines fill the screen, which caps how far back
+  // the view can scroll.
+  std::size_t oldest_page = 0;
+  for (int height = 0; oldest_page < lines.size(); ++oldest_page) {
+    height += line_height(oldest_page);
+    if (height > available_height && oldest_page > 0) {
+      break;
+    }
+  }
+  max_scroll_ = lines.size() - oldest_page;
+  scroll_visible_ = static_cast<int>(oldest_page);
+
   // scroll_ = 0 means viewing newest content (bottom of history)
   // scroll_ > 0 means scrolled up into older content
-  // Clamp scroll to valid range (lines is non-empty here)
-  scroll_ = std::min(scroll_, lines.size() - 1);
+  scroll_ = std::min(scroll_, max_scroll_);
 
   // The anchor line is the newest line we want visible at the bottom
   const std::size_t anchor_index = lines.size() - 1 - scroll_;
@@ -76,16 +93,8 @@ void ConsoleLayer::render(const RenderContext& ctx) {
 
   for (std::size_t i = anchor_index + 1; i > 0;) {
     --i;
-    int num_wrapped = context_.font->count_wrapped_lines(
-        lines[i].text, FontFace::MINI, text_width);
-    int line_h = std::max(1, num_wrapped) * font_line_height_;
-
-    if (accumulated_height + line_h > available_height &&
-        !visible_lines.empty()) {
-      // This line won't fit and we already have content - stop here
-      break;
-    }
-
+    const int line_h = line_height(i);
+    // The line that reaches past the top is still drawn, cut off.
     accumulated_height += line_h;
     visible_lines.push_back({i, line_h});
 
@@ -97,8 +106,12 @@ void ConsoleLayer::render(const RenderContext& ctx) {
   // Reverse so we render oldest first (top to bottom)
   std::ranges::reverse(visible_lines);
 
+  // Drawn on a surface of its own so the topmost line is clipped
+  Surface output(DisplayConstants::SCREEN_WIDTH, available_height);
+  output.fill(240);
+
   // Calculate y positions - align content to the bottom of the output area
-  int y = output_bottom - accumulated_height;
+  int y = available_height - accumulated_height;
 
   for (const auto& vl : visible_lines) {
     uint8_t col = typed_text_color;
@@ -113,35 +126,21 @@ void ConsoleLayer::render(const RenderContext& ctx) {
       col = output_text_color;
       break;
     }
-    context_.font->render_text_onto(*ctx.surface, lines[vl.index].text,
+    context_.font->render_text_onto(output, lines[vl.index].text,
                                     ViewPoint{4, y}, FontFace::MINI, col);
     y += vl.height;
   }
+  ctx.surface->blit_raw(output, ViewPoint{0, output_top});
 
-  // Scrollbar - only show if there's more content than fits
-  if (has_older_content() || scroll_ > 0) {
-    const int bar_x = DisplayConstants::SCREEN_WIDTH - 6;
-    const int bar_w = 4;
-    const int track_h = output_bottom - output_top;
+  scroll_track_ = ViewRect{0, output_top, DisplayConstants::SCREEN_WIDTH,
+                           output_bottom - output_top};
+  scroll_bar_.draw(*ctx.surface, scroll_track_, scroll_extent());
+}
 
-    const std::size_t total_lines = lines.size();
-    const std::size_t visible_count = visible_lines.size();
-    const std::size_t max_scroll = total_lines - visible_count;
-
-    // Only draw scrollbar if there's actually scrollable content
-    if (visible_count < total_lines && max_scroll > 0) {
-      const int bar_h =
-          std::max(10, static_cast<int>(visible_count * track_h / total_lines));
-      // scroll_ = 0 means at bottom, so scrollbar should be at bottom
-      // scroll_ = max means at top, so scrollbar should be at top
-      const int bar_pos =
-          static_cast<int>((max_scroll - std::min(scroll_, max_scroll)) *
-                           (track_h - bar_h) / max_scroll);
-
-      ViewRect sb{bar_x, output_top + bar_pos, bar_w, bar_h};
-      ctx.surface->fill_rect(sb, 244);
-    }
-  }
+ScrollBar::Extent ConsoleLayer::scroll_extent() const {
+  return {.offset = static_cast<int>(scroll_),
+          .visible = scroll_visible_,
+          .total = static_cast<int>(console_.lines().size())};
 }
 
 bool ConsoleLayer::on_text(const input::TextEvent& ev) {
@@ -278,16 +277,8 @@ void ConsoleLayer::scroll_line(int delta) {
   // delta > 0 means scroll down (towards newer, decrease scroll_)
   // delta < 0 means scroll up (towards older, increase scroll_)
   int new_scroll = static_cast<int>(scroll_) - delta;
-  new_scroll = std::clamp(new_scroll, 0, static_cast<int>(num_lines - 1));
+  new_scroll = std::clamp(new_scroll, 0, static_cast<int>(max_scroll_));
   scroll_ = static_cast<std::size_t>(new_scroll);
-}
-
-bool ConsoleLayer::has_older_content() const {
-  const auto num_lines = console_.lines().size();
-  if (num_lines == 0) {
-    return false;
-  }
-  return scroll_ < num_lines - 1;
 }
 
 bool ConsoleLayer::freezes_view() const { return is_active(); }
@@ -299,11 +290,20 @@ void ConsoleLayer::tick() {
   interactions_.begin_frame();
   ViewRect console_rect{0, 0, DisplayConstants::SCREEN_WIDTH, console_height_};
   interactions_.create_frame_item(
-      console_rect, "console_scroll", [this](views::ui::InteractionEvent ie) {
+      console_rect, "console_scroll",
+      [this](views::ui::InteractionEvent ie) {
+        int offset = static_cast<int>(scroll_);
+        if (scroll_bar_.on_interaction(ie, ie.local, scroll_track_,
+                                       scroll_extent(), offset)) {
+          scroll_ = static_cast<std::size_t>(offset);
+          mark_dirty();
+          return;
+        }
         if (ie.type != views::ui::InteractionEvent::Type::Scroll) {
           return;
         }
         scroll_line(-ie.scroll_delta);
         mark_dirty();
-      });
+      },
+      {.drag_button = views::ui::MouseButton::Left});
 }

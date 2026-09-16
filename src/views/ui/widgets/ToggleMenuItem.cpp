@@ -8,8 +8,7 @@
 #include "engine/geom/Spaces.h"
 #include "resources/FontManager.h"
 
-constexpr int COLOR_HOVER = 29;   // Green
-constexpr int COLOR_NORMAL = 240; // Black
+constexpr int COLOR_HOVER = 29; // Green
 constexpr int toggle_behind_label_offset = 400;
 
 // Original constructor - delegates to new constructor with default labels
@@ -30,7 +29,7 @@ void ToggleMenuItem::draw(Surface& screen, ViewPoint p, bool is_selected) {
   const std::string& value_text = value_ ? true_label_ : false_label_;
 
   RenderedTextMetrics metrics = context_.font->render_text_onto(
-      screen, text_, p, font_face_, is_selected ? COLOR_HOVER : COLOR_NORMAL,
+      screen, text_, p, font_face_, is_selected ? COLOR_HOVER : idle_color(),
       TextAnchor::Start);
 
   width_ = metrics.width;
@@ -38,7 +37,7 @@ void ToggleMenuItem::draw(Surface& screen, ViewPoint p, bool is_selected) {
 
   metrics = context_.font->render_text_onto(
       screen, value_text, ViewPoint{toggle_behind_label_offset, p.y},
-      font_face_, is_selected ? COLOR_HOVER : COLOR_NORMAL, TextAnchor::Start);
+      font_face_, is_selected ? COLOR_HOVER : idle_color(), TextAnchor::Start);
   width_ += (toggle_behind_label_offset - width_);
 }
 

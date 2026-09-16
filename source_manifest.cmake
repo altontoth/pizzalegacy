@@ -238,11 +238,13 @@ set(GAME_PLEGACY_SOURCES
     src/views/ui/widgets/SaveFileInfoBox.cpp
     src/views/ui/widgets/SaveFileInputBox.cpp
     src/views/ui/widgets/SaveFileListBox.cpp
+    src/views/ui/widgets/ScrollBar.cpp
     src/views/ui/widgets/SliderMenuItem.cpp
     src/views/ui/widgets/StatBar.cpp
     src/views/ui/widgets/TextListBox.cpp
     src/views/ui/widgets/TextMenuItem.cpp
     src/views/ui/widgets/ToggleMenuItem.cpp
+    src/views/ui/widgets/TrackDrag.cpp
     src/views/viewers/BobViewer.cpp
     src/views/viewers/CharacterViewer.cpp
     src/views/viewers/FontViewer.cpp
@@ -741,13 +743,14 @@ set(PLEGACY_HEADERS
     src/views/ui/widgets/SaveFileInfoBox.h
     src/views/ui/widgets/SaveFileInputBox.h
     src/views/ui/widgets/SaveFileListBox.h
-    src/views/ui/widgets/ScrollThumb.h
+    src/views/ui/widgets/ScrollBar.h
     src/views/ui/widgets/SliderMenuItem.h
     src/views/ui/widgets/SpacerMenuItem.h
     src/views/ui/widgets/StatBar.h
     src/views/ui/widgets/TextListBox.h
     src/views/ui/widgets/TextMenuItem.h
     src/views/ui/widgets/ToggleMenuItem.h
+    src/views/ui/widgets/TrackDrag.h
     src/views/viewers/BobViewer.h
     src/views/viewers/CharacterViewer.h
     src/views/viewers/FontViewer.h

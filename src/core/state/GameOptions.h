@@ -48,6 +48,18 @@ inline std::string to_string(AutosaveFrequency freq) {
 // alone, apparently meaning any one city; the German one checks every city.
 enum class WinCondition { Paris, AnyCity, AllCities };
 
+inline std::string to_string(WinCondition condition) {
+  switch (condition) {
+  case WinCondition::Paris:
+    return "Paris";
+  case WinCondition::AnyCity:
+    return "Any city";
+  case WinCondition::AllCities:
+    return "All cities";
+  }
+  return "??";
+}
+
 inline std::string_view to_config_value(WinCondition condition) {
   switch (condition) {
   case WinCondition::Paris:
@@ -140,8 +152,8 @@ struct GameOptions {
   static constexpr int KEY_REPEAT_INTERVAL_MAX = 1000;
   static constexpr int TOOLTIP_DELAY_MIN = 0;
   static constexpr int TOOLTIP_DELAY_MAX = 5000;
-  static constexpr int ATTACK_SCENE_HZ_MIN = 1;
-  static constexpr int ATTACK_SCENE_HZ_MAX = 70;
+  static constexpr int ATTACK_SCENE_HZ_MIN = 15;
+  static constexpr int ATTACK_SCENE_HZ_MAX = 100;
 
   bool map_fx = true;
   bool restaurant_fx = true;
@@ -169,7 +181,6 @@ struct GameOptions {
   bool load_list_sort_by_date = true;
   bool load_list_show_autosaves = false;
 
-  // Config file only, with no entry in the options screen.
   // The mafia shakes down a random restaurant instead of always the first.
   bool mafia_shakedowns_target_all_restaurants = false;
   bool demand_fulfillment_popularity = true;
@@ -184,7 +195,9 @@ struct GameOptions {
   // it draws, which is 70 on a fast 486 and 35 or less on a slower machine.
   int attack_scene_hz = 35;
 
-  // Console only, for this run.
-  // Off stops the police turning up by themselves.
+  // Not saved, so these last for this run only.
+  // Off stops the police turning up by themselves. Console only.
   bool police = true;
+  // Show the advanced rows on the options screens.
+  bool show_advanced_options = false;
 };

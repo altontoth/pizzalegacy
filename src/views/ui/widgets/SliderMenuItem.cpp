@@ -18,7 +18,6 @@
 #include "resources/FontManager.h"
 
 namespace {
-constexpr uint8_t COLOR_LABEL = 240;
 constexpr uint8_t COLOR_TRACK_FILLED = 240;
 constexpr uint8_t COLOR_TRACK_EMPTY = 198;
 constexpr uint8_t COLOR_HANDLE = 14;
@@ -47,7 +46,7 @@ SliderMenuItemBase::SliderMenuItemBase(GameContext& context,
     : MenuItem(context, font_face, text) {}
 
 void SliderMenuItemBase::draw(Surface& screen, ViewPoint p, bool is_selected) {
-  context_.font->render_text_onto(screen, text_, p, font_face_, COLOR_LABEL,
+  context_.font->render_text_onto(screen, text_, p, font_face_, idle_color(),
                                   TextAnchor::Start);
 
   const int track_x = p.x + TRACK_LOCAL_X;
@@ -68,7 +67,7 @@ void SliderMenuItemBase::draw(Surface& screen, ViewPoint p, bool is_selected) {
   }
 
   uint8_t handle_color = COLOR_HANDLE;
-  if (dragging_) {
+  if (track_drag_.dragging()) {
     handle_color = COLOR_HANDLE_GRAB;
   }
   else if (is_selected) {
@@ -80,7 +79,7 @@ void SliderMenuItemBase::draw(Surface& screen, ViewPoint p, bool is_selected) {
 
   context_.font->render_text_onto(screen, value_text(),
                                   ViewPoint{p.x + VALUE_LOCAL_X, p.y},
-                                  font_face_, COLOR_LABEL, TextAnchor::Start);
+                                  font_face_, idle_color(), TextAnchor::Start);
 }
 
 Size SliderMenuItemBase::measure() const {
@@ -100,64 +99,26 @@ bool SliderMenuItemBase::on_adjust(AdjustAxis axis, int delta) {
   return true;
 }
 
-bool SliderMenuItemBase::point_on_track(int local_x) {
-  // Pad by the handle radius so the disc stays grabbable even when at min or
-  // max position.
-  return local_x >= TRACK_LOCAL_X - HANDLE_RADIUS &&
-         local_x <= TRACK_LOCAL_X + TRACK_WIDTH + HANDLE_RADIUS;
-}
-
-void SliderMenuItemBase::seek_to(int local_x) {
-  const float frac = std::clamp(
-      static_cast<float>(local_x - TRACK_LOCAL_X) / TRACK_WIDTH, 0.0f, 1.0f);
-  set_fraction(frac);
-}
-
 bool SliderMenuItemBase::on_interaction(views::ui::InteractionEvent ie) {
-  using Type = views::ui::InteractionEvent::Type;
   // Menu::update_interactions rewrites ie.pos to be local to the row rect,
-  // whose origin is the row origin the track is drawn relative to.
-  const int local_x = ie.pos.x;
+  // whose origin is the row origin the track is drawn relative to. The
+  // padding keeps the disc grabbable even when at min or max position.
+  const TrackDrag::Track track{
+      .start = TRACK_LOCAL_X, .length = TRACK_WIDTH, .padding = HANDLE_RADIUS};
 
-  switch (ie.type) {
-  case Type::ButtonDown:
-    if (ie.button != views::ui::MouseButton::Left || !point_on_track(local_x)) {
-      armed_ = false;
-      return false;
-    }
-    // Click-to-seek: jump immediately, and arm a possible drag.
-    armed_ = true;
-    seek_to(local_x);
-    return true;
-  case Type::DragStart:
-    if (!armed_) {
-      return false;
-    }
-    dragging_ = true;
-    seek_to(local_x);
-    return true;
-  case Type::DragMove:
-    if (!dragging_) {
-      return false;
-    }
-    seek_to(local_x);
-    return true;
-  case Type::DragEnd:
-    if (!dragging_ && !armed_) {
-      return false;
-    }
-    dragging_ = false;
-    armed_ = false;
-    return true;
-  case Type::Scroll:
-    if (ie.scroll_delta == 0) {
+  if (ie.type == views::ui::InteractionEvent::Type::Scroll) {
+    if (ie.scroll_delta == 0 || !track.contains(ie.pos.x)) {
       return false;
     }
     step(ie.scroll_delta > 0 ? 1 : -1);
     return true;
-  default:
-    return false;
   }
+
+  const auto result = track_drag_.on_interaction(ie, ie.pos.x, track);
+  if (result.fraction) {
+    set_fraction(*result.fraction);
+  }
+  return result.handled;
 }
 
 SliderMenuItem::SliderMenuItem(GameContext& context, const std::string& text,

@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <optional>
 #include <string>
 #include <vector>
 #include "engine/DebugLabel.h"
@@ -13,6 +14,7 @@
 #include "resources/util/FileUtils.h"
 #include "views/ui/widgets/ListCursor.h"
 #include "views/ui/widgets/MenuItem.h"
+#include "views/ui/widgets/ScrollBar.h"
 
 class SaveFileListBox : public MenuItem,
                         public debug::AutoLabel<SaveFileListBox> {
@@ -33,13 +35,18 @@ public:
   bool on_adjust(AdjustAxis axis, int delta) override;
   bool adjust_repeats() const override { return true; }
   bool on_interaction(views::ui::InteractionEvent ie) override;
+  std::optional<views::ui::MouseButton> drag_button() const override {
+    return views::ui::MouseButton::Left;
+  }
 
 private:
   int file_at(int local_y) const;
+  ScrollBar::Extent scroll_extent() const;
 
   std::vector<fileutils::FileEntry>& save_files_;
   int* scroll_offset_;
   std::function<void(const std::string&)> on_file_clicked_;
   std::function<void(const std::string&)> on_file_double_clicked_;
   ListCursor cursor_;
+  ScrollBar scroll_bar_;
 };
