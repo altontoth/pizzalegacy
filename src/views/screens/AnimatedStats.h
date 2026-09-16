@@ -7,9 +7,11 @@
 #pragma once
 
 #include <array>
+#include <string>
 #include "core/common/Ids.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/state/AnimatedStatsScreen.h"
+#include "engine/geom/Spaces.h"
 #include "resources/Bob.h"
 #include "views/base/RestaurantSubView.h"
 
@@ -40,6 +42,8 @@ private:
 
   void draw_decorated_background(const RenderContext& ctx,
                                  uint8_t bg_color) const;
+
+  void add_tooltip(ViewRect area, std::string id, std::string text);
 
   Restaurant* restaurant_{nullptr};
   AnimatedStatsScreen current_screen_{AnimatedStatsScreen::Production};

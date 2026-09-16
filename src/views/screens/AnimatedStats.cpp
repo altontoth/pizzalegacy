@@ -7,6 +7,10 @@
 #include "views/screens/AnimatedStats.h"
 
 #include <algorithm>
+#include <array>
+#include <string>
+#include <string_view>
+#include <utility>
 #include "core/Demographics.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/state/AnimatedStatsScreen.h"
@@ -17,6 +21,7 @@
 #include "engine/Random.h"
 #include "engine/gfx/Blit.h"
 #include "engine/gfx/Draw.h"
+#include "engine/ui/TooltipRequest.h"
 #include "resources/BlitmapIcons.h"
 #include "resources/BlitmapManager.h"
 #include "resources/FontManager.h"
@@ -259,6 +264,23 @@ void AnimatedStats::draw_decorated_background(const RenderContext& ctx,
   views::ui::render_decorated_corners(*ctx.surface, stanbobs, box, 6, {11});
 }
 
+void AnimatedStats::add_tooltip(ViewRect area, std::string id,
+                                std::string text) {
+  interactions_.create_frame_item(
+      area, id, [](const views::ui::InteractionEvent&) {},
+      {.tooltip = [text =
+                       std::move(text)](const views::ui::InteractionEvent& ie) {
+        return TooltipRequest{.text = text,
+                              .anchor = TooltipAnchor::Mouse,
+                              .screenPos = ie.pos,
+                              .palette = 62,
+                              .bg_color = 15,
+                              .text_color = 240,
+                              .border_color = 240,
+                              .padding = 4};
+      }});
+}
+
 // Shared thermometer rendering, ported from the original.
 void AnimatedStats::draw_thermometer(const RenderContext& ctx) const {
   constexpr int WL = LegacyConstants::WOOD_BORDER_WIDTH_LEFT;
@@ -393,6 +415,18 @@ void AnimatedStats::render_reputation(const RenderContext& ctx) {
     blitmap4.render_icon(COMP_ICONS[i], *ctx.surface, ICON_POS[i]);
   }
 
+  if (state_.options().qol_improvements) {
+    static constexpr std::array<std::string_view, 8> COMP_LABELS = {
+        "Waiting time", "Pizza prices", "Pizzas on menu", "Advertising",
+        "Star rating",  "Furnishing",   "Demand met",     "Events"};
+    for (int i = 0; i < REPUTATION_NUM_COMPONENTS; i++) {
+      const auto icon = blitmap4.icon_surface(COMP_ICONS[i]);
+      add_tooltip(
+          ViewRect{ICON_POS[i].x, ICON_POS[i].y, icon.width(), icon.height()},
+          compat::format("rep_comp_{}", i), std::string(COMP_LABELS[i]));
+    }
+  }
+
   draw_thermometer(ctx);
 
   // Accumulate fill from completed + in-progress components
@@ -458,6 +492,17 @@ void AnimatedStats::render_pizza_quality(const RenderContext& ctx) {
 
   for (int i = 0; i < PIZZA_QUALITY_NUM_COMPONENTS; i++) {
     blitmap4.render_icon(QUALITY_ICONS[i], *ctx.surface, ICON_POS[i]);
+  }
+
+  if (state_.options().qol_improvements) {
+    static constexpr std::array<std::string_view, 4> QUALITY_LABELS = {
+        "Ingredients", "Chefs", "Ovens", "Contamination"};
+    for (int i = 0; i < PIZZA_QUALITY_NUM_COMPONENTS; i++) {
+      const auto icon = blitmap4.icon_surface(QUALITY_ICONS[i]);
+      add_tooltip(
+          ViewRect{ICON_POS[i].x, ICON_POS[i].y, icon.width(), icon.height()},
+          compat::format("quality_comp_{}", i), std::string(QUALITY_LABELS[i]));
+    }
   }
 
   draw_thermometer(ctx);
@@ -625,27 +670,10 @@ void AnimatedStats::render_capacity(const RenderContext& ctx) {
     static constexpr std::array<std::string_view, 5> CAT_LABELS = {
         "Seating", "Ingredient stock", "Chefs", "Ovens", "Waiters"};
 
-    auto tooltip = [&](ViewRect r, std::string_view id, std::string_view text) {
-      interactions_.create_frame_item(
-          r, id, [](const views::ui::InteractionEvent&) {},
-          {.tooltip = [text](const views::ui::InteractionEvent& ie) {
-            return TooltipRequest{.text = std::string(text),
-                                  .anchor = TooltipAnchor::Mouse,
-                                  .screenPos = ie.pos,
-                                  .palette = 62,
-                                  .bg_color = 15,
-                                  .text_color = 240,
-                                  .border_color = 240,
-                                  .padding = 4};
-          }});
-    };
-
-    static constexpr std::array<std::string_view, 5> CAT_IDS = {
-        "cap_cat_0", "cap_cat_1", "cap_cat_2", "cap_cat_3", "cap_cat_4"};
-
     for (int i = 0; i < CAPACITY_NUM_CATEGORIES; i++) {
       int bar_y = category_bar_start.y + (i * bar_height);
-      tooltip({0, bar_y, 40, bar_height}, CAT_IDS[i], CAT_LABELS[i]);
+      add_tooltip({0, bar_y, 40, bar_height}, compat::format("cap_cat_{}", i),
+                  std::string(CAT_LABELS[i]));
     }
   }
 

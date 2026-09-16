@@ -122,8 +122,10 @@ just sell it immediately.
 
 ### Market Research bar charts are more fine grained
 Original started at $10,000, with this setting on it starts at $1,000 so you
-can see more detail early on in the game. It also shows a tooltip when hovering
-over the player icon that shows the exact amount.
+can see more detail early on in the game.
+
+### Tooltips
+Add tooltips to various screens for more clarity on what things mean.
 
 ### Capacity bars rescale with demand
 In the original the capacity screen's bars stop growing once demand passes a
