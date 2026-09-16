@@ -407,6 +407,16 @@ InsuranceConversation::lines() const {
         {.custom_text = compat::format(" {}", policy.monthly_premium)})};
   }
 
+  case InsuranceLine::YOU_MUST_BE_MISTAKEN_YOU_DONT_HAVE: {
+    auto type_line = static_cast<InsuranceLine>(
+        static_cast<int>(InsuranceLine::THEFT_INSURANCE) +
+        type_index(selected_type_));
+    return {make_line(
+        current_line_,
+        {.custom_text = compat::format(
+             "{} with us!", lines_.at(static_cast<int>(type_line)))})};
+  }
+
   // Payout confirmed and premium will increase: show "we will pay" text as
   // click-through so advance() can follow up with the premium-increase message.
   case InsuranceLine::AH_YES_PREMIUM_WILL_INCREASE:
@@ -423,7 +433,6 @@ InsuranceConversation::lines() const {
       IM_SORRY_IN_VIEW_OF_YOUR_CIRCUMSTANCES_YOU_ARE_TOO_GREAT_RISK:
   case InsuranceLine::CONGRATULATIONS_YOU_WONT_REGRET_TAKING_POLICY_WITH_US:
   case InsuranceLine::SORRY_NOT_NOTIFIED_OF_CLAIM:
-  case InsuranceLine::YOU_MUST_BE_MISTAKEN_YOU_DONT_HAVE:
   case InsuranceLine::YES_I_BELIEVE_BUT_LOOK_AT_THE_EXTREMELY_SMALL_PRINT:
   case InsuranceLine::THERES_NO_ROOM_FOR_SYMPATHY_TOUGH_BUSINESS:
   case InsuranceLine::I_AM_TERRIBLY_SORRY_BUT_OTHER_MATTERS_TO_ATTEND_TO:
