@@ -108,6 +108,7 @@ void MarketResearch::render_bar_chart(
       LegacyConstants::BASE_MAP_TILE_WIDTH * BASE_MAP_ZOOM_MULTIPLIER;
 
   const auto& landsym = context_.vga->get("gfx/landsym");
+  const auto players = state_.players();
 
   for (int i = 0; i < NUMBER_OF_PLAYERS; ++i) {
     int center_x = graph_box.x + (i * slot_width) + (slot_width / 2);
@@ -146,16 +147,10 @@ void MarketResearch::render_bar_chart(
     ViewRect src = landsym_source_rect(tile_type, BASE_MAP_ZOOM_MULTIPLIER);
     ctx.surface->blit(landsym, src, ViewPoint{icon_x, icon_y});
 
-    // Hover tooltip showing actual value
-    if (state_.options().qol_improvements) {
-      float display_value = values[i];
-      std::string tip;
-      if (mode == BarChartMode::Percentage) {
-        tip = compat::format("{:.1f}%", display_value);
-      }
-      else {
-        tip = "$" + std::to_string(static_cast<int>(display_value));
-      }
+    // Tooltip with the chain name
+    const Player* owner = players[i];
+    if (state_.options().qol_improvements && owner) {
+      std::string tip = owner->name();
       interactions_.create_frame_item(
           {icon_x, icon_y, icon_size, icon_size},
           "bar_chart_" + std::to_string(i),
