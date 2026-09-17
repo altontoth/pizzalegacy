@@ -27,6 +27,7 @@ private:
     FontHeader header;
     std::vector<uint8_t> bitmap;              // row-major, as stored
     std::vector<CharacterPosition> positions; // one per glyph
+    std::vector<uint16_t> advances; // one per glyph, proportional only
   };
 
   [[nodiscard]] static ParsedFont parse(std::span<const uint8_t> bytes);

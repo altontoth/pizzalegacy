@@ -21,7 +21,6 @@
 #include "engine/ui/TextAnchor.h"
 #include "resources/FontTypes.h"
 
-constexpr int SPACE_BETWEEN_CHARACTERS = 2;
 namespace {
 
 // Decodes the codepoint starting at `pos` and advances it. Malformed bytes
@@ -275,8 +274,7 @@ RenderedTextMetrics Font::render_line_onto(Surface& target,
       if (glyph != nullptr) {
         const Glyph& g = *glyph;
 
-        const bool has_pixels = g.start_position_x != 0 || g.character != U' ';
-        if (has_pixels && color != gfx::TRANSPARENT) {
+        if (g.width > 0 && color != gfx::TRANSPARENT) {
           const ViewRect src{g.start_position_x, g.start_position_y, g.width,
                              g.height};
           target.blit_stencil(data_.surface, src, {cur.x, pos.y}, color);
@@ -643,24 +641,10 @@ const Glyph* Font::find_glyph(uint32_t codepoint) const {
   return it == data_.glyphs.end() ? nullptr : &it->second;
 }
 
-int Font::advance_width(const Glyph& glyph) const {
-  return data_.fixed_char_width.value_or(glyph.width);
-}
+int Font::advance_width(const Glyph& glyph) const { return glyph.advance; }
 
 int Font::get_character_spacing(const TextStyle& style) const {
-  // If explicitly set in style, use that value
-  if (style.character_spacing.has_value()) {
-    return *style.character_spacing;
-  }
-
-  // MINI, SUPERSMA, and CSTANDAR have no inter-character spacing
-  if (face_ == FontFace::MINI || face_ == FontFace::SUPERSMA ||
-      face_ == FontFace::CSTANDAR) {
-    return 0;
-  }
-
-  // Default spacing for other fonts
-  return SPACE_BETWEEN_CHARACTERS;
+  return style.character_spacing.value_or(0);
 }
 
 RenderedTextMetrics Font::render_fixed_width(Surface& surface,

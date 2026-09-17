@@ -41,35 +41,41 @@ FontLoader::ParsedFont FontLoader::parse(std::span<const uint8_t> bytes) {
   out.bitmap.assign(p, p + bitmap_bytes);
   p += bitmap_bytes;
 
-  // remaining bytes are CharacterPosition records
-  // keep going while we have at least one full struct of room in bytes left
-  while (p + sizeof(CharacterPosition) <= bytes.data() + bytes.size()) {
+  // A position and an advance for every character in range, plus one entry
+  // for characters outside it.
+  const std::size_t entries =
+      out.header.last_character - out.header.first_character + 2;
+  const bool proportional = out.header.fixed_width_font_flag != 0x02;
+  std::size_t table_bytes = entries * sizeof(CharacterPosition);
+  if (proportional) {
+    table_bytes += entries * sizeof(uint16_t);
+  }
+  if (bytes.size() < sizeof(FontHeader) + bitmap_bytes + table_bytes) {
+    fatal("font file truncated (tables)");
+  }
+  for (std::size_t i = 0; i < entries; ++i) {
     CharacterPosition cp;
     std::memcpy(&cp, p, sizeof(cp));
     out.positions.push_back(cp);
     p += sizeof(cp);
+  }
+  if (proportional) {
+    for (std::size_t i = 0; i < entries; ++i) {
+      uint16_t adv;
+      std::memcpy(&adv, p, sizeof(adv));
+      out.advances.push_back(adv);
+      p += sizeof(adv);
+    }
   }
   return out;
 }
 
 gfx::Surface FontLoader::build_atlas(const ParsedFont& pf, int scale,
                                      gfx::PaletteHandle palette) {
-  // sum of glyph widths (skip invalid records)
   uint16_t width_px = 0;
   for (const auto& cp : pf.positions) {
     width_px += cp.width;
   }
-
-  // space width hack copied from dos logic
-  const uint16_t n_width = [&]() -> uint16_t {
-    auto idx = static_cast<std::size_t>('n' - '!');
-    if (idx < pf.positions.size()) {
-      return pf.positions[idx].width / 2;
-    }
-    return pf.header.character_width / 2;
-  }();
-
-  width_px += n_width;
 
   const int atlas_w = width_px * scale;
   const int atlas_h = pf.header.character_height * scale;
@@ -115,47 +121,24 @@ FontLoader::build_glyph_table(const ParsedFont& pf, int scale) {
   std::unordered_map<uint32_t, Glyph> tbl;
   const int first = pf.header.first_character;
   const int last = pf.header.last_character;
-  const size_t glyph_count = last - first + 1;
-
+  const std::size_t glyph_count = last - first + 1;
   const bool fixed = (pf.header.fixed_width_font_flag == 0x02);
-  const uint16_t cell = pf.header.character_width;
 
-  int valid_glyphs = 0;
-  for (size_t idx = 0; idx < glyph_count; ++idx) {
+  for (std::size_t idx = 0; idx < glyph_count; ++idx) {
     const auto& cp = pf.positions[idx];
-
-    if (idx < 5 || (cp.start_pos != 0 && valid_glyphs < 5)) {
-      if (cp.width > 0) {
-        valid_glyphs++;
-      }
-    }
-
-    if (cp.width == 0) {
-      continue;
-    }
-
-    bool looks_like_blank = (cp.start_pos == 0) && // no bitmap
-                            (cp.width != 0);       // but has an advance
-
-    if (looks_like_blank) {
-      uint16_t adv = (pf.header.fixed_width_font_flag == 0x02)
-                         ? pf.header.character_width
-                         : cp.width;
-
-      tbl.emplace(
-          U' ', Glyph{0, 0, static_cast<uint16_t>(adv * scale),
-                      static_cast<uint16_t>(pf.header.character_height * scale),
-                      U' '});
-    }
-
-    uint32_t ch = first + static_cast<uint8_t>(idx);
-
-    uint16_t width = fixed ? cell : cp.width; // advance table handled later
+    const uint16_t advance =
+        fixed ? pf.header.character_width : pf.advances[idx];
+    const uint32_t ch = first + static_cast<uint8_t>(idx);
     tbl.emplace(
         ch,
-        Glyph{static_cast<uint16_t>(cp.start_pos * scale), // x inside bitmap
-              0, static_cast<uint16_t>(width * scale),
-              static_cast<uint16_t>(pf.header.character_height * scale), ch});
+        Glyph{
+            .start_position_x = static_cast<uint16_t>(cp.start_pos * scale),
+            .start_position_y = 0,
+            .width = static_cast<uint16_t>(cp.width * scale),
+            .height = static_cast<uint16_t>(pf.header.character_height * scale),
+            .advance = static_cast<uint16_t>(advance * scale),
+            .character = ch,
+        });
   }
   return tbl;
 }
@@ -179,24 +162,11 @@ std::unique_ptr<Font> FontLoader::load(const std::string& filename) {
   // glyph table
   auto glyphs = build_glyph_table(parsed, scale);
 
-  // Calculate fixed character width for monospace fonts
-  std::optional<int> fixed_width = std::nullopt;
-  if (face == FontFace::SUPERSMA) {
-    fixed_width = 8;
-  }
-  else if (face == FontFace::MINI) {
-    fixed_width = 4;
-  }
-  else if (face == FontFace::CSTANDAR) {
-    fixed_width = 10;
-  }
-
   // package it all up into a Font
   FontData fd{
       .surface = std::move(atlas),
       .glyphs = std::move(glyphs),
       .line_height = parsed.header.character_height * scale,
-      .fixed_char_width = fixed_width,
   };
   return std::make_unique<Font>(face, std::move(fd));
 }
