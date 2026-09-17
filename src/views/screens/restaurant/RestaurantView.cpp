@@ -578,11 +578,16 @@ void RestaurantView::handle_mouse_click(WorldPoint map_point) {
 }
 
 void RestaurantView::toggle_kitchen_view() {
+  (kitchen_view_ ? kitchen_scroll_ : restaurant_scroll_) = camera_.scroll();
   kitchen_view_ = !kitchen_view_;
 
   // Recalculate background size for the new view
   calculate_background_dimensions();
   apply_view_camera();
+  if (const auto& saved =
+          kitchen_view_ ? kitchen_scroll_ : restaurant_scroll_) {
+    camera_.scroll(*saved);
+  }
 
   camctrl_.reset();
   mark_dirty();

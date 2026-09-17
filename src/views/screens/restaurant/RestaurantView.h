@@ -144,6 +144,9 @@ private:
 
   const Surface& k0_;
   bool kitchen_view_ = false;
+  // Scroll each view was left at, restored when toggling back to it.
+  std::optional<WorldPoint> restaurant_scroll_;
+  std::optional<WorldPoint> kitchen_scroll_;
   bool closed_for_placement_ = false;
   mutable std::optional<views::screens::restaurant::NavGrid> nav_grid_cache_;
   int background_width_ = 0;
