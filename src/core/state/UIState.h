@@ -6,6 +6,7 @@
 
 #pragma once
 #include <array>
+#include <cstddef>
 #include <filesystem>
 #include <functional>
 #include <optional>
@@ -151,6 +152,7 @@ struct PurchasingState {
 };
 struct SupplierListState {
   SupplierType supplier;
+  std::size_t page{0};
 };
 struct ViewerState {
   std::filesystem::path filename;

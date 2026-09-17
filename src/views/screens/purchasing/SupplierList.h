@@ -7,14 +7,17 @@
 
 #pragma once
 
+#include "core/state/UIState.h"
 #include "views/helpers/SupplierListRenderer.h"
 #include "views/screens/purchasing/CategoryOverviewScreen.h"
 
+#include <cstddef>
 #include <optional>
 
 class SupplierList : public CategoryOverviewScreen {
 public:
-  SupplierList(GameContext& context, GameState& state, SupplierType type);
+  SupplierList(GameContext& context, GameState& state,
+               const SupplierListState& list_state);
   void tick() override;
   void render(const RenderContext& ctx) override;
 

@@ -7,11 +7,13 @@
 #include "views/screens/purchasing/SupplierList.h"
 #include "core/factories/SupplierFactory.h"
 #include "core/state/GameState.h"
+#include "core/state/UIState.h"
 #include "core/supply/Supplier.h"
 
 SupplierList::SupplierList(GameContext& context, GameState& state,
-                           SupplierType type)
-    : CategoryOverviewScreen(context, state, type) {
+                           const SupplierListState& list_state)
+    : CategoryOverviewScreen(context, state, list_state.supplier),
+      current_page_(list_state.page) {
 
   category_titles[SupplierType::FURNITURE] = "Suppliers";
   category_titles[SupplierType::KITCHENWARE] = "Suppliers";
@@ -22,6 +24,9 @@ SupplierList::SupplierList(GameContext& context, GameState& state,
                         supplier_type_, state.time().current_date().year()),
                     // Click callback - navigate to furniture/floor list
                     [this](const Supplier* supplier) {
+                      if (auto* top = state_.ui().top_as<SupplierListState>()) {
+                        top->page = current_page_;
+                      }
                       if (supplier_type_ == SupplierType::FLOORING) {
                         state_.ui().push<FloorListState>(supplier->id());
                       }

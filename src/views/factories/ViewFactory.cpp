@@ -376,7 +376,7 @@ ViewFactory::Result ViewFactory::create(GameContext& context, GameState& gs) {
             view = std::make_unique<PurchasingMain>(context, gs);
           },
           [&](const SupplierListState& ss) {
-            view = std::make_unique<SupplierList>(context, gs, ss.supplier);
+            view = std::make_unique<SupplierList>(context, gs, ss);
           },
           [&](const BankState& bs) {
             const auto& city = gs.active_city();
