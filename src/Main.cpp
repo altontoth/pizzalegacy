@@ -44,6 +44,8 @@ namespace { // anonymous
          "file\n"
       << "  --bob <path>                           # open BOB viewer with "
          "file\n"
+      << "  --card <text>                          # show a title card, '|' "
+         "breaks a line\n"
       << "  --crt                                  # force CRT aspect ratio "
          "(4:3)\n"
       << "  -h, --help\n";
@@ -110,6 +112,12 @@ static Game::LaunchOptions parse_args(int argc, char* argv[]) {
         usage(argv[0], 2);
       }
       opts.bob_viewer = argv[++i];
+    }
+    else if (arg == "--card") {
+      if (i + 1 >= argc) {
+        usage(argv[0], 2);
+      }
+      opts.card_text = argv[++i];
     }
     else if (arg == "console") {
       // The rest is the console command, one argument per word as the shell

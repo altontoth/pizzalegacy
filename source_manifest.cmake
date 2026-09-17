@@ -246,6 +246,7 @@ set(GAME_PLEGACY_SOURCES
     src/views/ui/widgets/ToggleMenuItem.cpp
     src/views/ui/widgets/TrackDrag.cpp
     src/views/viewers/BobViewer.cpp
+    src/views/viewers/CardViewer.cpp
     src/views/viewers/CharacterViewer.cpp
     src/views/viewers/FontViewer.cpp
     src/views/viewers/PaletteView.cpp
@@ -752,6 +753,7 @@ set(PLEGACY_HEADERS
     src/views/ui/widgets/ToggleMenuItem.h
     src/views/ui/widgets/TrackDrag.h
     src/views/viewers/BobViewer.h
+    src/views/viewers/CardViewer.h
     src/views/viewers/CharacterViewer.h
     src/views/viewers/FontViewer.h
     src/views/viewers/PaletteView.h

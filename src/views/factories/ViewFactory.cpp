@@ -85,6 +85,7 @@
 #include "views/screens/stock/IngredientSupplierList.h"
 #include "views/screens/stock/StockMain.h"
 #include "views/viewers/BobViewer.h"
+#include "views/viewers/CardViewer.h"
 #include "views/viewers/CharacterViewer.h"
 #include "views/viewers/FontViewer.h"
 #include "views/viewers/PaletteView.h"
@@ -141,6 +142,9 @@ std::unique_ptr<View> create_viewer(GameContext& context, GameState& state,
   if (filename == "char") {
     return std::make_unique<CharacterViewer>(context, state);
   }
+  if (type == ViewerType::Card) {
+    return std::make_unique<CardViewer>(context, state, filename.string());
+  }
 
   if (!std::filesystem::exists(filename)) {
     std::cerr << "File not found: " << filename << "\n";
@@ -172,6 +176,7 @@ std::unique_ptr<View> create_viewer(GameContext& context, GameState& state,
       Logger::info("Loading BOB file: {}", filename.string());
       return std::make_unique<BobViewer>(context, state, filename.string());
     case ViewerType::Auto:
+    case ViewerType::Card:
       break; // resolved above
     }
   }

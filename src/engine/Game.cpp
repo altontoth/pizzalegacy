@@ -113,7 +113,8 @@ Game::Game(LaunchOptions opts)
       startup_console_args_(std::move(opts.console_args)),
       exec_script_(std::move(opts.exec_script)), rng_seed_(opts.rng_seed),
       vga_viewer_path_(std::move(opts.vga_viewer)),
-      bob_viewer_path_(std::move(opts.bob_viewer)) {}
+      bob_viewer_path_(std::move(opts.bob_viewer)),
+      card_text_(std::move(opts.card_text)) {}
 
 // Define this here instead of the header to let forward declares work inside
 // unique_ptrs
@@ -218,6 +219,12 @@ int Game::run() {
       ViewerState vs;
       vs.filename = *bob_viewer_path_;
       vs.type = ViewerType::Bob;
+      state.ui().push<ViewerState>(vs);
+    }
+    else if (card_text_) {
+      ViewerState vs;
+      vs.filename = *card_text_;
+      vs.type = ViewerType::Card;
       state.ui().push<ViewerState>(vs);
     }
     else if (!filename_.empty()) {

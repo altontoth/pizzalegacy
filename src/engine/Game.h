@@ -46,6 +46,7 @@ public:
     std::optional<bool> crt_mode;           // --crt to force CRT mode
     std::optional<std::string> vga_viewer;  // --vga <path>
     std::optional<std::string> bob_viewer;  // --bob <path>
+    std::optional<std::string> card_text;   // --card <text>
   };
 
   Game(LaunchOptions opts);
@@ -115,4 +116,5 @@ private:
   int run_exec_script(DebugConsole& console, GameState& state) const;
   std::optional<std::string> vga_viewer_path_;
   std::optional<std::string> bob_viewer_path_;
+  std::optional<std::string> card_text_;
 };
