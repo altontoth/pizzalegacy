@@ -25,7 +25,7 @@ public:
   Money price_per_tile;
 
   int popularity_for(ConsumerType type) const {
-    return popularity[static_cast<std::size_t>(type)] * popularity_factor / 4;
+    return popularity[static_cast<std::size_t>(type)] * popularity_factor / 2;
   };
 };
 

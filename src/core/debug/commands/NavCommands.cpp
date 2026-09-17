@@ -508,6 +508,16 @@ CommandDef make_nav_commands() {
           },
       })
       .add_subcommand(CommandDef{
+          .name = "demographics",
+          .description = "Furniture & customers page of the active restaurant",
+          .handler = [](const CommandContext& ctx) -> CommandResult {
+            ctx.state.ui().push<CategoryOverviewState>(CategoryOverviewState{
+                .type = SupplierType::FURNITURE, .demographics = true});
+            return CommandResult::success().add_message(
+                "Navigated to furniture & customers");
+          },
+      })
+      .add_subcommand(CommandDef{
           .name = "suppliers",
           .aliases = {"sl"},
           .description = "Supplier list",

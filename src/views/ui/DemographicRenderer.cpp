@@ -5,7 +5,11 @@
  */
 
 #include "views/ui/DemographicRenderer.h"
+#include <algorithm>
+#include <string>
 #include "core/Demographics.h"
+#include "engine/gfx/ColorIndex.h"
+#include "engine/ui/TextAnchor.h"
 #include "resources/FontTypes.h"
 
 namespace views::ui {
@@ -14,50 +18,47 @@ void render_demographics(gfx::Surface& surface, FontManager& font,
                          const Blitmap<Blitmap2Icon>& blitmap,
                          const Popularity& popularity,
                          const std::string& title) {
-  // Render title at the top
-  font.render_text_onto(surface, title, ViewPoint{140, 12}, FontFace::RUBY,
-                        {.color = 8});
+  constexpr int title_center_x = 191;
+  constexpr gfx::ColorIndex text_color = 12;
+  const TextStyle title_style{.color = text_color, .align = TextAnchor::Middle};
+  font.render_text_onto(surface, title, ViewPoint{title_center_x, 14},
+                        FontFace::RUBY, title_style);
+  font.render_text_onto(surface, " & customers", ViewPoint{title_center_x, 38},
+                        FontFace::RUBY, title_style);
 
-  font.render_text_onto(surface, "& customers", ViewPoint{92, 38},
-                        FontFace::RUBY, {.color = 8});
-
-  // Starting position for first demographic
-  constexpr int start_x = 40;
+  constexpr int column_spacing = 52;
+  constexpr int icon_x = 38;
   constexpr int icon_y = 278;
-  constexpr int spacing = 50;
-  constexpr int bar_bottom_y = 252;
+  constexpr int bar_x = 46;
+  constexpr int bar_bottom_y = 250;
+  constexpr int bar_top_limit_y = 104;
+  constexpr int number_right_x = 76;
+  constexpr int number_above_bar = 10;
 
-  // Bar indicator icon (index 29 in blitmap2) - 2 pixels tall, 40 pixels wide
-  const auto bar_icon = Blitmap2Icon::PIXEL_LINE;
-
-  // Iterate through all demographics
   for (auto type : ALL_CONSUMER_TYPES) {
-    int i = static_cast<int>(type);
-    const int x = start_x + (i * spacing);
-
-    // Get the popularity value for this demographic (can be negative)
-    // but we only show 1 and up, and ignore anything above 150
-    const int value = std::clamp(popularity[type], 0, 150);
+    const int i = static_cast<int>(type);
+    const int column = i * column_spacing;
 
     const auto demo_icon = static_cast<Blitmap2Icon>(i);
-    blitmap.render_icon(demo_icon, surface, ViewPoint{x, icon_y});
+    blitmap.render_icon(demo_icon, surface, ViewPoint{icon_x + column, icon_y});
 
-    if (value >= 1) {
-      const int bar_height_pixels = std::min(value, 100);
-
-      // Bar starts above the icon and grows upward
-      // Bar x position is same as icon, bar ends at icon_y and grows up
-      const int bar_top_y = bar_bottom_y - bar_height_pixels;
-
-      for (int bar_y = bar_bottom_y; bar_y > bar_top_y; bar_y -= 2) {
-        blitmap.render_icon(bar_icon, surface, ViewPoint{x, bar_y});
-      }
-
-      // Render the number above the bar
-      font.render_text_onto(surface, std::to_string(value),
-                            ViewPoint{x + 6, bar_top_y - 16},
-                            FontFace::CSTANDAR, {.color = 8});
+    const int value = popularity[type];
+    if (value <= 0) {
+      continue;
     }
+
+    // One two-pixel row per two points, going up from the icon.
+    const int bar_top_y =
+        std::max(bar_bottom_y - ((value / 2) * 2), bar_top_limit_y);
+    for (int bar_y = bar_bottom_y; bar_y > bar_top_y; bar_y -= 2) {
+      blitmap.render_icon(Blitmap2Icon::PIXEL_LINE, surface,
+                          ViewPoint{bar_x + column, bar_y});
+    }
+
+    font.render_text_onto(
+        surface, std::to_string(value),
+        ViewPoint{number_right_x + column, bar_top_y - number_above_bar},
+        FontFace::CSTANDAR, {.color = text_color, .align = TextAnchor::End});
   }
 }
 
