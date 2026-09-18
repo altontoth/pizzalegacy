@@ -94,7 +94,7 @@ public:
   void ai_end_of_day(class GameState& game_state);
   void end_of_week(class GameState& game_state);
   void on_supplier_visit();
-  void on_city_travel();
+  void on_city_travel(core::CityId destination, int week_day);
   void add_loan(core::CityId city_id, Loan loan, GameDate date);
   void repay_loan(Loan& loan, const GameDate& date, bool fix_legacy_bugs);
   std::vector<Loan>& loans_in_city(core::CityId city_id);
@@ -117,8 +117,11 @@ public:
   const PlayerFinancials& financials() const { return financials_; }
 
   [[nodiscard]] bool
-  spend_cash(const GameDate& date, Account to, Money amount,
+  spend_cash(const GameDate& date, MonthlyCategory category, Money amount,
              std::optional<core::RestaurantId> restaurant_id = std::nullopt);
+  // Expenses not shown in the overview, e.g. buying weapons or paying off a
+  // supplier debt.
+  [[nodiscard]] bool spend_cash(const GameDate& date, Account to, Money amount);
   Money cash_balance() const;
   core::inventory::Inventory& inventory();
   const core::inventory::Inventory& inventory() const;

@@ -13,5 +13,6 @@ namespace debug::commands {
 debug::command::CommandDef make_mafia_commands();
 debug::command::CommandDef make_police_commands();
 debug::command::CommandDef make_armsdealer_commands();
+debug::command::CommandDef make_bank_commands();
 
 } // namespace debug::commands

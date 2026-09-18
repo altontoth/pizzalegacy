@@ -6,24 +6,43 @@
 
 #pragma once
 
+#include <algorithm>
+#include <array>
+#include <cstddef>
+#include <deque>
 #include <iomanip>
+#include <map>
 #include <optional>
 #include <ostream>
-#include <string>
 #include <string_view>
-#include <unordered_map>
 #include <vector>
 #include "core/common/Ids.h"
 #include "core/finance/Money.h"
 #include "core/time/GameDate.h"
 
-enum class AccountingScope : uint8_t {
-  Capital,    // Balance sheet only (initial investments, property purchases)
-  Operational // Both balance sheet and monthly overview (ongoing expenses)
+// The lines of the balance sheet.
+enum class Account {
+  Property,
+  Machines,
+  Furniture,
+  Weapons,
+  Stock,
+  Cash,
+  Capital,
+  Loan,
+  // What is owed to suppliers for contract deliveries.
+  DeliveryDebts,
+  // The original's Balance page labels it; nothing in the game posts to it.
+  Debts,
+  // This year's profit or loss so far.
+  ProfitAndLoss,
 };
 
-enum class Account {
-  // Profit & Loss:
+inline constexpr std::size_t account_count =
+    static_cast<std::size_t>(Account::ProfitAndLoss) + 1;
+
+// The receipt and expenditure lines of the monthly overview.
+enum class MonthlyCategory {
   Sales,
   CoinMachines,
   Missions,
@@ -34,120 +53,115 @@ enum class Account {
   Furniture,
   Protection,
   Repayment,
-  Investments,
   Others,
-  // Balance sheet:
-  Cash,
-  Capital,
-  ProfitAndLoss,
-  Loan,
-  Property,
-  Weapons,
-  // Off the books:
-  FinesAndBribes,
-  // The original's Balance page labels it; nothing in the game posts to it.
-  Debts,
-  // Supplier-contract payables, normally settled the day they are delivered.
-  DeliveryDebts,
-  // Not in the original, added for debug console:
-  Cheat,
 };
+
+inline constexpr std::size_t category_count =
+    static_cast<std::size_t>(MonthlyCategory::Others) + 1;
+
+inline constexpr std::array receipt_categories = {
+    MonthlyCategory::Sales,
+    MonthlyCategory::CoinMachines,
+    MonthlyCategory::Missions,
+};
+
+inline constexpr std::array expenditure_categories = {
+    MonthlyCategory::Staff,     MonthlyCategory::Rents,
+    MonthlyCategory::Stock,     MonthlyCategory::Machines,
+    MonthlyCategory::Furniture, MonthlyCategory::Protection,
+    MonthlyCategory::Repayment, MonthlyCategory::Others,
+};
+
+inline bool is_receipt(MonthlyCategory category) {
+  return std::ranges::find(receipt_categories, category) !=
+         receipt_categories.end();
+}
+
+// The monthly category of a transfer not shown in the overview.
+inline constexpr std::nullopt_t balance_sheet_only = std::nullopt;
 
 inline std::string_view to_string(Account account) {
   switch (account) {
   case Account::Property:
     return "property";
-  case Account::Staff:
-    return "staff";
-  case Account::Rents:
-    return "rents";
-  case Account::Stock:
-    return "stock";
-  case Account::Protection:
-    return "protection";
-  case Account::Repayment:
-    return "repayment";
-  case Account::Others:
-    return "others";
-  case Account::Sales:
-    return "sales";
-  case Account::CoinMachines:
-    return "coin machines";
-  case Account::Missions:
-    return "missions";
   case Account::Machines:
     return "machines";
   case Account::Furniture:
     return "furniture";
+  case Account::Weapons:
+    return "weapons";
+  case Account::Stock:
+    return "stock";
   case Account::Cash:
     return "cash";
   case Account::Capital:
     return "capital";
-  case Account::ProfitAndLoss:
-    return "profit and loss";
   case Account::Loan:
     return "loan";
-  case Account::FinesAndBribes:
-    return "fines and bribes";
-  case Account::Weapons:
-    return "weapons";
   case Account::DeliveryDebts:
     return "delivery debts";
   case Account::Debts:
     return "debts";
-  case Account::Cheat:
-    return "cheat";
-  case Account::Investments:
-    return "investments";
+  case Account::ProfitAndLoss:
+    return "profit and loss";
   }
   return "unknown";
 }
 
-// Free function for converting string to Account
-inline std::optional<Account> string_to_account(const std::string& str) {
-  // Static map for efficient lookup
-  static const std::unordered_map<std::string, Account> account_map = {
-      {"property", Account::Property},
-      {"staff", Account::Staff},
-      {"rents", Account::Rents},
-      {"stock", Account::Stock},
-      {"protection", Account::Protection},
-      {"repayment", Account::Repayment},
-      {"others", Account::Others},
-      {"sales", Account::Sales},
-      {"coin machines", Account::CoinMachines},
-      {"missions", Account::Missions},
-      {"machines", Account::Machines},
-      {"furniture", Account::Furniture},
-      {"cash", Account::Cash},
-      {"capital", Account::Capital},
-      {"profit and loss", Account::ProfitAndLoss},
-      {"profit", Account::ProfitAndLoss}, // Alias for compatibility
-      {"loan", Account::Loan},
-      {"fines and bribes", Account::FinesAndBribes},
-      {"weapons", Account::Weapons},
-      {"delivery debts", Account::DeliveryDebts},
-      {"debts", Account::Debts},
-      {"cheat", Account::Cheat}};
-
-  auto it = account_map.find(str);
-  if (it != account_map.end()) {
-    return it->second;
+inline std::string_view to_string(MonthlyCategory category) {
+  switch (category) {
+  case MonthlyCategory::Sales:
+    return "sales";
+  case MonthlyCategory::CoinMachines:
+    return "coin machines";
+  case MonthlyCategory::Missions:
+    return "missions";
+  case MonthlyCategory::Staff:
+    return "staff";
+  case MonthlyCategory::Rents:
+    return "rents";
+  case MonthlyCategory::Stock:
+    return "stock";
+  case MonthlyCategory::Machines:
+    return "machines";
+  case MonthlyCategory::Furniture:
+    return "furniture";
+  case MonthlyCategory::Protection:
+    return "protection";
+  case MonthlyCategory::Repayment:
+    return "repayment";
+  case MonthlyCategory::Others:
+    return "others";
   }
-  return std::nullopt;
+  return "unknown";
+}
+
+// Where money spent under a category goes on the balance sheet.
+inline Account account_for(MonthlyCategory category) {
+  switch (category) {
+  case MonthlyCategory::Stock:
+    return Account::Stock;
+  case MonthlyCategory::Machines:
+    return Account::Machines;
+  case MonthlyCategory::Furniture:
+    return Account::Furniture;
+  default:
+    return Account::ProfitAndLoss;
+  }
 }
 
 struct Posting {
   Account account;
   Money amount; // plus = debit, minus = credit
   std::optional<core::RestaurantId> restaurant_id;
-  AccountingScope scope;
+  // The overview category this line counts toward, if any.
+  std::optional<MonthlyCategory> monthly;
 
-  // Constructor with restaurant_id and scope
   Posting(Account acc, Money amt,
           std::optional<core::RestaurantId> rest_id = std::nullopt,
-          AccountingScope sc = AccountingScope::Operational)
-      : account(acc), amount(amt), restaurant_id(rest_id), scope(sc) {}
+          std::optional<MonthlyCategory> monthly_category = std::nullopt)
+      : account(acc), amount(amt), restaurant_id(rest_id),
+        monthly(monthly_category) {}
 };
 
 struct JournalEntry {
@@ -155,13 +169,44 @@ struct JournalEntry {
   std::vector<Posting> lines;
 };
 
+// This month's and last month's overview numbers, expenses positive and
+// receipts negative. The first booking in a new month moves this month's
+// numbers to last month.
+class MonthlyFigures {
+public:
+  using Figures = std::array<Money, category_count>;
+
+  void book(const GameDate& date, MonthlyCategory category, Money amount);
+  Money current_month(MonthlyCategory category, const GameDate& date) const;
+  Money previous_month(MonthlyCategory category, const GameDate& date) const;
+
+  static int month_number(const GameDate& date) {
+    return (date.year() * 12) + date.month() - 1;
+  }
+  int month() const { return month_; }
+  const Figures& this_month() const { return this_month_; }
+  const Figures& last_month() const { return last_month_; }
+  void set(int month, const Figures& this_month, const Figures& last_month);
+
+private:
+  int month_ = 0;
+  Figures this_month_{};
+  Figures last_month_{};
+};
+
+// The running balance of every account and the monthly overview numbers of
+// the player and of each restaurant. The most recent postings are kept for
+// dump ledger.
 class Ledger {
   friend std::ostream& operator<<(std::ostream& os, const Ledger& ledger) {
-    for (const auto& entry : ledger.journal_) {
+    for (const auto& entry : ledger.recent_) {
       os << entry.date << ":\n";
       for (const auto& line : entry.lines) {
         os << "  " << std::setw(16) << to_string(line.account) << "  "
            << std::setw(10) << line.amount;
+        if (line.monthly.has_value()) {
+          os << "  [" << to_string(*line.monthly) << "]";
+        }
         if (line.restaurant_id.has_value()) {
           os << "  (restaurant #" << line.restaurant_id.value() << ")";
         }
@@ -172,19 +217,31 @@ class Ledger {
   }
 
 public:
-  void post(const JournalEntry& je);
-  Money balance(Account acct,
-                std::optional<core::RestaurantId> restaurant = std::nullopt,
-                std::optional<AccountingScope> scope = std::nullopt) const;
-  std::vector<const JournalEntry*> between(GameDate from,
-                                           GameDate to) const noexcept;
-  Money
-  balance_between(Account acct, GameDate from, GameDate to,
-                  std::optional<core::RestaurantId> restaurant = std::nullopt,
-                  std::optional<AccountingScope> scope = std::nullopt) const;
+  static constexpr std::size_t recent_max = 500;
 
-  const std::vector<JournalEntry>& entries() const noexcept { return journal_; }
+  void post(const JournalEntry& je);
+  Money balance(Account account) const {
+    return balances_.at(static_cast<std::size_t>(account));
+  }
+  const MonthlyFigures& month() const { return month_; }
+  const MonthlyFigures& restaurant_month(core::RestaurantId id) const;
+  const std::map<core::RestaurantId, MonthlyFigures>&
+  restaurant_months() const {
+    return restaurant_months_;
+  }
+
+  void set_balance(Account account, Money amount) {
+    balances_.at(static_cast<std::size_t>(account)) = amount;
+  }
+  void set_month(const MonthlyFigures& figures) { month_ = figures; }
+  void set_restaurant_month(core::RestaurantId id,
+                            const MonthlyFigures& figures) {
+    restaurant_months_[id] = figures;
+  }
 
 private:
-  std::vector<JournalEntry> journal_;
+  std::array<Money, account_count> balances_{};
+  MonthlyFigures month_;
+  std::map<core::RestaurantId, MonthlyFigures> restaurant_months_;
+  std::deque<JournalEntry> recent_;
 };

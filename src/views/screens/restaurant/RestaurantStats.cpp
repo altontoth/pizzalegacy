@@ -557,10 +557,10 @@ void RestaurantStats::render_month_review(const RenderContext& ctx) {
   context_.font->render_line_onto(
       *ctx.surface, "sales:", ViewPoint{30, sales_y}, FontFace::PIZ_NUMB,
       text_color, TextAnchor::Start);
-  auto prev_sales = -financials.previous_month_operational(Account::Sales, date,
-                                                           restaurant_id_);
-  auto curr_sales = -financials.current_month_operational(Account::Sales, date,
-                                                          restaurant_id_);
+  auto prev_sales =
+      -financials.previous_month(MonthlyCategory::Sales, date, restaurant_id_);
+  auto curr_sales =
+      -financials.current_month(MonthlyCategory::Sales, date, restaurant_id_);
   context_.font->render_line_onto(
       *ctx.surface, compat::format("{}", prev_sales),
       ViewPoint{prev_month_col, sales_y}, FontFace::PIZ_NUMB, text_color,
@@ -574,10 +574,10 @@ void RestaurantStats::render_month_review(const RenderContext& ctx) {
   context_.font->render_line_onto(
       *ctx.surface, "coin machines:", ViewPoint{30, coin_machines_y},
       FontFace::PIZ_NUMB, text_color, TextAnchor::Start);
-  auto prev_coins = -financials.previous_month_operational(
-      Account::CoinMachines, date, restaurant_id_);
-  auto curr_coins = -financials.current_month_operational(Account::CoinMachines,
-                                                          date, restaurant_id_);
+  auto prev_coins = -financials.previous_month(MonthlyCategory::CoinMachines,
+                                               date, restaurant_id_);
+  auto curr_coins = -financials.current_month(MonthlyCategory::CoinMachines,
+                                              date, restaurant_id_);
   context_.font->render_line_onto(
       *ctx.surface, compat::format("{}", prev_coins),
       ViewPoint{prev_month_col, coin_machines_y}, FontFace::PIZ_NUMB,
@@ -605,9 +605,10 @@ void RestaurantStats::render_month_review(const RenderContext& ctx) {
       *ctx.surface, "expenditure:", ViewPoint{20, expenditure_y},
       FontFace::PIZ_NUMB, text_color, TextAnchor::Start);
 
-  const std::vector<Account> exp_accounts = {
-      Account::Staff,    Account::Rents,     Account::Stock,
-      Account::Machines, Account::Furniture, Account::Protection};
+  const std::vector<MonthlyCategory> exp_categories = {
+      MonthlyCategory::Staff,     MonthlyCategory::Rents,
+      MonthlyCategory::Stock,     MonthlyCategory::Machines,
+      MonthlyCategory::Furniture, MonthlyCategory::Protection};
   const std::vector<std::string> exp_labels = {
       "staff:", "rents:", "stock:", "machines:", "furniture:", "protection:"};
 
@@ -616,15 +617,15 @@ void RestaurantStats::render_month_review(const RenderContext& ctx) {
   Money prev_total_exp{0};
   Money curr_total_exp{0};
 
-  for (size_t i = 0; i < exp_accounts.size(); ++i) {
+  for (size_t i = 0; i < exp_categories.size(); ++i) {
     context_.font->render_line_onto(*ctx.surface, exp_labels[i],
                                     ViewPoint{30, y}, FontFace::PIZ_NUMB,
                                     text_color, TextAnchor::Start);
 
-    auto prev_exp = financials.previous_month_operational(exp_accounts[i], date,
-                                                          restaurant_id_);
-    auto curr_exp = financials.current_month_operational(exp_accounts[i], date,
-                                                         restaurant_id_);
+    auto prev_exp =
+        financials.previous_month(exp_categories[i], date, restaurant_id_);
+    auto curr_exp =
+        financials.current_month(exp_categories[i], date, restaurant_id_);
     prev_total_exp = prev_total_exp + prev_exp;
     curr_total_exp = curr_total_exp + curr_exp;
 

@@ -75,12 +75,9 @@ struct DailyStats {
   // Furniture purchases (for weekly expenses report)
   Money furniture_purchases{0};
 
-  Money fixed_costs{0}; // Staff wages + rent + utilities
-  Money net_profit{0};  // gross_profit - fixed_costs
-
-  // Total expenditure including all costs (fixed + ingredients + furniture)
+  // Restaurant expenses, except wages and rent.
   Money total_expenditure() const {
-    return fixed_costs + ingredient_purchases + furniture_purchases;
+    return ingredient_purchases + furniture_purchases;
   }
 
   // Operational
@@ -147,8 +144,6 @@ struct DailyStats {
     ingredient_purchases_by_category = {Money{0}, Money{0}, Money{0}, Money{0}};
     ingredient_purchases = Money{0};
     furniture_purchases = Money{0};
-    fixed_costs = Money{0};
-    net_profit = Money{0};
     avg_quality = 0;
     capacity_utilization = 0;
     pizza_sales.clear();
@@ -160,7 +155,6 @@ struct DailyStats {
   // Calculate derived metrics
   void finalize(int total_capacity) {
     gross_profit = revenue - ingredient_costs;
-    net_profit = gross_profit - fixed_costs;
 
     if (total_capacity > 0) {
       capacity_utilization = (orders_fulfilled * 100) / total_capacity;

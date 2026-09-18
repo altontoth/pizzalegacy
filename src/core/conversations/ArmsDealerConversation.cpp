@@ -504,9 +504,9 @@ ArmsDealerConversation::make_sale(int requested, core::item::Item id,
   const Money profit = proceeds - cost_basis;
 
   player.financials().transfer(date, Account::Weapons, Account::Cash, proceeds,
-                               AccountingScope::Operational);
+                               balance_sheet_only);
   player.financials().transfer(date, Account::ProfitAndLoss, Account::Weapons,
-                               profit, AccountingScope::Operational);
+                               profit, balance_sheet_only);
 
   // Underworld score: profit / 100
   if (profit > 0_usd) {

@@ -248,7 +248,7 @@ void DepotExportScreen::execute_export() {
 
   // Pay transport costs
   if (transport_cost_ > 0_usd &&
-      !state_.spend_cash(Account::Stock, transport_cost_)) {
+      !state_.spend_cash(MonthlyCategory::Stock, transport_cost_)) {
     return;
   }
 

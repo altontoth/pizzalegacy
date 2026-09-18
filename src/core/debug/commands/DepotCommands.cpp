@@ -356,7 +356,7 @@ Examples:
             }
             Money cost{price_per_kg->cents * kg};
             if (!player->spend_cash(ctx.state.time().current_date(),
-                                    Account::Stock, cost)) {
+                                    MonthlyCategory::Stock, cost)) {
               return CommandResult::error(compat::format(
                   "Player {} ran out of money after {} ingredients (${:n} "
                   "spent)",

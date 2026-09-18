@@ -302,23 +302,22 @@ void DepotIngredientOrderScreen::place_order() {
     Money relieved{std::min(book_value.cents, total_cost.cents)};
     if (relieved.cents > 0) {
       player->financials().transfer(date, Account::Stock, Account::Cash,
-                                    relieved, AccountingScope::Operational);
+                                    relieved, balance_sheet_only);
     }
     if (book_value.cents > total_cost.cents) {
-      player->financials().transfer(date, Account::Stock,
-                                    Account::ProfitAndLoss,
-                                    Money{book_value.cents - total_cost.cents},
-                                    AccountingScope::Operational);
+      player->financials().transfer(
+          date, Account::Stock, Account::ProfitAndLoss,
+          Money{book_value.cents - total_cost.cents}, balance_sheet_only);
     }
     else if (total_cost.cents > book_value.cents) {
       player->financials().transfer(date, Account::ProfitAndLoss, Account::Cash,
                                     Money{total_cost.cents - book_value.cents},
-                                    AccountingScope::Operational);
+                                    balance_sheet_only);
     }
   }
   else {
     if (total_cost.cents > 0 &&
-        !state_.spend_cash(Account::Stock, total_cost)) {
+        !state_.spend_cash(MonthlyCategory::Stock, total_cost)) {
       return;
     }
 

@@ -12,6 +12,7 @@
 #include "core/finance/Ledger.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/state/GameState.h"
+#include "core/supply/Supplier.h"
 #include "engine/FormatCompat.h"
 #include "engine/gfx/Blit.h"
 #include "engine/gfx/Draw.h"
@@ -321,8 +322,12 @@ void FurnitureListView::show_invoice() {
     auto* restaurant = state_.active_restaurant();
 
     if (total_cost.cents > 0) {
-      if (!restaurant || !state_.spend_cash(Account::Furniture, total_cost,
-                                            restaurant->id())) {
+      const MonthlyCategory category =
+          supplier->type() == SupplierType::KITCHENWARE
+              ? MonthlyCategory::Machines
+              : MonthlyCategory::Furniture;
+      if (!restaurant ||
+          !state_.spend_cash(category, total_cost, restaurant->id())) {
         return;
       }
 

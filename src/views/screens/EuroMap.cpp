@@ -339,12 +339,13 @@ void EuroMap::on_city_leave(core::CityId city) {
 void EuroMap::attempt_flight() {
   auto target = *last_clicked_city_;
   Money cost = calculate_cost(state_.active_city_id(), target);
-  if (!state_.spend_cash(Account::Others, cost)) {
+  if (!state_.spend_cash(MonthlyCategory::Others, cost)) {
     return;
   }
 
   if (auto* player = state_.active_player()) {
-    player->on_city_travel();
+    player->on_city_travel(target,
+                           state_.time().current_date().week_day_index());
   }
 
   // Flying to another city costs money instead of time:

@@ -662,19 +662,22 @@ void FurniturePlacementController::handle_sell_furniture() {
   const auto* furn = on_cursor_->furniture();
   Money sell_price = furn->price() / 2;
 
-  auto do_sell = [this, sell_price]() {
+  const Account asset = furn->category() == FurnitureCategory::KITCHENWARE
+                            ? Account::Machines
+                            : Account::Furniture;
+  auto do_sell = [this, sell_price, asset]() {
     auto* player = state_.active_player();
     Money full_price = sell_price * 2;
     Money loss = full_price - sell_price;
 
     // Credit cash with the sell price
-    player->financials().transfer(state_.time().current_date(),
-                                  Account::Furniture, Account::Cash, sell_price,
-                                  AccountingScope::Operational);
+    player->financials().transfer(state_.time().current_date(), asset,
+                                  Account::Cash, sell_price,
+                                  balance_sheet_only);
     // Write off the lost value
-    player->financials().transfer(state_.time().current_date(),
-                                  Account::Furniture, Account::ProfitAndLoss,
-                                  loss, AccountingScope::Operational);
+    player->financials().transfer(state_.time().current_date(), asset,
+                                  Account::ProfitAndLoss, loss,
+                                  balance_sheet_only);
 
     decrement_or_erase_current_and_maybe_advance();
     update_buttons();

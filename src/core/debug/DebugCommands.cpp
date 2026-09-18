@@ -35,6 +35,7 @@ void register_debug_commands(DebugConsole& console, GameState& state,
   registry.register_command(debug::commands::make_city_commands());
   registry.register_command(debug::commands::make_mafia_commands());
   registry.register_command(debug::commands::make_police_commands());
+  registry.register_command(debug::commands::make_bank_commands());
   registry.register_command(debug::commands::make_mayor_commands());
   registry.register_command(debug::commands::make_staff_commands());
   registry.register_command(debug::commands::make_armsdealer_commands());

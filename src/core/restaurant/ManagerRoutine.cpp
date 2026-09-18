@@ -264,7 +264,7 @@ void ManagerRoutine::do_shopping() {
       }
 
       player->financials().spend_cash(game_state_.time().current_date(),
-                                      Account::Stock, total_cost,
+                                      MonthlyCategory::Stock, total_cost,
                                       restaurant_.id());
       restaurant_.inventory().add_ingredient(ingredient_type, buy_kg * 1000,
                                              supplier->quality(), price_per_kg);

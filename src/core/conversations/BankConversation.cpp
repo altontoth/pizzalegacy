@@ -14,11 +14,13 @@
 #include "core/city/City.h"
 #include "core/conversations/BankLine.h"
 #include "core/events/MilestoneId.h"
+#include "core/finance/BalanceSheet.h"
 #include "core/finance/Investment.h"
 #include "core/finance/Ledger.h"
 #include "engine/Math.h"
 
 constexpr int MAX_NUMBER_OF_LOANS = 4;
+constexpr Money no_loan_above_cash = 10'000'000_usd;
 
 // The offer is a share of the player's cash, until they are rich enough for
 // the flat one.
@@ -39,6 +41,8 @@ bool BankConversation::advance() {
   case BankLine::ACCOUNT_OVERDRAWN:
   case BankLine::HELLO_MAY_I_HELP_YOU:
   case BankLine::SORRY_ALREADY_HAVE_LOAN:
+  case BankLine::TOO_MANY_LOANS:
+  case BankLine::YOU_DONT_NEED_A_LOAN:
   case BankLine::GOOD_LUCK_WITH_INVESTMENTS:
   case BankLine::YOU_DONT_HAVE_ENOUGH_TO_REPAY:
   case BankLine::YOU_DONT_HAVE_LOAN_WITH_US:
@@ -62,12 +66,15 @@ bool BankConversation::advance_line_choice(BankLine choice) {
   // Do something with the choice
   switch (choice) {
   case BankLine::I_NEED_LOAN:
-    if (state_.active_player()->number_of_loans() > MAX_NUMBER_OF_LOANS) {
+    if (state_.active_player()->has_loan_with_bank(
+            state_.active_city_id(), core::BankId{actor_->id().value})) {
+      current_line(BankLine::SORRY_ALREADY_HAVE_LOAN);
+    }
+    else if (state_.active_player()->number_of_loans() >= MAX_NUMBER_OF_LOANS) {
       current_line(BankLine::TOO_MANY_LOANS);
     }
-    else if (state_.active_player()->has_loan_with_bank(
-                 state_.active_city_id(), core::BankId{actor_->id().value})) {
-      current_line(BankLine::SORRY_ALREADY_HAVE_LOAN);
+    else if (state_.active_player()->cash_balance() > no_loan_above_cash) {
+      current_line(BankLine::YOU_DONT_NEED_A_LOAN);
     }
     else {
       proposed_loan_ = propose_loan();
@@ -87,7 +94,8 @@ bool BankConversation::advance_line_choice(BankLine choice) {
       auto& loans =
           state_.active_player()->loans_in_city(state_.active_city_id());
       auto it = std::ranges::find_if(loans, [this](const Loan& l) {
-        return l.bank_id() == core::BankId{actor_->id().value};
+        return !l.is_settled() &&
+               l.bank_id() == core::BankId{actor_->id().value};
       });
       repaying_loan_ = &(*it);
 
@@ -148,7 +156,7 @@ bool BankConversation::advance_proposal(bool agree) {
   case BankLine::LATEST_INVESTMENT_TIP:
     if (agree) {
       (void)state_.active_player()->spend_cash(state_.time().current_date(),
-                                               Account::Investments,
+                                               Account::ProfitAndLoss,
                                                proposed_investment_.amount());
       state_.active_player()->add_investment(proposed_investment_);
       current_line(BankLine::YOUR_MONEY_IS_SAFE_WITH_US);
@@ -388,12 +396,13 @@ Loan BankConversation::propose_loan() const {
                     100) +
                    (5 * character.popularity_multiplier());
 
-  // Capital plus net profit which improves credit score if it's positive.
-  Money capital = -financials.balance(Account::Capital);
-  Money net_profit =
-      -financials.total_receipts() - financials.total_expenditures();
-  if (net_profit > 0_usd) {
-    capital += net_profit;
+  // Capital plus this year's profit, or nothing when the year is running at a
+  // loss.
+  const BalanceSheet sheet{*player_obj};
+  const Money result = -sheet.profit_and_loss();
+  Money capital;
+  if (result >= 0_usd) {
+    capital = -financials.balance(Account::Capital) + result;
   }
 
   // Character stat score and financial position share the same scale

@@ -6,63 +6,79 @@
 
 #include "core/finance/Ledger.h"
 
+#include <stdexcept>
+
+void MonthlyFigures::book(const GameDate& date, MonthlyCategory category,
+                          Money amount) {
+  const int month = month_number(date);
+  const auto index = static_cast<std::size_t>(category);
+  if (month > month_) {
+    last_month_ = month == month_ + 1 ? this_month_ : Figures{};
+    this_month_ = {};
+    month_ = month;
+  }
+  if (month == month_) {
+    this_month_.at(index) += amount;
+  }
+  else if (month == month_ - 1) {
+    last_month_.at(index) += amount;
+  }
+}
+
+Money MonthlyFigures::current_month(MonthlyCategory category,
+                                    const GameDate& date) const {
+  if (month_number(date) != month_) {
+    return Money{0};
+  }
+  return this_month_.at(static_cast<std::size_t>(category));
+}
+
+Money MonthlyFigures::previous_month(MonthlyCategory category,
+                                     const GameDate& date) const {
+  const int month = month_number(date);
+  const auto index = static_cast<std::size_t>(category);
+  if (month == month_) {
+    return last_month_.at(index);
+  }
+  if (month == month_ + 1) {
+    return this_month_.at(index);
+  }
+  return Money{0};
+}
+
+void MonthlyFigures::set(int month, const Figures& this_month,
+                         const Figures& last_month) {
+  month_ = month;
+  this_month_ = this_month;
+  last_month_ = last_month;
+}
+
 void Ledger::post(const JournalEntry& je) {
   Money sum = 0_usd;
-  for (auto& p : je.lines) {
+  for (const auto& p : je.lines) {
     sum += p.amount;
   }
   if (sum != 0_usd) {
     throw std::logic_error("Unbalanced JE");
   }
-  journal_.push_back(je);
-}
-
-Money Ledger::balance(Account acct,
-                      std::optional<core::RestaurantId> restaurant,
-                      std::optional<AccountingScope> scope) const {
-  Money total = 0_c;
-
-  for (const auto& je : journal_) {
-    for (const auto& line : je.lines) {
-      if (line.account == acct &&
-          (!restaurant || line.restaurant_id == restaurant) &&
-          (!scope || line.scope == *scope)) {
-        total += line.amount;
+  for (const auto& p : je.lines) {
+    balances_.at(static_cast<std::size_t>(p.account)) += p.amount;
+    if (p.monthly) {
+      month_.book(je.date, *p.monthly, p.amount);
+      if (p.restaurant_id) {
+        restaurant_months_[*p.restaurant_id].book(je.date, *p.monthly,
+                                                  p.amount);
       }
     }
   }
-
-  return total;
+  recent_.push_back(je);
+  if (recent_.size() > recent_max) {
+    recent_.pop_front();
+  }
 }
 
-std::vector<const JournalEntry*> Ledger::between(GameDate from,
-                                                 GameDate to) const noexcept {
-
-  std::vector<const JournalEntry*> results;
-
-  for (const auto& je : journal_) {
-    if (je.date >= from && je.date <= to) {
-      results.push_back(&je);
-    }
-  }
-
-  return results;
-}
-
-Money Ledger::balance_between(Account acct, GameDate from, GameDate to,
-                              std::optional<core::RestaurantId> restaurant,
-                              std::optional<AccountingScope> scope) const {
-  Money total = 0;
-  for (const auto& entry : journal_) {
-    if (entry.date >= from && entry.date <= to) {
-      for (const auto& posting : entry.lines) {
-        if (posting.account == acct &&
-            (!restaurant || posting.restaurant_id == restaurant) &&
-            (!scope || posting.scope == *scope)) {
-          total += posting.amount;
-        }
-      }
-    }
-  }
-  return total;
+const MonthlyFigures& Ledger::restaurant_month(core::RestaurantId id) const {
+  static const MonthlyFigures none;
+  auto it = restaurant_months_.find(id);
+  return it == restaurant_months_.end() ? none : it->second;
 }

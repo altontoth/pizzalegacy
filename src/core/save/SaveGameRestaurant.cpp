@@ -819,9 +819,6 @@ json daily_stats_to_json(const core::restaurant::DailyStats& stats) {
   // Furniture purchases
   j["furniture_purchases"] = stats.furniture_purchases.cents;
 
-  j["fixed_costs"] = stats.fixed_costs.cents;
-  j["net_profit"] = stats.net_profit.cents;
-
   // Operational
   j["avg_quality"] = stats.avg_quality;
   j["capacity_utilization"] = stats.capacity_utilization;
@@ -882,9 +879,6 @@ core::restaurant::DailyStats json_to_daily_stats(const json& j) {
 
   // Furniture purchases
   stats.furniture_purchases = Money{j.value("furniture_purchases", 0LL)};
-
-  stats.fixed_costs = Money{j.value("fixed_costs", 0LL)};
-  stats.net_profit = Money{j.value("net_profit", 0LL)};
 
   // Operational
   stats.avg_quality = j.value("avg_quality", 0);

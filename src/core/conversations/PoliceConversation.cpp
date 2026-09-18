@@ -204,8 +204,8 @@ bool PoliceConversation::advance_line_choice(PoliceLine choice) {
     if (engine::random::rand_percentage_chance(std::max(chance, 5)) &&
         player->cash_balance() >= cash_bribe) {
       player->financials().transfer(state_.time().current_date(), Account::Cash,
-                                    Account::FinesAndBribes, cash_bribe,
-                                    AccountingScope::Operational);
+                                    Account::ProfitAndLoss, cash_bribe,
+                                    balance_sheet_only);
       current_line(PoliceLine::SURE_BUT_THIS_WILL_REMAIN_OUR_SECRET);
     }
     else {
@@ -221,8 +221,8 @@ bool PoliceConversation::advance_line_choice(PoliceLine choice) {
     if (engine::random::rand_percentage_chance(std::max(chance, 5)) &&
         player->cash_balance() >= sports_car_bribe) {
       player->financials().transfer(state_.time().current_date(), Account::Cash,
-                                    Account::FinesAndBribes, sports_car_bribe,
-                                    AccountingScope::Operational);
+                                    Account::ProfitAndLoss, sports_car_bribe,
+                                    balance_sheet_only);
       current_line(
           PoliceLine::ALRIGHT_ILL_HAVE_ONE_FOR_80K_AND_YOU_CAN_GO_FREE);
     }
@@ -237,8 +237,8 @@ bool PoliceConversation::advance_line_choice(PoliceLine choice) {
   case PoliceLine::ANY_INFO_FOR_SALE:
   case PoliceLine::SSSHH_DO_YOU_SELL_INFO:
     player->financials().transfer(state_.time().current_date(), Account::Cash,
-                                  Account::FinesAndBribes, 1000_usd,
-                                  AccountingScope::Operational);
+                                  Account::ProfitAndLoss, 1000_usd,
+                                  balance_sheet_only);
     current_line(
         PoliceLine::WHAT_DO_YOU_THINK_I_AM_I_FINE_YOU_1K_FOR_INSULTING);
     break;
@@ -288,8 +288,8 @@ bool PoliceConversation::advance_line_choice(PoliceLine choice) {
   case PoliceLine::NEED_A_DONATION_TO_THE_LOCAL_POLICE: {
     if (player->cash_balance() >= donation_amount_) {
       player->financials().transfer(state_.time().current_date(), Account::Cash,
-                                    Account::FinesAndBribes, donation_amount_,
-                                    AccountingScope::Operational);
+                                    Account::ProfitAndLoss, donation_amount_,
+                                    balance_sheet_only);
       state_.record_milestone(core::events::MilestoneId::FirstBribery,
                               player->id());
       current_line(PoliceLine::YES_THANKS_WHAT_WOULD_I_HAVE_DONE_WITHOUT);
@@ -315,9 +315,9 @@ bool PoliceConversation::advance_proposal(bool agree) {
   case PoliceLine::
       YOU_HAVE_BEEN_SENTENCED_TO_X_DAYS_IN_JAIL_OR_WOULD_YOU_RATHER: {
     if (agree && player->cash_balance() >= bribe_or_fine_cost_) {
-      player->financials().transfer(
-          state_.time().current_date(), Account::Cash, Account::FinesAndBribes,
-          bribe_or_fine_cost_, AccountingScope::Operational);
+      player->financials().transfer(state_.time().current_date(), Account::Cash,
+                                    Account::ProfitAndLoss, bribe_or_fine_cost_,
+                                    balance_sheet_only);
       if (!arrest_reason_) {
         fatal("Don't have an arrest reason when I do expect one.");
       }
@@ -339,8 +339,8 @@ bool PoliceConversation::advance_proposal(bool agree) {
       FINE_THANKS_I_EVEN_KNOW_WHERE_WE_WILL_BE_CHECKING_WAREHOUSE_NEXT_MONTH_FOR_4K:
     if (agree) {
       player->financials().transfer(state_.time().current_date(), Account::Cash,
-                                    Account::FinesAndBribes, 4000_usd,
-                                    AccountingScope::Operational);
+                                    Account::ProfitAndLoss, 4000_usd,
+                                    balance_sheet_only);
       current_line(
           investigated_district(state_)
               ? PoliceLine::
@@ -356,8 +356,8 @@ bool PoliceConversation::advance_proposal(bool agree) {
       YES_INDEED_I_HAPPENED_TO_FIND_OUT_MAYOR_VISIT_RESTAURANT_FOR_2K:
     if (agree) {
       player->financials().transfer(state_.time().current_date(), Account::Cash,
-                                    Account::FinesAndBribes, 2000_usd,
-                                    AccountingScope::Operational);
+                                    Account::ProfitAndLoss, 2000_usd,
+                                    balance_sheet_only);
       current_line(PoliceLine::THANK_YOU_THE_MAYOR_WILL_VISIT_YOUR_RESTAURANT);
     }
     else {
@@ -523,7 +523,7 @@ void PoliceConversation::seize_carried_weapons(GameState& state,
   if (seized.cents > 0) {
     player.financials().transfer(state.time().current_date(), Account::Weapons,
                                  Account::ProfitAndLoss, seized,
-                                 AccountingScope::Operational);
+                                 balance_sheet_only);
   }
 }
 

@@ -217,8 +217,9 @@ void FloorListView::set_up_input_panel() {
         const auto tile_count = restaurant->size().w * restaurant->size().h;
         const auto price = tile_count * supplier_->price_per_tile();
         // Price per tile
-        if (player->spend_cash(state_.time().current_date(), Account::Furniture,
-                               price, restaurant->id())) {
+        if (player->spend_cash(state_.time().current_date(),
+                               MonthlyCategory::Furniture, price,
+                               restaurant->id())) {
           restaurant->layout()->floor_pattern(patterns_[*selected_index_]);
           charge_exit();
           state_.ui().push<RestaurantViewState>(RestaurantViewState{

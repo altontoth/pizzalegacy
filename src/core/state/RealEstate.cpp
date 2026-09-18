@@ -99,7 +99,7 @@ bool RealEstate::buy_restaurant(Property& property, Player& buyer, Money price,
       return false;
     }
     buyer.financials().transfer(today, Account::Cash, Account::Property, price,
-                                AccountingScope::Capital);
+                                balance_sheet_only);
   }
 
   property.buy(buyer.id());
@@ -131,7 +131,8 @@ Restaurant* RealEstate::rent_restaurant(Property& property, Player& player,
 
   if (!free) {
     // We already check player has enough money, so this can't be false.
-    (void)player.spend_cash(today, Account::Rents, price, restaurant->id());
+    (void)player.spend_cash(today, MonthlyCategory::Rents, price,
+                            restaurant->id());
     gs_->adjust_social_score(player, 50);
   }
   return restaurant;
@@ -145,7 +146,7 @@ bool RealEstate::buy_depot(Property& property, Player& buyer, Money price) {
     return false;
   }
   buyer.financials().transfer(today, Account::Cash, Account::Property, price,
-                              AccountingScope::Capital);
+                              balance_sheet_only);
 
   // A tenant buying the depot they rent already has its capacity and score.
   const bool was_tenant =
@@ -168,7 +169,7 @@ bool RealEstate::rent_depot(Property& property, Player& player, bool free) {
   Money price = property.get_monthly_rent();
   GameDate today = gs_->time().current_date();
 
-  if (!free && !player.spend_cash(today, Account::Rents, price)) {
+  if (!free && !player.spend_cash(today, MonthlyCategory::Rents, price)) {
     return false;
   }
   property.rent(player.id());
@@ -226,7 +227,7 @@ bool RealEstate::sell_property(Property& property, Player& seller,
   GameDate today = gs_->time().current_date();
 
   seller.financials().transfer(today, Account::Property, Account::Cash,
-                               sale_price, AccountingScope::Capital);
+                               sale_price, balance_sheet_only);
 
   if (property.type() == PropertyType::DEPOT) {
     gs_->adjust_social_score(seller, -170);
@@ -329,12 +330,12 @@ void RealEstate::close_restaurant(Player& player, Property& property) {
       if (furniture_amount > 0_usd) {
         player.financials().transfer(date, Account::Furniture,
                                      Account::ProfitAndLoss, furniture_amount,
-                                     AccountingScope::Operational);
+                                     balance_sheet_only);
       }
       if (oven_amount > 0_usd) {
         player.financials().transfer(date, Account::Machines,
                                      Account::ProfitAndLoss, oven_amount,
-                                     AccountingScope::Operational);
+                                     balance_sheet_only);
       }
     }
   }
@@ -453,10 +454,10 @@ RealEstate::furnish_new_restaurant(Player& player, Property& property,
       // Apply financial transactions for furniture and ovens
       player.financials().transfer(
           gs_->time().current_date(), Account::Capital, Account::Furniture,
-          layout->furniture_value() / 2, AccountingScope::Capital);
+          layout->furniture_value() / 2, balance_sheet_only);
       player.financials().transfer(gs_->time().current_date(), Account::Capital,
                                    Account::Machines, layout->oven_value() / 2,
-                                   AccountingScope::Capital);
+                                   balance_sheet_only);
     }
 
     rest->kitchen_size(layout->kitchen_size());

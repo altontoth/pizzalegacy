@@ -158,9 +158,12 @@ public:
 
   // Spending money with insufficient funds notification
   // Returns true if successful, false if insufficient funds (and posts message)
-  [[nodiscard]] bool spend_cash(Player& player, Account to, Money amount);
+  [[nodiscard]] bool spend_cash(Player& player, MonthlyCategory category,
+                                Money amount);
+  [[nodiscard]] bool spend_cash(MonthlyCategory category,
+                                Money amount);             // Uses active player
   [[nodiscard]] bool spend_cash(Account to, Money amount); // Uses active player
-  [[nodiscard]] bool spend_cash(Account to, Money amount,
+  [[nodiscard]] bool spend_cash(MonthlyCategory category, Money amount,
                                 core::RestaurantId restaurant_id);
 
   // The player whose account number this is, or null if it is nobody's.

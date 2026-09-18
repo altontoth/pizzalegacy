@@ -74,10 +74,9 @@ struct WeeklyCityProfits {
   struct Entry {
     CityId city_id;
     Money profit;
-    bool is_active;
   };
   std::vector<Entry> entries;
-  Money total; // non-active cities only; the active city is settled live
+  Money total;
 };
 WeeklyCityProfits collect_weekly_city_profits(const GameState& gs,
                                               const Player& player);

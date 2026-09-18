@@ -29,7 +29,7 @@ enum class GlobalStatsScreen {
 
 struct MonthlyPopupState {
   bool visible{false};
-  Account account{Account::Sales};
+  MonthlyCategory category{MonthlyCategory::Sales};
   bool is_receipts{true};
   bool show_category_total{false};
   int scroll_offset{0};

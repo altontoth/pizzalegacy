@@ -312,11 +312,13 @@ void IngredientOrderScreen::place_order() {
 
   Logger::info("[Order] Total: {} items for {}", total_items, total_cost);
 
-  if (total_cost.cents > 0 && !state_.spend_cash(Account::Stock, total_cost)) {
+  auto* restaurant = state_.active_restaurant();
+  if (total_cost.cents > 0 &&
+      !state_.spend_cash(MonthlyCategory::Stock, total_cost,
+                         restaurant->id())) {
     return;
   }
 
-  auto* restaurant = state_.active_restaurant();
   for (const auto& batch : ingredients_) {
     if (batch.count > 0) {
       Money cost =

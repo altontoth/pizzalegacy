@@ -242,15 +242,16 @@ void GlobalStats::render_month_overview(const RenderContext& ctx) {
   constexpr int row_width = 340;
   constexpr int row_height = 18;
 
-  auto create_clickable_row = [&](Account acct, ViewPoint pos, bool is_receipt,
-                                  bool is_total, std::string_view label) {
+  auto create_clickable_row = [&](MonthlyCategory category, ViewPoint pos,
+                                  bool is_receipt, bool is_total,
+                                  std::string_view label) {
     ViewRect click_area{pos.x, pos.y - 2, row_width, row_height};
     interactions_.create_frame_item(
-        click_area, label, [this, acct, is_receipt, is_total](auto& ie) {
+        click_area, label, [this, category, is_receipt, is_total](auto& ie) {
           if (ie.type == views::ui::InteractionEvent::Type::Click &&
               ie.button == views::ui::MouseButton::Left) {
             popup_state_.visible = true;
-            popup_state_.account = acct;
+            popup_state_.category = category;
             popup_state_.is_receipts = is_receipt;
             popup_state_.show_category_total = is_total;
             popup_state_.scroll_offset = 0;
@@ -267,19 +268,20 @@ void GlobalStats::render_month_overview(const RenderContext& ctx) {
     ViewPoint pos{label_x, 72};
 
     // Both columns are per-player figures
-    for (auto acct : PlayerFinancials::receipt_accounts()) {
-      receipts_last += financials.previous_month_operational(acct, date);
-      receipts_this += financials.current_month_operational(acct, date);
+    for (auto category : receipt_categories) {
+      receipts_last += financials.previous_month(category, date);
+      receipts_this += financials.current_month(category, date);
     }
     draw_label_and_amounts("receipts", -receipts_last, -receipts_this, pos);
-    create_clickable_row(Account::Sales, pos, true, true, "receipts_total");
+    create_clickable_row(MonthlyCategory::Sales, pos, true, true,
+                         "receipts_total");
 
-    for (auto acct : PlayerFinancials::receipt_accounts()) {
+    for (auto category : receipt_categories) {
       pos.y += line_spacing;
-      Money this_m = financials.current_month_operational(acct, date);
-      Money last_m = financials.previous_month_operational(acct, date);
-      draw_label_and_amounts(to_string(acct), -last_m, -this_m, pos);
-      create_clickable_row(acct, pos, true, false, to_string(acct));
+      Money this_m = financials.current_month(category, date);
+      Money last_m = financials.previous_month(category, date);
+      draw_label_and_amounts(to_string(category), -last_m, -this_m, pos);
+      create_clickable_row(category, pos, true, false, to_string(category));
     }
   }
 
@@ -289,19 +291,20 @@ void GlobalStats::render_month_overview(const RenderContext& ctx) {
   {
     ViewPoint pos{label_x, 160};
 
-    for (auto acct : PlayerFinancials::expenditure_accounts()) {
-      exp_last += financials.previous_month_operational(acct, date);
-      exp_this += financials.current_month_operational(acct, date);
+    for (auto category : expenditure_categories) {
+      exp_last += financials.previous_month(category, date);
+      exp_this += financials.current_month(category, date);
     }
     draw_label_and_amounts("expenditure", exp_last, exp_this, pos);
-    create_clickable_row(Account::Staff, pos, false, true, "expenditure_total");
+    create_clickable_row(MonthlyCategory::Staff, pos, false, true,
+                         "expenditure_total");
 
-    for (auto acct : PlayerFinancials::expenditure_accounts()) {
+    for (auto category : expenditure_categories) {
       pos.y += line_spacing;
-      Money this_m = financials.current_month_operational(acct, date);
-      Money last_m = financials.previous_month_operational(acct, date);
-      draw_label_and_amounts(to_string(acct), last_m, this_m, pos);
-      create_clickable_row(acct, pos, false, false, to_string(acct));
+      Money this_m = financials.current_month(category, date);
+      Money last_m = financials.previous_month(category, date);
+      draw_label_and_amounts(to_string(category), last_m, this_m, pos);
+      create_clickable_row(category, pos, false, false, to_string(category));
     }
   }
 
@@ -354,7 +357,7 @@ void GlobalStats::render_month_overview_popup(
     account_label = popup_state_.is_receipts ? "receipts:" : "expenditure:";
   }
   else {
-    account_label = compat::format("{}:", to_string(popup_state_.account));
+    account_label = compat::format("{}:", to_string(popup_state_.category));
   }
   const PxOffset label_offset{162, 10};
   context_.font->render_text_onto(*ctx.surface, account_label,
@@ -376,19 +379,24 @@ void GlobalStats::render_month_overview_popup(
     Money value = 0_usd;
 
     if (popup_state_.show_category_total) {
-      // Sum all receipt or expenditure accounts for this restaurant
-      const auto accounts = popup_state_.is_receipts
-                                ? PlayerFinancials::receipt_accounts()
-                                : PlayerFinancials::expenditure_accounts();
-      for (auto acct : accounts) {
-        value += financials.current_month_operational(acct, current_date,
-                                                      restaurant->id());
+      // Sum all receipt or expenditure categories for this restaurant
+      auto add_up = [&](const auto& categories) {
+        for (auto category : categories) {
+          value += financials.current_month(category, current_date,
+                                            restaurant->id());
+        }
+      };
+      if (popup_state_.is_receipts) {
+        add_up(receipt_categories);
+      }
+      else {
+        add_up(expenditure_categories);
       }
     }
     else {
-      // Single account for this restaurant
-      value = financials.current_month_operational(
-          popup_state_.account, current_date, restaurant->id());
+      // Single category for this restaurant
+      value = financials.current_month(popup_state_.category, current_date,
+                                       restaurant->id());
     }
 
     // Receipts are credits (negative in ledger); negate for display
@@ -570,20 +578,10 @@ void GlobalStats::render_bar_chart(
 }
 
 void GlobalStats::render_cash_flow(const RenderContext& ctx) {
-  auto& financials = state_.active_player()->financials();
-  auto today = state_.time().current_date();
-
-  // Show current year's weekly bars. Each bar's value is the true running cash
-  // balance queried from game_start_date, so initial capital is included.
-  std::vector<int64_t> weekly_dollars;
-  GameDate cursor = today.start_of_year();
-  while (cursor < today) {
-    GameDate next = cursor.add_days(7);
-    Money balance =
-        financials.balance_between(Account::Cash, game_start_date, next);
-    weekly_dollars.push_back(balance.whole());
-    cursor = next;
-  }
+  const auto& financials = state_.active_player()->financials();
+  const auto& weeks = financials.liquidity();
+  std::vector<int64_t> weekly_dollars(
+      weeks.begin(), weeks.begin() + financials.liquidity_weeks());
 
   render_bar_chart(ctx, weekly_dollars, "liquidity", "weeks");
 }
@@ -978,8 +976,7 @@ void GlobalStats::render_balance(const RenderContext& ctx) {
         ViewPoint{amount_x(pos), pos.y}, FontFace::PIZ_NUMB, item_color,
         TextAnchor::End);
   };
-  auto balance =
-      BalanceSheet(*state_.active_player(), state_.options().fix_legacy_bugs);
+  auto balance = BalanceSheet(*state_.active_player());
   // Assets
   ViewPoint label_pos{6, 120};
   Money loss_amount = 0_usd;

@@ -13,6 +13,8 @@
 #include "core/character/SocialStatus.h"
 #include "core/city/City.h"
 #include "core/city/CityNames.h"
+#include "core/conversations/BankConversation.h"
+#include "core/conversations/BankLine.h"
 #include "core/conversations/PoliceConversation.h"
 #include "core/debug/command/CommonArgs.h"
 #include "core/item/Item.h"
@@ -23,6 +25,7 @@
 #include "engine/FormatCompat.h"
 
 #include <algorithm>
+#include <cstddef>
 
 using namespace debug::command;
 
@@ -728,6 +731,80 @@ Example:
         return result;
       },
   };
+}
+
+static CommandDef make_bank_loan() {
+  return CommandDef{
+      .name = "loan",
+      .description = "Ask a bank in the active city for a loan",
+      .help_text = R"(Usage: bank loan [bank] [accept]
+
+Asks the given bank of the active city for a loan, as the active player
+choosing "I need a loan", and prints what the bank says. With accept=true an
+offer is accepted.
+
+Examples:
+  bank loan
+  bank loan 1 true
+)",
+      .args =
+          {
+              ArgSpec{
+                  .name = "bank",
+                  .type = ArgType::Int,
+                  .optional = true,
+                  .default_provider = DefaultProvider::None,
+                  .description = "Bank number in the active city",
+                  .min_value = 0,
+              },
+              ArgSpec{
+                  .name = "accept",
+                  .type = ArgType::Bool,
+                  .optional = true,
+                  .default_provider = DefaultProvider::None,
+                  .description = "Accept the offer",
+              },
+          },
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        auto* city = ctx.state.active_city();
+        if (!city || !ctx.state.active_player()) {
+          return CommandResult::error("No active city or player");
+        }
+        const auto banks = city->actors(ActorType::BANK);
+        const auto index =
+            static_cast<std::size_t>(ctx.has_arg(0) ? ctx.int_arg(0) : 0);
+        if (index >= banks.size()) {
+          return CommandResult::error(
+              compat::format("The active city has {} bank(s)", banks.size()));
+        }
+        const Actor* bank = banks[index];
+        BankConversation conversation{ctx.state, bank,
+                                      city->bank_settings(bank->id())};
+        conversation.advance_line_choice(BankLine::I_NEED_LOAN);
+
+        CommandResult result = CommandResult::success();
+        const auto lines = conversation.lines();
+        for (const auto& line : lines) {
+          result.add_message(line.text);
+        }
+        const bool accept = ctx.has_arg(1) && ctx.bool_arg(1);
+        if (accept && !lines.empty() &&
+            lines.front().line_id == BankLine::LOAN_ARRANGEMENT) {
+          conversation.advance_proposal(true);
+          result.add_message("Offer accepted");
+        }
+        return result;
+      },
+  };
+}
+
+CommandDef make_bank_commands() {
+  return CommandDef{
+      .name = "bank",
+      .description = "Bank interaction commands",
+      .help_text = "Talk to a bank of the active city",
+  }
+      .add_subcommand(make_bank_loan());
 }
 
 CommandDef make_police_commands() {

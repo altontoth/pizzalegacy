@@ -704,7 +704,7 @@ void TurnOrchestrator::snapshot_weekly_profits(
     Money weekly_total;
     for (const auto& day :
          rest->stats().current_week(gs_->time().current_date())) {
-      weekly_total = weekly_total + day.net_profit;
+      weekly_total = weekly_total + day.gross_profit;
     }
     rest->last_weekly_profit(weekly_total);
   }
@@ -719,22 +719,13 @@ TurnOrchestrator::finish_end_of_turn(const turn::FinishTurn& step) {
   auto* current_player = gs_->active_player();
   if (current_player) {
     if (current_player->is_human_controlled()) {
+      current_player->financials().close_profit_day(gs_->active_city_id());
       bool is_eow = gs_->time().current_date().is_end_of_week();
       gs_->milestones().check_milestone_events(*current_player, is_eow);
     }
     else {
       current_player->ai_end_of_day(*gs_);
     }
-  }
-
-  // The day's restaurant revenue is now booked, so append this player's net for
-  // today to the rolling series the daily-profits screen reads.
-  if (current_player) {
-    const GameDate& date = gs_->time().current_date();
-    Money day_profit =
-        -current_player->financials().total_receipts(date, date) -
-        current_player->financials().total_expenditures(date, date);
-    current_player->financials().record_daily_profit(day_profit);
   }
 
   if (gs_->active_player()->is_human_controlled()) {
@@ -1058,6 +1049,9 @@ TurnOrchestrator::execute_pipeline_step(const turn::Step& step) {
             deferred_manager_alerts_.clear();
             if (is_human) {
               gs_->status().suppress(false);
+              if (gs_->time().current_date().week_day_index() == 0) {
+                player->financials().reset_days_present();
+              }
             }
             // Human restaurants that are in scope are all in the active city,
             // so the per-city guard keeps the city-view-entry trigger from
@@ -1290,6 +1284,7 @@ void TurnOrchestrator::end_of_week_processing() {
   for (auto& player : gs_->players_) {
     if (player) {
       player->end_of_week(*gs_);
+      player->financials().record_liquidity(player->cash_balance());
     }
   }
 
@@ -1311,6 +1306,8 @@ void TurnOrchestrator::end_of_year_processing() {
     if (player) {
       auto& ch = player->character();
       ch.age(static_cast<uint8_t>(std::min(255, (int)ch.age() + 1)));
+      player->financials().close_year(gs_->time().current_date());
+      player->financials().start_liquidity_year(gs_->options().fix_legacy_bugs);
     }
   }
 }
@@ -1439,7 +1436,7 @@ void TurnOrchestrator::raid_depots(core::PlayerId player_id) {
     if (seized.cents > 0 && gs_->options().fix_legacy_bugs) {
       player->financials().transfer(gs_->time().current_date(),
                                     Account::Weapons, Account::ProfitAndLoss,
-                                    seized, AccountingScope::Operational);
+                                    seized, balance_sheet_only);
     }
 
     // The original stops investigating a district only when it finds a bomb,

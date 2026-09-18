@@ -99,7 +99,7 @@ void StaffEvents::apply_event_effect(StaffEventData::Type type, Staff& staff,
     Money theft_amount{theft_cents};
     if (auto* player = game_state.restaurant_owner(restaurant)) {
       player->financials().spend_cash(game_state.time().current_date(),
-                                      Account::Others, theft_amount,
+                                      MonthlyCategory::Others, theft_amount,
                                       restaurant.id());
       player->make_insurance_claim(InsuranceType::THEFT);
     }
@@ -163,7 +163,7 @@ void StaffEvents::apply_event_effect(StaffEventData::Type type, Staff& staff,
   case Type::SpillWine: {
     if (auto* player = game_state.restaurant_owner(restaurant)) {
       player->financials().spend_cash(game_state.time().current_date(),
-                                      Account::Others, Money{100000},
+                                      MonthlyCategory::Others, Money{100000},
                                       restaurant.id());
     }
     break;

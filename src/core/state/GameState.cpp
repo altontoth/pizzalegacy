@@ -116,8 +116,9 @@ void GameState::post_insufficient_funds() {
   });
 }
 
-bool GameState::spend_cash(Player& player, Account to, Money amount) {
-  if (player.spend_cash(time().current_date(), to, amount)) {
+bool GameState::spend_cash(Player& player, MonthlyCategory category,
+                           Money amount) {
+  if (player.spend_cash(time().current_date(), category, amount)) {
     return true;
   }
   post_insufficient_funds();
@@ -129,17 +130,30 @@ bool GameState::spend_cash(Account to, Money amount) {
   if (!player) {
     return false;
   }
-  return spend_cash(*player, to, amount);
+  if (player->spend_cash(time().current_date(), to, amount)) {
+    return true;
+  }
+  post_insufficient_funds();
+  return false;
 }
 
-bool GameState::spend_cash(Account to, Money amount,
+bool GameState::spend_cash(MonthlyCategory category, Money amount) {
+  auto* player = active_player();
+  if (!player) {
+    return false;
+  }
+  return spend_cash(*player, category, amount);
+}
+
+bool GameState::spend_cash(MonthlyCategory category, Money amount,
                            core::RestaurantId restaurant_id) {
   auto* player = active_player();
   if (!player) {
     return false;
   }
 
-  if (player->spend_cash(time().current_date(), to, amount, restaurant_id)) {
+  if (player->spend_cash(time().current_date(), category, amount,
+                         restaurant_id)) {
     return true;
   }
   post_insufficient_funds();
@@ -168,9 +182,9 @@ void GameState::deduct_staff_wages_for_restaurant(
   }
 
   // wages (can go negative)
-  p->financials().transfer(time_.current_date(), Account::Cash, Account::Staff,
-                           total_wages, restaurant_id,
-                           AccountingScope::Operational);
+  p->financials().transfer(time_.current_date(), Account::Cash,
+                           Account::ProfitAndLoss, total_wages, restaurant_id,
+                           MonthlyCategory::Staff);
 
   Logger::info(
       "[Finance] {} - Staff wages deducted for {}: {} (balance now {})",
@@ -1586,7 +1600,7 @@ bool GameState::bank_transfer(int account_number, Money amount,
   const auto& date = time().current_date();
 
   // Debit the sender
-  if (!sender.spend_cash(date, Account::Others, amount)) {
+  if (!sender.spend_cash(date, MonthlyCategory::Others, amount)) {
     return false;
   }
 
@@ -1614,7 +1628,6 @@ bool GameState::bank_transfer(int account_number, Money amount,
     return true;
   }
 
-  target->financials().transfer(date, Account::Others, Account::Cash, amount,
-                                AccountingScope::Operational);
+  target->financials().spend_cash(date, MonthlyCategory::Others, -amount);
   return true;
 }

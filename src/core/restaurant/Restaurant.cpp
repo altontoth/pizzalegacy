@@ -1594,7 +1594,7 @@ void Restaurant::start_of_day(GameState& game_state) {
       player->financials().transfer(game_state.time().current_date(),
                                     Account::Stock, Account::ProfitAndLoss,
                                     rotten_value, restaurant_id_,
-                                    AccountingScope::Operational);
+                                    balance_sheet_only);
     }
   }
 

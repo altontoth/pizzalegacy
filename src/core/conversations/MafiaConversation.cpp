@@ -151,7 +151,7 @@ void MafiaConversation::apply_npc_effects(GameState& state, MafiaMode mm) {
     auto& mission = player->mafia_state().active_mission;
     if (mission && mission->completed) {
       if (mission->reward.cents > 0) {
-        player->financials().spend_cash(date, Account::Missions,
+        player->financials().spend_cash(date, MonthlyCategory::Missions,
                                         -mission->reward);
       }
       state.adjust_underworld_score(*player, 20);
@@ -206,7 +206,7 @@ void MafiaConversation::apply_npc_effects(GameState& state, MafiaMode mm) {
     auto& loan = player->mafia_state().loan;
     if (loan && player->cash_balance() >= loan->amount) {
       player->financials().transfer(date, Account::Cash, Account::ProfitAndLoss,
-                                    loan->amount, AccountingScope::Capital);
+                                    loan->amount, balance_sheet_only);
       player->mafia_state().loan = std::nullopt;
     }
     else if (loan) {
@@ -416,7 +416,7 @@ bool MafiaConversation::advance_proposal(bool agree) {
         state_.difficulty_level());
 
     if (agree) {
-      player->financials().spend_cash(date, Account::Protection,
+      player->financials().spend_cash(date, MonthlyCategory::Protection,
                                       protection_price_);
       if (restaurant) {
         restaurant->protection_timer(rand_max_n(20) + district_factor);
@@ -457,9 +457,9 @@ bool MafiaConversation::advance_proposal(bool agree) {
           }
 
           if (total_damage.cents > 0) {
-            player->financials().transfer(
-                date, Account::Furniture, Account::ProfitAndLoss, total_damage,
-                *restaurant_id_, AccountingScope::Capital);
+            player->financials().transfer(date, Account::Furniture,
+                                          Account::ProfitAndLoss, total_damage,
+                                          *restaurant_id_, balance_sheet_only);
           }
           restaurant->update_demographics(player->recipes());
         }
@@ -475,7 +475,7 @@ bool MafiaConversation::advance_proposal(bool agree) {
   case MafiaLine::LOAN_OFFER:
     if (agree) {
       player->financials().transfer(date, Account::ProfitAndLoss, Account::Cash,
-                                    loan_amount_, AccountingScope::Capital);
+                                    loan_amount_, balance_sheet_only);
       // Must repay the repayment amount (loan + interest) in 90 days
       player->mafia_state().loan = MafiaLoan{.amount = loan_repayment_,
                                              .due_date = date.add_days(90),
@@ -504,13 +504,13 @@ bool MafiaConversation::advance_proposal(bool agree) {
 
         if (pending_mission_->mission_type == MafiaMissionType::Laundering) {
           // Give the player the laundering cash up front
-          player->financials().spend_cash(date, Account::Missions,
+          player->financials().spend_cash(date, MonthlyCategory::Missions,
                                           -pending_mission_->cash_amount);
         }
         else if (pending_mission_->mission_type ==
                  MafiaMissionType::Investment) {
           // Deduct investment cost
-          player->financials().spend_cash(date, Account::Missions,
+          player->financials().spend_cash(date, MonthlyCategory::Missions,
                                           pending_mission_->cash_amount);
         }
       }
@@ -525,7 +525,8 @@ bool MafiaConversation::advance_proposal(bool agree) {
 
   case MafiaLine::TIP_PRICE_OFFER: {
     if (agree && player->cash_balance() >= tip_price_) {
-      player->financials().spend_cash(date, Account::Others, tip_price_);
+      player->financials().spend_cash(date, MonthlyCategory::Others,
+                                      tip_price_);
       if (!tip_reveal_) {
         fatal("Tip reveal line not set");
       }

@@ -20,7 +20,7 @@ void RestaurantStats::end_of_day(int total_capacity) {
   total_pizzas_sold += today.orders_fulfilled;
   total_ingredients_used_grams += today.ingredients_used_grams;
   total_revenue = total_revenue + today.revenue;
-  total_profit = total_profit + today.net_profit;
+  total_profit = total_profit + today.gross_profit;
 
   // Shift days forward
   day_before_yesterday = yesterday;

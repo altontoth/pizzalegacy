@@ -51,8 +51,8 @@ static std::optional<Money> buy_ingredient(GameState& state, Player& player,
   if (player.cash_balance() < cost) {
     return std::nullopt;
   }
-  (void)player.spend_cash(state.time().current_date(), Account::Stock, cost,
-                          restaurant.id());
+  (void)player.spend_cash(state.time().current_date(), MonthlyCategory::Stock,
+                          cost, restaurant.id());
   restaurant.inventory().add_ingredient(type, kg * 1000, supplier.quality(),
                                         *price_per_kg);
   return cost;

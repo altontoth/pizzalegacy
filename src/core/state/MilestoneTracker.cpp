@@ -57,7 +57,6 @@ bool perfect_delivery_week(const Restaurant& rest, bool require_orders) {
 void MilestoneTracker::check_milestone_events(Player& player,
                                               bool is_end_of_week) {
   using core::events::MilestoneId;
-  const auto& date = gs_->time().current_date();
   const auto pid = player.id();
 
   // Asset milestones (cash on hand)
@@ -158,25 +157,12 @@ void MilestoneTracker::check_milestone_events(Player& player,
     return;
   }
 
-  // Weekly loss milestone
-  const auto week_start = date.add_days(-6);
-  const Money week_receipts =
-      player.financials().total_receipts(week_start, date);
-  const Money week_expenditures =
-      player.financials().total_expenditures(week_start, date);
-  const Money week_net = week_receipts - week_expenditures;
-  if (week_net < -1'000'000_usd) {
-    gs_->record_milestone(MilestoneId::LosesOneMillionInOneWeek, pid);
-  }
-
   // Weekly profit per restaurant and per city
-  Money city_weekly_profit;
   for (auto* rest : city_restaurants) {
     if (!rest || rest->property().city().id() != active_city_id) {
       continue;
     }
     const Money wp = rest->last_weekly_profit();
-    city_weekly_profit = city_weekly_profit + wp;
 
     if (wp >= 25'000_usd) {
       gs_->record_milestone(MilestoneId::Has25KWeeksProfitInOneRestaurant, pid);
@@ -186,7 +172,7 @@ void MilestoneTracker::check_milestone_events(Player& player,
     }
   }
 
-  if (city_weekly_profit >= 500'000_usd) {
+  if (player.financials().weekly_city_profit(active_city_id) >= 500'000) {
     gs_->record_milestone(MilestoneId::Has500KWeeksProfitsInOneCity, pid);
   }
 }

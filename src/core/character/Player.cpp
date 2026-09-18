@@ -105,7 +105,8 @@ std::ostream& operator<<(std::ostream& os, const Player& player) {
 Player::Player(core::PlayerId id, Character character, bool is_human)
     : id_(id), character_(character), is_human_(is_human) {
   financials_.transfer(game_start_date, Account::Capital, Account::Cash,
-                       character.starting_money(), AccountingScope::Capital);
+                       character.starting_money(), balance_sheet_only);
+  financials_.start_liquidity(character.starting_money());
 
   social_status_.social_score((character.personality() / 2) + 220);
   social_status_.underworld_score((character.courage() / 2) + 220);
@@ -194,6 +195,9 @@ void Player::end_of_day_human(GameState& game_state, EndOfDayCause cause) {
   const auto active_city_id = game_state.active_city_id();
   const auto& current_date = game_state.time().current_date();
 
+  financials_.start_profit_day();
+  financials_.count_day_present(active_city_id);
+
   // Deduct daily advertising costs for campaigns in active city
   if (auto it = campaigns_.find(active_city_id); it != campaigns_.end()) {
     for (const auto& campaign_opt : it->second) {
@@ -201,9 +205,16 @@ void Player::end_of_day_human(GameState& game_state, EndOfDayCause cause) {
         // Deduct daily cost (can go negative)
         Account expense_account = Account::ProfitAndLoss;
         financials_.transfer(current_date, Account::Cash, expense_account,
-                             campaign_opt->rate.cost,
-                             AccountingScope::Operational);
+                             campaign_opt->rate.cost, balance_sheet_only);
+        financials_.add_to_profit_today(-campaign_opt->rate.cost.whole());
       }
+    }
+  }
+
+  for (const auto* depot : game_state.real_estate().depots_for(id_)) {
+    if (depot->is_rented() && depot->city().id() == active_city_id) {
+      financials_.add_to_profit_today(-depot->get_monthly_rent().whole() /
+                                      PlayerFinancials::days_per_rent_month);
     }
   }
 
@@ -289,24 +300,33 @@ int Player::jail_time() const { return jail_time_; }
 void Player::add_loan(core::CityId city_id, Loan loan, GameDate date) {
   loans_[city_id].push_back(loan);
   financials_.transfer(date, Account::Loan, Account::Cash, loan.start_amount(),
-                       AccountingScope::Operational);
+                       balance_sheet_only);
 }
 
 void Player::repay_loan(Loan& loan, const GameDate& date,
                         bool fix_legacy_bugs) {
   financials_.transfer(date, Account::Cash, Account::Loan,
                        loan.repay_principal(fix_legacy_bugs),
-                       AccountingScope::Capital);
-  financials_.transfer(date, Account::Cash, Account::Repayment,
+                       balance_sheet_only);
+  financials_.transfer(date, Account::Cash, Account::ProfitAndLoss,
                        loan.months_left() * loan.monthly_interest(),
-                       AccountingScope::Capital);
+                       balance_sheet_only);
   loan.repay();
 }
 
-bool Player::spend_cash(const GameDate& date, Account to, Money amount,
+bool Player::spend_cash(const GameDate& date, MonthlyCategory category,
+                        Money amount,
                         std::optional<core::RestaurantId> restaurant_id) {
   if (cash_balance() >= amount) {
-    financials_.spend_cash(date, to, amount, restaurant_id);
+    financials_.spend_cash(date, category, amount, restaurant_id);
+    return true;
+  }
+  return false;
+}
+
+bool Player::spend_cash(const GameDate& date, Account to, Money amount) {
+  if (cash_balance() >= amount) {
+    financials_.transfer(date, Account::Cash, to, amount, balance_sheet_only);
     return true;
   }
   return false;
@@ -327,15 +347,17 @@ const std::vector<Loan>& Player::loans_in_city(core::CityId city_id) const {
 int Player::number_of_loans() const {
   int total_loans = 0;
   for (const auto& [city_id, loans] : loans_) {
-    total_loans += static_cast<int>(loans.size());
+    total_loans += static_cast<int>(std::ranges::count_if(
+        loans, [](const Loan& loan) { return !loan.is_settled(); }));
   }
   return total_loans;
 }
 
 bool Player::has_loan_with_bank(core::CityId city_id, BankId bank_id) const {
   const auto& loans = loans_in_city(city_id);
-  return std::ranges::any_of(
-      loans, [bank_id](const Loan& loan) { return loan.bank_id() == bank_id; });
+  return std::ranges::any_of(loans, [bank_id](const Loan& loan) {
+    return !loan.is_settled() && loan.bank_id() == bank_id;
+  });
 }
 
 bool Player::add_investment(Investment investment) {
@@ -370,16 +392,15 @@ void Player::apply_monthly_investment_payouts(const GameDate& date) {
     }
     if (slot->is_matured()) {
       // Principal is returned the month after the last interest payment.
-      financials_.transfer(date, Account::Investments, Account::Cash,
-                           slot->amount(), AccountingScope::Operational);
+      financials_.transfer(date, Account::ProfitAndLoss, Account::Cash,
+                           slot->amount(), balance_sheet_only);
       Logger::info("[Finance] {} - Investment matured, principal returned: {}",
                    name_, slot->amount());
       slot.reset();
     }
     else {
-      financials_.transfer(date, Account::Investments, Account::Cash,
-                           slot->monthly_return(),
-                           AccountingScope::Operational);
+      financials_.transfer(date, Account::ProfitAndLoss, Account::Cash,
+                           slot->monthly_return(), balance_sheet_only);
       slot->end_of_month();
     }
   }
@@ -430,7 +451,7 @@ void Player::use_weapon(const GameDate& date, core::item::Item id) {
   Money cost = weapon_unit_cost(id);
   if (cost.cents > 0) {
     financials_.transfer(date, Account::Weapons, Account::ProfitAndLoss, cost,
-                         AccountingScope::Operational);
+                         balance_sheet_only);
   }
 }
 
@@ -571,8 +592,8 @@ void Player::apply_monthly_insurance_premiums(const GameDate& date) {
   if (total.cents <= 0) {
     return;
   }
-  financials_.transfer(date, Account::Cash, Account::Repayment, total,
-                       AccountingScope::Operational);
+  financials_.transfer(date, Account::Cash, Account::ProfitAndLoss, total,
+                       MonthlyCategory::Repayment);
 }
 
 void Player::on_supplier_visit() {
@@ -584,7 +605,9 @@ void Player::on_supplier_visit() {
   }
 }
 
-void Player::on_city_travel() {
+void Player::on_city_travel(core::CityId destination, int week_day) {
+  financials_.arrive_in_city(
+      destination, !visited_city_ids_.contains(destination), week_day);
   int health = character_.health();
   for (int i = 0; i < city_travel_energy_rolls; ++i) {
     if (engine::random::rand_percentage_chance(100 - health)) {
@@ -754,13 +777,13 @@ void Player::cancel_contract(GameState& game_state, size_t index) {
   bool paid = true;
   if (c.original_term > 0 && c.cancellation_penalty.cents > 0) {
     Money fee = (c.cancellation_penalty * c.remaining_term) / c.original_term;
-    paid = spend_cash(game_state.time().current_date(), Account::Stock, fee,
-                      c.restaurant_id);
+    paid = spend_cash(game_state.time().current_date(), MonthlyCategory::Stock,
+                      fee, c.restaurant_id);
     if (!paid && supplier) {
       supplier->relationship(id_).outstanding_debt += fee;
       financials_.transfer(game_state.time().current_date(),
                            Account::DeliveryDebts, Account::Stock, fee,
-                           AccountingScope::Capital);
+                           balance_sheet_only);
     }
   }
 
@@ -902,7 +925,8 @@ void Player::process_contracts(GameState& game_state) {
       payment += c.charge;
     }
 
-    if (!game_state.spend_cash(Account::Stock, payment, c.restaurant_id)) {
+    if (!game_state.spend_cash(MonthlyCategory::Stock, payment,
+                               c.restaurant_id)) {
       rel.outstanding_debt += payment;
       rel.missed_payment_penalty =
           static_cast<uint8_t>(std::max(1, supplier->spending_rank(id_)));
@@ -910,7 +934,7 @@ void Player::process_contracts(GameState& game_state) {
       // the monthly overview.
       financials_.transfer(game_state.time().current_date(),
                            Account::DeliveryDebts, Account::Stock, payment,
-                           AccountingScope::Capital);
+                           balance_sheet_only);
       game_state.status().post(StatusMsg{
           .payload = compat::format(
               "{}: Delivery from {}: because of insolvency the amount will be "

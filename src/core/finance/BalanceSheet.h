@@ -19,17 +19,16 @@ class BalanceSheet {
   }
 
 public:
-  BalanceSheet(const Player&, bool fix_legacy_bugs = false);
+  explicit BalanceSheet(const Player&);
   std::vector<BalanceEntry> assets() const;
   std::vector<BalanceEntry> liabilities() const;
-  // The year's result, gathering every revenue and expense account into the
-  // one figure the sheet shows. Negative is a profit, following the ledger's
-  // sign, and lands on the liabilities side; a loss shows among the assets.
+  // This year's profit or loss as the ledger holds it. It is a credit, so a
+  // profit comes out negative and shows among the liabilities, while a loss
+  // shows among the assets.
   Money profit_and_loss() const;
   Money total_assets() const;
   Money total_liabilities() const;
 
 private:
   const Player& player_;
-  bool fix_legacy_bugs_;
 };

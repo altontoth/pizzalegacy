@@ -187,7 +187,7 @@ bool InsuranceConversation::advance_line_choice(InsuranceLine choice) {
         break;
       }
       // Charge cancellation fee and clear slot
-      player->financials().spend_cash(date, Account::Others, 2000_usd);
+      player->financials().spend_cash(date, MonthlyCategory::Others, 2000_usd);
       policy = InsurancePolicy{};
       current_line(InsuranceLine::ALL_THAT_REMAINS_IS_2K_REDUNDANCY_PROVISION);
     }
@@ -216,7 +216,8 @@ bool InsuranceConversation::advance_line_choice(InsuranceLine choice) {
   case InsuranceLine::HOW_ABOUT_10_BIG_ONES_FOR_YOU: {
     int personality = player->character().personality();
     if (rand_percentage_chance(personality)) {
-      player->financials().spend_cash(date, Account::FinesAndBribes, 10000_usd);
+      player->financials().transfer(date, Account::Cash, Account::ProfitAndLoss,
+                                    10000_usd, balance_sheet_only);
       auto increased = execute_payout(true);
       current_line(increased ? InsuranceLine::AH_YES_PREMIUM_WILL_INCREASE
                              : InsuranceLine::AH_YES_YOU_ARE_RIGHT_WE_WILL_PAY);
@@ -281,7 +282,8 @@ bool InsuranceConversation::advance_proposal(bool agree) {
 
   case InsuranceLine::DONT_WORRY_ILL_TAKE_CARE_FOR_20_BIG_ONES:
     if (agree) {
-      player->financials().spend_cash(date, Account::FinesAndBribes, 20000_usd);
+      player->financials().transfer(date, Account::Cash, Account::ProfitAndLoss,
+                                    20000_usd, balance_sheet_only);
       auto increased = execute_payout(true);
       current_line(increased ? InsuranceLine::AH_YES_PREMIUM_WILL_INCREASE
                              : InsuranceLine::AH_YES_YOU_ARE_RIGHT_WE_WILL_PAY);
@@ -501,7 +503,8 @@ bool InsuranceConversation::execute_payout(bool may_increase_premium) {
   auto& policy = ins_state.policies[type_index(selected_type_)];
 
   ins_state.pending_claim = std::nullopt;
-  player->financials().spend_cash(date, Account::Others, -policy.max_coverage);
+  player->financials().spend_cash(date, MonthlyCategory::Others,
+                                  -policy.max_coverage);
 
   if (may_increase_premium && coin_flip()) {
     policy.monthly_premium = Money{policy.monthly_premium.cents * 2};

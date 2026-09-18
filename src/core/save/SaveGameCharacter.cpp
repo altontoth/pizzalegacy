@@ -17,12 +17,14 @@
 #include "core/character/Player.h"
 #include "core/common/Ids.h"
 #include "core/factories/CharacterFactory.h"
+#include "core/finance/Ledger.h"
 #include "core/food/IngredientCategoryType.h"
 #include "core/marketing/NewspaperAdFormat.h"
 #include "core/save/SaveGameDate.h"
 #include "core/state/GameState.h"
 #include "core/status/StatusHub.h"
 #include "core/supply/ActiveContract.h"
+#include "core/util/Constants.h"
 #include "core/util/GameContext.h"
 
 namespace save {
@@ -844,22 +846,65 @@ Investment json_to_investment(const json& j) {
       Money{j["monthly_return"].get<int64_t>()});
 }
 
-json posting_to_json(const Posting& posting) {
-  json j;
-  j["account"] = static_cast<int>(posting.account);
-  j["amount"] = posting.amount.cents;
-  if (posting.restaurant_id.has_value()) {
-    j["restaurant_id"] = posting.restaurant_id.value().value;
+// Only for loading saves from before the running balances. Their journal
+// names each account by its number in the ledger's old account list, where
+// every overview category was an account too.
+constexpr std::array<std::pair<Account, int>, 11> saved_account_ids = {{
+    {Account::Property, 16},
+    {Account::Machines, 6},
+    {Account::Furniture, 7},
+    {Account::Weapons, 17},
+    {Account::Stock, 5},
+    {Account::Cash, 12},
+    {Account::Capital, 13},
+    {Account::Loan, 15},
+    {Account::DeliveryDebts, 20},
+    {Account::Debts, 19},
+    {Account::ProfitAndLoss, 14},
+}};
+
+constexpr std::array<std::pair<MonthlyCategory, int>, 11> saved_category_ids = {
+    {
+        {MonthlyCategory::Sales, 0},
+        {MonthlyCategory::CoinMachines, 1},
+        {MonthlyCategory::Missions, 2},
+        {MonthlyCategory::Staff, 3},
+        {MonthlyCategory::Rents, 4},
+        {MonthlyCategory::Stock, 5},
+        {MonthlyCategory::Machines, 6},
+        {MonthlyCategory::Furniture, 7},
+        {MonthlyCategory::Protection, 8},
+        {MonthlyCategory::Repayment, 9},
+        {MonthlyCategory::Others, 11},
+    }};
+
+// The debug console's cheat account.
+constexpr int saved_cheat_id = 21;
+
+std::optional<MonthlyCategory> category_from_saved_id(int id) {
+  for (const auto& [c, saved] : saved_category_ids) {
+    if (saved == id) {
+      return c;
+    }
   }
-  else {
-    j["restaurant_id"] = nullptr;
+  return std::nullopt;
+}
+
+// Every other old account was part of the year's profit or loss.
+Account account_from_saved_id(int id) {
+  for (const auto& [a, saved] : saved_account_ids) {
+    if (saved == id) {
+      return a;
+    }
   }
-  j["scope"] = static_cast<int>(posting.scope);
-  return j;
+  if (id == saved_cheat_id) {
+    return Account::Capital;
+  }
+  return Account::ProfitAndLoss;
 }
 
 Posting json_to_posting(const json& j) {
-  Account account = static_cast<Account>(j["account"].get<int>());
+  const int account_id = j["account"].get<int>();
   Money amount{j["amount"].get<int64_t>()};
   std::optional<core::RestaurantId> restaurant_id = std::nullopt;
 
@@ -867,30 +912,14 @@ Posting json_to_posting(const json& j) {
     restaurant_id = core::RestaurantId{j["restaurant_id"].get<int32_t>()};
   }
 
-  AccountingScope scope = AccountingScope::Operational;
-  if (j.contains("scope")) {
-    scope = static_cast<AccountingScope>(j["scope"].get<int>());
+  std::optional<MonthlyCategory> monthly;
+  if (j.value("scope", 1) == 1) {
+    // An operational line counted toward the category its account stood for.
+    monthly = category_from_saved_id(account_id);
   }
 
-  return Posting{account, amount, restaurant_id, scope};
-}
-
-json journal_entry_to_json(const JournalEntry& entry) {
-  json j;
-
-  // Save date
-  j["date"] = {{"year", entry.date.year()},
-               {"month", entry.date.month()},
-               {"day", entry.date.day()}};
-
-  // Save postings
-  json postings_array = json::array();
-  for (const auto& posting : entry.lines) {
-    postings_array.push_back(posting_to_json(posting));
-  }
-  j["lines"] = std::move(postings_array);
-
-  return j;
+  return Posting{account_from_saved_id(account_id), amount, restaurant_id,
+                 monthly};
 }
 
 JournalEntry json_to_journal_entry(const json& j) {
@@ -917,35 +946,99 @@ JournalEntry json_to_journal_entry(const json& j) {
   return entry;
 }
 
-json ledger_to_json(const Ledger& ledger) {
-  json entries_array = json::array();
-  for (const auto& entry : ledger.entries()) {
-    entries_array.push_back(journal_entry_to_json(entry));
+json month_to_json(const MonthlyFigures& figures) {
+  json this_month = json::object();
+  json last_month = json::object();
+  for (std::size_t c = 0; c < category_count; ++c) {
+    const auto name = std::string(to_string(static_cast<MonthlyCategory>(c)));
+    this_month[name] = figures.this_month()[c].cents;
+    last_month[name] = figures.last_month()[c].cents;
   }
-  return entries_array;
+  return {{"month", figures.month()},
+          {"this", std::move(this_month)},
+          {"last", std::move(last_month)}};
 }
 
-Ledger json_to_ledger(const json& j) {
-  Ledger ledger;
-  for (const auto& entry_json : j) {
-    ledger.post(json_to_journal_entry(entry_json));
+MonthlyFigures json_to_month(const json& j) {
+  auto figures_from = [](const json& named) {
+    MonthlyFigures::Figures figures{};
+    for (std::size_t c = 0; c < category_count; ++c) {
+      const auto name = std::string(to_string(static_cast<MonthlyCategory>(c)));
+      figures[c] = Money{named.value(name, int64_t{0})};
+    }
+    return figures;
+  };
+  MonthlyFigures figures;
+  figures.set(j["month"].get<int>(), figures_from(j["this"]),
+              figures_from(j["last"]));
+  return figures;
+}
+
+json ledger_to_json(const Ledger& ledger) {
+  json balances = json::object();
+  for (std::size_t a = 0; a < account_count; ++a) {
+    const auto account = static_cast<Account>(a);
+    balances[std::string(to_string(account))] = ledger.balance(account).cents;
   }
-  return ledger;
+  json restaurants = json::array();
+  for (const auto& [id, figures] : ledger.restaurant_months()) {
+    json r = month_to_json(figures);
+    r["restaurant_id"] = id.value;
+    restaurants.push_back(std::move(r));
+  }
+  return {{"balances", std::move(balances)},
+          {"month", month_to_json(ledger.month())},
+          {"restaurant_months", std::move(restaurants)}};
+}
+
+void json_to_ledger(const json& j, Ledger& ledger) {
+  for (std::size_t a = 0; a < account_count; ++a) {
+    const auto account = static_cast<Account>(a);
+    ledger.set_balance(
+        account, Money{j["balances"].value(std::string(to_string(account)),
+                                           int64_t{0})});
+  }
+  ledger.set_month(json_to_month(j["month"]));
+  for (const auto& r : j["restaurant_months"]) {
+    ledger.set_restaurant_month(
+        core::RestaurantId{r["restaurant_id"].get<int32_t>()},
+        json_to_month(r));
+  }
 }
 
 json player_financials_to_json(const PlayerFinancials& financials) {
   json j;
-  j["journal"] = ledger_to_json(financials.ledger());
+  j["books"] = ledger_to_json(financials.ledger());
   j["daily_profit_history"] = financials.daily_profit_history();
   j["daily_profit_days"] = financials.daily_profit_days();
+  j["weekly_city_profit"] = financials.weekly_city_profits();
+  j["days_present"] = financials.days_present();
+  j["liquidity"] = financials.liquidity();
+  j["liquidity_weeks"] = financials.liquidity_weeks();
   return j;
+}
+
+// Saves from before the running balances kept every posting ever made, which
+// are replayed in date order.
+void replay_journal(const json& journal, PlayerFinancials& financials) {
+  std::vector<JournalEntry> entries;
+  for (const auto& entry_json : journal) {
+    entries.push_back(json_to_journal_entry(entry_json));
+  }
+  std::ranges::stable_sort(entries, {}, &JournalEntry::date);
+  for (const auto& entry : entries) {
+    financials.ledger().post(entry);
+  }
 }
 
 PlayerFinancials json_to_player_financials(const json& j) {
   PlayerFinancials financials;
 
-  if (j.contains("journal")) {
-    financials.restore_ledger(json_to_ledger(j["journal"]));
+  if (j.contains("books")) {
+    json_to_ledger(j["books"], financials.ledger());
+  }
+  else if (j.contains("journal")) {
+    replay_journal(j["journal"], financials);
   }
 
   if (j.contains("daily_profit_history")) {
@@ -958,6 +1051,27 @@ PlayerFinancials json_to_player_financials(const json& j) {
     }
     financials.set_daily_profit_history(history,
                                         j.value("daily_profit_days", 0));
+  }
+
+  if (j.contains("weekly_city_profit")) {
+    financials.set_weekly_city_profits(
+        j["weekly_city_profit"].get<std::array<int64_t, NUMBER_OF_CITIES>>(),
+        j.value("days_present", std::array<int, NUMBER_OF_CITIES>{}));
+  }
+
+  if (j.contains("liquidity")) {
+    std::array<int64_t, PlayerFinancials::liquidity_weeks_max> weeks{};
+    const auto& arr = j["liquidity"];
+    for (int i = 0; i < PlayerFinancials::liquidity_weeks_max &&
+                    i < static_cast<int>(arr.size());
+         ++i) {
+      weeks[i] = arr[i].get<int64_t>();
+    }
+    financials.set_liquidity(weeks, j.value("liquidity_weeks", 1));
+  }
+  else {
+    // A save from before the chart was kept starts it at the cash it loads.
+    financials.start_liquidity(financials.balance(Account::Cash));
   }
 
   return financials;

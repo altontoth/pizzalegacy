@@ -22,6 +22,7 @@
 #include "core/marketing/AdvertisingCampaign.h"
 #include "core/state/GameState.h"
 #include "core/time/TimeOfDay.h"
+#include "core/util/Constants.h"
 #include "core/util/GameContext.h"
 #include "engine/FormatCompat.h"
 #include "resources/BobSizeFn.h"
@@ -176,8 +177,8 @@ Examples:
         auto& financials = player->financials();
         if (current < amount) {
           Money delta = amount - current;
-          financials.transfer(today, Account::Cheat, Account::Cash, delta,
-                              AccountingScope::Capital);
+          financials.transfer(today, Account::Capital, Account::Cash, delta,
+                              balance_sheet_only);
           return CommandResult::success()
               .add_message(compat::format("Added ${:n} to cash", delta))
               .add_message(
@@ -185,8 +186,8 @@ Examples:
         }
         else {
           Money delta = current - amount;
-          financials.transfer(today, Account::Cash, Account::Cheat, delta,
-                              AccountingScope::Capital);
+          financials.transfer(today, Account::Cash, Account::Capital, delta,
+                              balance_sheet_only);
           return CommandResult::success()
               .add_message(compat::format("Removed ${:n} from cash", delta))
               .add_message(
@@ -231,8 +232,8 @@ Examples:
         }
 
         GameDate today = ctx.state.time().current_date();
-        player->financials().transfer(today, Account::Cheat, Account::Cash,
-                                      amount, AccountingScope::Capital);
+        player->financials().transfer(today, Account::Capital, Account::Cash,
+                                      amount, balance_sheet_only);
 
         return CommandResult::success()
             .add_message(compat::format("Added ${:n} to cash", amount))
@@ -278,8 +279,8 @@ Examples:
         }
 
         GameDate today = ctx.state.time().current_date();
-        player->financials().transfer(today, Account::Cash, Account::Cheat,
-                                      amount, AccountingScope::Capital);
+        player->financials().transfer(today, Account::Cash, Account::Capital,
+                                      amount, balance_sheet_only);
 
         return CommandResult::success()
             .add_message(compat::format("Removed ${:n} from cash", amount))
@@ -416,10 +417,9 @@ Examples:
         }
 
         if (written_off.cents > 0) {
-          player->financials().transfer(ctx.state.time().current_date(),
-                                        Account::Weapons,
-                                        Account::ProfitAndLoss, written_off,
-                                        AccountingScope::Operational);
+          player->financials().transfer(
+              ctx.state.time().current_date(), Account::Weapons,
+              Account::ProfitAndLoss, written_off, balance_sheet_only);
         }
 
         return CommandResult::success().add_message(
@@ -800,7 +800,7 @@ Examples:
               compat::format("Player {} not found", player_id.value));
         }
 
-        BalanceSheet sheet{*player, ctx.state.options().fix_legacy_bugs};
+        BalanceSheet sheet{*player};
         CommandResult result = CommandResult::success();
         result.add_message("Assets:");
         for (const auto& entry : sheet.assets()) {
@@ -883,9 +883,10 @@ Examples:
           }
         }
         return CommandResult::success().add_message(
-            compat::format("Loan account {:i}, repayment account {:i}",
+            compat::format("Loan account {:i}, repayment this month {:i}",
                            player->financials().balance(Account::Loan),
-                           player->financials().balance(Account::Repayment)));
+                           player->financials().current_month(
+                               MonthlyCategory::Repayment, date)));
       },
   };
 }

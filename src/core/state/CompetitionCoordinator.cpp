@@ -162,7 +162,8 @@ void CompetitionCoordinator::collect_competition_bets(
   for (const auto& p : session.participants) {
     auto* participant = gs_->player(p.player_id);
     if (participant) {
-      participant->financials().spend_cash(today, Account::Others, p.bet);
+      participant->financials().spend_cash(today, MonthlyCategory::Others,
+                                           p.bet);
     }
   }
 }
@@ -231,9 +232,9 @@ CompetitionCoordinator::finalize_competition_results(
     Money winnings = winner.bet * 2;
 
     if (winner_player) {
-      winner_player->financials().transfer(today, Account::Sales, Account::Cash,
-                                           winnings,
-                                           AccountingScope::Operational);
+      winner_player->financials().transfer(today, Account::ProfitAndLoss,
+                                           Account::Cash, winnings,
+                                           MonthlyCategory::Sales);
       gs_->adjust_social_score(*winner_player, 40);
     }
 
@@ -272,9 +273,8 @@ CompetitionCoordinator::finalize_competition_results(
     for (auto& p : c.participants) {
       auto* participant = gs_->player(p.player_id);
       if (participant) {
-        participant->financials().transfer(today, Account::Others,
-                                           Account::Cash, p.bet,
-                                           AccountingScope::Operational);
+        participant->financials().spend_cash(today, MonthlyCategory::Others,
+                                             -p.bet);
       }
     }
   }

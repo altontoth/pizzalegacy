@@ -535,15 +535,11 @@ Surface PlayerProfile::create_company(const Player* player) {
                            FontFace::PIZ_NUMB, text_color);
 
     if (state_.is_city_loaded(city_id)) {
-      Money city_profit{};
-      for (auto* rest : state_.restaurants_for(player->id())) {
-        if (rest && rest->property().city().id() == city_id) {
-          city_profit = city_profit + rest->last_weekly_profit();
-        }
-      }
-      font->render_line_onto(page, compat::format("{:i}", city_profit),
-                             {336, y}, FontFace::PIZ_NUMB, text_color,
-                             TextAnchor::End);
+      font->render_line_onto(
+          page,
+          compat::format("{}",
+                         player->financials().weekly_city_profit(city_id)),
+          {336, y}, FontFace::PIZ_NUMB, text_color, TextAnchor::End);
     }
     else {
       font->render_line_onto(page, "---------------", {188, y},
