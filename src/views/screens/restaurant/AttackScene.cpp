@@ -16,9 +16,13 @@
 
 #include "core/GameTypes.h"
 #include "core/character/Character.h"
+#include "core/character/InsurancePlayerState.h"
 #include "core/character/Player.h"
 #include "core/city/Property.h"
 #include "core/events/MilestoneId.h"
+#include "core/finance/Ledger.h"
+#include "core/finance/Money.h"
+#include "core/finance/PlayerFinancials.h"
 #include "core/restaurant/Furniture.h"
 #include "core/restaurant/PlacedFurniture.h"
 #include "core/restaurant/RestaurantLayout.h"
@@ -817,6 +821,14 @@ void AttackScene::process_attack_aftermath(AttackEndReason reason) {
   const int64_t dollars = destroyed_furniture_value_.whole();
   const int contamination_pct = view_.restaurant_->contamination();
 
+  const auto date = state_.time().current_date();
+  if (destroyed_furniture_value_ > 0_usd) {
+    victim->financials().transfer(date, Account::Furniture,
+                                  Account::ProfitAndLoss,
+                                  destroyed_furniture_value_,
+                                  view_.restaurant_->id(), balance_sheet_only);
+  }
+
   if (!victim->is_human_controlled()) {
     // Computer victim: apply the closure and AI profit hit immediately.
     const int closure_days = (dollars > 0) ? static_cast<int>(dollars / 2000)
@@ -830,6 +842,9 @@ void AttackScene::process_attack_aftermath(AttackEndReason reason) {
     // Only the owner investing raises this again, so the restaurant serves
     // nobody until then.
     view_.restaurant_->ai_customers_per_day(0);
+  }
+  else if (destroyed_furniture_value_ > 0_usd) {
+    victim->make_insurance_claim(InsuranceType::FIRE);
   }
 }
 
