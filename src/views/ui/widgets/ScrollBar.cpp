@@ -30,8 +30,18 @@ void ScrollBar::draw(gfx::Surface& surface, ViewRect track,
                      const Extent& extent) const {
   const ViewRect thumb = thumb_rect(track, extent);
   if (thumb.h > 0) {
+    if (style_.track_color) {
+      surface.fill_rect(ViewRect{thumb.x + 1, track.y, thumb.w - 2, track.h},
+                        *style_.track_color);
+    }
     const bool lit = hovered_ || track_drag_.dragging();
-    surface.fill_rect(thumb, lit ? style_.hover_color : style_.color);
+    const uint8_t color = lit ? style_.hover_color : style_.color;
+    // The end rows are inset a pixel to round off the corners.
+    surface.fill_rect(ViewRect{thumb.x, thumb.y + 1, thumb.w, thumb.h - 2},
+                      color);
+    surface.fill_rect(ViewRect{thumb.x + 1, thumb.y, thumb.w - 2, 1}, color);
+    surface.fill_rect(
+        ViewRect{thumb.x + 1, thumb.y + thumb.h - 1, thumb.w - 2, 1}, color);
   }
 }
 

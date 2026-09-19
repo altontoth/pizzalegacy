@@ -47,8 +47,11 @@ private:
   std::size_t cmd_hist_index_ = 0;
   // First visible line index
   std::size_t scroll_ = 0;
-  ScrollBar scroll_bar_{
-      {.color = 244, .hover_color = 255, .margin = 2, .bottom_anchored = true}};
+  ScrollBar scroll_bar_{{.color = 244,
+                         .hover_color = 255,
+                         .track_color = 242,
+                         .margin = 2,
+                         .bottom_anchored = true}};
   // Where the output area was last drawn, how many of the oldest lines fit
   // in it, and so how far back the view can scroll.
   ViewRect scroll_track_;

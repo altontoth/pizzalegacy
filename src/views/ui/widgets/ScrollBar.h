@@ -7,6 +7,7 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
 
 #include "engine/geom/Spaces.h"
 #include "engine/gfx/Surface.h"
@@ -19,9 +20,12 @@
 class ScrollBar {
 public:
   struct Style {
-    uint8_t color = 14;
+    uint8_t color = 12;
     // While the pointer is over the thumb's column or dragging it.
-    uint8_t hover_color = 12;
+    uint8_t hover_color = 10;
+    // The thin line that the thumb runs along, to show how much there is to
+    // scroll.
+    std::optional<uint8_t> track_color = 14;
     // Gap between the thumb and the track's right edge.
     int margin = 1;
     // Offset 0 shows the end of the content rather than its start.
