@@ -95,10 +95,10 @@ void TurnOrchestrator::skip_to_next_player() {
 }
 
 void TurnOrchestrator::run_pending_end_of_turn() {
-  if (should_end_of_turn_) {
+  if (should_end_of_turn_ && !processing_end_of_turn_) {
     end_of_turn(end_of_day_cause_);
-    should_end_of_turn_ = false;
   }
+  should_end_of_turn_ = false;
 }
 
 bool TurnOrchestrator::tick_pipeline_delay() {
@@ -712,8 +712,6 @@ void TurnOrchestrator::snapshot_weekly_profits(
 
 turn::StepResult
 TurnOrchestrator::finish_end_of_turn(const turn::FinishTurn& step) {
-  processing_end_of_turn_ = false;
-
   snapshot_weekly_profits(step.restaurant_ids);
 
   auto* current_player = gs_->active_player();
@@ -1089,6 +1087,7 @@ TurnOrchestrator::execute_pipeline_step(const turn::Step& step) {
           },
 
           [&](const turn::ResumeTime&) {
+            processing_end_of_turn_ = false;
             if (gs_->players_[gs_->active_player_.value]
                     ->is_human_controlled()) {
               gs_->resume_clock();

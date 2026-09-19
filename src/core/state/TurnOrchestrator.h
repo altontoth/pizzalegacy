@@ -276,8 +276,7 @@ private:
   // Countdown for an active Delay step; tick_pipeline_delay() resumes the
   // pipeline at 0.
   int pipeline_delay_frames_{0};
-  // True from end_of_turn() until FinishTurn runs; gates deferred event
-  // delivery.
+  // True while no player's day is running.
   bool processing_end_of_turn_{false};
   // True while the pipeline is parked on a step that waits for player input
   // (report screens, competitions, invoices); timer waits (Delay,
