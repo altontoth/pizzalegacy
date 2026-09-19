@@ -110,7 +110,7 @@ void MilestoneTracker::check_milestone_events(Player& player,
                             pid);
     }
 
-    if (perfect_delivery_week(*rest, gs_->options().fix_legacy_bugs)) {
+    if (perfect_delivery_week(*rest, gs_->rules().fix_legacy_bugs)) {
       perfect_delivery_count++;
       gs_->record_milestone(MilestoneId::AbleToMeet100PctDeliveries, pid);
     }
@@ -190,7 +190,7 @@ void MilestoneTracker::check_market_share_milestones(const City& city) {
       continue;
     }
     // Original game bug: checks 5% but displays "10% market share" message
-    int first_threshold = gs_->options().fix_legacy_bugs ? 10 : 5;
+    int first_threshold = gs_->rules().fix_legacy_bugs ? 10 : 5;
     if (control_map.has_market_share_at_least(p, 50)) {
       gs_->record_milestone(MilestoneId::Achieved50PctMarketShareInCity, pid);
       gs_->record_milestone(domination_event, pid);
@@ -216,7 +216,7 @@ void MilestoneTracker::check_world_domination() {
   constexpr int win_threshold = 5;
   const int pid = p->id().value;
 
-  switch (gs_->options().win_condition) {
+  switch (gs_->rules().win_condition) {
   case WinCondition::Paris: {
     auto* paris = gs_->city(core::CityId{0});
     if (!paris ||
@@ -259,7 +259,7 @@ void MilestoneTracker::check_restaurant_milestones(const Player& player) {
   using core::events::MilestoneId;
   auto pid = player.id();
 
-  const bool fix_bugs = gs_->options().fix_legacy_bugs;
+  const bool fix_bugs = gs_->rules().fix_legacy_bugs;
 
   int opened_count = 0;
   int open_count = 0;

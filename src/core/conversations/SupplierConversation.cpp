@@ -284,7 +284,7 @@ void SupplierConversation::handle_demand(SupplierLine demand) {
     }
 
     if (!engine::random::rand_percentage_chance(negotiation_skill_)) {
-      if (!state_.options().fix_legacy_bugs) {
+      if (!state_.rules().fix_legacy_bugs) {
         contract_.penalty = contract_.penalty / 2;
       }
       current_line(SupplierLine::NO_REASON_FOR_SPECIAL_CONDITIONS);

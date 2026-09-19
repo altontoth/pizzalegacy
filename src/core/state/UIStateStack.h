@@ -64,6 +64,16 @@ public:
     return std::holds_alternative<S>(stack_.back());
   }
 
+  // Whether any entry on the stack is an S.
+  template <class S> bool contains() const {
+    for (const auto& entry : stack_) {
+      if (std::holds_alternative<S>(entry)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   // change-tracking
   bool ui_changed() { return std::exchange(changed_, false); }
 

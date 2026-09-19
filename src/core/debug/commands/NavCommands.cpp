@@ -57,10 +57,10 @@ Examples:
                   .type = ArgType::String,
                   .optional = true,
                   .description =
-                      "audio, graphics, controls, gameplay or bindings",
+                      "audio, graphics, controls, gameplay, rules or bindings",
                   .allowed_values =
                       std::vector<std::string>{"audio", "graphics", "controls",
-                                               "gameplay", "bindings"},
+                                               "gameplay", "rules", "bindings"},
               },
           },
       .handler = [](const CommandContext& ctx) -> CommandResult {
@@ -78,7 +78,8 @@ Examples:
             {"audio", OptionsScreen::Audio},
             {"graphics", OptionsScreen::Graphics},
             {"controls", OptionsScreen::Controls},
-            {"gameplay", OptionsScreen::Gameplay}};
+            {"gameplay", OptionsScreen::Gameplay},
+            {"rules", OptionsScreen::Rules}};
         for (const auto& [name, screen] : sections) {
           if (name == section) {
             ctx.state.ui().push<OptionsMenuState>(OptionsMenuState{screen});

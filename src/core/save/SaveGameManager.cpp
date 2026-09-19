@@ -37,6 +37,7 @@
 #include "core/save/SaveGameFood.h"
 #include "core/save/SaveGameRestaurant.h"
 #include "core/state/GameOptions.h"
+#include "core/state/GameRules.h"
 #include "core/state/GameState.h"
 #include "core/state/TurnOrchestrator.h"
 #include "core/time/GameTime.h"
@@ -510,6 +511,35 @@ GameTime json_to_time(const json& j) {
   return time;
 }
 
+json rules_to_json(const GameRules& rules) {
+  return {
+      {"fix_legacy_bugs", rules.fix_legacy_bugs},
+      {"qol_improvements", rules.qol_improvements},
+      {"mafia_shakedowns_target_all_restaurants",
+       rules.mafia_shakedowns_target_all_restaurants},
+      {"demand_fulfillment_popularity", rules.demand_fulfillment_popularity},
+      {"win_condition", to_config_value(rules.win_condition)},
+      {"police", rules.police},
+  };
+}
+
+// Missing keys use the values in rules.
+GameRules json_to_rules(const json& j, GameRules rules) {
+  rules.fix_legacy_bugs = j.value("fix_legacy_bugs", rules.fix_legacy_bugs);
+  rules.qol_improvements = j.value("qol_improvements", rules.qol_improvements);
+  rules.mafia_shakedowns_target_all_restaurants =
+      j.value("mafia_shakedowns_target_all_restaurants",
+              rules.mafia_shakedowns_target_all_restaurants);
+  rules.demand_fulfillment_popularity = j.value(
+      "demand_fulfillment_popularity", rules.demand_fulfillment_popularity);
+  if (auto parsed = win_condition_from_config_value(
+          j.value("win_condition", std::string{}))) {
+    rules.win_condition = *parsed;
+  }
+  rules.police = j.value("police", rules.police);
+  return rules;
+}
+
 } // namespace
 
 json SaveGameManager::state_to_json(const GameState& state,
@@ -545,6 +575,7 @@ json SaveGameManager::state_to_json(const GameState& state,
 
   // Save difficulty
   j["difficulty_level"] = state.difficulty_level();
+  j["rules"] = rules_to_json(state.rules());
   if (auto district = state.district_under_investigation()) {
     j["district_under_investigation"] = *district;
   }
@@ -768,6 +799,8 @@ void SaveGameManager::json_to_state(const json& j, GameState& state,
   if (j.contains("difficulty_level")) {
     state.difficulty_level(j["difficulty_level"].get<int>());
   }
+  state.rules() =
+      json_to_rules(j.value("rules", json::object()), state.options().rules);
   if (j.contains("district_under_investigation")) {
     state.district_under_investigation(
         j["district_under_investigation"].get<int>());

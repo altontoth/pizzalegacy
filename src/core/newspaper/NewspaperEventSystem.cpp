@@ -89,7 +89,7 @@ void NewspaperEventSystem::schedule_event(int slot, NewspaperEvent event,
 // events
 bool NewspaperEventSystem::execute_named_event(NewspaperEvent event,
                                                GameState& state, City& city) {
-  auto fix_bugs = state.options().fix_legacy_bugs;
+  auto fix_bugs = state.rules().fix_legacy_bugs;
   auto& ns = city.newspaper_state();
   auto& trends = city.ingredient_trend_system();
   auto event_id = static_cast<int>(event);

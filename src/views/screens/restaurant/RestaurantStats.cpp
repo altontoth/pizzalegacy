@@ -849,7 +849,7 @@ void RestaurantStats::render_sales_curve(const RenderContext& ctx) {
   // bar. When you buy something today, it appears immediately but is
   // incorrectly attributed to yesterday. Set to false to fix this bug and show
   // purchases on the correct day.
-  bool keep_original_display_bug = !state_.options().fix_legacy_bugs;
+  bool keep_original_display_bug = !state_.rules().fix_legacy_bugs;
 
   // Get today's purchases for the bug-compatible display
   const auto& today_stats = restaurant_->stats().today;

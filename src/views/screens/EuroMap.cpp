@@ -159,7 +159,7 @@ void EuroMap::render(const RenderContext& ctx) {
 
     if (map_mode_ == MapMode::DEPOT) {
       auto* dest_city = state_.city(target);
-      if (state_.options().fix_legacy_bugs && state_.is_city_loaded(target) &&
+      if (state_.rules().fix_legacy_bugs && state_.is_city_loaded(target) &&
           dest_city->trade_embargo_counter(*category_)) {
         context_.font->render_text_onto(
             popup_surface, compat::format("{} is", core::city_name(target)),
@@ -290,7 +290,7 @@ void EuroMap::on_city_click(core::CityId city, views::ui::MouseButton btn) {
   // acts as accepting the price, saving the user from having to figure out that
   // they have to click the white box with the price (which is not communicated
   // to them in any way).
-  if (state_.options().qol_improvements &&
+  if (state_.rules().qol_improvements &&
       map_state_ == MapState::CITY_CONFIRMED && last_clicked_city_ == city) {
     attempt_flight();
     return;

@@ -22,6 +22,7 @@
 #include "core/state/ClockRate.h"
 #include "core/state/CompetitionCoordinator.h"
 #include "core/state/GameOptions.h"
+#include "core/state/GameRules.h"
 #include "core/state/MilestoneTracker.h"
 #include "core/state/RealEstate.h"
 #include "core/state/TurnOrchestrator.h"
@@ -342,6 +343,10 @@ public:
   GameOptions& options() { return options_; }
   const GameOptions& options() const { return options_; }
 
+  // The rules for the current game.
+  GameRules& rules() { return rules_; }
+  const GameRules& rules() const { return rules_; }
+
   // Fullscreen message manager
   core::events::CareerLog& career_log() { return career_log_; }
   const core::events::CareerLog& career_log() const { return career_log_; }
@@ -535,6 +540,7 @@ private:
   std::vector<FurnitureBatch> furniture_placement_;
   StatusHub status_hub_{time_};
   GameOptions options_;
+  GameRules rules_;
   TurnOrchestrator turn_{*this};
   CompetitionCoordinator competitions_{*this};
   MilestoneTracker milestones_{*this};

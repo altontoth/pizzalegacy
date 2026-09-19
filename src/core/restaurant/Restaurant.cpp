@@ -1024,7 +1024,7 @@ void Restaurant::end_of_day(GameState& game_state) {
 
   // Original game bug: sabotage contamination never decays, so multiple
   // sabotage attacks stack permanently. Fix: decay by 1 toward 0 each day.
-  if (game_state.options().fix_legacy_bugs && sabotage_contamination_ != 0) {
+  if (game_state.rules().fix_legacy_bugs && sabotage_contamination_ != 0) {
     sabotage_contamination_ += (sabotage_contamination_ < 0) ? 1 : -1;
   }
 
@@ -1099,7 +1099,7 @@ void Restaurant::eod_batch_order_fulfillment(class GameState& game_state) {
   // Each role with not enough capacity reports it
   auto post_shortage = [this, &game_state](std::string_view text) {
     std::string message{text};
-    if (game_state.options().qol_improvements) {
+    if (game_state.rules().qol_improvements) {
       message = compat::format("{}: {}", name_, text);
     }
     constexpr int status_color_yellow = 16;
@@ -1708,7 +1708,7 @@ void Restaurant::recalculate_economy_metrics(GameState& game_state) {
   const auto& city = property_.city();
   const auto& district = property_.district();
   calculate_popularity(*player, city, district,
-                       game_state.options().demand_fulfillment_popularity);
+                       game_state.rules().demand_fulfillment_popularity);
   economy_.total_popularity(popularity_.total());
   update_demographics(player->recipes());
 }

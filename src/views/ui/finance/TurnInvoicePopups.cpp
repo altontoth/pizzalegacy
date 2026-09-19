@@ -104,7 +104,7 @@ void show_monthly_invoice_popup(GameContext& context, GameState& gs,
   cfg.lines.push_back(empty_line);
 
   // The original reuses the loan captions for the two investment lines.
-  const bool fix_captions = gs.options().fix_legacy_bugs;
+  const bool fix_captions = gs.rules().fix_legacy_bugs;
   cfg.lines.push_back(
       {fix_captions ? "LOAN REPAYMENT:" : "REPAYMENT:", costs.loan_repayment});
   cfg.lines.push_back(

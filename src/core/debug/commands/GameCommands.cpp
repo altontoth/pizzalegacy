@@ -14,6 +14,7 @@
 #include "core/state/ClockRate.h"
 #include "core/state/EndOfDayCause.h"
 #include "core/state/GameOptions.h"
+#include "core/state/GameRules.h"
 #include "core/state/GameState.h"
 #include "core/state/Overloaded.h"
 #include "core/state/UIState.h"
@@ -225,8 +226,8 @@ Examples:
 struct OptionDef {
   std::string_view name;
   std::variant<bool GameOptions::*, int GameOptions::*, float GameOptions::*,
-               WinCondition GameOptions::*, FpsOption GameOptions::*,
-               AutosaveFrequency GameOptions::*>
+               FpsOption GameOptions::*, AutosaveFrequency GameOptions::*,
+               bool GameRules::*, WinCondition GameRules::*>
       member;
   std::string_view description;
   // Inclusive bounds, for the numeric options only.
@@ -239,23 +240,23 @@ struct OptionDef {
 
 static const OptionDef option_defs[] = {
     {.name = "fix_legacy_bugs",
-     .member = &GameOptions::fix_legacy_bugs,
+     .member = &GameRules::fix_legacy_bugs,
      .description = "Correct the original's bugs rather than reproduce them"},
     {.name = "qol_improvements",
-     .member = &GameOptions::qol_improvements,
+     .member = &GameRules::qol_improvements,
      .description = "Conveniences the original did without"},
     {.name = "automatic_report",
      .member = &GameOptions::automatic_report,
      .description = "Show the day's turnover report when the turn ends"},
     {.name = "mafia_shakedowns_target_all_restaurants",
-     .member = &GameOptions::mafia_shakedowns_target_all_restaurants,
+     .member = &GameRules::mafia_shakedowns_target_all_restaurants,
      .description = "Shake down a random restaurant instead of always the "
                     "first"},
     {.name = "demand_fulfillment_popularity",
-     .member = &GameOptions::demand_fulfillment_popularity,
+     .member = &GameRules::demand_fulfillment_popularity,
      .description = "Fix bug in order fulfillment popularity"},
     {.name = "win_condition",
-     .member = &GameOptions::win_condition,
+     .member = &GameRules::win_condition,
      .description = "Cities to dominate to win: paris, any_city or "
                     "all_cities"},
     {.name = "attack_scene_hz",
@@ -264,7 +265,7 @@ static const OptionDef option_defs[] = {
      .lowest = GameOptions::ATTACK_SCENE_HZ_MIN,
      .highest = GameOptions::ATTACK_SCENE_HZ_MAX},
     {.name = "police",
-     .member = &GameOptions::police,
+     .member = &GameRules::police,
      .description = "Enable and disable police"},
     {.name = "show_advanced_options",
      .member = &GameOptions::show_advanced_options,
@@ -378,9 +379,16 @@ static const OptionDef* find_option(std::string_view name) {
 }
 
 static std::string option_value(const GameOptions& options,
+                                const GameRules& rules,
                                 const OptionDef& option) {
   return std::visit(
-      overloaded{[&](bool GameOptions::* member) -> std::string {
+      overloaded{[&](bool GameRules::* member) -> std::string {
+                   return rules.*member ? "on" : "off";
+                 },
+                 [&](WinCondition GameRules::* member) -> std::string {
+                   return std::string(to_config_value(rules.*member));
+                 },
+                 [&](bool GameOptions::* member) -> std::string {
                    return options.*member ? "on" : "off";
                  },
                  [&](int GameOptions::* member) -> std::string {
@@ -388,9 +396,6 @@ static std::string option_value(const GameOptions& options,
                  },
                  [&](float GameOptions::* member) -> std::string {
                    return compat::format("{:.2f}", options.*member);
-                 },
-                 [&](WinCondition GameOptions::* member) -> std::string {
-                   return std::string(to_config_value(options.*member));
                  },
                  [&](FpsOption GameOptions::* member) -> std::string {
                    return std::string(to_config_value(options.*member));
@@ -403,6 +408,7 @@ static std::string option_value(const GameOptions& options,
 
 // Returns what went wrong, or nothing when the option was set.
 static std::optional<std::string> set_option(GameOptions& options,
+                                             GameRules& rules,
                                              const OptionDef& option,
                                              const std::string& value) {
   auto out_of_range = [&](double v) {
@@ -410,19 +416,21 @@ static std::optional<std::string> set_option(GameOptions& options,
                           option.lowest, option.highest, value);
   };
   std::optional<std::string> failure;
+  auto parse_bool = [&](bool& target) {
+    if (value == "on" || value == "true" || value == "1") {
+      target = true;
+    }
+    else if (value == "off" || value == "false" || value == "0") {
+      target = false;
+    }
+    else {
+      failure = compat::format("Expected on or off, got '{}'", value);
+    }
+  };
   std::visit(
       overloaded{
-          [&](bool GameOptions::* member) {
-            if (value == "on" || value == "true" || value == "1") {
-              options.*member = true;
-            }
-            else if (value == "off" || value == "false" || value == "0") {
-              options.*member = false;
-            }
-            else {
-              failure = compat::format("Expected on or off, got '{}'", value);
-            }
-          },
+          [&](bool GameOptions::* member) { parse_bool(options.*member); },
+          [&](bool GameRules::* member) { parse_bool(rules.*member); },
           [&](int GameOptions::* member) {
             int parsed = 0;
             auto [ptr, ec] = std::from_chars(
@@ -455,9 +463,9 @@ static std::optional<std::string> set_option(GameOptions& options,
               failure = compat::format("Expected a number, got '{}'", value);
             }
           },
-          [&](WinCondition GameOptions::* member) {
+          [&](WinCondition GameRules::* member) {
             if (auto parsed = win_condition_from_config_value(value)) {
-              options.*member = *parsed;
+              rules.*member = *parsed;
             }
             else {
               failure = compat::format(
@@ -528,14 +536,15 @@ Examples:
         }
 
         auto& options = ctx.state.options();
-        if (auto failure = set_option(options, *option, value)) {
+        auto& rules = ctx.state.rules();
+        if (auto failure = set_option(options, rules, *option, value)) {
           return CommandResult::error(*failure);
         }
         if (option->apply) {
           option->apply(ctx.state, ctx.context);
         }
         return CommandResult::success().add_message(compat::format(
-            "{} is now {}", name, option_value(options, *option)));
+            "{} is now {}", name, option_value(options, rules, *option)));
       },
   };
 }
@@ -554,12 +563,13 @@ Example:
 )",
       .handler = [](const CommandContext& ctx) -> CommandResult {
         const auto& options = ctx.state.options();
+        const auto& rules = ctx.state.rules();
         auto result = CommandResult::success();
         result.add_message("Options:");
         for (const auto& option : option_defs) {
-          result.add_message(compat::format("  {:<40} {:<10}  {}", option.name,
-                                            option_value(options, option),
-                                            option.description));
+          result.add_message(compat::format(
+              "  {:<40} {:<10}  {}", option.name,
+              option_value(options, rules, option), option.description));
         }
         return result;
       },

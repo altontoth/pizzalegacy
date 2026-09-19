@@ -28,6 +28,7 @@ private:
   void build_graphics(GameState& state);
   void build_controls(GameState& state);
   void build_gameplay(GameState& state);
+  void build_rules(GameState& state);
   // Returns the advanced options checkbox, if the screen has one.
   MenuItem* add_save_and_back(GameState& state, OptionsScreen screen);
   void add_back(std::function<void()> action);

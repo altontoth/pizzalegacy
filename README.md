@@ -49,10 +49,19 @@ files). In the pizza design screen, `F1` imports a recipe from `recipes/` and
 `F2` exports the current pizza to it.
 
 Game settings (resolution, volume, autosaves, optional bug fixes, and more)
-are changed from the in-game options screen. Keyboard and gamepad bindings are
-changed on the Key bindings screen under Controls, or by editing
-`bindings.conf` in the directory above; the file is created on first launch and
-documents all actions and their default bindings.
+are changed from the in-game options screen. The rules (bug fixes, quality of
+life improvements, win condition and advanced balance options) are stored
+in the save game, so a loaded game keeps the rules it was started with.
+Changing them from the main menu changes the rules for new games; to change a
+game you are already playing, load it first and change them from the disk menu.
+In that menu you can use "Save rules for new games" to store these settings and
+use them for new games from then on. Keyboard and gamepad bindings are changed
+on the Key bindings screen under Controls, or by editing `bindings.conf` in the
+directory above; the file is created on first launch and documents all actions
+and their default bindings.
+gamepad bindings are changed on the Key bindings screen under Controls, or by
+editing `bindings.conf` in the directory above; the file is created on first
+launch and documents all actions and their default bindings.
 
 ## Current status
 

@@ -587,7 +587,7 @@ void Advertising::initialize_new_campaign(AdvertisingChannel channel) {
   case AdvertisingChannel::NEWSPAPER_ADS:
     newspaper_game_.start(NewspaperAdGame::ad_lines(),
                           state_.active_player()->name(),
-                          state_.options().fix_legacy_bugs);
+                          state_.rules().fix_legacy_bugs);
     hovered_news_row_.reset();
     break;
   default:

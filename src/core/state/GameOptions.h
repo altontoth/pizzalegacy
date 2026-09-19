@@ -10,6 +10,7 @@
 #include <string>
 #include <string_view>
 
+#include "core/state/GameRules.h"
 #include "engine/DisplayConstants.h"
 
 // FPS is decoupled from the 30Hz tick, so a higher rate only smooths
@@ -42,34 +43,6 @@ inline std::string to_string(AutosaveFrequency freq) {
     return "Monthly";
   }
   return "??";
-}
-
-// Market share domination needed to win. The English release checks Paris
-// alone, apparently meaning any one city; the German one checks every city.
-enum class WinCondition { Paris, AnyCity, AllCities };
-
-inline std::string to_string(WinCondition condition) {
-  switch (condition) {
-  case WinCondition::Paris:
-    return "Paris";
-  case WinCondition::AnyCity:
-    return "Any city";
-  case WinCondition::AllCities:
-    return "All cities";
-  }
-  return "??";
-}
-
-inline std::string_view to_config_value(WinCondition condition) {
-  switch (condition) {
-  case WinCondition::Paris:
-    return "paris";
-  case WinCondition::AnyCity:
-    return "any_city";
-  case WinCondition::AllCities:
-    return "all_cities";
-  }
-  return "any_city";
 }
 
 inline std::string_view to_config_value(FpsOption fps) {
@@ -129,20 +102,6 @@ autosave_frequency_from_config_value(std::string_view value) {
   return std::nullopt;
 }
 
-inline std::optional<WinCondition>
-win_condition_from_config_value(std::string_view value) {
-  if (value == "paris") {
-    return WinCondition::Paris;
-  }
-  if (value == "any_city") {
-    return WinCondition::AnyCity;
-  }
-  if (value == "all_cities") {
-    return WinCondition::AllCities;
-  }
-  return std::nullopt;
-}
-
 struct GameOptions {
   static constexpr int AUTOSAVE_COUNT_MIN = 1;
   static constexpr int AUTOSAVE_COUNT_MAX = 9;
@@ -164,8 +123,6 @@ struct GameOptions {
   bool automatic_report = true;
   // Use 640x480 (4:3) CRT aspect ratio instead of 640x400
   bool crt_aspect_ratio = false;
-  bool fix_legacy_bugs = true;
-  bool qol_improvements = true;
   // Start the window at twice the 640x400 surface.
   bool double_size = true;
   bool fullscreen = false;
@@ -181,10 +138,8 @@ struct GameOptions {
   bool load_list_sort_by_date = true;
   bool load_list_show_autosaves = false;
 
-  // The mafia shakes down a random restaurant instead of always the first.
-  bool mafia_shakedowns_target_all_restaurants = false;
-  bool demand_fulfillment_popularity = true;
-  WinCondition win_condition = WinCondition::AnyCity;
+  // The rules a new game starts with.
+  GameRules rules;
   // How long a held key waits before it starts repeating, and the gap
   // between repeats.
   int key_repeat_delay_ms = 500;
@@ -195,9 +150,7 @@ struct GameOptions {
   // it draws, which is 70 on a fast 486 and 35 or less on a slower machine.
   int attack_scene_hz = 35;
 
-  // Not saved, so these last for this run only.
-  // Off stops the police turning up by themselves. Console only.
-  bool police = true;
+  // Not saved, so it lasts for this run only.
   // Show the advanced rows on the options screens.
   bool show_advanced_options = false;
 };

@@ -12,18 +12,25 @@
 #include <vector>
 
 #include "core/state/GameOptions.h"
+#include "core/state/GameRules.h"
 #include "core/state/GameState.h"
+#include "core/state/UIState.h"
 #include "core/util/ConfigManager.h"
 #include "engine/DisplayConstants.h"
 #include "engine/audio/AudioManager.h"
 #include "engine/input/Action.h"
 #include "engine/input/InputManager.h"
 #include "engine/input/Key.h"
+#include "resources/FontTypes.h"
+#include "views/ui/PopupManager.h"
+#include "views/ui/popups/AlertPopup.h"
 #include "views/ui/widgets/CheckboxMenuItem.h"
 #include "views/ui/widgets/EnumMenuItem.h"
 #include "views/ui/widgets/IntSliderMenuItem.h"
+#include "views/ui/widgets/LabelMenuItem.h"
 #include "views/ui/widgets/PositionMarkerMenuItem.h"
 #include "views/ui/widgets/SliderMenuItem.h"
+#include "views/ui/widgets/SpacerMenuItem.h"
 #include "views/ui/widgets/TextMenuItem.h"
 #include "views/ui/widgets/ToggleMenuItem.h"
 
@@ -35,6 +42,13 @@ const TextStyle style{
 const TextStyle sel_style{
     .color = 29,
 };
+const TextStyle label_style{
+    .color = 240,
+    .shadow = ShadowStyle{.offset = {-1, 1}, .color = 246},
+};
+constexpr int label_gap = 6;
+// A blank row before "Save rules for new games".
+constexpr int row_gap = 14;
 
 // "Ctrl+F or F11", or empty when nothing is bound.
 std::string chord_list(const std::vector<input::Binding>& chords) {
@@ -75,6 +89,10 @@ MenuOptions::MenuOptions(GameContext& context, GameState& state,
     title_ = "Options - Gameplay";
     build_gameplay(state);
     break;
+  case OptionsScreen::Rules:
+    title_ = "Options - Rules";
+    build_rules(state);
+    break;
   }
   MenuItem* advanced_toggle = add_save_and_back(state, screen);
   update_selection(focus_advanced_toggle ? advanced_toggle : nullptr);
@@ -96,6 +114,10 @@ void MenuOptions::build_chooser(GameState& state) {
   add_menu_item(std::make_unique<TextMenuItem>(
       context_, "> Gameplay",
       [&state] { state.ui().push<OptionsMenuState>(OptionsScreen::Gameplay); },
+      face, style, sel_style));
+  add_menu_item(std::make_unique<TextMenuItem>(
+      context_, "> Rules",
+      [&state] { state.ui().push<OptionsMenuState>(OptionsScreen::Rules); },
       face, style, sel_style));
 
   // Sub-screens save their own changes when leaving, so from the main screen we
@@ -195,76 +217,34 @@ void MenuOptions::build_graphics(GameState& state) {
 }
 
 void MenuOptions::build_gameplay(GameState& state) {
-  add_menu_item(
-      std::make_unique<ToggleMenuItem>(context_, "Automatic Report",
-                                       state.options().automatic_report,
-                                       [&state, this] {
-                                         state.options().automatic_report =
-                                             !state.options().automatic_report;
-                                         mark_dirty();
-                                       }))
+  auto& options = state.options();
+  auto toggle = [this](const std::string& label, bool& value) -> MenuItem& {
+    return add_menu_item(std::make_unique<ToggleMenuItem>(
+        context_, label, value, [&value, this] {
+          value = !value;
+          mark_dirty();
+        }));
+  };
+
+  toggle("Automatic Report", options.automatic_report)
       .help_text("Automatically show the daily turnover report at the end of "
                  "the turn.");
   add_menu_item(
-      std::make_unique<ToggleMenuItem>(
-          context_, "Fix original bugs", state.options().fix_legacy_bugs,
-          [&state, this] {
-            state.options().fix_legacy_bugs = !state.options().fix_legacy_bugs;
-            mark_dirty();
-          }))
-      .help_text("Fix various bugs from the original; see "
-                 "docs/MODERNIZATIONS.md for details.");
-  add_menu_item(
-      std::make_unique<ToggleMenuItem>(context_, "Quality of Life improvements",
-                                       state.options().qol_improvements,
-                                       [&state, this] {
-                                         state.options().qol_improvements =
-                                             !state.options().qol_improvements;
-                                         mark_dirty();
-                                       }))
-      .help_text("Enable various modernizations of the UI and mouse behavior.");
-  add_menu_item(
       std::make_unique<EnumMenuItem<AutosaveFrequency>>(
-          context_, "Auto save", state.options().autosave_frequency,
+          context_, "Auto save", options.autosave_frequency,
           std::vector{AutosaveFrequency::Off, AutosaveFrequency::Daily,
                       AutosaveFrequency::Weekly, AutosaveFrequency::Monthly},
           [this] { mark_dirty(); }, face))
       .help_text("Automatically save the game at the end of the day, week or "
                  "month.");
   add_menu_item(std::make_unique<IntSliderMenuItem>(
-      context_, "Auto save slots", state.options().autosave_count,
+      context_, "Auto save slots", options.autosave_count,
       GameOptions::AUTOSAVE_COUNT_MIN, GameOptions::AUTOSAVE_COUNT_MAX,
       [this](int) { mark_dirty(); }));
 
-  if (!state.options().show_advanced_options) {
+  if (!options.show_advanced_options) {
     return;
   }
-  auto& options = state.options();
-  auto toggle = [this](const std::string& label, bool& value) -> MenuItem& {
-    return add_menu_item(std::make_unique<ToggleMenuItem>(context_, label,
-                                                          value,
-                                                          [&value, this] {
-                                                            value = !value;
-                                                            mark_dirty();
-                                                          }))
-        .advanced(true);
-  };
-  toggle("Random shakedown target",
-         options.mafia_shakedowns_target_all_restaurants)
-      .help_text("On: the mafia can shake down any of your restaurants. Off: "
-                 "only your first one, as in the original.");
-  toggle("Fulfillment affects popularity",
-         options.demand_fulfillment_popularity)
-      .help_text("On: popularity reflects unmet orders. "
-                 "Off: it always takes the full drop, as in the DOS original.");
-  add_menu_item(std::make_unique<EnumMenuItem<WinCondition>>(
-                    context_, "Win condition", options.win_condition,
-                    std::vector{WinCondition::Paris, WinCondition::AnyCity,
-                                WinCondition::AllCities},
-                    [this] { mark_dirty(); }, face))
-      .advanced(true)
-      .help_text("Paris: win with enough market share in Paris. "
-                 "Any: win in any city. All: win in every city.");
   add_menu_item(std::make_unique<IntSliderMenuItem>(
                     context_, "Attack scene speed", options.attack_scene_hz,
                     GameOptions::ATTACK_SCENE_HZ_MIN,
@@ -274,8 +254,68 @@ void MenuOptions::build_gameplay(GameState& state) {
       .help_text("Updates per second in burglaries. The original ran at 70 "
                  "on a fast 486 and 35 or less on slower machines.");
   toggle("Player colors in dropdowns", options.show_player_color_in_dropdown)
+      .advanced(true)
       .help_text("On: the Player and Range lists on the city map show each "
                  "player's color.");
+}
+
+void MenuOptions::build_rules(GameState& state) {
+  // From the main menu the rules are the ones a new game starts with; from
+  // the disk menu they are the ones from the running game.
+  const bool in_game = state.ui().contains<CityViewState>();
+  GameRules& rules = in_game ? state.rules() : state.options().rules;
+  add_menu_item(std::make_unique<LabelMenuItem>(
+      context_, in_game ? "Rules for this game" : "Rules for new games", face,
+      label_style));
+  add_menu_item(std::make_unique<SpacerMenuItem>(context_, label_gap));
+  auto toggle = [this](const std::string& label, bool& value) -> MenuItem& {
+    return add_menu_item(std::make_unique<ToggleMenuItem>(
+        context_, label, value, [&value, this] {
+          value = !value;
+          mark_dirty();
+        }));
+  };
+
+  toggle("Fix original bugs", rules.fix_legacy_bugs)
+      .help_text("Fix various bugs from the original; see "
+                 "docs/MODERNIZATIONS.md for details.");
+  toggle("Quality of Life improvements", rules.qol_improvements)
+      .help_text("Enable various modernizations of the UI and mouse behavior.");
+  if (state.options().show_advanced_options) {
+    toggle("Random shakedown target",
+           rules.mafia_shakedowns_target_all_restaurants)
+        .advanced(true)
+        .help_text("On: the mafia can shake down any of your restaurants. Off: "
+                   "only your first one, as in the original.");
+    toggle("Fulfillment affects popularity",
+           rules.demand_fulfillment_popularity)
+        .advanced(true)
+        .help_text(
+            "On: popularity reflects unmet orders. "
+            "Off: it always takes the full drop, as in the DOS original.");
+    add_menu_item(std::make_unique<EnumMenuItem<WinCondition>>(
+                      context_, "Win condition", rules.win_condition,
+                      std::vector{WinCondition::Paris, WinCondition::AnyCity,
+                                  WinCondition::AllCities},
+                      [this] { mark_dirty(); }, face))
+        .advanced(true)
+        .help_text("Paris: win with enough market share in Paris. "
+                   "Any: win in any city. All: win in every city.");
+  }
+  if (in_game) {
+    add_menu_item(std::make_unique<SpacerMenuItem>(context_, row_gap));
+    add_menu_item(std::make_unique<TextMenuItem>(
+                      context_, "Save rules for new games",
+                      [&state, this] {
+                        state.options().rules = state.rules();
+                        context_.config->save_options(state.options());
+                        context_.popup->create<AlertPopup>(
+                            "New games will start with these rules.");
+                      },
+                      face, style, sel_style))
+        .help_text("Make the rules used in the current game the rules for "
+                   "new games.");
+  }
 }
 
 void MenuOptions::build_controls(GameState& state) {
@@ -350,7 +390,8 @@ MenuItem* MenuOptions::add_save_and_back(GameState& state,
   end_scrolling_items(scroll_height);
 
   MenuItem* advanced_toggle = nullptr;
-  if (screen == OptionsScreen::Controls || screen == OptionsScreen::Gameplay) {
+  if (screen == OptionsScreen::Controls || screen == OptionsScreen::Gameplay ||
+      screen == OptionsScreen::Rules) {
     // The bottom left corner, level with Back
     constexpr int toggle_y = 238;
     add_menu_item(
@@ -365,9 +406,12 @@ MenuItem* MenuOptions::add_save_and_back(GameState& state,
         }));
   }
 
-  // There is no way to leave the options without saving, so "Back" saves the
-  // current settings and returns to the main screen.
+  // Back is the only way out, so it also saves. Outside a running game the
+  // game rules are the ones new games start with.
   add_back([this, &state] {
+    if (!state.ui().contains<CityViewState>()) {
+      state.rules() = state.options().rules;
+    }
     context_.config->save_options(state.options());
     state.ui().pop();
   });

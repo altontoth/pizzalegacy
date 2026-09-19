@@ -100,7 +100,7 @@ void apply_electricity_slot_invoice(GameState& gs, Player& player,
 MonthlyCosts collect_monthly_costs(const GameState& gs, const Player& player) {
   MonthlyCosts costs;
 
-  auto loan_costs = player.monthly_loan_costs(gs.options().fix_legacy_bugs);
+  auto loan_costs = player.monthly_loan_costs(gs.rules().fix_legacy_bugs);
   costs.loan_repayment = loan_costs.repayment;
   costs.loan_interest = loan_costs.interest;
   costs.insurance_premiums = player.monthly_insurance_premiums();
@@ -142,7 +142,7 @@ MonthlyCosts collect_monthly_costs(const GameState& gs, const Player& player) {
 void apply_monthly_costs(GameState& gs, Player& player,
                          const MonthlyCosts& costs) {
   const auto& date = gs.time().current_date();
-  player.apply_monthly_loan_payments(date, gs.options().fix_legacy_bugs);
+  player.apply_monthly_loan_payments(date, gs.rules().fix_legacy_bugs);
   player.apply_monthly_insurance_premiums(date);
   player.apply_monthly_investment_payouts(date);
   for (const auto& rent : costs.rents) {

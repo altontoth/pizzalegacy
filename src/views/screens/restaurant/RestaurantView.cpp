@@ -123,7 +123,7 @@ RestaurantView::RestaurantView(GameContext& context, GameState& state,
   // Calculate background dimensions based on restaurant/kitchen size
   calculate_background_dimensions();
   rmb_drag_scroller_.init(
-      camctrl_, [this] { return state_.options().qol_improvements; },
+      camctrl_, [this] { return state_.rules().qol_improvements; },
       [this] { return state_.options().rmb_drag_inverted; },
       [this](ViewPoint) {
         if (!placement_.rotate_cursor()) {
@@ -492,8 +492,7 @@ void RestaurantView::register_interactions_viewport() {
         }
 
         if (ev.button == views::ui::MouseButton::Right) {
-          if (!state_.options().qol_improvements &&
-              !placement_.rotate_cursor()) {
+          if (!state_.rules().qol_improvements && !placement_.rotate_cursor()) {
             zoom_out_of_restaurant_view();
           }
           return;
@@ -862,7 +861,7 @@ void RestaurantView::render_placement_layer(PlacementLayer placement) {
               handle_furniture_click(pf);
             }
             else if (ev.button == views::ui::MouseButton::Right) {
-              if (!state_.options().qol_improvements &&
+              if (!state_.rules().qol_improvements &&
                   !placement_.rotate_cursor()) {
                 zoom_out_of_restaurant_view();
               }

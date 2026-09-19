@@ -65,7 +65,7 @@ enum class SupplierID;
 enum class ActorType;
 enum class RestaurantViewMode;
 
-enum class OptionsScreen { Audio, Graphics, Controls, Gameplay };
+enum class OptionsScreen { Audio, Graphics, Controls, Gameplay, Rules };
 
 struct CityViewState {
   core::CityId city_id;

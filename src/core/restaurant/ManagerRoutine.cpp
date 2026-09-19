@@ -193,7 +193,7 @@ void ManagerRoutine::do_shopping() {
   float difficulty_mult =
       FoodSupplier::price_multiplier(game_state_.difficulty_level());
 
-  const bool fix_legacy_bugs = game_state_.options().fix_legacy_bugs;
+  const bool fix_legacy_bugs = game_state_.rules().fix_legacy_bugs;
 
   for (auto category : ALL_INGREDIENT_CATEGORIES) {
     int shortage_count = count_category_shortages(restaurant_, category);
@@ -403,7 +403,7 @@ bool ManagerRoutine::do_turnover_monitoring() {
   // "turnover decrease" gates the *rise* message and "turnover increase" gates
   // the *fall* one. With fix_legacy_bugs each setting reacts to the trend it
   // names.
-  const bool swapped = !game_state_.options().fix_legacy_bugs;
+  const bool swapped = !game_state_.rules().fix_legacy_bugs;
   const ManagerReaction rise_setting =
       swapped ? settings.turnover_decrease : settings.turnover_increase;
   const ManagerReaction fall_setting =

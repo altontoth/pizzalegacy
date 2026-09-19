@@ -201,7 +201,7 @@ bool InsuranceConversation::advance_line_choice(InsuranceLine choice) {
   case InsuranceLine::SO_MUCH_THE_WORSE_YOU_SHOULD_BE_GLAD_TO_BE_ALIVE: {
     auto rebuttal = type_specific_rebuttal();
     if (rebuttal == InsuranceLine::LIFE_CLAIM_REBUTTAL &&
-        state_.options().fix_legacy_bugs) {
+        state_.rules().fix_legacy_bugs) {
       // Original shows the premium-increase message but forgets to actually
       // increase the premium. With bug fixes enabled, we apply the doubling.
       auto& policy =

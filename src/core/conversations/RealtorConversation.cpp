@@ -135,7 +135,7 @@ bool RealtorConversation::advance_line_choice(RealtorLine choice) {
     else {
       price_ = Money(static_cast<int64_t>(price_.cents * negotiate_plus));
       // The original stores the quote, tenant discount or rip-off included.
-      if (state_.options().fix_legacy_bugs) {
+      if (state_.rules().fix_legacy_bugs) {
         property->purchase_price(Money(static_cast<int64_t>(
             property->purchase_price().cents * negotiate_plus)));
       }

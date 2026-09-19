@@ -205,6 +205,7 @@ int Game::run() {
 
   // Use the already-loaded options
   state.options() = loaded_options;
+  state.rules() = loaded_options.rules;
 
   // For direct file loading (--vga, --bob, --fnt, --raw), set up the state with
   // the correct viewer type

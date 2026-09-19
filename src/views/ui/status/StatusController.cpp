@@ -367,9 +367,9 @@ StatusController::build_restaurant(const RestaurantCtx& rctx) {
   const auto& district = city->district(district_index);
 
   // Get real values from restaurant
-  rctx.rest->calculate_popularity(
-      *state->active_player(), *state->active_city(), district,
-      state->options().demand_fulfillment_popularity);
+  rctx.rest->calculate_popularity(*state->active_player(),
+                                  *state->active_city(), district,
+                                  state->rules().demand_fulfillment_popularity);
   const int popularity = rest->total_popularity();
   const int cooks = rest->count_cooks();
   const int waiters = rest->count_waiters();

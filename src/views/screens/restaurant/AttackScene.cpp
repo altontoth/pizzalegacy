@@ -482,7 +482,7 @@ bool AttackScene::update() {
     }
   }
 
-  if (!defender_ && !walking_out_ && state_.options().police) {
+  if (!defender_ && !walking_out_ && state_.rules().police) {
     if (update_count_ > BURGLARY_ALARM_UPDATES &&
         engine::random::rand_percentage_chance(4) &&
         engine::random::rand_percentage_chance(4)) {
@@ -717,7 +717,7 @@ bool AttackScene::odd_update() const { return (update_count_ & 1) != 0; }
 
 void AttackScene::advance_death(AttackSprite& s) {
   if (s.death_ctr == death::POLICE_CTR) {
-    if (state_.options().police) {
+    if (state_.rules().police) {
       police_coming();
     }
     s.death_ctr = death::FROZEN_CTR;

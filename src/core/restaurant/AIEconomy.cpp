@@ -200,7 +200,7 @@ AttackSeverity attack_competitor(Restaurant& restaurant, Player& player,
   // The original's text lookup is 1-based but is handed a 0-based item id, so
   // it names the item rather than saying what happened.
   const std::string line =
-      game_state.options().fix_legacy_bugs
+      game_state.rules().fix_legacy_bugs
           ? core::item::ActionText::get(
                 core::item::ActionLine::StinkBombAStinkBombHasExploded)
           : std::string{core::item::to_string(core::item::Item::StinkBomb)};

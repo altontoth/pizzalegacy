@@ -247,8 +247,8 @@ difficult with them fixed. To allow play testing with the new behavior these
 options, along with a few timing and display settings, are hidden on the
 options screens until you tick "Show advanced options" in the bottom left
 corner. That checkbox is not saved, so it is off again every time the game
-starts. The balance options and the player colors are on the Gameplay screen,
-the timing options on Controls. settings.conf carries a commented list of every
+starts. The balance options are on the Rules screen, the player colors on
+Gameplay and the timing options on Controls. settings.conf carries a commented list of every
 option and its default as well.
 
 ### mafia_shakedowns_target_all_restaurants

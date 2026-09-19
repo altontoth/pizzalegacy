@@ -467,6 +467,7 @@ set(PLEGACY_HEADERS
     src/core/state/EndOfDayCause.h
     src/core/state/FadePresenter.h
     src/core/state/GameOptions.h
+    src/core/state/GameRules.h
     src/core/state/GameState.h
     src/core/state/InterruptionRate.h
     src/core/state/MilestoneTracker.h

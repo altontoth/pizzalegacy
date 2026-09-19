@@ -14,6 +14,7 @@
 #include <string>
 #include <string_view>
 #include "core/state/GameOptions.h"
+#include "core/state/GameRules.h"
 #include "engine/Fatal.h"
 #include "engine/Logger.h"
 #include "engine/StringUtil.h"
@@ -69,6 +70,30 @@ OptionDef int_option(std::string_view key, std::string_view section = {},
           section, note};
 }
 
+template <auto Field>
+OptionDef rule_bool_option(std::string_view key, std::string_view section = {},
+                           std::string_view note = {}) {
+  return {
+      key, [](const GameOptions& o) { return from_bool(o.rules.*Field); },
+      [](GameOptions& o, const std::string& s) { o.rules.*Field = to_bool(s); },
+      section, note};
+}
+
+template <auto Field, auto Parser>
+OptionDef rule_enum_option(std::string_view key, std::string_view section = {},
+                           std::string_view note = {}) {
+  return {key,
+          [](const GameOptions& o) {
+            return std::string(to_config_value(o.rules.*Field));
+          },
+          [](GameOptions& o, const std::string& s) {
+            if (auto parsed = Parser(s)) {
+              o.rules.*Field = *parsed;
+            }
+          },
+          section, note};
+}
+
 // Parser is the matching *_from_config_value function. Returns nullopt for a
 // value it doesn't recognise.
 template <auto Field, auto Parser>
@@ -119,19 +144,20 @@ const auto option_defs = std::to_array({
     bool_option<&GameOptions::automatic_report>(
         "automatic_report", "Gameplay",
         "show the day's turnover report when the turn ends"),
-    bool_option<&GameOptions::fix_legacy_bugs>("fix_legacy_bugs"),
-    bool_option<&GameOptions::qol_improvements>("qol_improvements"),
+    rule_bool_option<&GameRules::fix_legacy_bugs>("fix_legacy_bugs"),
+    rule_bool_option<&GameRules::qol_improvements>("qol_improvements"),
     bool_option<&GameOptions::show_player_color_in_dropdown>(
         "show_player_color_in_dropdown", {},
         "mark players in the city map dropdowns with their player color"),
 
-    bool_option<&GameOptions::mafia_shakedowns_target_all_restaurants>(
+    rule_bool_option<&GameRules::mafia_shakedowns_target_all_restaurants>(
         "mafia_shakedowns_target_all_restaurants", "Advanced",
         "shake down a random restaurant instead of always the first"),
-    bool_option<&GameOptions::demand_fulfillment_popularity>(
+    rule_bool_option<&GameRules::demand_fulfillment_popularity>(
         "demand_fulfillment_popularity", {},
         "fix bug in order fulfillment popularity"),
-    enum_option<&GameOptions::win_condition, &win_condition_from_config_value>(
+    rule_enum_option<&GameRules::win_condition,
+                     &win_condition_from_config_value>(
         "win_condition", {}, "paris, any_city or all_cities"),
     int_option<&GameOptions::attack_scene_hz, GameOptions::ATTACK_SCENE_HZ_MIN,
                GameOptions::ATTACK_SCENE_HZ_MAX>(

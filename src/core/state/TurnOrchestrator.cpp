@@ -1306,7 +1306,7 @@ void TurnOrchestrator::end_of_year_processing() {
       auto& ch = player->character();
       ch.age(static_cast<uint8_t>(std::min(255, (int)ch.age() + 1)));
       player->financials().close_year(gs_->time().current_date());
-      player->financials().start_liquidity_year(gs_->options().fix_legacy_bugs);
+      player->financials().start_liquidity_year(gs_->rules().fix_legacy_bugs);
     }
   }
 }
@@ -1432,7 +1432,7 @@ void TurnOrchestrator::raid_depots(core::PlayerId player_id) {
     }
 
     // The original does not write the seized weapons off.
-    if (seized.cents > 0 && gs_->options().fix_legacy_bugs) {
+    if (seized.cents > 0 && gs_->rules().fix_legacy_bugs) {
       player->financials().transfer(gs_->time().current_date(),
                                     Account::Weapons, Account::ProfitAndLoss,
                                     seized, balance_sheet_only);
@@ -1440,9 +1440,8 @@ void TurnOrchestrator::raid_depots(core::PlayerId player_id) {
 
     // The original stops investigating a district only when it finds a bomb,
     // emptying every other weapon out of the depots it visits on the way.
-    const bool raid_satisfied = gs_->options().fix_legacy_bugs
-                                    ? seized.cents > 0
-                                    : bomb_value.cents > 0;
+    const bool raid_satisfied =
+        gs_->rules().fix_legacy_bugs ? seized.cents > 0 : bomb_value.cents > 0;
     if (raid_satisfied) {
       queue_depot_raid_call(player_id);
       gs_->district_under_investigation(std::nullopt);
@@ -1463,7 +1462,7 @@ void TurnOrchestrator::run_city_start_of_day(City& city) {
   // The weekly trend step. Arriving from the map runs this pass, so a city
   // entered on the first day of a week ticks on arrival.
   if (gs_->time().current_date().week_day_index() == 0) {
-    city.economy_trend().tick(gs_->options().fix_legacy_bugs);
+    city.economy_trend().tick(gs_->rules().fix_legacy_bugs);
     city.ingredient_trend_system().weekly_seed();
   }
 
@@ -1494,7 +1493,7 @@ void TurnOrchestrator::run_city_start_of_day(City& city) {
       !city.districts().empty()) {
     int drawn =
         engine::random::rand_max_n(static_cast<int>(city.districts().size()));
-    gs_->district_under_investigation(gs_->options().fix_legacy_bugs
+    gs_->district_under_investigation(gs_->rules().fix_legacy_bugs
                                           ? city.districts().at(drawn)->id()
                                           : drawn);
   }

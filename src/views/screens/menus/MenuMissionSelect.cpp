@@ -66,7 +66,7 @@ MenuMissionSelect::MenuMissionSelect(GameContext& context, GameState& state)
 
   auto goals = std::make_unique<TextListBox>(
       context, Size{GOALS_BOX_W, GOALS_BOX_H}, &goals_scroll_,
-      state.options().qol_improvements, [this](int index) {
+      state.rules().qol_improvements, [this](int index) {
         if (goals_mode_ == GoalsBoxMode::Files) {
           select_player_mission(index);
         }
@@ -139,7 +139,7 @@ void MenuMissionSelect::load_mission(const std::filesystem::path& path) {
     context_.popup->create<AlertPopup>("Not a valid mission file.");
     return;
   }
-  if (state_.options().fix_legacy_bugs) {
+  if (state_.rules().fix_legacy_bugs) {
     // The original's mission files date from the German 1994 release, so it's
     // not possible to get 100% because the missions are in 1994 but we start in
     // 1995. Let's fix this:

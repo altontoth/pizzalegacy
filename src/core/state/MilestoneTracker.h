@@ -33,7 +33,7 @@ public:
   void check_market_share_milestones(const City& city);
 
   // Win condition: market share domination over as much of the map as
-  // GameOptions::win_condition asks for.
+  // GameRules::win_condition asks for.
   void check_world_domination();
 
   // Central depot count milestones.

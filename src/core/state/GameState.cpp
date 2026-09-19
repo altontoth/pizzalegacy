@@ -268,7 +268,7 @@ City& GameState::city_or_create(core::CityId city_id) {
   assert(is_valid_city_id(city_id));
   auto& city = cities_[city_id.value];
   if (city == nullptr) {
-    city = CityFactory::create_city(city_id, options_.fix_legacy_bugs,
+    city = CityFactory::create_city(city_id, rules_.fix_legacy_bugs,
                                     build_player_chars());
   }
   return *city;
@@ -960,7 +960,7 @@ std::optional<GameState::RacketOffer> GameState::roll_protection_racket() {
   // rather than assigning the returned restaurant back to the current
   // restaurant, so every shakedown lands on the player's first restaurant.
   auto* restaurant = candidates.front();
-  if (options().mafia_shakedowns_target_all_restaurants) {
+  if (rules().mafia_shakedowns_target_all_restaurants) {
     restaurant = candidates[engine::random::rand_max_n(
         static_cast<int>(candidates.size()))];
   }
@@ -1047,6 +1047,7 @@ void GameState::finalize_initialization(GameContext& context) {
   }
 
   init::Config cfg = *initializer_;
+  rules_ = options_.rules;
 
   // Use initializer to set permanent state
   game_mode_ = cfg.mode;
@@ -1237,7 +1238,7 @@ void GameState::initiate_arrest(ArrestReason reason,
 }
 
 bool GameState::check_police_events() {
-  if (!options_.police) {
+  if (!rules_.police) {
     return false;
   }
 
