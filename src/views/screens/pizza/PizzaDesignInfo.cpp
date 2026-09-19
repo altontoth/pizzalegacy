@@ -116,22 +116,11 @@ void PizzaDesign::draw_pizza_info(const RenderContext& ctx) const {
   auto* city = state_.active_city();
 
   // Compute live ingredient cost for a pizza at a given restaurant.
-  // Uses weighted-average vendor prices, falls back to city base prices.
   auto compute_pizza_cost = [&](const auto* rest) {
-    const auto& inv = rest->inventory();
     Money cost{0};
     for (const auto& topping : pizza->toppings()) {
-      auto type = topping->ingredient()->type();
-      int weight_grams = topping->weight();
-      const auto* stock = inv.get_ingredient_stock(type);
-      Money price_per_1000g;
-      if (stock && stock->quantity > 0 && stock->weighted_avg_cost > 0_usd) {
-        price_per_1000g = stock->weighted_avg_cost;
-      }
-      else {
-        price_per_1000g = city->ingredient_base_price(type);
-      }
-      cost += price_per_1000g * weight_grams / 1000;
+      cost += rest->ingredient_price(topping->ingredient()->type()) *
+              topping->weight() / 1000;
     }
     return cost;
   };

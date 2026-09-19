@@ -296,6 +296,9 @@ public:
   const core::restaurant::RestaurantInventory& inventory() const {
     return inventory_;
   }
+  // The last average paid per kilo, or the city's base price for an
+  // ingredient that hasn't been bought before.
+  Money ingredient_price(core::food::IngredientType type) const;
 
   Money purchase_ingredients(core::food::IngredientType type, int quantity_kg,
                              int quality, Money price_per_kg);

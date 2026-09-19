@@ -1254,9 +1254,8 @@ void Restaurant::eod_batch_order_fulfillment(class GameState& game_state) {
 
     Money cost_each{0};
     for (const auto& [ingredient_type, qty_grams] : line.per_pizza) {
-      const auto& stock = inventory_.get_stock(ingredient_type);
       Money this_cost =
-          Money{(stock.weighted_avg_cost.cents * qty_grams) / 1000};
+          Money{(ingredient_price(ingredient_type).cents * qty_grams) / 1000};
       cost_each = cost_each + this_cost;
 
       stats_.today.ingredients_used_grams +=
@@ -1893,6 +1892,14 @@ Money Restaurant::purchase_furniture(const Furniture* furniture, int quantity) {
   stats_.today.furniture_purchases =
       stats_.today.furniture_purchases + total_cost;
   return total_cost;
+}
+
+Money Restaurant::ingredient_price(core::food::IngredientType type) const {
+  const auto& stock = inventory_.get_stock(type);
+  if (stock.weighted_avg_cost > 0_usd) {
+    return stock.weighted_avg_cost;
+  }
+  return property_.city().ingredient_base_price(type);
 }
 
 Money Restaurant::purchase_ingredients(core::food::IngredientType type,
