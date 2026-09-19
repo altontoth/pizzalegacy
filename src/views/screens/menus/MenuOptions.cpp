@@ -279,6 +279,13 @@ void MenuOptions::build_gameplay(GameState& state) {
 }
 
 void MenuOptions::build_controls(GameState& state) {
+  add_menu_item(std::make_unique<TextMenuItem>(
+                    context_, "> Key bindings",
+                    [&state] {
+                      state.ui().push<ScreenTag>(ScreenTag::Kind::MenuBindings);
+                    },
+                    face, style, sel_style))
+      .help_text("Choose the keys and gamepad buttons for each action.");
   add_menu_item(
       std::make_unique<ToggleMenuItem>(context_, "Invert map scrolling",
                                        state.options().rmb_drag_inverted,

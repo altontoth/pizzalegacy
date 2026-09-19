@@ -6,6 +6,7 @@
 
 #include "core/debug/commands/DebugCommands.h"
 
+#include <filesystem>
 #include <fstream>
 #include <sstream>
 #include "core/debug/command/CommandRegistry.h"
@@ -13,6 +14,8 @@
 #include "core/save/SaveGameManager.h"
 #include "core/state/GameState.h"
 #include "core/util/GameContext.h"
+#include "engine/FormatCompat.h"
+#include "engine/input/BindingsFile.h"
 #include "engine/input/InputManager.h"
 #include "engine/ui/InteractionManager.h"
 
@@ -365,6 +368,57 @@ Examples:
   };
 }
 
+static ArgSpec bindings_file_arg() {
+  return ArgSpec{
+      .name = "file",
+      .type = ArgType::String,
+      .optional = false,
+      .default_provider = DefaultProvider::None,
+      .description = "Bindings file",
+  };
+}
+
+static CommandDef make_debug_bindings() {
+  return CommandDef{
+      .name = "bindings",
+      .description = "Load or save key bindings files",
+      .help_text = "Load a bindings file on top of the current bindings, or "
+                   "write the current bindings to disk",
+  }
+      .add_subcommand(CommandDef{
+          .name = "load",
+          .description = "Apply a bindings file",
+          .help_text = R"(Usage: debug bindings load <file>
+
+Load the specified file on top of the current bindings.
+)",
+          .args = {bindings_file_arg()},
+          .handler = [](const CommandContext& ctx) -> CommandResult {
+            const std::string file = ctx.string_arg(0);
+            if (!std::filesystem::exists(file)) {
+              return CommandResult::error(
+                  compat::format("No such file: {}", file));
+            }
+            input::apply_bindings_file(*ctx.context.input, file);
+            return CommandResult::success({compat::format("Applied {}", file)});
+          },
+      })
+      .add_subcommand(CommandDef{
+          .name = "save",
+          .description = "Write the current bindings to a file",
+          .help_text = R"(Usage: debug bindings save <file>
+
+Write the current bindings to disk.
+)",
+          .args = {bindings_file_arg()},
+          .handler = [](const CommandContext& ctx) -> CommandResult {
+            const std::string file = ctx.string_arg(0);
+            input::save_bindings_file(*ctx.context.input, file);
+            return CommandResult::success({compat::format("Wrote {}", file)});
+          },
+      });
+}
+
 static CommandDef make_debug_dump() {
   return CommandDef{
       .name = "dump",
@@ -387,7 +441,8 @@ CommandDef make_debug_commands() {
       .description = "Debug and diagnostic commands",
       .help_text = "Debug utilities for inspecting game state",
   }
-      .add_subcommand(make_debug_dump());
+      .add_subcommand(make_debug_dump())
+      .add_subcommand(make_debug_bindings());
 }
 
 CommandDef make_dump_command() {

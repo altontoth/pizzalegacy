@@ -237,6 +237,7 @@ void InputManager::process(const SDL_Event& ev) {
 
   case SDL_EVENT_WINDOW_FOCUS_LOST:
     repeat_ = {};
+    capture_modifiers_.reset();
     break;
 
   case SDL_EVENT_GAMEPAD_ADDED: {
@@ -290,6 +291,10 @@ void InputManager::key_down(Key k, Mod mods) {
   keys_down_.insert(k);
   mods_down_ = mods;
   last_key_down_ = k;
+  if (capture_) {
+    capture_key_down(k, mods);
+    return;
+  }
   evaluate_bindings_for_key_down(k, mods);
 }
 
@@ -299,7 +304,40 @@ void InputManager::key_up(Key k, Mod mods) {
   // Releasing any key ends the repeat, modifiers included.
   repeat_ = {};
 
+  if (capture_modifiers_ && contributed_mod_bit(k) != Mod::None) {
+    finish_capture(*capture_modifiers_);
+  }
   evaluate_bindings_for_key_up(k);
+}
+
+void InputManager::begin_capture(CaptureCallback on_done) {
+  capture_ = std::move(on_done);
+  capture_modifiers_.reset();
+  repeat_ = {};
+}
+
+void InputManager::cancel_capture() noexcept {
+  capture_ = nullptr;
+  capture_modifiers_.reset();
+}
+
+void InputManager::capture_key_down(Key k, Mod mods) {
+  if (k == Key::Escape) {
+    finish_capture(std::nullopt);
+    return;
+  }
+  const Binding b = lookup_binding(k, mods);
+  if (contributed_mod_bit(k) != Mod::None) {
+    capture_modifiers_ = b;
+    return;
+  }
+  finish_capture(b);
+}
+
+void InputManager::finish_capture(std::optional<CapturedInput> input) {
+  CaptureCallback on_done = std::move(capture_);
+  cancel_capture();
+  on_done(std::move(input));
 }
 
 void InputManager::evaluate_bindings_for_key_down(Key k, Mod mods) {
@@ -348,6 +386,10 @@ void InputManager::evaluate_bindings_for_key_up(Key k) {
 }
 
 void InputManager::gamepad_button_down(GamepadButton b) {
+  if (capture_) {
+    finish_capture(b);
+    return;
+  }
   std::vector<Action> actions;
   for (const auto& [button, bound_action] : gamepad_button_bindings_) {
     if (button == b) {
@@ -582,13 +624,26 @@ void InputManager::debug_dump_state(std::ostream& os) const {
 }
 
 void InputManager::bind_button(Binding chord, Action a) {
-  button_bindings_.emplace_back(chord, a);
   document_action(a);
+  const auto at = std::ranges::find_if(button_bindings_, [&](const auto& e) {
+    return declared_after(e.second, a);
+  });
+  button_bindings_.insert(at, {chord, a});
 }
 
 void InputManager::bind_gamepad_button(GamepadButton b, Action a) {
-  gamepad_button_bindings_.emplace_back(b, a);
   document_action(a);
+  const auto at =
+      std::ranges::find_if(gamepad_button_bindings_, [&](const auto& e) {
+        return declared_after(e.second, a);
+      });
+  gamepad_button_bindings_.insert(at, {b, a});
+}
+
+bool InputManager::declared_after(Action a, Action b) const {
+  const auto a_at = std::ranges::find(documented_actions_, a);
+  const auto b_at = std::ranges::find(documented_actions_, b);
+  return a_at != documented_actions_.end() && a_at > b_at;
 }
 
 void InputManager::bind_fixed(Binding chord, Action a) {
@@ -614,8 +669,16 @@ void InputManager::document_action(Action a) {
 }
 
 void InputManager::remove_bindings(Action a) {
+  remove_button_bindings(a);
+  remove_gamepad_bindings(a);
+}
+
+void InputManager::remove_button_bindings(Action a) {
   std::erase_if(button_bindings_,
                 [a](const auto& entry) { return entry.second == a; });
+}
+
+void InputManager::remove_gamepad_bindings(Action a) {
   std::erase_if(gamepad_button_bindings_,
                 [a](const auto& entry) { return entry.second == a; });
 }

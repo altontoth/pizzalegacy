@@ -49,9 +49,10 @@ files). In the pizza design screen, `F1` imports a recipe from `recipes/` and
 `F2` exports the current pizza to it.
 
 Game settings (resolution, volume, autosaves, optional bug fixes, and more)
-are changed from the in-game options screen. Keyboard and gamepad bindings can
-be customized by editing `bindings.conf` in the directory above; the file is
-created on first launch and documents all actions and their default bindings.
+are changed from the in-game options screen. Keyboard and gamepad bindings are
+changed on the Key bindings screen under Controls, or by editing
+`bindings.conf` in the directory above; the file is created on first launch and
+documents all actions and their default bindings.
 
 ## Current status
 

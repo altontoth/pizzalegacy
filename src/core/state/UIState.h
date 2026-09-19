@@ -38,6 +38,7 @@ struct ScreenTag {
     MenuMain,
     MenuNewGame,
     MenuOptions,
+    MenuBindings,
     MenuQuickstart,
     MenuHighScores,
     CharacterSelection,

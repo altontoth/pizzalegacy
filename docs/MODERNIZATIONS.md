@@ -84,6 +84,16 @@ there are some that are just always in effect.
   ingredient and furniture order count, switch between candidate cards in the
   staff screen and when selecting characters when creating a new game.
 
+ ### Key bindings
+
+ * Keys and gamepad buttons can be changed on the Key bindings screen, under
+   Controls in the Options screen.
+
+### Game speed
+
+* You can speed up the game by using Ctrl+2 to Ctrl+5 to run the game at 2x,
+  3x, 5x or 10x speed. Ctrl+1 takes you back to 1x speed again.
+
 ### Busy cursor and activity captions
 
 * When the game is busy and not accepting input (ending a turn, autosaving,

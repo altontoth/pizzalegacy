@@ -17,7 +17,7 @@ enum class Action {
   TakeScreenshot,
   Exit,
 
-  // Debug fast-forward
+  // Game speed
   TimeScale1,
   TimeScale2,
   TimeScale3,

@@ -48,6 +48,7 @@ Opens the options menu, or one of its sections directly.
 Examples:
   nav op            # The section list
   nav op graphics   # Straight into the graphics section
+  nav op bindings   # The key bindings screen under controls
 )",
       .args =
           {
@@ -55,10 +56,11 @@ Examples:
                   .name = "section",
                   .type = ArgType::String,
                   .optional = true,
-                  .description = "audio, graphics, controls or gameplay",
+                  .description =
+                      "audio, graphics, controls, gameplay or bindings",
                   .allowed_values =
                       std::vector<std::string>{"audio", "graphics", "controls",
-                                               "gameplay"},
+                                               "gameplay", "bindings"},
               },
           },
       .handler = [](const CommandContext& ctx) -> CommandResult {
@@ -67,6 +69,11 @@ Examples:
           return CommandResult::success().add_message("Navigated to options");
         }
         const std::string section = ctx.string_arg(0);
+        if (section == "bindings") {
+          ctx.state.ui().push<ScreenTag>(ScreenTag::Kind::MenuBindings);
+          return CommandResult::success().add_message(
+              "Navigated to key bindings");
+        }
         static const std::pair<std::string_view, OptionsScreen> sections[] = {
             {"audio", OptionsScreen::Audio},
             {"graphics", OptionsScreen::Graphics},

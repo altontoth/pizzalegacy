@@ -15,11 +15,13 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <optional>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
+#include <variant>
 #include <vector>
 
 union SDL_Event;
@@ -48,7 +50,14 @@ struct TextEvent {
   std::string text;
 };
 
+// A key chord or gamepad button taken by a capture.
+using CapturedInput = std::variant<Binding, GamepadButton>;
+// Receives the captured input, or nullopt when input was canceled.
+using CaptureCallback = std::function<void(std::optional<CapturedInput>)>;
+
 void configure_default_bindings(InputManager& in);
+void restore_default_bindings(InputManager& in,
+                              const std::vector<Action>& actions);
 
 class InputManager {
 public:
@@ -86,6 +95,10 @@ public:
   void end_text_input();
   bool text_input_active() const noexcept;
 
+  // Allow us to capture chords or gamepad button without dispatching.
+  void begin_capture(CaptureCallback on_done);
+  void cancel_capture() noexcept;
+
   // Polling
   bool is_pressed(Action a) const noexcept;
   Mod modifiers() const noexcept { return mods_down_; }
@@ -100,6 +113,8 @@ public:
   void bind_button(Binding chord, Action a);
   void bind_gamepad_button(GamepadButton b, Action a);
   void remove_bindings(Action a);
+  void remove_button_bindings(Action a);
+  void remove_gamepad_bindings(Action a);
   void clear_bindings();
 
   // Bind an action that players cannot reassign. Bindings-file overrides for
@@ -166,6 +181,10 @@ private:
   int repeat_delay_ms_{500};
   int repeat_interval_ms_{60};
 
+  CaptureCallback capture_{};
+  // Modifiers held during a capture with no other key pressed yet.
+  std::optional<Binding> capture_modifiers_{};
+
   // Action state (held)
   std::unordered_set<Action> actions_down_{};
 
@@ -181,8 +200,8 @@ private:
   // The SDL_Window that owns text input focus
   SDL_Window* window_{nullptr};
 
-  // Binding tables. A key may carry several actions; they dispatch in the
-  // order they were bound.
+  // Binding tables. A key can be bound to multiple actions; they get dispatched
+  // in the order that the actions were declared.
   std::vector<std::pair<Binding, Action>> button_bindings_;
 
   std::vector<std::pair<GamepadButton, Action>> gamepad_button_bindings_;
@@ -195,10 +214,15 @@ private:
   std::unordered_set<Action> fixed_actions_;
 
   void document_action(Action a);
+  // Whether a comes later in documented_actions() than b.
+  bool declared_after(Action a, Action b) const;
 
   // Key state updates from backend
   void key_down(Key k, Mod mods);
   void key_up(Key k, Mod mods);
+
+  void capture_key_down(Key k, Mod mods);
+  void finish_capture(std::optional<CapturedInput> input);
 
   // Action evaluation & dispatch
   void evaluate_bindings_for_key_down(Key k, Mod mods);

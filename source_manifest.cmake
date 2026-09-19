@@ -158,6 +158,7 @@ set(GAME_PLEGACY_SOURCES
     src/views/screens/menus/CharacterSelection.cpp
     src/views/screens/menus/DifficultySelection.cpp
     src/views/screens/menus/DiskMenu.cpp
+    src/views/screens/menus/MenuBindings.cpp
     src/views/screens/menus/MenuGameLoad.cpp
     src/views/screens/menus/MenuHighScores.cpp
     src/views/screens/menus/MenuMain.cpp
@@ -228,6 +229,7 @@ set(GAME_PLEGACY_SOURCES
     src/views/ui/staff/StaffEventPopups.cpp
     src/views/ui/status/StatusController.cpp
     src/views/ui/widgets/ArrowMenuItem.cpp
+    src/views/ui/widgets/BindingMenuItem.cpp
     src/views/ui/widgets/Button.cpp
     src/views/ui/widgets/CharacterPhotoBox.cpp
     src/views/ui/widgets/CharacterSelectionBox.cpp
@@ -655,6 +657,7 @@ set(PLEGACY_HEADERS
     src/views/screens/menus/CharacterSelection.h
     src/views/screens/menus/DifficultySelection.h
     src/views/screens/menus/DiskMenu.h
+    src/views/screens/menus/MenuBindings.h
     src/views/screens/menus/MenuGameLoad.h
     src/views/screens/menus/MenuHighScores.h
     src/views/screens/menus/MenuMain.h
@@ -728,6 +731,7 @@ set(PLEGACY_HEADERS
     src/views/ui/staff/StaffEventPopups.h
     src/views/ui/status/StatusController.h
     src/views/ui/widgets/ArrowMenuItem.h
+    src/views/ui/widgets/BindingMenuItem.h
     src/views/ui/widgets/Button.h
     src/views/ui/widgets/CharacterPhotoBox.h
     src/views/ui/widgets/CharacterSelectionBox.h

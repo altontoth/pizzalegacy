@@ -25,29 +25,29 @@ struct ButtonAlias {
   GamepadButton button;
 };
 constexpr ButtonAlias button_names[] = {
-    {"a", GamepadButton::A},
-    {"b", GamepadButton::B},
-    {"x", GamepadButton::X},
-    {"y", GamepadButton::Y},
-    {"back", GamepadButton::Back},
-    {"guide", GamepadButton::Guide},
-    {"start", GamepadButton::Start},
-    {"leftstick", GamepadButton::LeftStick},
-    {"rightstick", GamepadButton::RightStick},
-    {"leftshoulder", GamepadButton::LeftShoulder},
-    {"rightshoulder", GamepadButton::RightShoulder},
-    {"dpadup", GamepadButton::DpadUp},
-    {"dpaddown", GamepadButton::DpadDown},
-    {"dpadleft", GamepadButton::DpadLeft},
-    {"dpadright", GamepadButton::DpadRight},
-    {"leftstickup", GamepadButton::LeftStickUp},
-    {"leftstickdown", GamepadButton::LeftStickDown},
-    {"leftstickleft", GamepadButton::LeftStickLeft},
-    {"leftstickright", GamepadButton::LeftStickRight},
-    {"rightstickup", GamepadButton::RightStickUp},
-    {"rightstickdown", GamepadButton::RightStickDown},
-    {"rightstickleft", GamepadButton::RightStickLeft},
-    {"rightstickright", GamepadButton::RightStickRight},
+    {"A", GamepadButton::A},
+    {"B", GamepadButton::B},
+    {"X", GamepadButton::X},
+    {"Y", GamepadButton::Y},
+    {"Back", GamepadButton::Back},
+    {"Guide", GamepadButton::Guide},
+    {"Start", GamepadButton::Start},
+    {"LeftStick", GamepadButton::LeftStick},
+    {"RightStick", GamepadButton::RightStick},
+    {"LeftShoulder", GamepadButton::LeftShoulder},
+    {"RightShoulder", GamepadButton::RightShoulder},
+    {"DpadUp", GamepadButton::DpadUp},
+    {"DpadDown", GamepadButton::DpadDown},
+    {"DpadLeft", GamepadButton::DpadLeft},
+    {"DpadRight", GamepadButton::DpadRight},
+    {"LeftStickUp", GamepadButton::LeftStickUp},
+    {"LeftStickDown", GamepadButton::LeftStickDown},
+    {"LeftStickLeft", GamepadButton::LeftStickLeft},
+    {"LeftStickRight", GamepadButton::LeftStickRight},
+    {"RightStickUp", GamepadButton::RightStickUp},
+    {"RightStickDown", GamepadButton::RightStickDown},
+    {"RightStickLeft", GamepadButton::RightStickLeft},
+    {"RightStickRight", GamepadButton::RightStickRight},
 };
 
 struct AxisAlias {
@@ -55,12 +55,12 @@ struct AxisAlias {
   GamepadAxis axis;
 };
 constexpr AxisAlias axis_names[] = {
-    {"leftx", GamepadAxis::LeftX},
-    {"lefty", GamepadAxis::LeftY},
-    {"rightx", GamepadAxis::RightX},
-    {"righty", GamepadAxis::RightY},
-    {"triggerleft", GamepadAxis::TriggerLeft},
-    {"triggerright", GamepadAxis::TriggerRight},
+    {"LeftX", GamepadAxis::LeftX},
+    {"LeftY", GamepadAxis::LeftY},
+    {"RightX", GamepadAxis::RightX},
+    {"RightY", GamepadAxis::RightY},
+    {"TriggerLeft", GamepadAxis::TriggerLeft},
+    {"TriggerRight", GamepadAxis::TriggerRight},
 };
 
 } // namespace
@@ -77,7 +77,7 @@ std::string_view gamepad_button_to_string(GamepadButton b) {
 std::optional<GamepadButton> gamepad_button_from_string(std::string_view sv) {
   const auto s = lower(sv);
   for (const auto& a : button_names) {
-    if (s == a.name) {
+    if (s == lower(a.name)) {
       return a.button;
     }
   }
@@ -96,7 +96,7 @@ std::string_view gamepad_axis_to_string(GamepadAxis ax) {
 std::optional<GamepadAxis> gamepad_axis_from_string(std::string_view sv) {
   const auto s = lower(sv);
   for (const auto& a : axis_names) {
-    if (s == a.name) {
+    if (s == lower(a.name)) {
       return a.axis;
     }
   }

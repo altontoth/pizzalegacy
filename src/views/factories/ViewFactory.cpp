@@ -56,6 +56,7 @@
 #include "views/screens/menus/CharacterSelection.h"
 #include "views/screens/menus/DifficultySelection.h"
 #include "views/screens/menus/DiskMenu.h"
+#include "views/screens/menus/MenuBindings.h"
 #include "views/screens/menus/MenuGameLoad.h"
 #include "views/screens/menus/MenuHighScores.h"
 #include "views/screens/menus/MenuMain.h"
@@ -102,6 +103,7 @@ bool is_menu_screen(ScreenTag::Kind kind) {
   case K::MenuMain:
   case K::MenuNewGame:
   case K::MenuOptions:
+  case K::MenuBindings:
   case K::MenuQuickstart:
   case K::MenuHighScores:
   case K::CharacterSelection:
@@ -228,6 +230,9 @@ ViewFactory::Result ViewFactory::create(GameContext& context, GameState& gs) {
               break;
             case K::MenuOptions:
               view = std::make_unique<MenuOptions>(context, gs);
+              break;
+            case K::MenuBindings:
+              view = std::make_unique<MenuBindings>(context, gs);
               break;
             case K::MenuQuickstart:
               view = std::make_unique<MenuQuickstart>(context, gs);

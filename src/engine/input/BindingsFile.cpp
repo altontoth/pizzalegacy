@@ -13,6 +13,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include "engine/Logger.h"
 #include "engine/StringUtil.h"
@@ -114,27 +115,37 @@ void apply_bindings_file(InputManager& in, const std::string& path) {
   }
 }
 
+std::vector<std::string> binding_tokens(const InputManager& in, Action a) {
+  std::vector<std::string> tokens;
+  for (const Binding& chord : in.button_bindings_for(a)) {
+    tokens.push_back(chord_to_string(chord));
+  }
+  for (const auto& [button, action] : in.gamepad_button_bindings()) {
+    if (action == a) {
+      tokens.push_back(std::string(pad_prefix_out) +
+                       std::string(gamepad_button_to_string(button)));
+    }
+  }
+  return tokens;
+}
+
 namespace { // anonymous
 
-std::string bindings_for(const InputManager& in, Action a) {
+std::string join(const std::vector<std::string>& tokens) {
   std::string joined;
-  auto append = [&joined](std::string_view token) {
+  for (const std::string& token : tokens) {
     if (!joined.empty()) {
       joined += ',';
     }
     joined += token;
-  };
-
-  for (const Binding& chord : in.button_bindings_for(a)) {
-    append(chord_to_string(chord));
-  }
-  for (const auto& [button, action] : in.gamepad_button_bindings()) {
-    if (action == a) {
-      append(std::string(pad_prefix_out) +
-             std::string(gamepad_button_to_string(button)));
-    }
   }
   return joined;
+}
+
+bool same_bindings(std::vector<std::string> a, std::vector<std::string> b) {
+  std::ranges::sort(a);
+  std::ranges::sort(b);
+  return a == b;
 }
 
 } // namespace
@@ -143,10 +154,13 @@ void write_bindings_template(const InputManager& in, const std::string& path) {
   if (std::filesystem::exists(path)) {
     return;
   }
+  save_bindings_file(in, path);
+}
 
+void save_bindings_file(const InputManager& in, const std::string& path) {
   std::ofstream file(path);
   if (!file) {
-    Logger::warn("Could not write bindings template to {}", path);
+    Logger::warn("Could not write bindings to {}", path);
     return;
   }
 
@@ -164,11 +178,15 @@ void write_bindings_template(const InputManager& in, const std::string& path) {
 # An empty value ("TogglePause=") unbinds the action entirely.
 #
 # Names are case-insensitive. Lines starting with # are comments.
-# Delete this file to restore it with all defaults.
+# Delete this file to restore it with all defaults. Changing a binding on the
+# Key bindings options screen rewrites this file, dropping your own comments.
 #
-# Everything below is this build's defaults. An action listed with no value
-# has no default binding; give it a chord to enable it.
+# The commented lines are this build's defaults. An action listed with no
+# value has no default binding; give it a chord to enable it.
 )";
+
+  InputManager defaults;
+  configure_default_bindings(defaults);
 
   const auto& actions = in.documented_actions();
   const auto& sections = in.doc_sections();
@@ -180,8 +198,14 @@ void write_bindings_template(const InputManager& in, const std::string& path) {
       file << "#\n# " << sections[next_section].label << ":\n";
       ++next_section;
     }
+    const std::vector<std::string> current = binding_tokens(in, actions[i]);
+    const std::vector<std::string> default_tokens =
+        binding_tokens(defaults, actions[i]);
+    if (!same_bindings(current, default_tokens)) {
+      file << magic_enum::enum_name(actions[i]) << '=' << join(current) << '\n';
+    }
     file << '#' << magic_enum::enum_name(actions[i]) << '='
-         << bindings_for(in, actions[i]) << '\n';
+         << join(default_tokens) << '\n';
   }
 }
 
