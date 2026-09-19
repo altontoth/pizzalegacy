@@ -272,10 +272,14 @@ void RestaurantEconomy::calculate_demand_with_competition(
   const Player* owner_player = owner ? game_state.player(*owner) : nullptr;
 
   // Copy protection: only human restaurants are held to the cook book.
+  bool too_few_canonical = false;
   int imitation = 100;
   if (owner_player && owner_player->is_human_controlled()) {
-    imitation =
-        restaurant.menu().average_canonical_imitation(owner_player->recipes());
+    const auto& recipes = owner_player->recipes();
+    too_few_canonical =
+        static_cast<int>(restaurant.menu().count_canonical(recipes)) <
+        min_canonical_pizzas;
+    imitation = restaurant.menu().average_canonical_imitation(recipes);
   }
 
   // Apply competition to calculate actual customer counts
@@ -294,6 +298,9 @@ void RestaurantEconomy::calculate_demand_with_competition(
     else {
       // Competition affects us - scale down proportionally
       customer_count = (prop_demand * our_base_demand) / comp_score;
+      if (too_few_canonical) {
+        customer_count /= 3;
+      }
     }
 
     customer_count = (customer_count * imitation) / 100;
