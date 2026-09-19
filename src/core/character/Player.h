@@ -19,6 +19,7 @@
 #include "core/character/SocialStatus.h"
 #include "core/common/Ids.h"
 #include "core/finance/Investment.h"
+#include "core/finance/Ledger.h"
 #include "core/finance/Loan.h"
 #include "core/finance/PlayerFinancials.h"
 #include "core/food/PlayerRecipes.h"

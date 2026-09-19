@@ -11,6 +11,7 @@
 #include "core/city/CityViewMapState.h"
 #include "core/economy/WeaponMarket.h"
 #include "core/events/CareerLog.h"
+#include "core/finance/Ledger.h"
 #include "core/food/CustomerTasteProfiles.h"
 #include "core/init/NewGameConfig.h"
 #include "core/mission/MissionTarget.h"

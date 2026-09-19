@@ -8,6 +8,7 @@
 
 #include "core/factories/FloorPatternFactory.h"
 #include "core/factories/SupplierFactory.h"
+#include "core/finance/Ledger.h"
 #include "core/restaurant/RestaurantTypes.h"
 #include "core/state/GameState.h"
 #include "core/util/LegacyConstants.h"

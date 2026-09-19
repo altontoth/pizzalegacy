@@ -14,6 +14,7 @@
 #include "core/city/CityNames.h"
 #include "core/city/Property.h"
 #include "core/common/Ids.h"
+#include "core/finance/Ledger.h"
 #include "core/state/GameState.h"
 #include "core/util/Constants.h"
 #include "engine/DisplayConstants.h"

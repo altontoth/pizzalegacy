@@ -9,6 +9,7 @@
 #include <string_view>
 #include "core/city/City.h"
 #include "core/city/Property.h"
+#include "core/finance/Ledger.h"
 #include "core/food/IngredientCategory.h"
 #include "core/food/IngredientCategoryType.h"
 #include "core/food/IngredientType.h"

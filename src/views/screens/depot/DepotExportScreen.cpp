@@ -11,6 +11,7 @@
 #include "core/city/CentralDepot.h"
 #include "core/city/City.h"
 #include "core/factories/IngredientFactory.h"
+#include "core/finance/Ledger.h"
 #include "core/food/IngredientCategory.h"
 #include "core/state/GameState.h"
 #include "engine/FormatCompat.h"
