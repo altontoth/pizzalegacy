@@ -10,6 +10,7 @@
 #include <array>
 #include <cmath>
 #include "core/Demographics.h"
+#include "core/character/Player.h"
 #include "core/city/City.h"
 #include "core/city/Property.h"
 #include "core/food/PlayerRecipes.h"
@@ -19,6 +20,9 @@
 #include "engine/Random.h"
 
 namespace {
+// Human restaurants with fewer canonical pizzas on the menu lose demand.
+constexpr int min_canonical_pizzas = 3;
+
 int calculate_competition_penalty(const Restaurant& competitor,
                                   int competitor_base_demand, int distance) {
   int competitor_range = competitor.economy().range_tiles();
@@ -60,6 +64,14 @@ bool RestaurantEconomy::update_restaurant_range() {
 
 void RestaurantEconomy::calculate_competitive_strength(
     const Restaurant& restaurant, const core::food::PlayerRecipes* recipes) {
+  bool apply_penalty = false;
+  if (recipes) {
+    const auto& menu = restaurant.menu();
+    apply_penalty = static_cast<int>(menu.count_canonical(*recipes)) <
+                        min_canonical_pizzas ||
+                    menu.average_canonical_imitation(*recipes) < 30;
+  }
+
   for (ConsumerType demographic : ALL_CONSUMER_TYPES) {
     int base = furniture_appeal_[demographic] + total_popularity_;
 
@@ -72,28 +84,9 @@ void RestaurantEconomy::calculate_competitive_strength(
     // Apply quality rating
     int threshold = (sqrt_value * quality_rating_) / 100;
 
-    // Copy protection penalty: Check if using at least 3 canonical recipes
-    if (recipes) {
-      int canonical_count = 0;
-      int imitation_sum = 0;
-
-      for (const auto& entry : restaurant.menu().entries()) {
-        const auto* recipe = recipes->find(entry.recipe_id);
-        if (recipe && recipe->canonical_id().has_value()) {
-          canonical_count++;
-          imitation_sum += recipe->pizza().imitation();
-        }
-      }
-
-      if (canonical_count > 0) {
-        avg_canonical_imitation_ = imitation_sum / canonical_count;
-      }
-
-      bool apply_penalty = canonical_count < 3 || avg_canonical_imitation_ < 30;
-
-      if (apply_penalty) {
-        threshold /= 8;
-      }
+    // Copy protection penalty
+    if (apply_penalty) {
+      threshold /= 8;
     }
 
     threshold = std::clamp(threshold, 1, 250);
@@ -275,6 +268,16 @@ void RestaurantEconomy::calculate_demand_with_competition(
   }
   competition_score_ = total_competition - 600;
 
+  const auto owner = property.owner_or_tenant();
+  const Player* owner_player = owner ? game_state.player(*owner) : nullptr;
+
+  // Copy protection: only human restaurants are held to the cook book.
+  int imitation = 100;
+  if (owner_player && owner_player->is_human_controlled()) {
+    imitation =
+        restaurant.menu().average_canonical_imitation(owner_player->recipes());
+  }
+
   // Apply competition to calculate actual customer counts
   const auto& property_demand = property.potential_customers();
 
@@ -293,7 +296,7 @@ void RestaurantEconomy::calculate_demand_with_competition(
       customer_count = (prop_demand * our_base_demand) / comp_score;
     }
 
-    customer_count = (customer_count * avg_canonical_imitation_) / 100;
+    customer_count = (customer_count * imitation) / 100;
 
     customer_counts_[demo] = customer_count;
   }
@@ -304,8 +307,6 @@ void RestaurantEconomy::calculate_demand_with_competition(
     total_customers += count;
   }
 
-  const auto owner = property.owner_or_tenant();
-  const Player* owner_player = owner ? game_state.player(*owner) : nullptr;
   int daily_capacity = 0;
   if (owner_player && !owner_player->is_human_controlled()) {
     daily_capacity = restaurant.ai_customers_per_day();

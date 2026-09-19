@@ -145,10 +145,6 @@ private:
   // Competitive strength per demographic
   CompetitiveStrength competitive_strength_{{1, 1, 1, 1, 1, 1}};
 
-  // Mean imitation score of the menu's canonical recipes, as a percentage
-  // scale on demand. Stays 100 for AI restaurants, which have no recipe data.
-  int avg_canonical_imitation_{100};
-
   int quality_rating_{70};
 
   // percentage of customers turned away

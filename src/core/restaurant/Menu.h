@@ -12,7 +12,9 @@
 #include "core/Demographics.h"
 #include "core/common/Ids.h"
 #include "core/finance/Money.h"
+#include "core/food/Pizza.h"
 #include "core/food/PlayerRecipes.h"
+#include "core/food/Recipe.h"
 
 namespace core::restaurant {
 
@@ -113,6 +115,24 @@ public:
       }
     }
     return count;
+  }
+
+  // Mean imitation score of the canonical pizzas, 0 when there aren't any.
+  int average_canonical_imitation(
+      const core::food::PlayerRecipes& recipes) const {
+    int count = 0;
+    int sum = 0;
+    for (const auto& entry : entries_) {
+      const auto* recipe = recipes.find(entry.recipe_id);
+      if (recipe && recipe->canonical_id().has_value()) {
+        count++;
+        sum += recipe->pizza().imitation();
+      }
+    }
+    if (count == 0) {
+      return 0;
+    }
+    return sum / count;
   }
 
 private:
