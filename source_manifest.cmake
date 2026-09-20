@@ -409,6 +409,7 @@ set(PLEGACY_HEADERS
     src/core/food/IngredientCategoryType.h
     src/core/food/IngredientType.h
     src/core/food/Pizza.h
+    src/core/food/PizzaJudging.h
     src/core/food/PlayerRecipes.h
     src/core/food/Recipe.h
     src/core/food/RecipeCodec.h

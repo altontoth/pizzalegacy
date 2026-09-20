@@ -7,6 +7,7 @@
 #include "GameCommands.h"
 #include "core/events/CareerLog.h"
 #include "core/events/MilestoneId.h"
+#include "core/food/PizzaJudging.h"
 #include "core/mission/MissionFile.h"
 #include "core/mission/MissionScoring.h"
 #include "core/mission/MissionTarget.h"
@@ -227,7 +228,8 @@ struct OptionDef {
   std::string_view name;
   std::variant<bool GameOptions::*, int GameOptions::*, float GameOptions::*,
                FpsOption GameOptions::*, AutosaveFrequency GameOptions::*,
-               bool GameRules::*, WinCondition GameRules::*>
+               bool GameRules::*, WinCondition GameRules::*,
+               PizzaJudging GameRules::*>
       member;
   std::string_view description;
   // Inclusive bounds, for the numeric options only.
@@ -259,6 +261,9 @@ static const OptionDef option_defs[] = {
      .member = &GameRules::win_condition,
      .description = "Cities to dominate to win: paris, any_city or "
                     "all_cities"},
+    {.name = "pizza_judging",
+     .member = &GameRules::pizza_judging,
+     .description = "How a standard recipe is judged: original or relaxed"},
     {.name = "attack_scene_hz",
      .member = &GameOptions::attack_scene_hz,
      .description = "Attack scene updates per second, 70 or 35 in the original",
@@ -388,6 +393,9 @@ static std::string option_value(const GameOptions& options,
                  [&](WinCondition GameRules::* member) -> std::string {
                    return std::string(to_config_value(rules.*member));
                  },
+                 [&](PizzaJudging GameRules::* member) -> std::string {
+                   return std::string(to_config_value(rules.*member));
+                 },
                  [&](bool GameOptions::* member) -> std::string {
                    return options.*member ? "on" : "off";
                  },
@@ -470,6 +478,15 @@ static std::optional<std::string> set_option(GameOptions& options,
             else {
               failure = compat::format(
                   "Expected paris, any_city or all_cities, got '{}'", value);
+            }
+          },
+          [&](PizzaJudging GameRules::* member) {
+            if (auto parsed = pizza_judging_from_config_value(value)) {
+              rules.*member = *parsed;
+            }
+            else {
+              failure = compat::format("Expected original or relaxed, got '{}'",
+                                       value);
             }
           },
           [&](FpsOption GameOptions::* member) {

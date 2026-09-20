@@ -8,12 +8,14 @@
 
 #include <algorithm>
 #include <cmath>
+#include <map>
 #include <set>
 #include <utility>
 #include "core/food/Ingredient.h"
 #include "engine/Logger.h"
 
 constexpr int MAX_SCORE = 100;
+constexpr int MAX_MISMATCH = MAX_SCORE;
 
 namespace {
 // Pizza center coordinates
@@ -36,6 +38,15 @@ constexpr int WEIGHT_THRESHOLD_VERY_LIGHT = 400;
 constexpr int NORMALITY_MIN_CATEGORIES = 5;
 constexpr int NORMALITY_CATEGORY_BASE = 70;
 constexpr int NORMALITY_CATEGORY_STEP = 10;
+
+// Relaxed judging. The percent of the score for getting the reference's
+// ingredients right, the rest for their shares of the weight, how far the total
+// weight may differ from the reference's before you get any penalty, and what
+// each percent past that then costs.
+constexpr int RELAXED_INGREDIENT_PERCENT = 50;
+constexpr int RELAXED_RATIO_PERCENT = MAX_SCORE - RELAXED_INGREDIENT_PERCENT;
+constexpr int RELAXED_WEIGHT_FREE_BAND_PERCENT = 10;
+constexpr int RELAXED_WEIGHT_PENALTY_PER_PERCENT = 1;
 
 // Refinement calculation
 constexpr int REFINEMENT_DIVISOR = 2;
@@ -92,7 +103,7 @@ void Pizza::finalize(const CustomerTasteProfiles& taste_profiles,
   finalized_ = true;
 }
 
-void Pizza::finalize_against(const Pizza& reference,
+void Pizza::finalize_against(const Pizza& reference, PizzaJudging judging,
                              const CustomerTasteProfiles& taste_profiles,
                              const std::string& name) {
   if (name != "") {
@@ -100,8 +111,10 @@ void Pizza::finalize_against(const Pizza& reference,
   }
   compute_physical_stats();
 
-  // Compare this pizza to the reference one
-  int mismatch = compare_to_other_pizza(reference);
+  // Calculate the mismatch between this pizza and the reference one.
+  int mismatch = judging == PizzaJudging::Relaxed
+                     ? compare_pizza_composition(reference)
+                     : compare_to_other_pizza(reference);
 
   // Convert mismatch to a score (0 = perfect match, 100 = worst)
   // Higher mismatch means lower score
@@ -176,7 +189,7 @@ int Pizza::compare_to_other_pizza(const Pizza& other) const {
 
   for (std::size_t i = 0; i < count; ++i) {
     const auto& ref_topping = other_toppings[i];
-    int best_so_far = MAX_SCORE;
+    int best_so_far = MAX_MISMATCH;
 
     // Compare it to every topping in "this" pizza
     for (const auto& user_topping : this_toppings) {
@@ -201,12 +214,97 @@ int Pizza::compare_to_other_pizza(const Pizza& other) const {
   return 0;
 }
 
+namespace {
+// Grams of each ingredient, not counting the dough.
+using IngredientWeights = std::map<IngredientType, int>;
+
+IngredientWeights weight_by_ingredient(const Pizza& pizza) {
+  IngredientWeights weights;
+  for (const auto& topping : pizza.toppings()) {
+    weights[topping->ingredient()->type()] += topping->weight();
+  }
+  return weights;
+}
+
+int composition_mismatch(const IngredientWeights& reference,
+                         const IngredientWeights& attempt) {
+  auto total = [](const IngredientWeights& weights) {
+    int sum = 0;
+    for (const auto& [type, w] : weights) {
+      sum += w;
+    }
+    return sum;
+  };
+  const int ref_total = total(reference);
+  const int own_total = total(attempt);
+  if (ref_total == 0) {
+    return 0;
+  }
+  if (own_total == 0) {
+    return MAX_MISMATCH;
+  }
+
+  // The ingredient part: how many of the attempt's ingredients the
+  // reference also has, out of all distinct ingredients.
+  int shared = 0;
+  int exclusive = 0;
+  for (const auto& [type, w] : attempt) {
+    if (reference.contains(type)) {
+      shared++;
+    }
+    else {
+      exclusive++;
+    }
+  }
+  const int distinct = static_cast<int>(reference.size()) + exclusive;
+  const int ingredient_percent = RELAXED_INGREDIENT_PERCENT * shared / distinct;
+
+  // Compare each ingredient's share of the whole pizza, including ingredients
+  // that are present in only one of the pizzas.
+  constexpr int per_mille = 1000;
+  auto share = [](const IngredientWeights& weights, int sum,
+                  IngredientType type) {
+    auto it = weights.find(type);
+    return it == weights.end() ? 0 : it->second * per_mille / sum;
+  };
+  int share_difference = 0;
+  for (const auto& [type, w] : reference) {
+    share_difference += std::abs(share(reference, ref_total, type) -
+                                 share(attempt, own_total, type));
+  }
+  for (const auto& [type, w] : attempt) {
+    if (!reference.contains(type)) {
+      share_difference += share(attempt, own_total, type);
+    }
+  }
+  share_difference = std::min(share_difference, per_mille);
+  int ratio_percent =
+      RELAXED_RATIO_PERCENT * (per_mille - share_difference) / per_mille;
+
+  // The weight penalty only reduces the share score, so a pizza with the
+  // right ingredients can never lose more than its share score.
+  int weight_deviation = std::abs(own_total - ref_total) * 100 / ref_total;
+  if (weight_deviation > RELAXED_WEIGHT_FREE_BAND_PERCENT) {
+    ratio_percent -= (weight_deviation - RELAXED_WEIGHT_FREE_BAND_PERCENT) *
+                     RELAXED_WEIGHT_PENALTY_PER_PERCENT;
+    ratio_percent = std::max(ratio_percent, 0);
+  }
+
+  return MAX_SCORE - (ingredient_percent + ratio_percent);
+}
+} // namespace
+
+int Pizza::compare_pizza_composition(const Pizza& other) const {
+  return composition_mismatch(weight_by_ingredient(other),
+                              weight_by_ingredient(*this));
+}
+
 int Pizza::topping_comparison_score(const Topping& ref_topping,
                                     const Topping& user_topping) {
   // Check if ingredients differ entirely, if they differ
   // the mismatch is 100 right away.)
   if (ref_topping.ingredient()->name() != user_topping.ingredient()->name()) {
-    return MAX_SCORE;
+    return MAX_MISMATCH;
   }
 
   // Compare chop state & rotation state

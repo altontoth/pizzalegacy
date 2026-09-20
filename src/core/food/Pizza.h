@@ -12,6 +12,7 @@
 #include <vector>
 #include "core/Demographics.h"
 #include "core/food/CustomerTasteProfiles.h"
+#include "core/food/PizzaJudging.h"
 #include "core/food/Topping.h"
 
 #include <iostream>
@@ -51,10 +52,15 @@ public:
   const std::array<int, NUMBER_OF_JUDGES>& scores() const;
   void finalize(const CustomerTasteProfiles& taste_profiles,
                 const std::string& name = "");
-  void finalize_against(const Pizza& reference,
+  void finalize_against(const Pizza& reference, PizzaJudging judging,
                         const CustomerTasteProfiles& taste_profiles,
                         const std::string& name = "");
   bool is_finalized() const noexcept { return finalized_; }
+  // How far this pizza is from the reference by its ingredients and their
+  // amounts, as a percentage: 0 is a match, 100 has nothing in common.
+  int compare_pizza_composition(const Pizza& other) const;
+  // How far this pizza is from the reference pizza by every topping position,
+  // chop and rotation state. 0 is a match, 100 has nothing in common.
   int compare_to_other_pizza(const Pizza& other) const;
   static int topping_comparison_score(const Topping& ref_topping,
                                       const Topping& user_topping);

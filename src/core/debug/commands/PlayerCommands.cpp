@@ -16,6 +16,7 @@
 #include "core/finance/Ledger.h"
 #include "core/finance/Loan.h"
 #include "core/finance/Money.h"
+#include "core/food/CanonicalPizza.h"
 #include "core/food/Pizza.h"
 #include "core/inventory/Inventory.h"
 #include "core/item/Item.h"

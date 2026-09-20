@@ -13,6 +13,7 @@
 #include <fstream>
 #include <string>
 #include <string_view>
+#include "core/food/PizzaJudging.h"
 #include "core/state/GameOptions.h"
 #include "core/state/GameRules.h"
 #include "engine/Fatal.h"
@@ -159,6 +160,11 @@ const auto option_defs = std::to_array({
     rule_enum_option<&GameRules::win_condition,
                      &win_condition_from_config_value>(
         "win_condition", {}, "paris, any_city or all_cities"),
+    rule_enum_option<&GameRules::pizza_judging,
+                     &pizza_judging_from_config_value>(
+        "pizza_judging", {},
+        "original judges a pizza on a standard recipe very strictly, "
+        "relaxed does not care about the exact form and positioning"),
     int_option<&GameOptions::attack_scene_hz, GameOptions::ATTACK_SCENE_HZ_MIN,
                GameOptions::ATTACK_SCENE_HZ_MAX>(
         "attack_scene_hz", {},

@@ -8,6 +8,7 @@
 // prize distribution and the results table.
 
 #include "core/GameTypes.h"
+#include "core/food/PizzaJudging.h"
 #include "core/state/GameState.h"
 #include "engine/FormatCompat.h"
 #include "engine/audio/AudioManager.h"
@@ -179,9 +180,9 @@ void PizzaDesign::on_competition_design_finished() {
     return;
   }
   state_.advance_time_blocks(5);
-  bake_->working.finalize_against(*competition_->canonical_pizza,
-                                  state_.customer_taste_profiles(),
-                                  "competition pizza");
+  bake_->working.finalize_against(
+      *competition_->canonical_pizza, PizzaJudging::Original,
+      state_.customer_taste_profiles(), "competition pizza");
   auto imitation_scores = bake_->working.scores();
 
   auto bake_ptr = std::make_shared<core::food::BakeSession>(std::move(*bake_));

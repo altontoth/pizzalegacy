@@ -11,6 +11,7 @@
 #include <utility>
 #include <vector>
 
+#include "core/food/PizzaJudging.h"
 #include "core/state/GameOptions.h"
 #include "core/state/GameRules.h"
 #include "core/state/GameState.h"
@@ -281,6 +282,12 @@ void MenuOptions::build_rules(GameState& state) {
                  "docs/MODERNIZATIONS.md for details.");
   toggle("Quality of Life improvements", rules.qol_improvements)
       .help_text("Enable various modernizations of the UI and mouse behavior.");
+  add_menu_item(std::make_unique<EnumMenuItem<PizzaJudging>>(
+                    context_, "Standard pizza judging", rules.pizza_judging,
+                    std::vector{PizzaJudging::Original, PizzaJudging::Relaxed},
+                    [this] { mark_dirty(); }, face))
+      .help_text("Original: match the cook book exactly. "
+                 "Relaxed: the right ingredients in the right amounts.");
   if (state.options().show_advanced_options) {
     toggle("Random shakedown target",
            rules.mafia_shakedowns_target_all_restaurants)

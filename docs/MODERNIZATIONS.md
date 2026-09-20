@@ -273,6 +273,15 @@ popularity; ours does, regardless of this option.
 The Player and Range dropdowns on the city map show each player's control
 map color in front of their name. On by default.
 
+### pizza_judging
+The original wants you to create at least some standard recipes on your menu
+and provides fourteen standard pizzas for you to recreate from the manual. It
+then compares your creation to the on-disk version and gives you a penalty for
+every deviation from that on-disk file. This is very strict, the position of
+every ingredient is compared. This is called the Original setting, and we add a
+Relaxed option that only cares about having the right ingredients in roughly
+the right amount.
+
 ### win_condition
 This can take one of three options; the German release requires >= 5% market
 share in all ten cities to win the game (`all_cities`), the English version

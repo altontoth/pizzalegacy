@@ -30,6 +30,7 @@
 #include "core/city/Property.h"
 #include "core/economy/WeaponMarket.h"
 #include "core/events/CareerLog.h"
+#include "core/food/PizzaJudging.h"
 #include "core/mission/MissionTarget.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/save/SaveGameCharacter.h"
@@ -519,6 +520,7 @@ json rules_to_json(const GameRules& rules) {
        rules.mafia_shakedowns_target_all_restaurants},
       {"demand_fulfillment_popularity", rules.demand_fulfillment_popularity},
       {"win_condition", to_config_value(rules.win_condition)},
+      {"pizza_judging", to_config_value(rules.pizza_judging)},
       {"police", rules.police},
   };
 }
@@ -535,6 +537,10 @@ GameRules json_to_rules(const json& j, GameRules rules) {
   if (auto parsed = win_condition_from_config_value(
           j.value("win_condition", std::string{}))) {
     rules.win_condition = *parsed;
+  }
+  if (auto parsed = pizza_judging_from_config_value(
+          j.value("pizza_judging", std::string{}))) {
+    rules.pizza_judging = *parsed;
   }
   rules.police = j.value("police", rules.police);
   return rules;

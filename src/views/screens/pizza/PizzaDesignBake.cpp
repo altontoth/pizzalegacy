@@ -10,6 +10,7 @@
 #include "core/events/MilestoneId.h"
 #include "core/factories/PizzaFactory.h"
 #include "core/food/CanonicalPizza.h"
+#include "core/food/PizzaJudging.h"
 #include "core/state/GameState.h"
 #include "engine/FormatCompat.h"
 #include "engine/Logger.h"
@@ -105,6 +106,7 @@ void PizzaDesign::on_design_finished() {
 
     if (canonical_pizza) {
       bake_->working.finalize_against(*canonical_pizza,
+                                      state_.rules().pizza_judging,
                                       state_.customer_taste_profiles());
     }
     else {

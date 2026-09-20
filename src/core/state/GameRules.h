@@ -10,6 +10,8 @@
 #include <string>
 #include <string_view>
 
+#include "core/food/PizzaJudging.h"
+
 // Market share domination needed to win. The English release checks Paris
 // alone, apparently meaning any one city; the German one checks every city.
 enum class WinCondition { Paris, AnyCity, AllCities };
@@ -61,6 +63,7 @@ struct GameRules {
   bool mafia_shakedowns_target_all_restaurants = false;
   bool demand_fulfillment_popularity = true;
   WinCondition win_condition = WinCondition::AnyCity;
+  PizzaJudging pizza_judging = PizzaJudging::Relaxed;
   // Off stops the police turning up by themselves. Console only.
   bool police = true;
 
@@ -74,5 +77,6 @@ constexpr GameRules original_rules{
     .mafia_shakedowns_target_all_restaurants = false,
     .demand_fulfillment_popularity = false,
     .win_condition = WinCondition::Paris,
+    .pizza_judging = PizzaJudging::Original,
     .police = true,
 };
