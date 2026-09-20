@@ -269,11 +269,18 @@ void MenuOptions::build_rules(GameState& state) {
       context_, in_game ? "Rules for this game" : "Rules for new games", face,
       label_style));
   add_menu_item(std::make_unique<SpacerMenuItem>(context_, label_gap));
-  auto toggle = [this](const std::string& label, bool& value) -> MenuItem& {
+  auto changed = [this, &state, in_game] {
+    if (in_game) {
+      state.rules_changed(true);
+    }
+    mark_dirty();
+  };
+  auto toggle = [this, changed](const std::string& label,
+                                bool& value) -> MenuItem& {
     return add_menu_item(std::make_unique<ToggleMenuItem>(
-        context_, label, value, [&value, this] {
+        context_, label, value, [&value, changed] {
           value = !value;
-          mark_dirty();
+          changed();
         }));
   };
 
@@ -285,7 +292,7 @@ void MenuOptions::build_rules(GameState& state) {
   add_menu_item(std::make_unique<EnumMenuItem<PizzaJudging>>(
                     context_, "Standard pizza judging", rules.pizza_judging,
                     std::vector{PizzaJudging::Original, PizzaJudging::Relaxed},
-                    [this] { mark_dirty(); }, face))
+                    changed, face))
       .help_text("Original: match the cook book exactly. "
                  "Relaxed: the right ingredients in the right amounts.");
   if (state.options().show_advanced_options) {
@@ -304,7 +311,7 @@ void MenuOptions::build_rules(GameState& state) {
                       context_, "Win condition", rules.win_condition,
                       std::vector{WinCondition::Paris, WinCondition::AnyCity,
                                   WinCondition::AllCities},
-                      [this] { mark_dirty(); }, face))
+                      changed, face))
         .advanced(true)
         .help_text("Paris: win with enough market share in Paris. "
                    "Any: win in any city. All: win in every city.");

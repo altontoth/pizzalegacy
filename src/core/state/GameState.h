@@ -346,6 +346,10 @@ public:
   // The rules for the current game.
   GameRules& rules() { return rules_; }
   const GameRules& rules() const { return rules_; }
+  const GameRules& starting_rules() const { return starting_rules_; }
+  void starting_rules(const GameRules& rules) { starting_rules_ = rules; }
+  bool rules_changed() const { return rules_changed_; }
+  void rules_changed(bool changed) { rules_changed_ = changed; }
 
   // Fullscreen message manager
   core::events::CareerLog& career_log() { return career_log_; }
@@ -541,6 +545,8 @@ private:
   StatusHub status_hub_{time_};
   GameOptions options_;
   GameRules rules_;
+  GameRules starting_rules_;
+  bool rules_changed_ = false;
   TurnOrchestrator turn_{*this};
   CompetitionCoordinator competitions_{*this};
   MilestoneTracker milestones_{*this};

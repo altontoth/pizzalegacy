@@ -552,10 +552,15 @@ Examples:
               compat::format("Unknown option '{}'", name));
         }
 
+        const bool in_game = ctx.state.ui().contains<CityViewState>();
         auto& options = ctx.state.options();
-        auto& rules = ctx.state.rules();
+        auto& rules = in_game ? ctx.state.rules() : options.rules;
+        const GameRules before = rules;
         if (auto failure = set_option(options, rules, *option, value)) {
           return CommandResult::error(*failure);
+        }
+        if (in_game && rules != before) {
+          ctx.state.rules_changed(true);
         }
         if (option->apply) {
           option->apply(ctx.state, ctx.context);
@@ -580,7 +585,8 @@ Example:
 )",
       .handler = [](const CommandContext& ctx) -> CommandResult {
         const auto& options = ctx.state.options();
-        const auto& rules = ctx.state.rules();
+        const bool in_game = ctx.state.ui().contains<CityViewState>();
+        const auto& rules = in_game ? ctx.state.rules() : options.rules;
         auto result = CommandResult::success();
         result.add_message("Options:");
         for (const auto& option : option_defs) {

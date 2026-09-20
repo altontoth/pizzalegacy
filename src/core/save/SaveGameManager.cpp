@@ -582,6 +582,8 @@ json SaveGameManager::state_to_json(const GameState& state,
   // Save difficulty
   j["difficulty_level"] = state.difficulty_level();
   j["rules"] = rules_to_json(state.rules());
+  j["starting_rules"] = rules_to_json(state.starting_rules());
+  j["rules_changed"] = state.rules_changed();
   if (auto district = state.district_under_investigation()) {
     j["district_under_investigation"] = *district;
   }
@@ -807,6 +809,9 @@ void SaveGameManager::json_to_state(const json& j, GameState& state,
   }
   state.rules() =
       json_to_rules(j.value("rules", json::object()), state.options().rules);
+  state.starting_rules(
+      json_to_rules(j.value("starting_rules", json::object()), state.rules()));
+  state.rules_changed(j.value("rules_changed", false));
   if (j.contains("district_under_investigation")) {
     state.district_under_investigation(
         j["district_under_investigation"].get<int>());

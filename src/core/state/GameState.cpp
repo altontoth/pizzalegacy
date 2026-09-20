@@ -1048,6 +1048,8 @@ void GameState::finalize_initialization(GameContext& context) {
 
   init::Config cfg = *initializer_;
   rules_ = options_.rules;
+  starting_rules_ = options_.rules;
+  rules_changed_ = false;
 
   // Use initializer to set permanent state
   game_mode_ = cfg.mode;
