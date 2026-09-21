@@ -223,14 +223,16 @@ void InteractionManager::process(const SDL_Event& e) {
   }
 
   case SDL_EVENT_MOUSE_WHEEL: {
-    ViewPoint p = last_logical_mouse_pos_;
+    const int scroll_delta = e.wheel.integer_y;
+    const int scroll_delta_x = e.wheel.integer_x;
+    if (scroll_delta == 0 && scroll_delta_x == 0) {
+      break;
+    }
 
+    ViewPoint p = last_logical_mouse_pos_;
     const auto hit = hit_test(p);
     const ItemID normal_id = hit.normal;
     const auto& background_ids = hit.background;
-
-    int scroll_delta = e.wheel.integer_y;
-    int scroll_delta_x = e.wheel.integer_x;
 
     if (normal_id != 0) {
       auto* item = lookup_item(normal_id);
