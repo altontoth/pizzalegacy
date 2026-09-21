@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include <cstdint>
+
 #include "engine/DebugLabel.h"
 #include "engine/input/InputListener.h"
 #include "engine/input/ListenerToken.h"
@@ -20,11 +22,16 @@ public:
   DebugLayer(GameContext& context, GameState& state);
   void render(const RenderContext& ctx) override;
   void tick() override;
-  bool needs_force_recompose() const override { return pull_recompose_flag(); }
+  bool is_dirty() const override { return View::is_dirty() || changed(); }
+  bool needs_force_recompose() const override {
+    return pull_recompose_flag() || changed();
+  }
   bool on_text(const input::TextEvent& ev) override;
   bool on_action(const input::ActionEvent& ev) override;
 
 private:
-  std::optional<std::string> hit_item_id_;
+  bool changed() const;
+
+  uint64_t rendered_revision_{0};
   input::ListenerToken listener_;
 };

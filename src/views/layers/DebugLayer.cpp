@@ -5,17 +5,25 @@
  */
 
 #include "views/layers/DebugLayer.h"
+#include "core/util/GameContext.h"
 #include "engine/gfx/Draw.h"
 #include "engine/input/InputManager.h"
+#include "engine/ui/InteractionManager.h"
 #include "resources/FontManager.h"
 
 DebugLayer::DebugLayer(GameContext& context, GameState& state)
     : View(context, state), listener_(context.input->register_listener(*this)) {
 }
 
+bool DebugLayer::changed() const {
+  return is_active() &&
+         context_.interaction->items_revision() != rendered_revision_;
+}
+
 // TODO: Introduce some kind of DebugOverlayItem bus that views can push to and
 // we just render that.
 void DebugLayer::render(const RenderContext& ctx) {
+  rendered_revision_ = context_.interaction->items_revision();
   if (!is_active()) {
     return;
   }

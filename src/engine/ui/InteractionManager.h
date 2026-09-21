@@ -92,6 +92,7 @@ public:
   void set_display_height(int height) { display_height_ = height; }
   void clear() {
     items_.clear();
+    ++items_revision_;
     current_hover_ = 0;
     hot_item_name_.clear();
   }
@@ -225,6 +226,7 @@ private:
     items_.push_front({id, layer, r, std::string{id_str}, std::move(cb),
                        std::move(opts.tooltip), opts.layer, opts.drag_button,
                        opts.priority.value_or(priority_default), next_seq_++});
+    ++items_revision_;
     return InteractionToken{this, id};
   }
 
@@ -233,6 +235,7 @@ private:
                            [id](const auto& itm) { return itm.id == id; });
     if (it != items_.end()) {
       items_.erase(it);
+      ++items_revision_;
     }
   }
 
@@ -269,6 +272,8 @@ private:
                 MouseButton btn, ViewPoint p, ViewPoint delta = {}) const;
   void finish_drag(ViewPoint p);
   const std::deque<InteractionItem>& items() const { return items_; }
+  // Bumped whenever an item is added or removed.
+  uint64_t items_revision() const noexcept { return items_revision_; }
   void dispatch_hover_enter_leave(InteractionItem& it, ViewPoint p);
   InteractionItem* lookup_item(ItemID id) {
     for (auto& it : items_) {
@@ -283,6 +288,7 @@ private:
 
   TooltipManager& tt_mgr_;
   std::deque<InteractionItem> items_;
+  uint64_t items_revision_{0};
   LayerID next_layer_id_{1};
   uint64_t next_seq_{1};
   ItemID current_hover_{0};
