@@ -133,7 +133,7 @@ void Menu::update_interactions() {
             return TooltipRequest{
                 .text = tt,
                 .anchor = TooltipAnchor::Mouse,
-                .screenPos = ie.pos,
+                .pos = ie.pos,
                 .palette = 8,
                 .bg_color = 29,
                 .text_color = 240,

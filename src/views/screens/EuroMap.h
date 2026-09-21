@@ -20,7 +20,6 @@
 // What state is the UI in:
 enum class MapState {
   NO_ACTION,
-  CITY_HOVERED,
   CITY_CLICKED,
   CITY_CONFIRMED,
   PRICE_AGREED,
@@ -41,8 +40,6 @@ private:
   Surface create_popup(const RenderContext& ctx, int, int);
   Money calculate_cost(core::CityId from, core::CityId to);
   void on_city_click(core::CityId city, views::ui::MouseButton btn);
-  void on_city_hover(core::CityId city);
-  void on_city_leave(core::CityId city);
   bool player_has_depot_in_city(core::CityId city_id);
   void attempt_flight();
 
@@ -51,6 +48,5 @@ private:
   ViewRect small_popup_box_;
   std::optional<core::CityId> last_clicked_city_;
   MapMode map_mode_;
-  std::optional<core::CityId> hovered_city_;
   std::optional<IngredientCategory> category_;
 };

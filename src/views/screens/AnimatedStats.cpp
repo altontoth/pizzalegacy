@@ -272,7 +272,7 @@ void AnimatedStats::add_tooltip(ViewRect area, std::string id,
                        std::move(text)](const views::ui::InteractionEvent& ie) {
         return TooltipRequest{.text = text,
                               .anchor = TooltipAnchor::Mouse,
-                              .screenPos = ie.pos,
+                              .pos = ie.pos,
                               .palette = 62,
                               .bg_color = 15,
                               .text_color = 240,
@@ -998,7 +998,7 @@ void AnimatedStats::render_production(const RenderContext& ctx) {
           {.tooltip = [text](const views::ui::InteractionEvent& ie) {
             return TooltipRequest{.text = std::string(text),
                                   .anchor = TooltipAnchor::Mouse,
-                                  .screenPos = ie.pos,
+                                  .pos = ie.pos,
                                   .palette = 62,
                                   .bg_color = 15,
                                   .text_color = 240,

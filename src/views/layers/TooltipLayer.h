@@ -13,7 +13,6 @@
 #include "resources/FontManager.h"
 #include "views/base/OverlayBehavior.h"
 #include "views/base/View.h"
-#include "views/base/ViewDefs.h"
 
 class TooltipLayer : public View,
                      public OverlayBehavior<TooltipLayer>,
@@ -23,6 +22,7 @@ public:
       : View(context, state), mgr_(mgr) {}
 
   void render(const RenderContext& ctx) override {
+    rendered_revision_ = mgr_.revision();
     ctx.surface->fill(0);
     if (!mgr_.visible()) {
       return;
@@ -37,33 +37,23 @@ public:
     int w = text_size.width + (2 * req.padding);
     int h = text_size.height + (2 * req.padding);
 
-    // Compute box top-left and text center separately per anchor.
-    // For InputPanel the target x IS the fixed center column; the box is
-    // placed symmetrically around it so the text is always at the same x
-    // regardless of string length.
-    // For Mouse the target is the box top-left; the text center is derived
-    // from the box.
     ViewPoint box;
     ViewPoint text_center;
     switch (req.anchor) {
-    case TooltipAnchor::InputPanel:
-      box = {views::base::INPUT_PANEL_OFFSET_X +
-                 (views::base::INPUT_PANEL_WIDTH / 2) - (w / 2),
-             222};
-      text_center = {views::base::INPUT_PANEL_OFFSET_X +
-                         (views::base::INPUT_PANEL_WIDTH / 2),
-                     box.y + req.padding};
+    case TooltipAnchor::Fixed:
+      box = {req.pos.x - (w / 2), req.pos.y - req.padding};
+      text_center = req.pos;
       break;
     case TooltipAnchor::Mouse: {
       // position just above the cursor, or below it at the top of the
       // screen
-      int bx = req.screenPos.x;
+      int bx = req.pos.x;
       if (bx + w > DisplayConstants::SCREEN_WIDTH) {
         bx = DisplayConstants::SCREEN_WIDTH - w;
       }
-      int by = req.screenPos.y - h - 2;
+      int by = req.pos.y - h - 2;
       if (by < 0) {
-        by = req.screenPos.y + 2;
+        by = req.pos.y + 2;
       }
       box = {bx, by};
       text_center = {box.x + (w / 2), box.y + req.padding};
@@ -80,17 +70,15 @@ public:
     context_.font->render_line_onto(*ctx.surface, txt, text_center, req.font,
                                     req.text_color, TextAnchor::Middle);
   }
-  void tick() override {
-    auto rev = mgr_.revision();
-    if (rev != seen_revision_) {
-      seen_revision_ = rev;
-      request_recompose();
-      mark_dirty();
-    }
-  };
-  bool needs_force_recompose() const override { return pull_recompose_flag(); }
+  void tick() override {}
+  bool is_dirty() const override { return View::is_dirty() || changed(); }
+  bool needs_force_recompose() const override {
+    return pull_recompose_flag() || changed();
+  }
 
 private:
+  bool changed() const { return mgr_.revision() != rendered_revision_; }
+
   TooltipManager& mgr_;
-  uint64_t seen_revision_{0};
+  uint64_t rendered_revision_{0};
 };

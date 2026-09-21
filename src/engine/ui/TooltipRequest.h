@@ -13,15 +13,15 @@
 #include <string>
 
 enum class TooltipAnchor {
-  Mouse,      // follow cursor
-  InputPanel, // fixed slot inside input panel
+  Mouse, // pos is the cursor; the box sits just above it
+  Fixed, // pos is the text center
 };
 
 struct TooltipRequest {
   std::string text;
 
-  TooltipAnchor anchor = TooltipAnchor::InputPanel;
-  ViewPoint screenPos = {0, 0}; // only used when anchor == Mouse
+  TooltipAnchor anchor = TooltipAnchor::Fixed;
+  ViewPoint pos = {0, 0};
 
   FontFace font = FontFace::CSTANDAR;
   uint8_t palette = 0;

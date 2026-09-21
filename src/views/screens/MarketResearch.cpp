@@ -159,7 +159,7 @@ void MarketResearch::render_bar_chart(
             return TooltipRequest{
                 .text = tip,
                 .anchor = TooltipAnchor::Mouse,
-                .screenPos = ie.pos,
+                .pos = ie.pos,
                 .palette = 62,
                 .bg_color = 15,
                 .text_color = 240,

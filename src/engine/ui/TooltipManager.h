@@ -57,10 +57,10 @@ public:
   // it appeared.
   void update_mouse_pos(ViewPoint p) {
     if (pending_) {
-      if (pending_->screenPos != p) {
+      if (pending_->pos != p) {
         waited_ms_ = 0;
       }
-      pending_->screenPos = p;
+      pending_->pos = p;
     }
   }
 

@@ -7,8 +7,13 @@
 #include "views/screens/InputPanel.h"
 
 #include "engine/geom/Spaces.h"
+#include "views/base/ViewDefs.h"
 #include "views/helpers/ButtonGeometry.h"
 #include "views/ui/widgets/Button.h"
+
+constexpr ViewPoint tooltip_pos{views::base::INPUT_PANEL_OFFSET_X +
+                                    (views::base::INPUT_PANEL_WIDTH / 2),
+                                222};
 
 InputPanel::InputPanel(GameContext& context, GameState& state, ViewPoint origin)
     : PanelView(context, state, origin) {}
@@ -42,7 +47,8 @@ void InputPanel::layout_buttons() {
     auto ttcb = [tt_text = base](views::ui::InteractionEvent ie) {
       return TooltipRequest{
           .text = tt_text,
-          .anchor = TooltipAnchor::InputPanel,
+          .anchor = TooltipAnchor::Fixed,
+          .pos = tooltip_pos,
           .bg_color = gfx::TRANSPARENT,
           .text_color = 240, // black
           .padding = 0,

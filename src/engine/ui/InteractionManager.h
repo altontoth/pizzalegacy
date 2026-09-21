@@ -61,7 +61,9 @@ constexpr int priority_default = 0;
 constexpr int priority_turn_lock = 100;
 constexpr int priority_popup = 200;
 
-using TooltipCb = std::function<TooltipRequest(const InteractionEvent&)>;
+// Returning nothing hides the tooltip.
+using TooltipCb =
+    std::function<std::optional<TooltipRequest>(const InteractionEvent&)>;
 
 // Everything about an item beyond its rect, id and callback.
 struct ItemOptions {
@@ -262,7 +264,7 @@ private:
   [[nodiscard]] HitResult hit_test(ViewPoint p) const;
 
   [[nodiscard]] static MouseButton to_button(const SDL_Event& e) noexcept;
-  void handle_tooltip(const InteractionItem& it, const InteractionEvent& ev);
+  void handle_tooltip(const TooltipCb& tooltip_cb, const InteractionEvent& ev);
   void dispatch(const InteractionItem& item, InteractionEvent::Type type,
                 MouseButton btn, ViewPoint p, ViewPoint delta = {}) const;
   void finish_drag(ViewPoint p);

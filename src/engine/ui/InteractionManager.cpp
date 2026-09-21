@@ -269,21 +269,29 @@ void InteractionManager::process(const SDL_Event& e) {
   }
 }
 
-void InteractionManager::handle_tooltip(const InteractionItem& it,
+void InteractionManager::handle_tooltip(const TooltipCb& tooltip_cb,
                                         const InteractionEvent& ev) {
-  if (!it.tooltip_cb) {
+  if (!tooltip_cb) {
     return;
   }
 
   switch (ev.type) {
   case InteractionEvent::Type::Enter:
-    tt_mgr_.show(it.tooltip_cb(ev));
+  // A click asks again once the item's handler has run.
+  case InteractionEvent::Type::Click:
+    if (auto req = tooltip_cb(ev)) {
+      tt_mgr_.show(std::move(*req));
+    }
+    else {
+      tt_mgr_.clear();
+    }
     break;
 
   case InteractionEvent::Type::Hover:
     tt_mgr_.update_mouse_pos(ev.pos);
     break;
 
+  case InteractionEvent::Type::ButtonDown:
   case InteractionEvent::Type::Leave:
     tt_mgr_.clear();
     break;
@@ -340,6 +348,10 @@ void InteractionManager::update_mouse(ScreenPoint sp) {
     if (current_hover_ != 0) {
       if (auto* old = lookup_item(current_hover_)) {
         dispatch(*old, InteractionEvent::Type::Leave, MouseButton::Left, p);
+      }
+      else {
+        // Nothing owns the tooltip once its item is gone.
+        tt_mgr_.clear();
       }
     }
 
@@ -437,8 +449,9 @@ void InteractionManager::dispatch(const InteractionItem& item,
                                   InteractionEvent::Type type, MouseButton btn,
                                   ViewPoint p, ViewPoint delta) const {
 
-  // Copy callback before dispatching since the callback may destroy the item.
+  // Copy callbacks before dispatching since the callback may destroy the item.
   const auto cb = item.callback;
+  const auto tooltip_cb = item.tooltip_cb;
   const auto local_pos = p - item.rect.point();
   const InteractionEvent ev{.type = type,
                             .button = btn,
@@ -446,9 +459,9 @@ void InteractionManager::dispatch(const InteractionItem& item,
                             .local = ViewPoint{local_pos.dx, local_pos.dy},
                             .delta = delta};
 
-  const_cast<InteractionManager*>(this)->handle_tooltip(item, ev);
-
   cb(ev);
+
+  const_cast<InteractionManager*>(this)->handle_tooltip(tooltip_cb, ev);
 }
 
 void InteractionManager::finish_drag(ViewPoint p) {

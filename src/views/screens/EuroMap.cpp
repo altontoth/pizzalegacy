@@ -22,12 +22,17 @@
 #include "engine/geom/Spaces.h"
 #include "engine/gfx/Blit.h"
 #include "engine/gfx/Draw.h"
+#include "engine/gfx/Surface.h"
 #include "engine/ui/InteractionEvent.h"
+#include "engine/ui/TooltipRequest.h"
 #include "resources/FontManager.h"
 #include "views/base/ViewDefs.h"
 
 constexpr uint8_t dark_text_color = 20;
 constexpr uint8_t box_bg_color = 24;
+constexpr uint8_t city_name_color = 255;
+constexpr ViewPoint city_name_pos{(DisplayConstants::SCREEN_WIDTH / 2) - 40,
+                                  190};
 
 // Indexed by core::CityId. Our render coordinates are 2x these.
 struct CityCoord {
@@ -76,20 +81,26 @@ EuroMap::EuroMap(GameContext& context, GameState& state, MapMode mode,
     interactions_.create_persistent_item(
         r, compat::format("euromap.{}", core::city_name(city)),
         [this, city](views::ui::InteractionEvent ev) {
-          switch (ev.type) {
-          case views::ui::InteractionEvent::Type::ButtonDown:
+          if (ev.type == views::ui::InteractionEvent::Type::ButtonDown) {
             on_city_click(city, ev.button);
-            break;
-          case views::ui::InteractionEvent::Type::Enter:
-            on_city_hover(city);
-            break;
-          case views::ui::InteractionEvent::Type::Leave:
-            on_city_leave(city);
-            break;
-          default:
-            break;
           }
-        });
+        },
+        {.tooltip = [this, city](const views::ui::InteractionEvent&)
+             -> std::optional<TooltipRequest> {
+          if (map_state_ != MapState::NO_ACTION) {
+            return std::nullopt;
+          }
+          return TooltipRequest{
+              .text = std::string(core::city_name(city)),
+              .anchor = TooltipAnchor::Fixed,
+              .pos = city_name_pos,
+              .font = FontFace::ASTANDAR,
+              .palette = 2,
+              .bg_color = gfx::TRANSPARENT,
+              .text_color = city_name_color,
+              .padding = 0,
+          };
+        }});
   }
 }
 
@@ -239,14 +250,6 @@ void EuroMap::render(const RenderContext& ctx) {
     ctx.surface->blit_raw(popup_surface,
                           ViewPoint{small_popup_box_.x, small_popup_box_.y});
   }
-  else if (hovered_city_) {
-    constexpr int text_color = 255;
-    const int center_x = ctx.surface->rect().center().x;
-    context_.font->render_text_onto(
-        *ctx.surface, core::city_name(*hovered_city_),
-        ViewPoint{center_x - 40, 190}, FontFace::ASTANDAR, text_color,
-        TextAnchor::Middle);
-  }
 }
 
 Surface EuroMap::create_popup(const RenderContext& ctx, int w, int h) {
@@ -317,23 +320,6 @@ void EuroMap::on_city_click(core::CityId city, views::ui::MouseButton btn) {
     map_state_ = MapState::CITY_CLICKED;
   }
   last_clicked_city_ = city;
-  mark_dirty();
-}
-
-void EuroMap::on_city_hover(core::CityId city) {
-  if (map_state_ == MapState::NO_ACTION ||
-      map_state_ == MapState::CITY_HOVERED) {
-    map_state_ = MapState::CITY_HOVERED;
-    mark_dirty();
-  }
-  hovered_city_ = city;
-}
-
-void EuroMap::on_city_leave(core::CityId city) {
-  if (map_state_ == MapState::CITY_HOVERED && hovered_city_ == city) {
-    map_state_ = MapState::NO_ACTION;
-  }
-  hovered_city_.reset();
   mark_dirty();
 }
 
