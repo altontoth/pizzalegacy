@@ -56,8 +56,7 @@ public:
       break;
     case TooltipAnchor::Mouse: {
       // position just above the cursor, or below it at the top of the
-      // screen; screenPos kept current by InteractionManager::handle_tooltip
-      // on every Hover event
+      // screen
       int bx = req.screenPos.x;
       if (bx + w > DisplayConstants::SCREEN_WIDTH) {
         bx = DisplayConstants::SCREEN_WIDTH - w;

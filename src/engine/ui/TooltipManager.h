@@ -53,17 +53,14 @@ public:
     touch();
   }
 
-  // Update cursor position for mouse-anchored tooltips (e.g. on hover move)
+  // A pending tooltip waits for the cursor to stop; an active one stays where
+  // it appeared.
   void update_mouse_pos(ViewPoint p) {
     if (pending_) {
       if (pending_->screenPos != p) {
         waited_ms_ = 0;
       }
       pending_->screenPos = p;
-    }
-    if (current_ && current_->anchor == TooltipAnchor::Mouse) {
-      current_->screenPos = p;
-      touch();
     }
   }
 
