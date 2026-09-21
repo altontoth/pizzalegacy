@@ -28,8 +28,6 @@ std::vector<std::string> rule_differences(const GameRules& theirs,
   };
   add_difference(rule_labels::fix_legacy_bugs, on_off(theirs.fix_legacy_bugs),
                  on_off(ours.fix_legacy_bugs));
-  add_difference(rule_labels::qol_improvements, on_off(theirs.qol_improvements),
-                 on_off(ours.qol_improvements));
   add_difference(rule_labels::mafia_shakedowns_target_all_restaurants,
                  on_off(theirs.mafia_shakedowns_target_all_restaurants),
                  on_off(ours.mafia_shakedowns_target_all_restaurants));

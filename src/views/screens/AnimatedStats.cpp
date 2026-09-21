@@ -415,7 +415,7 @@ void AnimatedStats::render_reputation(const RenderContext& ctx) {
     blitmap4.render_icon(COMP_ICONS[i], *ctx.surface, ICON_POS[i]);
   }
 
-  if (state_.rules().qol_improvements) {
+  if (state_.options().qol_improvements) {
     static constexpr std::array<std::string_view, 8> COMP_LABELS = {
         "Waiting time", "Pizza prices", "Pizzas on menu", "Advertising",
         "Star rating",  "Furnishing",   "Demand met",     "Events"};
@@ -494,7 +494,7 @@ void AnimatedStats::render_pizza_quality(const RenderContext& ctx) {
     blitmap4.render_icon(QUALITY_ICONS[i], *ctx.surface, ICON_POS[i]);
   }
 
-  if (state_.rules().qol_improvements) {
+  if (state_.options().qol_improvements) {
     static constexpr std::array<std::string_view, 4> QUALITY_LABELS = {
         "Ingredients", "Chefs", "Ovens", "Contamination"};
     for (int i = 0; i < PIZZA_QUALITY_NUM_COMPONENTS; i++) {
@@ -666,7 +666,7 @@ void AnimatedStats::render_capacity(const RenderContext& ctx) {
   }
 
   // Hover tooltips over the row icons (left of each bar)
-  if (state_.rules().qol_improvements) {
+  if (state_.options().qol_improvements) {
     static constexpr std::array<std::string_view, 5> CAT_LABELS = {
         "Seating", "Ingredient stock", "Chefs", "Ovens", "Waiters"};
 
@@ -988,7 +988,7 @@ void AnimatedStats::render_production(const RenderContext& ctx) {
   }
 
   // Hover tooltips to give some sense of what's going on on this screen
-  if (state_.rules().qol_improvements) {
+  if (state_.options().qol_improvements) {
     constexpr int WL = LegacyConstants::WOOD_BORDER_WIDTH_LEFT;
     constexpr int WT = LegacyConstants::WOOD_BORDER_HEIGHT_TOP;
 
@@ -1099,7 +1099,8 @@ void AnimatedStats::calculate_capacity_stats() {
   static constexpr int bar_max = 139;
   int divisor = 8;
   // Widen the scale so demand still fits on its bar
-  if (state_.rules().qol_improvements && analysis.demand > bar_max * divisor) {
+  if (state_.options().qol_improvements &&
+      analysis.demand > bar_max * divisor) {
     divisor = (analysis.demand + bar_max - 1) / bar_max;
   }
 

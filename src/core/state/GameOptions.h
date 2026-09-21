@@ -121,6 +121,8 @@ struct GameOptions {
   float music_volume = 1.0f;
   // Show the day's turnover report when the turn ends.
   bool automatic_report = true;
+  // Mouse and UI modernizations:
+  bool qol_improvements = true;
   // Use 640x480 (4:3) CRT aspect ratio instead of 640x400
   bool crt_aspect_ratio = false;
   // Start the window at twice the 640x400 surface.

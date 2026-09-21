@@ -866,7 +866,7 @@ void GlobalStats::render_property(const RenderContext& ctx) {
   constexpr int venue_x = 152;
   constexpr int entry_y0 = 120;
   constexpr int row_height = 18;
-  const bool scrollable = state_.rules().qol_improvements;
+  const bool scrollable = state_.options().qol_improvements;
   const int visible_rows = scrollable ? 12 : 13;
 
   const int max_scroll =

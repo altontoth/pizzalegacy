@@ -230,6 +230,8 @@ void MenuOptions::build_gameplay(GameState& state) {
   toggle("Automatic Report", options.automatic_report)
       .help_text("Automatically show the daily turnover report at the end of "
                  "the turn.");
+  toggle("Quality of Life improvements", options.qol_improvements)
+      .help_text("Enable various modernizations of the UI and mouse behavior.");
   add_menu_item(
       std::make_unique<EnumMenuItem<AutosaveFrequency>>(
           context_, "Auto save", options.autosave_frequency,
@@ -287,8 +289,6 @@ void MenuOptions::build_rules(GameState& state) {
   toggle(rule_labels::fix_legacy_bugs, rules.fix_legacy_bugs)
       .help_text("Fix various bugs from the original; see "
                  "docs/MODERNIZATIONS.md for details.");
-  toggle(rule_labels::qol_improvements, rules.qol_improvements)
-      .help_text("Enable various modernizations of the UI and mouse behavior.");
   add_menu_item(std::make_unique<EnumMenuItem<PizzaJudging>>(
                     context_, rule_labels::pizza_judging, rules.pizza_judging,
                     std::vector{PizzaJudging::Original, PizzaJudging::Relaxed},

@@ -515,7 +515,6 @@ GameTime json_to_time(const json& j) {
 json rules_to_json(const GameRules& rules) {
   return {
       {"fix_legacy_bugs", rules.fix_legacy_bugs},
-      {"qol_improvements", rules.qol_improvements},
       {"mafia_shakedowns_target_all_restaurants",
        rules.mafia_shakedowns_target_all_restaurants},
       {"demand_fulfillment_popularity", rules.demand_fulfillment_popularity},
@@ -528,7 +527,6 @@ json rules_to_json(const GameRules& rules) {
 // Missing keys use the values in rules.
 GameRules json_to_rules(const json& j, GameRules rules) {
   rules.fix_legacy_bugs = j.value("fix_legacy_bugs", rules.fix_legacy_bugs);
-  rules.qol_improvements = j.value("qol_improvements", rules.qol_improvements);
   rules.mafia_shakedowns_target_all_restaurants =
       j.value("mafia_shakedowns_target_all_restaurants",
               rules.mafia_shakedowns_target_all_restaurants);

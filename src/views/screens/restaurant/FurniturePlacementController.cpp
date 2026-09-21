@@ -684,7 +684,7 @@ void FurniturePlacementController::handle_sell_furniture() {
     view_.mark_dirty();
   };
 
-  if (!state_.rules().qol_improvements) {
+  if (!state_.options().qol_improvements) {
     auto msg =
         compat::format("Do you want to sell this|item for {:w}?", sell_price);
     context_.popup->origin(ViewPoint{52, 80});

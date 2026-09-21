@@ -82,7 +82,7 @@ DepotIngredientOrderScreen::DepotIngredientOrderScreen(
     ingredients_.push_back(batch);
   }
 
-  if (ds.saved_ingredients && state_.rules().qol_improvements) {
+  if (ds.saved_ingredients && state_.options().qol_improvements) {
     for (auto& batch : ingredients_) {
       for (const auto& saved : *ds.saved_ingredients) {
         if (saved.ingredient_type == batch.ingredient_type) {

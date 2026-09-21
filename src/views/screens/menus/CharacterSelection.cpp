@@ -138,7 +138,7 @@ void CharacterSelection::generate_player_items() {
 
   std::vector<int> character_ids(NUMBER_OF_CHARACTERS);
   std::iota(character_ids.begin(), character_ids.end(), 0);
-  if (state_.rules().qol_improvements) {
+  if (state_.options().qol_improvements) {
     engine::random::shuffle(character_ids.begin(), character_ids.end());
   }
 
@@ -210,7 +210,7 @@ void CharacterSelection::active_player(int index) {
 }
 
 void CharacterSelection::change_character(int delta) {
-  if (state_.rules().qol_improvements) {
+  if (state_.options().qol_improvements) {
     selected_character_ = (selected_character_ + NUMBER_OF_CHARACTERS + delta) %
                           NUMBER_OF_CHARACTERS;
   }

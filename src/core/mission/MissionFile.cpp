@@ -47,7 +47,6 @@ std::vector<uint8_t> encode_rules(const GameRules& rules, bool rules_changed) {
   return {
       static_cast<uint8_t>(rules_changed),
       static_cast<uint8_t>(rules.fix_legacy_bugs),
-      static_cast<uint8_t>(rules.qol_improvements),
       static_cast<uint8_t>(rules.mafia_shakedowns_target_all_restaurants),
       static_cast<uint8_t>(rules.demand_fulfillment_popularity),
       static_cast<uint8_t>(rules.win_condition),
@@ -65,18 +64,17 @@ void decode_rules(const std::vector<uint8_t>& bytes, MissionTarget& target) {
   };
   decode_bool(0, target.rules_changed);
   decode_bool(1, rules.fix_legacy_bugs);
-  decode_bool(2, rules.qol_improvements);
-  decode_bool(3, rules.mafia_shakedowns_target_all_restaurants);
-  decode_bool(4, rules.demand_fulfillment_popularity);
+  decode_bool(2, rules.mafia_shakedowns_target_all_restaurants);
+  decode_bool(3, rules.demand_fulfillment_popularity);
+  if (bytes.size() > 4 &&
+      bytes[4] <= static_cast<uint8_t>(WinCondition::AllCities)) {
+    rules.win_condition = static_cast<WinCondition>(bytes[4]);
+  }
   if (bytes.size() > 5 &&
-      bytes[5] <= static_cast<uint8_t>(WinCondition::AllCities)) {
-    rules.win_condition = static_cast<WinCondition>(bytes[5]);
+      bytes[5] <= static_cast<uint8_t>(PizzaJudging::Relaxed)) {
+    rules.pizza_judging = static_cast<PizzaJudging>(bytes[5]);
   }
-  if (bytes.size() > 6 &&
-      bytes[6] <= static_cast<uint8_t>(PizzaJudging::Relaxed)) {
-    rules.pizza_judging = static_cast<PizzaJudging>(bytes[6]);
-  }
-  decode_bool(7, rules.police);
+  decode_bool(6, rules.police);
   target.rules = rules;
 }
 

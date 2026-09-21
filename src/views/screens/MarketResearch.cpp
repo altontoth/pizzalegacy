@@ -59,7 +59,7 @@ void MarketResearch::render_bar_chart(
     int max_val =
         static_cast<int>(*std::max_element(values.begin(), values.end()));
     // Original game starts at $10K chunks; qol_improvements allows finer $1K
-    const bool fine_scale = state_.rules().qol_improvements;
+    const bool fine_scale = state_.options().qol_improvements;
     constexpr std::array<int, 5> original_units = {10'000, 100'000, 1'000'000,
                                                    10'000'000, 100'000'000};
     constexpr std::array<int, 6> improved_units = {
@@ -149,7 +149,7 @@ void MarketResearch::render_bar_chart(
 
     // Tooltip with the chain name
     const Player* owner = players[i];
-    if (state_.rules().qol_improvements && owner) {
+    if (state_.options().qol_improvements && owner) {
       std::string tip = owner->name();
       interactions_.create_frame_item(
           {icon_x, icon_y, icon_size, icon_size},

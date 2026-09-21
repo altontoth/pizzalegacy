@@ -127,7 +127,7 @@ void Menu::update_interactions() {
         continue;
       }
       views::ui::TooltipCb ttcb;
-      if (state_.rules().qol_improvements) {
+      if (state_.options().qol_improvements) {
         if (std::string tt = menu_item->tooltip_text(); !tt.empty()) {
           ttcb = [tt = std::move(tt)](const views::ui::InteractionEvent& ie) {
             return TooltipRequest{
@@ -434,7 +434,7 @@ void Menu::render(const RenderContext& ctx) {
 }
 
 void Menu::render_help_text(Surface& surface) {
-  if (!state_.rules().qol_improvements || layout_.empty()) {
+  if (!state_.options().qol_improvements || layout_.empty()) {
     return;
   }
   const bool any_help = std::ranges::any_of(

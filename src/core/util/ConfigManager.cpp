@@ -146,7 +146,7 @@ const auto option_defs = std::to_array({
         "automatic_report", "Gameplay",
         "show the day's turnover report when the turn ends"),
     rule_bool_option<&GameRules::fix_legacy_bugs>("fix_legacy_bugs"),
-    rule_bool_option<&GameRules::qol_improvements>("qol_improvements"),
+    bool_option<&GameOptions::qol_improvements>("qol_improvements"),
     bool_option<&GameOptions::show_player_color_in_dropdown>(
         "show_player_color_in_dropdown", {},
         "mark players in the city map dropdowns with their player color"),

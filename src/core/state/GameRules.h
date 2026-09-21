@@ -59,7 +59,6 @@ win_condition_from_config_value(std::string_view value) {
 // in the save game, so the settings get loaded along with the rest.
 struct GameRules {
   bool fix_legacy_bugs = true;
-  bool qol_improvements = true;
   // The mafia shakes down a random restaurant instead of always the first.
   bool mafia_shakedowns_target_all_restaurants = false;
   bool demand_fulfillment_popularity = true;
@@ -74,7 +73,6 @@ struct GameRules {
 // The rules by the names as shown in the options screen.
 namespace rule_labels {
 constexpr const char* fix_legacy_bugs = "Fix original bugs";
-constexpr const char* qol_improvements = "Quality of Life improvements";
 constexpr const char* mafia_shakedowns_target_all_restaurants =
     "Random shakedown target";
 constexpr const char* demand_fulfillment_popularity =

@@ -615,7 +615,7 @@ void PizzaDesign::create_input_panel() {
           return;
         }
         if (bake_) {
-          if (state_.rules().qol_improvements &&
+          if (state_.options().qol_improvements &&
               !bake_->working.toppings().empty()) {
             context_.popup->create<ConfirmPopup>("Discard pizza?",
                                                  [this](bool agree) {

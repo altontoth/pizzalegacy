@@ -157,7 +157,7 @@ CityView::CityView(GameContext& context, GameState& state, core::CityId id)
                        MAIN_PANEL_WIDTH, MAIN_PANEL_HEIGHT};
   rmb_drag_scroller_.init(
       camctrl_,
-      [this] { return state_.rules().qol_improvements && !zoom_selector_; },
+      [this] { return state_.options().qol_improvements && !zoom_selector_; },
       [this] { return state_.options().rmb_drag_inverted; },
       [this](ViewPoint abs_pos) {
         const auto cfg = ZoomConfig::for_zoom_level(zoom_);
@@ -271,7 +271,7 @@ void CityView::register_map_interactions_viewport() {
             if (zoom_selector_) {
               disable_zoom_cursor();
             }
-            else if (!state_.rules().qol_improvements) {
+            else if (!state_.options().qol_improvements) {
               if (zoom_ == ZoomLevel::CLOSE || zoom_ == ZoomLevel::MEDIUM) {
                 zoom_out(ie.local);
               }
@@ -281,7 +281,7 @@ void CityView::register_map_interactions_viewport() {
           break;
         }
         case views::ui::InteractionEvent::Type::Scroll: {
-          if (!state_.rules().qol_improvements) {
+          if (!state_.options().qol_improvements) {
             break;
           }
           if (ie.scroll_delta > 0 && zoom_ != ZoomLevel::CLOSE) {
@@ -1374,7 +1374,7 @@ void CityView::render_highlights(const RenderContext& ctx) {
       int view_box_size = cell_view_size;
       if (zoom_ == ZoomLevel::FAR) {
         view_box_size *= 2;
-        if (state_.rules().qol_improvements) {
+        if (state_.options().qol_improvements) {
           view_box_size *= 2;
         }
       }
