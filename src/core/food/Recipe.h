@@ -52,7 +52,10 @@ public:
   }
 
   std::string_view display_name() const noexcept { return display_name_; }
-  void rename(std::string new_name) { display_name_ = std::move(new_name); }
+  void rename(std::string new_name) {
+    display_name_ = std::move(new_name);
+    pizza_.name(display_name_);
+  }
 
   const Pizza& pizza() const noexcept { return pizza_; }
   Pizza& pizza_mut() noexcept { return pizza_; }
@@ -88,7 +91,9 @@ private:
   Recipe(RecipeId id, Origin origin, std::optional<CanonicalPizza> canonical_id,
          std::string display_name, Pizza pizza)
       : id_(id), origin_(origin), canonical_id_(canonical_id),
-        display_name_(std::move(display_name)), pizza_(std::move(pizza)) {}
+        display_name_(std::move(display_name)), pizza_(std::move(pizza)) {
+    pizza_.name(display_name_);
+  }
 
   RecipeId id_{0};
   Origin origin_{Origin::User};
