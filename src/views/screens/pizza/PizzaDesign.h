@@ -78,6 +78,7 @@ private:
   void load_user_recipe_for_debug(int number);
   void load_canonical_for_debug(int number);
   void change_active_key(RecipeKey change_active_key);
+  void add_pizza_main_panel_item();
   void update_status_ingredient();
   void handle_post_judging();
 

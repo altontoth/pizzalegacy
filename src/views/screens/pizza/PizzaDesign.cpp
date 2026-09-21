@@ -274,6 +274,7 @@ void PizzaDesign::render(const RenderContext& ctx) {
   switch (mode_) {
   case PizzaDesignMode::View:
     draw_pizza(ctx);
+    add_pizza_main_panel_item();
     break;
   case PizzaDesignMode::AnnualCompetitionDesign:
   case PizzaDesignMode::CompetitionDesign:
@@ -283,9 +284,11 @@ void PizzaDesign::render(const RenderContext& ctx) {
     break;
   case PizzaDesignMode::Ingredients:
     draw_ingredients(ctx);
+    add_pizza_main_panel_item();
     break;
   case PizzaDesignMode::Info:
     draw_pizza_info(ctx);
+    add_pizza_main_panel_item();
     break;
   case PizzaDesignMode::Recipes:
     draw_recipes(ctx);
@@ -326,6 +329,25 @@ void PizzaDesign::render(const RenderContext& ctx) {
   else {
     ctx.surface->clear_custom_palette();
   }
+}
+
+// A click on the main panel leaves a read-only page: back to the recipe
+// list, or to the canvas while designing.
+void PizzaDesign::add_pizza_main_panel_item() {
+  if (!state_.options().qol_improvements) {
+    return;
+  }
+  interactions_.create_frame_item(
+      ViewRect{0, 0, views::base::MAIN_PANEL_WIDTH,
+               views::base::MAIN_PANEL_HEIGHT},
+      "pizza_main_panel", [this](views::ui::InteractionEvent ui) {
+        if (ui.type != views::ui::InteractionEvent::Type::Click ||
+            ui.button != views::ui::MouseButton::Left) {
+          return;
+        }
+        change_mode(design_mode_ ? PizzaDesignMode::Design
+                                 : PizzaDesignMode::Recipes);
+      });
 }
 
 void PizzaDesign::change_mode(PizzaDesignMode mode) {
