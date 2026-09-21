@@ -115,7 +115,8 @@ void MenuSaveAsMission::write_mission(const std::string& filename) {
 
   const auto* player = state_.active_player();
   const auto entries = state_.career_log().get_cv_entries_for(player->id());
-  if (core::mission::save_career_mission(name, entries)) {
+  if (core::mission::save_career_mission(name, entries, state_.starting_rules(),
+                                         state_.rules_changed())) {
     Logger::info("Saved career as mission: {}", name);
     // Pop twice to get back to DiskMenu (not just to the save menu)
     state_.ui().pop();

@@ -113,7 +113,8 @@ void GameOver::save_career_as_mission(const std::string& raw_name) {
   }
 
   const auto entries = state_.career_log().get_cv_entries_for(player_.id());
-  if (!core::mission::save_career_mission(name, entries)) {
+  if (!core::mission::save_career_mission(
+          name, entries, state_.starting_rules(), state_.rules_changed())) {
     context_.popup->create<AlertPopup>("Failed to save the mission file.");
   }
 }

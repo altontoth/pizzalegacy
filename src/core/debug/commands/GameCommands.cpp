@@ -853,8 +853,9 @@ static CommandDef make_game_mission_write() {
       .description = "Write the active player's CV as a mission file",
       .help_text = R"(Usage: game mission write <name>
 
-Serializes the active player's career (CV) as a 400-byte .mis mission
-file in the missions directory. The .mis extension is added if needed.
+Serializes the active player's career (CV) as a .mis mission file in the
+missions directory, with a trailer (containing the rules that the game started with)
+behind the 400 bytes the original reads. The .mis extension is added if needed.
 
 Example:
   game mission write mycareer
@@ -886,7 +887,9 @@ Example:
         if (name.empty()) {
           return CommandResult::error("Mission name is empty");
         }
-        auto path = core::mission::save_career_mission(name, entries);
+        auto path = core::mission::save_career_mission(
+            name, entries, ctx.state.starting_rules(),
+            ctx.state.rules_changed());
         if (!path) {
           return CommandResult::error(
               compat::format("Failed to write mission {}", name));

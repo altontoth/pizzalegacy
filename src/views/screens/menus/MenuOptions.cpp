@@ -284,31 +284,31 @@ void MenuOptions::build_rules(GameState& state) {
         }));
   };
 
-  toggle("Fix original bugs", rules.fix_legacy_bugs)
+  toggle(rule_labels::fix_legacy_bugs, rules.fix_legacy_bugs)
       .help_text("Fix various bugs from the original; see "
                  "docs/MODERNIZATIONS.md for details.");
-  toggle("Quality of Life improvements", rules.qol_improvements)
+  toggle(rule_labels::qol_improvements, rules.qol_improvements)
       .help_text("Enable various modernizations of the UI and mouse behavior.");
   add_menu_item(std::make_unique<EnumMenuItem<PizzaJudging>>(
-                    context_, "Standard pizza judging", rules.pizza_judging,
+                    context_, rule_labels::pizza_judging, rules.pizza_judging,
                     std::vector{PizzaJudging::Original, PizzaJudging::Relaxed},
                     changed, face))
       .help_text("Original: match the cook book exactly. "
                  "Relaxed: the right ingredients in the right amounts.");
   if (state.options().show_advanced_options) {
-    toggle("Random shakedown target",
+    toggle(rule_labels::mafia_shakedowns_target_all_restaurants,
            rules.mafia_shakedowns_target_all_restaurants)
         .advanced(true)
         .help_text("On: the mafia can shake down any of your restaurants. Off: "
                    "only your first one, as in the original.");
-    toggle("Fulfillment affects popularity",
+    toggle(rule_labels::demand_fulfillment_popularity,
            rules.demand_fulfillment_popularity)
         .advanced(true)
         .help_text(
             "On: popularity reflects unmet orders. "
             "Off: it always takes the full drop, as in the DOS original.");
     add_menu_item(std::make_unique<EnumMenuItem<WinCondition>>(
-                      context_, "Win condition", rules.win_condition,
+                      context_, rule_labels::win_condition, rules.win_condition,
                       std::vector{WinCondition::Paris, WinCondition::AnyCity,
                                   WinCondition::AllCities},
                       changed, face))

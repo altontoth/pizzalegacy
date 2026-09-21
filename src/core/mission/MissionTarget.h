@@ -8,7 +8,9 @@
 
 #include "core/events/CareerLog.h"
 #include "core/events/MilestoneId.h"
+#include "core/state/GameRules.h"
 
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -31,6 +33,8 @@ using TargetMilestone = core::events::CareerLog::CvEntry;
 struct MissionTarget {
   std::vector<TargetMilestone> milestones; // occupied slots, file slot order
   std::string source_name;                 // filename for display
+  std::optional<GameRules> rules;
+  bool rules_changed = false;
 
   // The mission ends when the player achieves this event (the last
   // defined target milestone).

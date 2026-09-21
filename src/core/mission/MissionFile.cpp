@@ -11,9 +11,13 @@
 #include <cctype>
 #include <cstdint>
 #include <fstream>
+#include <iterator>
 #include <system_error>
 #include <utility>
+#include <vector>
 #include "core/events/MilestoneId.h"
+#include "core/food/PizzaJudging.h"
+#include "core/state/GameRules.h"
 #include "core/time/GameDate.h"
 #include "engine/Logger.h"
 #include "engine/PlatformPaths.h"
@@ -30,6 +34,79 @@ constexpr int MIS_EVENT_OFFSET = 0 * MIS_SLOT_COUNT;
 constexpr int MIS_DAY_OFFSET = 1 * MIS_SLOT_COUNT;
 constexpr int MIS_MONTH_OFFSET = 2 * MIS_SLOT_COUNT;
 constexpr int MIS_YEAR_OFFSET = 3 * MIS_SLOT_COUNT;
+
+// The rules trailer sits behind the 400 bytes the original reads.
+constexpr std::array<uint8_t, 4> trailer_magic{'P', 'L', 'R', 'S'};
+constexpr uint8_t trailer_version = 1;
+constexpr int trailer_header_size = trailer_magic.size() + 2;
+
+// The trailer: the something-changed flag, then the rules in a fixed order (so
+// we can load missions from newer versions by just ignoring the bytes beyond
+// what we know about).
+std::vector<uint8_t> encode_rules(const GameRules& rules, bool rules_changed) {
+  return {
+      static_cast<uint8_t>(rules_changed),
+      static_cast<uint8_t>(rules.fix_legacy_bugs),
+      static_cast<uint8_t>(rules.qol_improvements),
+      static_cast<uint8_t>(rules.mafia_shakedowns_target_all_restaurants),
+      static_cast<uint8_t>(rules.demand_fulfillment_popularity),
+      static_cast<uint8_t>(rules.win_condition),
+      static_cast<uint8_t>(rules.pizza_judging),
+      static_cast<uint8_t>(rules.police),
+  };
+}
+
+void decode_rules(const std::vector<uint8_t>& bytes, MissionTarget& target) {
+  GameRules rules;
+  auto decode_bool = [&](size_t index, bool& value) {
+    if (index < bytes.size()) {
+      value = bytes[index] != 0;
+    }
+  };
+  decode_bool(0, target.rules_changed);
+  decode_bool(1, rules.fix_legacy_bugs);
+  decode_bool(2, rules.qol_improvements);
+  decode_bool(3, rules.mafia_shakedowns_target_all_restaurants);
+  decode_bool(4, rules.demand_fulfillment_popularity);
+  if (bytes.size() > 5 &&
+      bytes[5] <= static_cast<uint8_t>(WinCondition::AllCities)) {
+    rules.win_condition = static_cast<WinCondition>(bytes[5]);
+  }
+  if (bytes.size() > 6 &&
+      bytes[6] <= static_cast<uint8_t>(PizzaJudging::Relaxed)) {
+    rules.pizza_judging = static_cast<PizzaJudging>(bytes[6]);
+  }
+  decode_bool(7, rules.police);
+  target.rules = rules;
+}
+
+// Set the target's rules from the trailer; they stay unset when the file
+// has no trailer or one we don't recognize.
+void read_trailer(const std::vector<uint8_t>& file, const fs::path& path,
+                  MissionTarget& target) {
+  if (file.size() <= MIS_FILE_SIZE) {
+    return;
+  }
+  const auto trailer = file.begin() + MIS_FILE_SIZE;
+  const auto available = static_cast<int>(file.size()) - MIS_FILE_SIZE;
+  if (available < trailer_header_size ||
+      !std::equal(trailer_magic.begin(), trailer_magic.end(), trailer)) {
+    Logger::warn("Mission file has {} bytes past the mission that are not a "
+                 "rules trailer: {}",
+                 available, path.string());
+    return;
+  }
+  const uint8_t version = trailer[trailer_magic.size()];
+  const int length = trailer[trailer_magic.size() + 1];
+  if (version != trailer_version || available < trailer_header_size + length) {
+    Logger::warn("Mission file rules trailer is version {} with {} bytes, "
+                 "which this build cannot read: {}",
+                 version, length, path.string());
+    return;
+  }
+  const auto payload = trailer + trailer_header_size;
+  decode_rules(std::vector<uint8_t>(payload, payload + length), target);
+}
 
 // Event ids that exist as byte values but are not real milestones:
 // 28/29 are UI header lines, 93 is an empty line, 98/99 are unused slots.
@@ -76,17 +153,16 @@ std::optional<MissionTarget> read_mission_file(const fs::path& path) {
     return std::nullopt;
   }
 
-  std::array<uint8_t, MIS_FILE_SIZE> buf{};
-  is.read(reinterpret_cast<char*>(buf.data()), buf.size());
-  if (is.gcount() != MIS_FILE_SIZE ||
-      is.peek() != std::ifstream::traits_type::eof()) {
-    Logger::warn("Mission file is not exactly {} bytes: {}", MIS_FILE_SIZE,
+  const std::vector<uint8_t> buf(std::istreambuf_iterator<char>(is), {});
+  if (buf.size() < MIS_FILE_SIZE) {
+    Logger::warn("Mission file is shorter than {} bytes: {}", MIS_FILE_SIZE,
                  path.string());
     return std::nullopt;
   }
 
   MissionTarget target;
   target.source_name = path.filename().string();
+  read_trailer(buf, path, target);
 
   for (int slot = 0; slot < MIS_SLOT_COUNT; ++slot) {
     const uint8_t year_byte = buf[MIS_YEAR_OFFSET + slot];
@@ -145,7 +221,8 @@ void shift_mission_to_game_start(MissionTarget& target) {
 }
 
 bool write_mission_file(const fs::path& path,
-                        const std::vector<TargetMilestone>& cv_entries) {
+                        const std::vector<TargetMilestone>& cv_entries,
+                        const GameRules& rules, bool rules_changed) {
   if (cv_entries.size() > MIS_SLOT_COUNT) {
     Logger::warn("Career has {} entries; only the first {} fit in a mission",
                  cv_entries.size(), MIS_SLOT_COUNT);
@@ -169,6 +246,13 @@ bool write_mission_file(const fs::path& path,
     return false;
   }
   os.write(reinterpret_cast<const char*>(buf.data()), buf.size());
+
+  const std::vector<uint8_t> payload = encode_rules(rules, rules_changed);
+  std::vector<uint8_t> trailer(trailer_magic.begin(), trailer_magic.end());
+  trailer.push_back(trailer_version);
+  trailer.push_back(static_cast<uint8_t>(payload.size()));
+  trailer.insert(trailer.end(), payload.begin(), payload.end());
+  os.write(reinterpret_cast<const char*>(trailer.data()), trailer.size());
   return os.good();
 }
 
@@ -217,13 +301,14 @@ std::string sanitize_mission_name(const std::string& name) {
 
 std::optional<fs::path>
 save_career_mission(const std::string& name,
-                    const std::vector<TargetMilestone>& cv_entries) {
+                    const std::vector<TargetMilestone>& cv_entries,
+                    const GameRules& rules, bool rules_changed) {
   const fs::path dir = platform_paths::missions_dir();
   std::error_code ec;
   fs::create_directories(dir, ec);
 
   fs::path path = dir / (name + ".mis");
-  if (!write_mission_file(path, cv_entries)) {
+  if (!write_mission_file(path, cv_entries, rules, rules_changed)) {
     return std::nullopt;
   }
   return path;

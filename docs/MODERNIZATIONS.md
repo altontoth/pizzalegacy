@@ -205,6 +205,17 @@ the missions because they are supposed to happen before the game even begins.
 With the fix enabled, mission dates are shifted one year forward to match the
 English release timeline.
 
+### Missions record their rules
+A career saved as a mission records the rules it was played under, so that when
+you share the mission with someone else (or yourself later) they can see how
+their settings differ from the ones the mission was played with. It also tells
+you whether the rules were changed during the game, because someone could play a
+game with easy rules, disable them and only then save the mission.
+
+The mission information box tells you which rules are different from your
+current rules, it's up to you to decide if you want to play as is or make your
+rules match those from the mission.
+
 ### City economy sometimes stuck on one trend for five years
 Each city's economy drifts towards a goal, and picks a new goal when a countdown
 of up to 39 weeks runs out. The countdown in the original is a byte and can be

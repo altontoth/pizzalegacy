@@ -99,6 +99,7 @@ set(GAME_PLEGACY_SOURCES
     src/core/save/SaveGameManager.cpp
     src/core/save/SaveGameRestaurant.cpp
     src/core/state/CompetitionCoordinator.cpp
+    src/core/state/GameRules.cpp
     src/core/state/GameState.cpp
     src/core/state/MilestoneTracker.cpp
     src/core/state/RealEstate.cpp

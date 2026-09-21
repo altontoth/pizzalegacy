@@ -12,6 +12,7 @@
 #include <utility>
 #include "core/events/CareerLog.h"
 #include "core/mission/MissionFile.h"
+#include "core/state/GameRules.h"
 #include "core/state/GameState.h"
 #include "core/state/UIState.h"
 #include "engine/FormatCompat.h"
@@ -162,16 +163,38 @@ void MenuMissionSelect::show_goals() {
   goals_mode_ = GoalsBoxMode::Goals;
   goals_scroll_ = 0;
 
-  std::vector<std::string> lines;
+  std::vector<TextListBox::Line> lines;
   if (selected_) {
     for (const auto& milestone : selected_->milestones) {
-      lines.push_back(milestone.date.cv_date_string());
+      lines.push_back({.text = milestone.date.cv_date_string()});
       const std::string text =
           state_.career_log().cv_label(milestone.message_id);
       for (std::string_view line : Font::split_by_pipe(text)) {
-        lines.emplace_back(line);
+        lines.push_back({.text = std::string(line)});
       }
-      lines.emplace_back();
+      lines.push_back({});
+    }
+    // A mission from the original has no rules to compare.
+    if (selected_->rules) {
+      auto note = [&](std::string_view text) {
+        for (auto& line : goals_box_->wrap(text, FontFace::CSTANDAR)) {
+          lines.push_back(std::move(line));
+        }
+      };
+      auto differences =
+          rule_differences(*selected_->rules, state_.options().rules);
+      if (!differences.empty()) {
+        note("Rules different from yours:");
+        for (const auto& difference : differences) {
+          note(difference);
+        }
+        if (selected_->rules_changed) {
+          note("The rules were changed during play.");
+        }
+      }
+      else if (selected_->rules_changed) {
+        note("The rules match yours but were changed during play.");
+      }
     }
   }
   goals_box_->set_lines(std::move(lines), false, "Select mission...");

@@ -9,9 +9,11 @@
 #include <functional>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 #include "engine/DebugLabel.h"
 #include "engine/geom/Spaces.h"
+#include "resources/FontTypes.h"
 #include "views/ui/widgets/ListCursor.h"
 #include "views/ui/widgets/MenuItem.h"
 #include "views/ui/widgets/ScrollBar.h"
@@ -27,10 +29,17 @@ public:
         scroll_thumb_(scroll_thumb),
         on_line_clicked_(std::move(on_line_clicked)) {}
 
-  // The placeholder is shown in light gray while the list is empty.
+  struct Line {
+    std::string text;
+    FontFace face = FontFace::PIZ_NUMB;
+  };
+
+  void set_lines(std::vector<Line> lines, bool clickable,
+                 std::string placeholder = "");
   void set_lines(std::vector<std::string> lines, bool clickable,
                  std::string placeholder = "");
   int max_scroll() const;
+  std::vector<Line> wrap(std::string_view text, FontFace face) const;
 
   void draw(Surface& screen, ViewPoint p, bool is_selected) override;
   void handle_action() override;
@@ -52,7 +61,7 @@ private:
   int line_at(int local_y) const;
 
   Size size_;
-  std::vector<std::string> lines_;
+  std::vector<Line> lines_;
   std::string placeholder_;
   bool clickable_ = false;
   int* scroll_offset_;

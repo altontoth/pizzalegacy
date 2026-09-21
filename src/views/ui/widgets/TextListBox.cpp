@@ -10,9 +10,11 @@
 #include <utility>
 #include "engine/geom/Spaces.h"
 #include "engine/gfx/Draw.h"
+#include "resources/Font.h"
 #include "resources/FontManager.h"
 
 constexpr int LINE_HEIGHT = 18;
+constexpr int TEXT_X = 6;
 constexpr int TEXT_COLOR = 1;
 constexpr uint8_t PLACEHOLDER_COLOR = 13;
 constexpr uint8_t ACTIVE_ROW = 13;
@@ -20,6 +22,16 @@ constexpr uint8_t INACTIVE_ROW = 14;
 constexpr uint8_t FOCUS_COLOR = 29;
 
 void TextListBox::set_lines(std::vector<std::string> lines, bool clickable,
+                            std::string placeholder) {
+  std::vector<Line> faced;
+  faced.reserve(lines.size());
+  for (auto& text : lines) {
+    faced.push_back({.text = std::move(text)});
+  }
+  set_lines(std::move(faced), clickable, std::move(placeholder));
+}
+
+void TextListBox::set_lines(std::vector<Line> lines, bool clickable,
                             std::string placeholder) {
   lines_ = std::move(lines);
   placeholder_ = std::move(placeholder);
@@ -29,6 +41,16 @@ void TextListBox::set_lines(std::vector<std::string> lines, bool clickable,
 }
 
 int TextListBox::visible_lines() const { return size_.h / LINE_HEIGHT; }
+
+std::vector<TextListBox::Line> TextListBox::wrap(std::string_view text,
+                                                 FontFace face) const {
+  std::vector<Line> lines;
+  for (auto& wrapped : context_.font->get(face).split_and_wrap_text(
+           text, size_.w - 2 * TEXT_X)) {
+    lines.push_back({.text = std::move(wrapped), .face = face});
+  }
+  return lines;
+}
 
 int TextListBox::max_scroll() const {
   return std::max(0, static_cast<int>(lines_.size()) - visible_lines());
@@ -47,7 +69,7 @@ int TextListBox::line_at(int local_y) const {
     return -1;
   }
   const int index = *scroll_offset_ + row;
-  if (index >= static_cast<int>(lines_.size()) || lines_[index].empty()) {
+  if (index >= static_cast<int>(lines_.size()) || lines_[index].text.empty()) {
     return -1;
   }
   return index;
@@ -75,13 +97,14 @@ void TextListBox::draw(Surface& screen, ViewPoint p, bool is_selected) {
       block.fill_rect(highlight_rect, is_selected ? ACTIVE_ROW : INACTIVE_ROW);
     }
 
-    context_.font->render_text_onto(block, lines_[line_index], ViewPoint{6, y},
-                                    FontFace::PIZ_NUMB, TEXT_COLOR);
+    const Line& line = lines_[line_index];
+    context_.font->render_text_onto(block, line.text, ViewPoint{TEXT_X, y},
+                                    line.face, TEXT_COLOR);
     y += LINE_HEIGHT;
   }
 
   if (lines_.empty() && !placeholder_.empty()) {
-    context_.font->render_text_onto(block, placeholder_, ViewPoint{6, 4},
+    context_.font->render_text_onto(block, placeholder_, ViewPoint{TEXT_X, 4},
                                     FontFace::PIZ_NUMB, PLACEHOLDER_COLOR);
   }
 

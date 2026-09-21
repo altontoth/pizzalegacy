@@ -7,6 +7,7 @@
 #pragma once
 
 #include "core/mission/MissionTarget.h"
+#include "core/state/GameRules.h"
 #include "resources/util/FileUtils.h"
 
 #include <filesystem>
@@ -19,7 +20,7 @@ namespace core::mission {
 /**
  * Binary .mis mission file I/O, byte-compatible with the original game.
  *
- * A .mis file is exactly 400 bytes: four back-to-back column-major
+ * A .mis file starts with 400 bytes: four back-to-back column-major
  * 100-byte blocks, in this order:
  *
  *   offset 0    100 bytes  event_ids
@@ -27,8 +28,9 @@ namespace core::mission {
  *   offset 200  100 bytes  months
  *   offset 300  100 bytes  years (biased, non-zero marks slot occupied)
  *
- * The same layout is used for reading missions and for saving the
- * player's own career as a mission, so round-trips are byte-identical.
+ * The original only reads the first 400 bytes, so in order for us to save extra
+ * information about the rules that were in effect when a mission was saved, we
+ * just add a trailer behind the first 400 bytes.
  */
 
 constexpr int MIS_SLOT_COUNT = 100;
@@ -39,8 +41,8 @@ constexpr int MIS_FILE_SIZE = 4 * MIS_SLOT_COUNT;
 // occupied, which holds since game years are all 1994 or later.
 constexpr int MIS_YEAR_BIAS = 1900;
 
-// Parse a .mis file. Returns nullopt if the file cannot be read or is not
-// exactly MIS_FILE_SIZE bytes. Invalid slots are skipped with a warning.
+// Parse a .mis file. Returns nullopt if the file cannot be read or is too
+// short.
 std::optional<MissionTarget>
 read_mission_file(const std::filesystem::path& path);
 
@@ -53,9 +55,11 @@ read_mission_file(const std::filesystem::path& path);
 void shift_mission_to_game_start(MissionTarget& target);
 
 // Write CV entries as a .mis file (at most MIS_SLOT_COUNT entries; excess
-// is dropped with a warning). Returns false on I/O failure.
+// is dropped with a warning), followed by the rules trailer. Returns false
+// on failure.
 bool write_mission_file(const std::filesystem::path& path,
-                        const std::vector<TargetMilestone>& cv_entries);
+                        const std::vector<TargetMilestone>& cv_entries,
+                        const GameRules& rules, bool rules_changed);
 
 struct MissionListEntry {
   std::string display_name;   // e.g. "m/0.mis" or "MyCareer.mis"
@@ -78,6 +82,7 @@ std::string sanitize_mission_name(const std::string& name);
 // the path written, or nullopt on failure.
 std::optional<std::filesystem::path>
 save_career_mission(const std::string& name,
-                    const std::vector<TargetMilestone>& cv_entries);
+                    const std::vector<TargetMilestone>& cv_entries,
+                    const GameRules& rules, bool rules_changed);
 
 } // namespace core::mission

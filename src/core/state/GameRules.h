@@ -9,6 +9,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include "core/food/PizzaJudging.h"
 
@@ -70,13 +71,19 @@ struct GameRules {
   bool operator==(const GameRules&) const = default;
 };
 
-// How the original game plays, for a career that was played there.
-constexpr GameRules original_rules{
-    .fix_legacy_bugs = false,
-    .qol_improvements = true,
-    .mafia_shakedowns_target_all_restaurants = false,
-    .demand_fulfillment_popularity = false,
-    .win_condition = WinCondition::Paris,
-    .pizza_judging = PizzaJudging::Original,
-    .police = true,
-};
+// The rules by the names as shown in the options screen.
+namespace rule_labels {
+constexpr const char* fix_legacy_bugs = "Fix original bugs";
+constexpr const char* qol_improvements = "Quality of Life improvements";
+constexpr const char* mafia_shakedowns_target_all_restaurants =
+    "Random shakedown target";
+constexpr const char* demand_fulfillment_popularity =
+    "Fulfillment affects popularity";
+constexpr const char* win_condition = "Win condition";
+constexpr const char* pizza_judging = "Standard pizza judging";
+constexpr const char* police = "Police";
+} // namespace rule_labels
+
+// Returns one line for each rule whose value differs, with their value.
+std::vector<std::string> rule_differences(const GameRules& theirs,
+                                          const GameRules& ours);

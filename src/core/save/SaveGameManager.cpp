@@ -600,6 +600,10 @@ json SaveGameManager::state_to_json(const GameState& state,
                                {"m", milestone.date.month()},
                                {"d", milestone.date.day()}});
     }
+    if (target.rules) {
+      j["mission_rules"] = rules_to_json(*target.rules);
+      j["mission_rules_changed"] = target.rules_changed;
+    }
     j["mission_target"] = {{"source_name", target.source_name},
                            {"milestones", mission_array}};
   }
@@ -801,6 +805,10 @@ void SaveGameManager::json_to_state(const json& j, GameState& state,
           {GameDate{milestone["y"].get<int>(), milestone["m"].get<int>(),
                     milestone["d"].get<int>()},
            static_cast<core::events::MilestoneId>(milestone["id"].get<int>())});
+    }
+    if (j.contains("mission_rules")) {
+      target.rules = json_to_rules(j["mission_rules"], GameRules{});
+      target.rules_changed = j.value("mission_rules_changed", false);
     }
     state.mission_target(std::move(target));
   }
