@@ -32,10 +32,11 @@ void StockMain::render(const RenderContext& ctx) {
                                    context_.vga->get("gfx/back3"));
   ctx.surface->palette({59});
 
-  context_.font->render_text_onto(*ctx.surface, "stocks", ViewPoint{168, 126},
-                                  FontFace::ASTANDAR, 8);
-  context_.font->render_text_onto(*ctx.surface, "depot", ViewPoint{170, 150},
-                                  FontFace::ASTANDAR, 8);
+  TextStyle title{.color = 8, .align = TextAnchor::Middle};
+  context_.font->render_text_onto(*ctx.surface, "stocks", ViewPoint{206, 126},
+                                  FontFace::ASTANDAR, title);
+  context_.font->render_text_onto(*ctx.surface, "depot", ViewPoint{206, 150},
+                                  FontFace::ASTANDAR, title);
 
   // Calculate depot info
   auto* restaurant = state_.active_restaurant();
@@ -50,25 +51,27 @@ void StockMain::render(const RenderContext& ctx) {
                                       (stock.quantity / 1000)};
   }
 
-  // Show kilograms and value
-  std::string kg_text = compat::format("{} kg", total_kg);
-  std::string value_text = compat::format("{:w}", total_value);
+  ctx.surface->fill_rect(ViewRect{130, 210, 88, 40}, 254);
 
-  TextStyle style{.color = 12, .character_spacing = 1};
+  TextStyle style{.color = 12};
   context_.font->render_text_onto(*ctx.surface, "kilogram", ViewPoint{130, 210},
                                   FontFace::PIZ_NUMB, style);
-  context_.font->render_text_onto(*ctx.surface, "value", ViewPoint{130, 240},
+  context_.font->render_text_onto(*ctx.surface, "value", ViewPoint{130, 232},
                                   FontFace::PIZ_NUMB, style);
 
-  const int right_edge = ctx.surface->width();
-  style.color = 8;
+  style.color = 240;
+  context_.font->render_text_onto(*ctx.surface, "kg", ViewPoint{264, 210},
+                                  FontFace::PIZ_NUMB, style);
+
+  const int value_right =
+      252 + context_.font->size_text(".-", FontFace::PIZ_NUMB, style).width;
   style.align = TextAnchor::End;
-  context_.font->render_text_onto(*ctx.surface, kg_text,
-                                  ViewPoint{right_edge - 106, 210},
-                                  FontFace::PIZ_NUMB, style);
-  context_.font->render_text_onto(*ctx.surface, value_text,
-                                  ViewPoint{right_edge - 110, 240},
-                                  FontFace::PIZ_NUMB, style);
+  context_.font->render_text_onto(*ctx.surface, compat::format("{}", total_kg),
+                                  ViewPoint{252, 210}, FontFace::PIZ_NUMB,
+                                  style);
+  context_.font->render_text_onto(
+      *ctx.surface, compat::format("{:w}", total_value),
+      ViewPoint{value_right, 232}, FontFace::PIZ_NUMB, style);
 }
 
 void StockMain::navigate_to_restaurant(core::RestaurantId new_id) {
