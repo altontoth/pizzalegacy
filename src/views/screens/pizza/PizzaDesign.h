@@ -6,11 +6,15 @@
 
 #pragma once
 
+#include <memory>
+#include <optional>
+
 #include "core/GameTypes.h"
 #include "core/events/MilestoneId.h"
 #include "core/food/BakeSession.h"
 #include "core/food/Pizza.h"
 #include "core/food/Recipe.h"
+#include "core/food/StandardPizza.h"
 #include "core/food/Topping.h"
 #include "core/state/CompetitionSession.h"
 #include "core/state/UIState.h"
@@ -31,6 +35,8 @@
  /   PizzaDesignBake.cpp        - bake workflow and post-judging
  /   PizzaDesignCompetition.cpp - competition flow, reveal and results
  */
+
+struct RecipeListRow;
 
 struct DesignResult {
   enum class Outcome { Saved, Cancelled };
@@ -72,12 +78,17 @@ private:
   void cancel_bake();
   core::food::Pizza* current_pizza();
   const core::food::Pizza* current_pizza() const;
-  void load_user_recipe(int number);
-  void load_canonical_recipe(int number);
+  void import_recipe();
+  void export_recipe();
+  void keep_state_for_return();
+  void rename_recipe(core::RecipeId id);
+  void open_recipe_menu(const RecipeListRow& row, ViewPoint at);
+  void load_standard_recipe(int number);
   void load_recipe_for_debug(const std::string& filename);
   void load_user_recipe_for_debug(int number);
-  void load_canonical_for_debug(int number);
+  void load_standard_for_debug(int number);
   void change_active_key(RecipeKey change_active_key);
+  void show_reference_pizza(core::food::StandardPizza cp);
   void add_pizza_main_panel_item();
   void update_status_ingredient();
   void handle_post_judging();
@@ -111,8 +122,11 @@ private:
   uint64_t chop_start_ms_{0};
   uint64_t chop_last_phase_{0};
   std::optional<RecipeKey> active_key_{new_row_tag};
+  std::unique_ptr<core::food::Pizza> reference_pizza_;
+  bool reference_view_{false};
   int page_{0};
   static constexpr int recipes_per_page_ = 14;
+  static constexpr int max_recipe_name_length = 18;
   size_t recipe_count_{0};
   std::optional<core::food::BakeSession> bake_;
   std::optional<CompetitionSession> competition_;

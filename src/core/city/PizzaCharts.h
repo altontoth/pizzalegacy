@@ -43,7 +43,7 @@ public:
 
   void build(GameState& game_state);
 
-  // The canonical AI pizza names, MARKT.E lines 51 to 149.
+  // The AI pizza names, MARKT.E lines 51 to 149.
   static const std::vector<std::string>& ai_pizza_names();
 
   // Resolves a reference against the owner it belongs to.

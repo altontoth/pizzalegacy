@@ -123,12 +123,11 @@ json recipe_to_json(const core::food::Recipe& recipe) {
   j["origin"] = static_cast<int>(recipe.origin());
   j["display_name"] = recipe.display_name();
 
-  // Save canonical_id if present
-  if (recipe.canonical_id().has_value()) {
-    j["canonical_id"] = static_cast<int>(*recipe.canonical_id());
+  if (recipe.reference_id().has_value()) {
+    j["reference_id"] = static_cast<int>(*recipe.reference_id());
   }
   else {
-    j["canonical_id"] = nullptr;
+    j["reference_id"] = nullptr;
   }
 
   // Save the pizza
@@ -149,11 +148,12 @@ json_to_recipe(const json& j,
   Pizza pizza = json_to_pizza(j["pizza"], taste_profiles);
 
   auto recipe = [&] {
-    if (!j["canonical_id"].is_null()) {
-      auto canonical_id =
-          static_cast<CanonicalPizza>(j["canonical_id"].get<int>());
-      return Recipe::canonical(id, canonical_id, std::move(display_name),
-                               std::move(pizza));
+    const json& reference =
+        j.contains("reference_id") ? j["reference_id"] : j["canonical_id"];
+    if (!reference.is_null()) {
+      auto reference_id = static_cast<StandardPizza>(reference.get<int>());
+      return Recipe::standard(id, reference_id, std::move(display_name),
+                              std::move(pizza));
     }
     return Recipe::user(id, std::move(display_name), std::move(pizza));
   }();

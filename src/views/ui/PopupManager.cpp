@@ -16,6 +16,8 @@ PopupManager::PopupManager(GameContext& gc)
 
 void PopupManager::origin(ViewPoint p) { pending_origin_ = p; }
 
+void PopupManager::anchor(ViewPoint p) { pending_anchor_ = p; }
+
 void PopupManager::tick() {
   bool did_change = false;
 

@@ -17,10 +17,16 @@ constexpr int SAVE_BOX_W = 224;
 constexpr int SAVE_BOX_H = 216;
 constexpr int MAX_VISIBLE_FILES = 11;
 constexpr int LINE_HEIGHT = 19;
+constexpr int NAME_X = 6;
 constexpr int DATE_COLUMN_X = 210;
+constexpr int NAME_DATE_GAP = 6;
 constexpr uint8_t ACTIVE_ROW = 13;
 constexpr uint8_t INACTIVE_ROW = 14;
+constexpr uint8_t MARKED_ROW = 7;
+constexpr uint8_t MARKED_ACTIVE_ROW = 39;
 constexpr uint8_t FOCUS_COLOR = 29;
+constexpr uint8_t TEXT_COLOR = 1;
+constexpr uint8_t DISABLED_TEXT_COLOR = 12;
 
 void SaveFileListBox::draw(Surface& screen, ViewPoint p, bool is_selected) {
   auto block = Surface(SAVE_BOX_W, SAVE_BOX_H, PaletteHandle{38}, 15);
@@ -40,15 +46,21 @@ void SaveFileListBox::draw(Surface& screen, ViewPoint p, bool is_selected) {
       break;
     }
 
-    if (file_index == cursor_.active) {
+    const bool marked =
+        is_marked_ && is_marked_(save_files_[file_index].filename);
+    if (marked || file_index == cursor_.active) {
       ViewRect highlight_rect{0, y, SAVE_BOX_W, LINE_HEIGHT};
-      block.fill_rect(highlight_rect, is_selected ? ACTIVE_ROW : INACTIVE_ROW);
+      uint8_t color = is_selected ? ACTIVE_ROW : INACTIVE_ROW;
+      if (marked) {
+        color = file_index == cursor_.active ? MARKED_ACTIVE_ROW : MARKED_ROW;
+      }
+      block.fill_rect(highlight_rect, color);
     }
 
-    // Remove .plsave extension for display
     std::string display_name = save_files_[file_index].filename;
-    if (display_name.ends_with(".plsave")) {
-      display_name = display_name.substr(0, display_name.size() - 7);
+    if (display_name.ends_with(extension_)) {
+      display_name =
+          display_name.substr(0, display_name.size() - extension_.size());
     }
 
     auto delta = save_files_[file_index].last_write_time -
@@ -62,11 +74,18 @@ void SaveFileListBox::draw(Surface& screen, ViewPoint p, bool is_selected) {
         compat::format("{} {} {:02d}:{:02d}", tm.tm_mday,
                        short_month_names[tm.tm_mon], tm.tm_hour, tm.tm_min);
 
-    context_.font->render_text_onto(block, display_name, ViewPoint{6, y},
-                                    FontFace::PIZ_NUMB, 1);
-    context_.font->render_text_onto(block, display_date,
-                                    ViewPoint{DATE_COLUMN_X, y + 4},
-                                    FontFace::MINI, 1, TextAnchor::End);
+    const uint8_t text_color =
+        disabled(file_index) ? DISABLED_TEXT_COLOR : TEXT_COLOR;
+    const int date_width =
+        context_.font->size_text(display_date, FontFace::MINI).width;
+    const int name_width = DATE_COLUMN_X - date_width - NAME_X - NAME_DATE_GAP;
+    context_.font->render_text_onto(
+        block,
+        context_.font->truncate_to_width(display_name, FontFace::PIZ_NUMB, name_width),
+        ViewPoint{NAME_X, y}, FontFace::PIZ_NUMB, text_color);
+    context_.font->render_text_onto(
+        block, display_date, ViewPoint{DATE_COLUMN_X, y + 4}, FontFace::MINI,
+        text_color, TextAnchor::End);
     y += LINE_HEIGHT;
   }
 
@@ -89,9 +108,14 @@ ScrollBar::Extent SaveFileListBox::scroll_extent() const {
 
 Size SaveFileListBox::measure() const { return Size{SAVE_BOX_W, SAVE_BOX_H}; }
 
+bool SaveFileListBox::disabled(int index) const {
+  return is_disabled_ && is_disabled_(save_files_[index].filename);
+}
+
 void SaveFileListBox::handle_action() {
   if (cursor_.active >= 0 &&
-      cursor_.active < static_cast<int>(save_files_.size())) {
+      cursor_.active < static_cast<int>(save_files_.size()) &&
+      !disabled(cursor_.active)) {
     on_file_clicked_(save_files_[cursor_.active].filename);
   }
 }
@@ -161,7 +185,7 @@ bool SaveFileListBox::on_interaction(views::ui::InteractionEvent ie) {
   if (ie.type == views::ui::InteractionEvent::Type::Click &&
       ie.button == views::ui::MouseButton::Left) {
     const int index = file_at(ie.local.y);
-    if (index >= 0) {
+    if (index >= 0 && !disabled(index)) {
       cursor_.active = index;
       on_file_clicked_(save_files_[index].filename);
       return true;
@@ -171,7 +195,7 @@ bool SaveFileListBox::on_interaction(views::ui::InteractionEvent ie) {
   if (ie.type == views::ui::InteractionEvent::Type::DoubleClick &&
       ie.button == views::ui::MouseButton::Left) {
     const int index = file_at(ie.local.y);
-    if (on_file_double_clicked_ && index >= 0) {
+    if (on_file_double_clicked_ && index >= 0 && !disabled(index)) {
       cursor_.active = index;
       on_file_double_clicked_(save_files_[index].filename);
       return true;

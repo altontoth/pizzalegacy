@@ -19,6 +19,7 @@
 #include "engine/ui/InteractionEvent.h"
 #include "resources/FontManager.h"
 #include "resources/FontTypes.h"
+#include "resources/util/FileUtils.h"
 #include "views/ui/PopupManager.h"
 #include "views/ui/popups/AlertPopup.h"
 #include "views/ui/popups/ConfirmPopup.h"
@@ -104,9 +105,9 @@ void GameOver::offer_save_career() {
 }
 
 void GameOver::save_career_as_mission(const std::string& raw_name) {
-  std::string name = core::mission::sanitize_mission_name(raw_name);
+  std::string name = fileutils::sanitize_filename(raw_name);
   if (name.empty()) {
-    name = core::mission::sanitize_mission_name(player_.name());
+    name = fileutils::sanitize_filename(player_.name());
   }
   if (name.empty()) {
     name = "career";

@@ -167,9 +167,12 @@ set(GAME_PLEGACY_SOURCES
     src/views/screens/menus/MenuNewGame.cpp
     src/views/screens/menus/MenuOptions.cpp
     src/views/screens/menus/MenuQuickstart.cpp
+    src/views/screens/menus/MenuRecipeExport.cpp
+    src/views/screens/menus/MenuRecipeImport.cpp
     src/views/screens/menus/MenuSave.cpp
     src/views/screens/menus/MenuSaveAsGame.cpp
     src/views/screens/menus/MenuSaveAsMission.cpp
+    src/views/screens/menus/RecipePreview.cpp
     src/views/screens/pizza/PizzaDesign.cpp
     src/views/screens/pizza/PizzaDesignBake.cpp
     src/views/screens/pizza/PizzaDesignCanvas.cpp
@@ -219,6 +222,7 @@ set(GAME_PLEGACY_SOURCES
     src/views/ui/popups/BasePopup.cpp
     src/views/ui/popups/ChequePopup.cpp
     src/views/ui/popups/ConfirmPopup.cpp
+    src/views/ui/popups/ContextMenuPopup.cpp
     src/views/ui/popups/GuestTalkPopup.cpp
     src/views/ui/popups/InvoicePopup.cpp
     src/views/ui/popups/JukeboxPopup.cpp
@@ -238,6 +242,7 @@ set(GAME_PLEGACY_SOURCES
     src/views/ui/widgets/CompanySelectionBox.cpp
     src/views/ui/widgets/IntSliderMenuItem.cpp
     src/views/ui/widgets/MissionTypeBox.cpp
+    src/views/ui/widgets/RecipeFileInfoBox.cpp
     src/views/ui/widgets/SaveFileInfoBox.cpp
     src/views/ui/widgets/SaveFileInputBox.cpp
     src/views/ui/widgets/SaveFileListBox.cpp
@@ -402,7 +407,6 @@ set(PLEGACY_HEADERS
     src/core/finance/Scale.h
     src/core/finance/TurnInvoices.h
     src/core/food/BakeSession.h
-    src/core/food/CanonicalPizza.h
     src/core/food/CustomerTasteProfiles.h
     src/core/food/Ingredient.h
     src/core/food/IngredientArray.h
@@ -414,6 +418,7 @@ set(PLEGACY_HEADERS
     src/core/food/PlayerRecipes.h
     src/core/food/Recipe.h
     src/core/food/RecipeCodec.h
+    src/core/food/StandardPizza.h
     src/core/food/Topping.h
     src/core/init/NewGameConfig.h
     src/core/inventory/Inventory.h
@@ -668,10 +673,13 @@ set(PLEGACY_HEADERS
     src/views/screens/menus/MenuNewGame.h
     src/views/screens/menus/MenuOptions.h
     src/views/screens/menus/MenuQuickstart.h
+    src/views/screens/menus/MenuRecipeExport.h
+    src/views/screens/menus/MenuRecipeImport.h
     src/views/screens/menus/MenuSave.h
     src/views/screens/menus/MenuSaveAsGame.h
     src/views/screens/menus/MenuSaveAsMission.h
     src/views/screens/menus/MenuTheme.h
+    src/views/screens/menus/RecipePreview.h
     src/views/screens/pizza/PizzaDesign.h
     src/views/screens/pizza/PizzaDesignHelpers.h
     src/views/screens/purchasing/CategoryOverviewScreen.h
@@ -723,6 +731,7 @@ set(PLEGACY_HEADERS
     src/views/ui/popups/BasePopup.h
     src/views/ui/popups/ChequePopup.h
     src/views/ui/popups/ConfirmPopup.h
+    src/views/ui/popups/ContextMenuPopup.h
     src/views/ui/popups/GuestTalkPopup.h
     src/views/ui/popups/InvoicePopup.h
     src/views/ui/popups/JukeboxPopup.h
@@ -748,6 +757,7 @@ set(PLEGACY_HEADERS
     src/views/ui/widgets/MenuItem.h
     src/views/ui/widgets/MissionTypeBox.h
     src/views/ui/widgets/PositionMarkerMenuItem.h
+    src/views/ui/widgets/RecipeFileInfoBox.h
     src/views/ui/widgets/SaveFileInfoBox.h
     src/views/ui/widgets/SaveFileInputBox.h
     src/views/ui/widgets/SaveFileListBox.h

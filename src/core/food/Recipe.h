@@ -11,8 +11,8 @@
 #include <numeric>
 #include <string>
 #include "core/common/Ids.h"
-#include "core/food/CanonicalPizza.h"
 #include "core/food/Pizza.h"
+#include "core/food/StandardPizza.h"
 
 #include <optional>
 #include <string_view>
@@ -31,11 +31,11 @@ public:
                   std::move(designed));
   }
 
-  // For canonical recipes
-  static Recipe canonical(RecipeId id, CanonicalPizza cid,
-                          std::string display_name, Pizza designed) {
+  // For standard recipes
+  static Recipe standard(RecipeId id, StandardPizza reference,
+                         std::string display_name, Pizza designed) {
     assert(designed.is_finalized());
-    return Recipe(id, Origin::Canonical, cid, std::move(display_name),
+    return Recipe(id, Origin::Standard, reference, std::move(display_name),
                   std::move(designed));
   }
 
@@ -47,8 +47,8 @@ public:
 
   RecipeId id() const noexcept { return id_; }
   Origin origin() const noexcept { return origin_; }
-  std::optional<CanonicalPizza> canonical_id() const noexcept {
-    return canonical_id_;
+  std::optional<StandardPizza> reference_id() const noexcept {
+    return reference_id_;
   }
 
   std::string_view display_name() const noexcept { return display_name_; }
@@ -88,16 +88,16 @@ public:
   }
 
 private:
-  Recipe(RecipeId id, Origin origin, std::optional<CanonicalPizza> canonical_id,
+  Recipe(RecipeId id, Origin origin, std::optional<StandardPizza> reference_id,
          std::string display_name, Pizza pizza)
-      : id_(id), origin_(origin), canonical_id_(canonical_id),
+      : id_(id), origin_(origin), reference_id_(reference_id),
         display_name_(std::move(display_name)), pizza_(std::move(pizza)) {
     pizza_.name(display_name_);
   }
 
   RecipeId id_{0};
   Origin origin_{Origin::User};
-  std::optional<CanonicalPizza> canonical_id_;
+  std::optional<StandardPizza> reference_id_;
   std::string display_name_;
   Pizza pizza_;
   DailySales daily_sales_{};

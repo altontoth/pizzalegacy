@@ -7,6 +7,7 @@
 #include "resources/util/FileUtils.h"
 
 #include <algorithm>
+#include <cctype>
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
@@ -194,7 +195,13 @@ std::vector<FileEntry> list_files(const std::string& directory,
   else {
     search_path = fs::path(game_data_path_) / directory;
   }
+  return list_files_in(search_path, extension, sort);
+}
 
+std::vector<FileEntry> list_files_in(const std::filesystem::path& search_path,
+                                     const std::string& extension,
+                                     FileSortOrder sort) {
+  namespace fs = std::filesystem;
   if (!fs::exists(search_path) || !fs::is_directory(search_path)) {
     return {};
   }
@@ -226,6 +233,23 @@ std::vector<FileEntry> list_files(const std::string& directory,
         {entry.path().filename().string(), entry.last_write_time()});
   }
   return files;
+}
+
+bool is_filename_char(char c) {
+  return std::isalnum(static_cast<unsigned char>(c)) || c == ' ' || c == '-' ||
+         c == '_';
+}
+
+std::string sanitize_filename(const std::string& name) {
+  std::string out;
+  for (char c : name) {
+    out.push_back(is_filename_char(c) ? c : '_');
+  }
+  auto first = out.find_first_not_of(' ');
+  if (first == std::string::npos) {
+    return {};
+  }
+  return out.substr(first, out.find_last_not_of(' ') - first + 1);
 }
 
 void game_data_path(const std::string& file_path) {

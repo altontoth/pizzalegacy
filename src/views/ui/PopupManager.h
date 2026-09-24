@@ -16,6 +16,7 @@
 #include "engine/Geometry.h"
 #include "engine/RenderContext.h"
 #include "engine/Renderable.h"
+#include "engine/Size.h"
 #include "engine/geom/Spaces.h"
 #include "engine/ui/InteractionLayers.h"
 #include "views/base/OverlayBehavior.h"
@@ -47,6 +48,9 @@ public:
   }
 
   void origin(ViewPoint p);
+  // Put the next popup's top-left corner at p, moved left or up if it would
+  // run off the screen.
+  void anchor(ViewPoint p);
   void tick() override;
   void render(const RenderContext& ctx) override;
   bool is_dirty() const override;
@@ -63,8 +67,21 @@ private:
   template <class Popup, class... Args> void do_create(Args&&... args) {
     active_popup_ =
         std::make_unique<Popup>(context_, std::forward<Args>(args)...);
-    active_origin_ = pending_origin_.value_or(center_origin(*active_popup_));
+    if (pending_anchor_) {
+      active_origin_ =
+          anchored_origin(*pending_anchor_, active_popup_->popup_size());
+    }
+    else {
+      active_origin_ = pending_origin_.value_or(center_origin(*active_popup_));
+    }
     pending_origin_.reset();
+    pending_anchor_.reset();
+  }
+
+  static ViewPoint anchored_origin(ViewPoint anchor, Size sz) {
+    const ViewRect screen{0, 0, DisplayConstants::SCREEN_WIDTH,
+                          DisplayConstants::SCREEN_HEIGHT};
+    return move_inside(ViewRect{anchor, sz}, screen).point();
   }
 
   static ViewPoint center_origin(const BasePopup& popup) {
@@ -79,6 +96,7 @@ private:
 
   const GameContext& context_;
   std::optional<ViewPoint> pending_origin_;
+  std::optional<ViewPoint> pending_anchor_;
   std::unique_ptr<BasePopup> active_popup_;
   ViewPoint active_origin_;
   std::queue<std::function<void()>> pending_creates_;

@@ -44,10 +44,10 @@ public:
   bool on_action(const input::ActionEvent& ev) override;
 
   void end_input();
+  void start_new_name_input(std::string initial = {});
 
 private:
   void mark_dirty();
-  void start_new_name_input();
   int entry_at(int local_y) const;
 
   std::vector<fileutils::FileEntry>& save_files_;

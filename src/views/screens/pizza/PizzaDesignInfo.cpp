@@ -71,6 +71,11 @@ void PizzaDesign::draw_ingredients(const RenderContext& ctx) const {
   context_.font->render_text_onto(
       *ctx.surface, std::to_string(summary_map.size()) + " ingredients used",
       ViewPoint{130, 306}, FontFace::CSTANDAR, text_color);
+  if (reference_view_) {
+    context_.font->render_text_onto(*ctx.surface, "COOK BOOK",
+                                    ViewPoint{130, 292}, FontFace::CSTANDAR,
+                                    text_color);
+  }
 }
 
 void PizzaDesign::draw_pizza_info(const RenderContext& ctx) const {

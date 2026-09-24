@@ -147,6 +147,10 @@ const auto option_defs = std::to_array({
         "show the day's turnover report when the turn ends"),
     rule_bool_option<&GameRules::fix_legacy_bugs>("fix_legacy_bugs"),
     bool_option<&GameOptions::qol_improvements>("qol_improvements"),
+    bool_option<&GameOptions::cook_book>(
+        "cook_book", {},
+        "allow a standard pizza's cook book entry to be shown in the recipe "
+        "list"),
     bool_option<&GameOptions::show_player_color_in_dropdown>(
         "show_player_color_in_dropdown", {},
         "mark players in the city map dropdowns with their player color"),

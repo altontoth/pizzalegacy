@@ -74,7 +74,7 @@ bool PizzaDesign::tick_competition() {
     auto& c = *competition_;
     if (!c.reveal_done) {
       int topping_count =
-          static_cast<int>(c.canonical_pizza->toppings().size());
+          static_cast<int>(c.reference_pizza->toppings().size());
       if (c.reveal_idx < topping_count) {
         int current_max = reveal_speed_boost_ ? 1 : c.delay_ticks;
         reveal_delay_remaining_ticks_ =
@@ -137,13 +137,13 @@ void PizzaDesign::update_competition_status() {
   if (!c.reveal_done) {
     int idx = c.reveal_idx - 1;
     if (idx >= 0 &&
-        idx < static_cast<int>(c.canonical_pizza->toppings().size())) {
+        idx < static_cast<int>(c.reference_pizza->toppings().size())) {
       ingredient_name =
-          c.canonical_pizza->toppings()[idx]->ingredient()->name();
+          c.reference_pizza->toppings()[idx]->ingredient()->name();
     }
   }
   status_.show_competition(CompetitionCtx{
-      .pizza_name = c.canonical_pizza->name(),
+      .pizza_name = c.reference_pizza->name(),
       .speed_level = c.speed_level,
       .current_ingredient = ingredient_name,
   });
@@ -181,7 +181,7 @@ void PizzaDesign::on_competition_design_finished() {
   }
   state_.advance_time_blocks(5);
   bake_->working.finalize_against(
-      *competition_->canonical_pizza, PizzaJudging::Original,
+      *competition_->reference_pizza, PizzaJudging::Original,
       state_.customer_taste_profiles(), "competition pizza");
   auto imitation_scores = bake_->working.scores();
 
@@ -238,7 +238,7 @@ void PizzaDesign::draw_competition_reveal(const RenderContext& ctx) const {
   if (!competition_) {
     return;
   }
-  const auto& toppings = competition_->canonical_pizza->toppings();
+  const auto& toppings = competition_->reference_pizza->toppings();
   int to_draw =
       std::min(competition_->reveal_idx, static_cast<int>(toppings.size()));
   for (int i = 0; i < to_draw; ++i) {

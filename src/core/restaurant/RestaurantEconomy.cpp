@@ -20,8 +20,8 @@
 #include "engine/Random.h"
 
 namespace {
-// Human restaurants with fewer canonical pizzas on the menu lose demand.
-constexpr int min_canonical_pizzas = 3;
+// Human restaurants with fewer standard pizzas on the menu lose demand.
+constexpr int min_standard_pizzas = 3;
 
 int calculate_competition_penalty(const Restaurant& competitor,
                                   int competitor_base_demand, int distance) {
@@ -67,9 +67,9 @@ void RestaurantEconomy::calculate_competitive_strength(
   bool apply_penalty = false;
   if (recipes) {
     const auto& menu = restaurant.menu();
-    apply_penalty = static_cast<int>(menu.count_canonical(*recipes)) <
-                        min_canonical_pizzas ||
-                    menu.average_canonical_imitation(*recipes) < 30;
+    apply_penalty =
+        static_cast<int>(menu.count_standard(*recipes)) < min_standard_pizzas ||
+        menu.average_imitation(*recipes) < 30;
   }
 
   for (ConsumerType demographic : ALL_CONSUMER_TYPES) {
@@ -272,14 +272,14 @@ void RestaurantEconomy::calculate_demand_with_competition(
   const Player* owner_player = owner ? game_state.player(*owner) : nullptr;
 
   // Copy protection: only human restaurants are held to the cook book.
-  bool too_few_canonical = false;
+  bool too_few_standard = false;
   int imitation = 100;
   if (owner_player && owner_player->is_human_controlled()) {
     const auto& recipes = owner_player->recipes();
-    too_few_canonical =
-        static_cast<int>(restaurant.menu().count_canonical(recipes)) <
-        min_canonical_pizzas;
-    imitation = restaurant.menu().average_canonical_imitation(recipes);
+    too_few_standard =
+        static_cast<int>(restaurant.menu().count_standard(recipes)) <
+        min_standard_pizzas;
+    imitation = restaurant.menu().average_imitation(recipes);
   }
 
   // Apply competition to calculate actual customer counts
@@ -298,7 +298,7 @@ void RestaurantEconomy::calculate_demand_with_competition(
     else {
       // Competition affects us - scale down proportionally
       customer_count = (prop_demand * our_base_demand) / comp_score;
-      if (too_few_canonical) {
+      if (too_few_standard) {
         customer_count /= 3;
       }
     }

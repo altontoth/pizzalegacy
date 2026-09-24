@@ -9,8 +9,8 @@
 
 #include "core/events/MilestoneId.h"
 #include "core/factories/PizzaFactory.h"
-#include "core/food/CanonicalPizza.h"
 #include "core/food/PizzaJudging.h"
+#include "core/food/StandardPizza.h"
 #include "core/state/GameState.h"
 #include "engine/FormatCompat.h"
 #include "engine/Logger.h"
@@ -45,19 +45,19 @@ void PizzaDesign::on_bake_pressed() {
   const auto& row = *sel;
 
   BakeSession s{};
-  if (!row.recipe_id && !row.canonical) {
+  if (!row.recipe_id && !row.reference) {
     s.kind = BakeKind::NewUser;
     s.suggested_name = "";
   }
-  else if (!row.recipe_id && row.canonical) {
-    s.kind = BakeKind::InstantiateCanonical;
-    s.canonical_id = row.canonical;
+  else if (!row.recipe_id && row.reference) {
+    s.kind = BakeKind::InstantiateStandard;
+    s.reference_id = row.reference;
     s.suggested_name = row.name;
   }
   else {
     s.kind = BakeKind::RecreateExisting;
     s.existing_id = row.recipe_id;
-    s.canonical_id = row.canonical;
+    s.reference_id = row.reference;
     s.suggested_name = row.name;
     s.working = Pizza(s.suggested_name);
     auto sp = std::make_shared<BakeSession>(std::move(s));
@@ -98,20 +98,20 @@ void PizzaDesign::on_design_finished() {
     return;
   }
 
-  if (bake_->canonical_id) {
+  if (bake_->reference_id) {
     auto get_bob_size =
         make_ingredient_bob_size_fn<Bob, core::food::Topping>(zutaten_bob_);
-    auto canonical_pizza = PizzaFactory::create_pizza(
-        *bake_->canonical_id, get_bob_size, state_.customer_taste_profiles());
+    auto reference_pizza = PizzaFactory::create_pizza(
+        *bake_->reference_id, get_bob_size, state_.customer_taste_profiles());
 
-    if (canonical_pizza) {
-      bake_->working.finalize_against(*canonical_pizza,
+    if (reference_pizza) {
+      bake_->working.finalize_against(*reference_pizza,
                                       state_.rules().pizza_judging,
                                       state_.customer_taste_profiles());
     }
     else {
-      Logger::warn("Failed to load canonical pizza {}",
-                   core::food::to_string(*bake_->canonical_id));
+      Logger::warn("Failed to load reference pizza {}",
+                   core::food::to_string(*bake_->reference_id));
     }
   }
   else {
@@ -160,11 +160,9 @@ void PizzaDesign::finish_recreate_existing() {
   auto& recipes = competing_player()->recipes();
   auto rid = *bake_->existing_id;
 
-  // Check if this is a canonical or user recipe
-  if (bake_->canonical_id) {
-    recipes.create_from_canonical(*bake_->canonical_id,
-                                  std::move(bake_->working));
-    change_active_key(*bake_->canonical_id);
+  if (bake_->reference_id) {
+    recipes.create_standard(*bake_->reference_id, std::move(bake_->working));
+    change_active_key(*bake_->reference_id);
   }
   else {
     // Recreating a user recipe
@@ -183,9 +181,8 @@ void PizzaDesign::finish_recreate_existing() {
 void PizzaDesign::post_bake() {
   auto bake_ptr = std::make_shared<core::food::BakeSession>(std::move(*bake_));
   auto active_key = active_key_;
-  JudgingMode jmode = bake_ptr->canonical_id.has_value()
-                          ? JudgingMode::Canonical
-                          : JudgingMode::Own;
+  JudgingMode jmode = bake_ptr->reference_id.has_value() ? JudgingMode::Standard
+                                                         : JudgingMode::Own;
 
   // Carry the annual competition session through the judge screen so that the
   // PizzaDesign afterwards has access
@@ -290,29 +287,28 @@ void PizzaDesign::handle_post_judging() {
     change_mode(competition_ ? PizzaDesignMode::Recipes
                              : PizzaDesignMode::Info);
 
-    constexpr int max_len = 18;
     context_.popup->create<TextInputPopup>(
-        "name of recipe:", max_len,
+        "name of recipe:", max_recipe_name_length,
         [this](std::string input) { this->finish_new_user(std::move(input)); });
   }
   else {
     const bool poor_imitation =
-        bake_->canonical_id && bake_->working.imitation() < 10;
+        bake_->reference_id && bake_->working.imitation() < 10;
 
     // Commit recipe now that judging is done
-    if (bake_->kind == BakeKind::InstantiateCanonical) {
-      competing_player()->recipes().create_from_canonical(
-          *bake_->canonical_id, std::move(bake_->working));
-      change_active_key(*bake_->canonical_id);
+    if (bake_->kind == BakeKind::InstantiateStandard) {
+      competing_player()->recipes().create_standard(*bake_->reference_id,
+                                                    std::move(bake_->working));
+      change_active_key(*bake_->reference_id);
     }
     else if (bake_->kind == BakeKind::RecreateExisting) {
       finish_recreate_existing();
     }
 
     if (poor_imitation) {
-      int canonical_id = static_cast<int>(*bake_->canonical_id);
-      constexpr int cookbook_page_offset = 9;
-      int page = (canonical_id + cookbook_page_offset) / 2;
+      int reference_id = static_cast<int>(*bake_->reference_id);
+      constexpr int cook_book_page_offset = 9;
+      int page = (reference_id + cook_book_page_offset) / 2;
       bake_.reset();
       // Replace OwnPizzaJudging so dismissing the reminder returns to Recipes.
       state_.ui().replace_top<PizzaDesignState>(PizzaDesignState{

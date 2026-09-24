@@ -33,6 +33,16 @@ std::vector<std::string> load_text_lines(const std::string& path,
 std::vector<FileEntry>
 list_files(const std::string& directory, const std::string& extension,
            FileSortOrder sort = FileSortOrder::Alphabetical);
+// list_files for a full directory path, not resolved against the game data.
+std::vector<FileEntry>
+list_files_in(const std::filesystem::path& directory,
+              const std::string& extension,
+              FileSortOrder sort = FileSortOrder::Alphabetical);
+// Filename-safe version of a name someone typed; empty if nothing safe
+// remains.
+std::string sanitize_filename(const std::string& name);
+// The characters sanitize_filename keeps.
+bool is_filename_char(char c);
 bool fexists(const std::string& file_path);
 
 std::optional<std::filesystem::path>

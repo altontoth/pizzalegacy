@@ -67,7 +67,7 @@ void CompetitionCoordinator::run_monthly_competition_chain(
   }
 
   // The first accepting player also picks the speed.
-  const bool ask_speed = !session->canonical_pizza;
+  const bool ask_speed = !session->reference_pizza;
   gs_->monthly_entry_presenter_(
       pid, ask_speed,
       [this, pid, remaining = std::move(remaining),
@@ -78,7 +78,7 @@ void CompetitionCoordinator::run_monthly_competition_chain(
           return;
         }
 
-        if (!session->canonical_pizza) {
+        if (!session->reference_pizza) {
           int speed_level = entry->speed_level.value_or(3);
           int pizza_index = std::min(competition_count_, 40) +
                             engine::random::rand_max_n(10) + 20;
@@ -86,9 +86,9 @@ void CompetitionCoordinator::run_monthly_competition_chain(
           auto get_bob_size =
               make_ingredient_bob_size_fn<Bob, core::food::Topping>(
                   zutaten_bob);
-          auto canonical = PizzaFactory::create_competition_pizza(
+          auto reference = PizzaFactory::create_competition_pizza(
               pizza_index, get_bob_size, gs_->customer_taste_profiles());
-          if (!canonical) {
+          if (!reference) {
             Logger::warn("run_monthly_competition: failed to load pizza {}",
                          pizza_index);
             run_monthly_competition_chain(std::move(remaining),
@@ -98,8 +98,8 @@ void CompetitionCoordinator::run_monthly_competition_chain(
           session->pizza_index = pizza_index;
           session->speed_level = speed_level;
           session->delay_ticks = 100 - (speed_level * 15);
-          session->canonical_pizza =
-              std::make_shared<core::food::Pizza>(std::move(*canonical));
+          session->reference_pizza =
+              std::make_shared<core::food::Pizza>(std::move(*reference));
         }
 
         session->participants.push_back(CompetitionParticipant{
@@ -114,7 +114,7 @@ void CompetitionCoordinator::run_monthly_competition_chain(
 void CompetitionCoordinator::launch_monthly_competition(
     std::shared_ptr<CompetitionSession> session) {
   // Shouldn't happen
-  if (!session->canonical_pizza) {
+  if (!session->reference_pizza) {
     gs_->turn().advance_pipeline();
     return;
   }

@@ -73,10 +73,6 @@ std::vector<MissionListEntry> list_available_missions();
 // Player-saved missions only (the writable missions directory).
 std::vector<fileutils::FileEntry> list_player_mission_files();
 
-// Filename-safe version of a player-entered mission name; empty if
-// nothing safe remains.
-std::string sanitize_mission_name(const std::string& name);
-
 // Write CV entries as <name>.mis in the missions directory (created on
 // demand). The name is used as-is; sanitize player input first. Returns
 // the path written, or nullopt on failure.

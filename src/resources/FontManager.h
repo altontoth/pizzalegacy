@@ -6,6 +6,7 @@
 
 #pragma once
 #include <string>
+#include <string_view>
 #include <vector>
 #include "Font.h"
 #include "FontLoader.h"
@@ -75,6 +76,11 @@ public:
 
   int count_wrapped_lines(std::string_view text, FontFace face, int max_width,
                           const TextStyle& style = {});
+
+  // The text as it fits on one line of max_width, cut short with "..." when
+  // it is too wide.
+  std::string truncate_to_width(std::string_view text, FontFace face, int max_width,
+                       const TextStyle& style = {});
 
   static std::vector<FontFace> font_list();
   static FontFace string_to_fontface(std::string_view file);

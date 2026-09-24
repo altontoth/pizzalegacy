@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include <string>
+
 #include "core/city/City.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/state/GameState.h"
@@ -27,6 +29,7 @@ struct PizzaCtx {
   GameState* state{nullptr};
   core::food::Pizza* wip_pizza{nullptr};
   const core::food::Recipe* recipe{nullptr};
+  bool cook_book{false};
 };
 
 struct ToppingCtx {

@@ -14,8 +14,8 @@
 
 namespace core::food {
 
-enum class CanonicalPizza {
-  PizzaNeapolitana = 0,
+enum class StandardPizza {
+  PizzaNapoletana = 0,
   PizzaMargherita,
   QuattroStagioni,
   AndreaDoria,
@@ -32,24 +32,24 @@ enum class CanonicalPizza {
   COUNT,
 };
 
-constexpr int to_index(CanonicalPizza id) { return static_cast<int>(id); }
-constexpr int CANON_COUNT = static_cast<int>(CanonicalPizza::COUNT);
+constexpr int to_index(StandardPizza id) { return static_cast<int>(id); }
+constexpr int STANDARD_PIZZA_COUNT = static_cast<int>(StandardPizza::COUNT);
 
-// The canonical slot an index names, or nullopt if it falls outside the range.
-constexpr std::optional<CanonicalPizza> canonical_from_index(int index) {
-  if (index < 0 || index >= CANON_COUNT) {
+// The standard pizza at an index, or nullopt when the index is out of range.
+constexpr std::optional<StandardPizza> standard_from_index(int index) {
+  if (index < 0 || index >= STANDARD_PIZZA_COUNT) {
     return std::nullopt;
   }
-  return static_cast<CanonicalPizza>(index);
+  return static_cast<StandardPizza>(index);
 }
 
-inline std::string filename_for(CanonicalPizza id) {
+inline std::string filename_for(StandardPizza id) {
   return compat::format("r/r{}.pc", to_index(id));
 }
 
-inline constexpr std::array<std::string_view, CANON_COUNT>
-    canonical_pizza_names{{
-        "Pizza Neapolitana",
+inline constexpr std::array<std::string_view, STANDARD_PIZZA_COUNT>
+    standard_pizza_names{{
+        "Pizza Napoletana",
         "Pizza Margherita",
         "Quattro Stagioni",
         "Andrea Doria",
@@ -65,9 +65,9 @@ inline constexpr std::array<std::string_view, CANON_COUNT>
         "Vegetable Pizza",
     }};
 
-static_assert(canonical_pizza_names.size() == CANON_COUNT);
+static_assert(standard_pizza_names.size() == STANDARD_PIZZA_COUNT);
 
-constexpr std::string_view to_string(CanonicalPizza id) {
-  return canonical_pizza_names[to_index(id)];
+constexpr std::string_view to_string(StandardPizza id) {
+  return standard_pizza_names[to_index(id)];
 }
 }; // namespace core::food

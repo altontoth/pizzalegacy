@@ -102,9 +102,9 @@ public:
   // Popularity calculation fields
   void service_quality_factor(uint8_t factor);
   uint8_t service_quality_factor() const;
-  void minimum_desired_canonical_pizza_count(uint8_t count);
+  void minimum_desired_standard_pizza_count(uint8_t count);
   void minimum_desired_user_pizza_count(uint8_t tolerance);
-  uint8_t minimum_desired_canonical_pizza_count() const;
+  uint8_t minimum_desired_standard_pizza_count() const;
   uint8_t minimum_desired_user_pizza_count() const;
 
 private:
@@ -135,6 +135,6 @@ private:
 
   // Popularity calculation fields
   uint8_t service_quality_factor_{0};
-  uint8_t minimum_desired_canonical_pizza_count_{0};
+  uint8_t minimum_desired_standard_pizza_count_{0};
   uint8_t minimum_desired_user_pizza_count_{0};
 };

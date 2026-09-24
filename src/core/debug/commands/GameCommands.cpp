@@ -27,6 +27,7 @@
 #include "engine/audio/AudioManager.h"
 #include "engine/input/InputManager.h"
 #include "engine/ui/ICursorManager.h"
+#include "resources/util/FileUtils.h"
 
 #include <charconv>
 #include <cstdio>
@@ -264,6 +265,10 @@ static const OptionDef option_defs[] = {
     {.name = "pizza_judging",
      .member = &GameRules::pizza_judging,
      .description = "How a standard recipe is judged: original or relaxed"},
+    {.name = "cook_book",
+     .member = &GameOptions::cook_book,
+     .description = "Let the recipe list show a standard pizza's cook book "
+                    "entry"},
     {.name = "attack_scene_hz",
      .member = &GameOptions::attack_scene_hz,
      .description = "Attack scene updates per second, 70 or 35 in the original",
@@ -883,7 +888,7 @@ Example:
         if (name.ends_with(".mis")) {
           name = name.substr(0, name.size() - 4);
         }
-        name = core::mission::sanitize_mission_name(name);
+        name = fileutils::sanitize_filename(name);
         if (name.empty()) {
           return CommandResult::error("Mission name is empty");
         }

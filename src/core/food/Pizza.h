@@ -22,7 +22,7 @@
 
 namespace core::food {
 
-enum class Origin { Canonical, User };
+enum class Origin { Standard, User };
 
 struct Flavors {
   // These are percentages, e.g. 80 = 80%

@@ -47,7 +47,7 @@ struct DistrictDataRaw {
   uint8_t average_income_factor;
   uint8_t service_speed_sensitivity;
   uint8_t unused_1a;
-  uint8_t minimum_desired_canonical_pizza_count;
+  uint8_t minimum_desired_standard_pizza_count;
   uint8_t minimum_desired_user_pizza_count;
   uint8_t unknown_4c;
   uint8_t district_type;
@@ -333,8 +333,8 @@ void CityFactory::load_districts(std::ifstream& is, uint8_t district_count) {
     // Popularity calculation fields
     district->service_quality_factor(raw.service_speed_sensitivity);
     // Decode from x10 encoding: raw stores valuex10, we store actual value
-    district->minimum_desired_canonical_pizza_count(
-        raw.minimum_desired_canonical_pizza_count / 10);
+    district->minimum_desired_standard_pizza_count(
+        raw.minimum_desired_standard_pizza_count / 10);
     // Decode from <<4 encoding: raw stores value<<4, we store actual value
     district->minimum_desired_user_pizza_count(
         raw.minimum_desired_user_pizza_count >> 4);

@@ -890,7 +890,7 @@ static CommandDef make_restaurant_qs() {
 
 Creates a fully functional small restaurant with:
 - Layout 1 (small restaurant)
-- All canonical recipes loaded and added to menu at $8
+- All standard recipes loaded and added to menu at $8
 - One chef hired
 - One waiter hired
 - All ingredients stocked with 500kg at quality 100
@@ -957,7 +957,7 @@ Examples:
         // So a following command can reach it as '@'.
         ctx.state.active_restaurant(restaurant->id());
 
-        // Load canonical recipes for the player
+        // Load standard recipes for the player
         auto& recipes = player->recipes();
         int loaded = 0;
 
@@ -965,8 +965,8 @@ Examples:
         auto get_bob_size =
             make_ingredient_bob_size_fn<Bob, core::food::Topping>(zutaten_bob);
 
-        for (int i = 0; i < core::food::CANON_COUNT; ++i) {
-          const auto cid = static_cast<core::food::CanonicalPizza>(i);
+        for (int i = 0; i < core::food::STANDARD_PIZZA_COUNT; ++i) {
+          const auto cid = static_cast<core::food::StandardPizza>(i);
           auto pizza = PizzaFactory::create_pizza(
               cid, get_bob_size, ctx.state.customer_taste_profiles());
 
@@ -974,7 +974,7 @@ Examples:
             continue;
           }
 
-          auto rid = recipes.create_from_canonical(cid, std::move(*pizza));
+          auto rid = recipes.create_standard(cid, std::move(*pizza));
           loaded++;
 
           // Add to menu at $8
@@ -982,7 +982,7 @@ Examples:
         }
 
         result.add_message(compat::format(
-            "Loaded {} canonical recipes and added to menu at $8", loaded));
+            "Loaded {} standard recipes and added to menu at $8", loaded));
 
         // Hire a chef (using character ID 0)
         auto* chef_data = CharacterFactory::create_character(0);

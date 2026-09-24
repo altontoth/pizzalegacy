@@ -114,6 +114,16 @@ struct PizzaDesignState {
   std::optional<core::PlayerId> competing_player_id = std::nullopt;
   // Called when the screen is dismissed after a competition (optional).
   std::function<void()> on_done = nullptr;
+  int page = 0;
+};
+// Save one of the player's recipes as a file in the recipes directory.
+struct RecipeExportState {
+  core::PlayerId player;
+  core::RecipeId recipe;
+};
+// Add recipe files from the recipes directory to the player's list.
+struct RecipeImportState {
+  core::PlayerId player;
 };
 struct EuroMapState {
   MapMode mode;
@@ -280,15 +290,15 @@ using UIState = std::variant<
     ActorTerminalState, BankState, PoliceState, MafiaState, MayorState,
     RestaurantViewState, ViewerState, FloorListState, FurnitureListState,
     CategoryOverviewState, SupplierListState, PizzaDesignState,
-    RestaurantMenuState, GlobalStatsState, RestaurantStatsState,
-    WeeksTakingsState, AnimatedStatsState, IngredientCategoryViewState,
-    DepotIngredientCategoryViewState, StockMainState, ContractsViewState,
-    DepotMainState, DepotExportState, IngredientSupplierListState,
-    DepotIngredientSupplierListState, IngredientOrderState,
-    DepotIngredientOrderState, DepotWeaponInterfaceState, TerminalState,
-    SupplierContractState, PlayerTurnCardState, FullscreenStatusState,
-    WinSequenceState, MafiaMissionViewState, MarketResearchState,
-    StatsRestaurantsState, PlayerProfileState, GameOverState,
-    MaestroMessageState, OptionsMenuState,
+    RecipeExportState, RecipeImportState, RestaurantMenuState, GlobalStatsState,
+    RestaurantStatsState, WeeksTakingsState, AnimatedStatsState,
+    IngredientCategoryViewState, DepotIngredientCategoryViewState,
+    StockMainState, ContractsViewState, DepotMainState, DepotExportState,
+    IngredientSupplierListState, DepotIngredientSupplierListState,
+    IngredientOrderState, DepotIngredientOrderState, DepotWeaponInterfaceState,
+    TerminalState, SupplierContractState, PlayerTurnCardState,
+    FullscreenStatusState, WinSequenceState, MafiaMissionViewState,
+    MarketResearchState, StatsRestaurantsState, PlayerProfileState,
+    GameOverState, MaestroMessageState, OptionsMenuState,
     // nothing on screen:
     std::monostate>;

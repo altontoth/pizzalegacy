@@ -12,9 +12,11 @@
 #include <algorithm>
 
 TextInputPopup::TextInputPopup(const GameContext& context, std::string text,
-                               int max_characters, callback_t cb)
+                               int max_characters, callback_t cb,
+                               std::string initial)
     : BasePopup(context), prompt_text_(std::move(text)),
-      max_characters_(max_characters), callback_(std::move(cb)) {
+      input_text_(std::move(initial)), max_characters_(max_characters),
+      callback_(std::move(cb)) {
   text_ = context.input->start_text_input(*this);
 
   const int lines = std::max(

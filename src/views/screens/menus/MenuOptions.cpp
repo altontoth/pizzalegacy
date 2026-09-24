@@ -232,6 +232,9 @@ void MenuOptions::build_gameplay(GameState& state) {
                  "the turn.");
   toggle("Quality of Life improvements", options.qol_improvements)
       .help_text("Enable various modernizations of the UI and mouse behavior.");
+  toggle("In-game cook book", options.cook_book)
+      .help_text("On: a right click on a standard pizza offers to show its "
+                 "cook book entry. Off: the entry is not shown.");
   add_menu_item(
       std::make_unique<EnumMenuItem<AutosaveFrequency>>(
           context_, "Auto save", options.autosave_frequency,

@@ -64,6 +64,8 @@
 #include "views/screens/menus/MenuNewGame.h"
 #include "views/screens/menus/MenuOptions.h"
 #include "views/screens/menus/MenuQuickstart.h"
+#include "views/screens/menus/MenuRecipeExport.h"
+#include "views/screens/menus/MenuRecipeImport.h"
 #include "views/screens/menus/MenuSave.h"
 #include "views/screens/menus/MenuSaveAsGame.h"
 #include "views/screens/menus/MenuSaveAsMission.h"
@@ -491,6 +493,14 @@ ViewFactory::Result ViewFactory::create(GameContext& context, GameState& gs) {
           },
           [&](const PizzaDesignState& pms) {
             view = std::make_unique<PizzaDesign>(context, gs, pms);
+          },
+          [&](const RecipeExportState& res) {
+            ui_mode = UiMode::Menu;
+            view = std::make_unique<MenuRecipeExport>(context, gs, res);
+          },
+          [&](const RecipeImportState& ris) {
+            ui_mode = UiMode::Menu;
+            view = std::make_unique<MenuRecipeImport>(context, gs, ris);
           },
           [&](const PlayerTurnCardState& ptcs) {
             view = std::make_unique<PlayerTurnCard>(context, gs, ptcs);

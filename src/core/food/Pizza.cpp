@@ -125,7 +125,7 @@ void Pizza::finalize_against(const Pizza& reference, PizzaJudging judging,
   imitation_ = total_score;
   // For competitions this is not really true but the pizza is not saved anyway,
   // so we just leave it:
-  origin_ = Origin::Canonical;
+  origin_ = Origin::Standard;
 
   // Distribute the score across judges using integer division
   // Example: 93 / 5 = 18 remainder 3

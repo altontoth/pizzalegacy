@@ -5,10 +5,10 @@
  */
 
 #include "views/ui/widgets/SaveFileInputBox.h"
-#include <cctype>
 #include "engine/geom/Spaces.h"
 #include "engine/gfx/Draw.h"
 #include "resources/FontManager.h"
+#include "resources/util/FileUtils.h"
 #include "resources/util/TextEncoding.h"
 
 constexpr int SAVE_BOX_W = 224;
@@ -140,10 +140,10 @@ int SaveFileInputBox::entry_at(int local_y) const {
   return index;
 }
 
-void SaveFileInputBox::start_new_name_input() {
+void SaveFileInputBox::start_new_name_input(std::string initial) {
   keyboard_enabled_ = true;
   input_active_ = true;
-  new_filename_.clear();
+  new_filename_ = std::move(initial);
   mark_dirty();
 }
 
@@ -210,10 +210,9 @@ bool SaveFileInputBox::on_text(const input::TextEvent& ev) {
     return false;
   }
 
-  // Filter input: only allow letters and numbers
   std::string filtered_text;
   for (char c : ev.text) {
-    if (std::isalnum(static_cast<unsigned char>(c))) {
+    if (fileutils::is_filename_char(c)) {
       filtered_text.push_back(c);
     }
   }

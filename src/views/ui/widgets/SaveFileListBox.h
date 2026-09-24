@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <functional>
 #include <optional>
 #include <string>
 #include <vector>
@@ -23,10 +24,22 @@ public:
       GameContext& gc, std::vector<fileutils::FileEntry>& save_files,
       int* scroll_offset,
       std::function<void(const std::string&)> on_file_clicked,
-      std::function<void(const std::string&)> on_file_double_clicked = nullptr)
+      std::function<void(const std::string&)> on_file_double_clicked = nullptr,
+      std::string extension = ".plsave")
       : MenuItem(gc), save_files_(save_files), scroll_offset_(scroll_offset),
         on_file_clicked_(std::move(on_file_clicked)),
-        on_file_double_clicked_(std::move(on_file_double_clicked)) {}
+        on_file_double_clicked_(std::move(on_file_double_clicked)),
+        extension_(std::move(extension)) {}
+
+  // Rows is_marked accepts are highlighted.
+  void mark_rows(std::function<bool(const std::string&)> is_marked) {
+    is_marked_ = std::move(is_marked);
+  }
+
+  // Rows is_disabled accepts are greyed out and ignore clicks.
+  void disable_rows(std::function<bool(const std::string&)> is_disabled) {
+    is_disabled_ = std::move(is_disabled);
+  }
 
   void draw(Surface& screen, ViewPoint p, bool is_selected) override;
   void handle_action() override;
@@ -41,12 +54,16 @@ public:
 
 private:
   int file_at(int local_y) const;
+  bool disabled(int index) const;
   ScrollBar::Extent scroll_extent() const;
 
   std::vector<fileutils::FileEntry>& save_files_;
   int* scroll_offset_;
   std::function<void(const std::string&)> on_file_clicked_;
   std::function<void(const std::string&)> on_file_double_clicked_;
+  std::string extension_;
+  std::function<bool(const std::string&)> is_marked_;
+  std::function<bool(const std::string&)> is_disabled_;
   ListCursor cursor_;
   ScrollBar scroll_bar_;
 };

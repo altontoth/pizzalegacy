@@ -5,7 +5,10 @@
  */
 
 #include "FontManager.h"
+#include <string>
+#include <string_view>
 #include "engine/geom/Spaces.h"
+#include "resources/util/TextEncoding.h"
 
 const std::unordered_map<std::string, FontFace> FontManager::font_map_ = {
     {"CSTANDAR", FontFace::CSTANDAR}, {"ASTANDAR", FontFace::ASTANDAR},
@@ -69,6 +72,23 @@ RenderedTextMetrics FontManager::size_text(std::string_view text, FontFace face,
 int FontManager::count_wrapped_lines(std::string_view text, FontFace face,
                                      int max_width, const TextStyle& style) {
   return get(face).count_wrapped_lines(text, max_width, style);
+}
+
+std::string FontManager::truncate_to_width(std::string_view text, FontFace face,
+                                  int max_width, const TextStyle& style) {
+  if (size_text(text, face, style).width <= max_width) {
+    return std::string(text);
+  }
+  constexpr std::string_view ellipsis = "...";
+  std::string fitted(text);
+  while (!fitted.empty()) {
+    text::pop_back_utf8(fitted);
+    const std::string candidate = fitted + std::string(ellipsis);
+    if (size_text(candidate, face, style).width <= max_width) {
+      return candidate;
+    }
+  }
+  return std::string(ellipsis);
 }
 
 std::vector<FontFace> FontManager::font_list() {

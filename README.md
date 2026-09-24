@@ -45,8 +45,9 @@ Settings, key bindings, saved games, and screenshots are stored per user:
 
 This directory contains subdirectories for `saves/` (saved games),
 `screenshots/` (in-game screenshots), and `recipes/` (pizza recipe `.pc`
-files). In the pizza design screen, `F1` imports a recipe from `recipes/` and
-`F2` exports the current pizza to it.
+files). On the recipe list, right-click a recipe to export it to `recipes/`
+or right-click the NEW row to import recipe files. Standard pizzas can't be
+imported or exported.
 
 Game settings (resolution, volume, autosaves, optional bug fixes, and more)
 are changed from the in-game options screen. The rules (bug fixes, quality of

@@ -266,7 +266,7 @@ void run_daily_evaluation(Player& player, GameState& game_state) {
 
 namespace {
 
-// One slot's random draw: a pizza off the canonical list, and a production
+// One slot's random draw: a pizza off the AI name list, and a production
 // ceiling the AI's cooking skill widens. Only the first 99 of the 100 pizza
 // names are reachable.
 void generate_menu_slot(AiMenuSlot& slot, uint8_t cooking) {

@@ -8,6 +8,7 @@
 
 #include "engine/DebugLabel.h"
 #include "engine/DisplayConstants.h"
+#include "engine/geom/Spaces.h"
 #include "engine/gfx/Draw.h"
 #include "engine/ui/TooltipManager.h"
 #include "resources/FontManager.h"
@@ -47,15 +48,13 @@ public:
     case TooltipAnchor::Mouse: {
       // position just above the cursor, or below it at the top of the
       // screen
-      int bx = req.pos.x;
-      if (bx + w > DisplayConstants::SCREEN_WIDTH) {
-        bx = DisplayConstants::SCREEN_WIDTH - w;
-      }
       int by = req.pos.y - h - 2;
       if (by < 0) {
         by = req.pos.y + 2;
       }
-      box = {bx, by};
+      const ViewRect screen{0, 0, DisplayConstants::SCREEN_WIDTH,
+                            DisplayConstants::SCREEN_HEIGHT};
+      box = move_inside(ViewRect{req.pos.x, by, w, h}, screen).point();
       text_center = {box.x + (w / 2), box.y + req.padding};
       break;
     }

@@ -726,18 +726,18 @@ json player_recipes_to_json(const core::food::PlayerRecipes& recipes) {
   json j;
   j["next_id"] = recipes.next_id.value;
 
-  // Save canonical recipes
-  json canonical_array = json::array();
-  for (size_t i = 0; i < recipes.canon.size(); ++i) {
-    const auto& slot = recipes.canon[i];
+  // Save standard recipes
+  json standard_array = json::array();
+  for (size_t i = 0; i < recipes.standard.size(); ++i) {
+    const auto& slot = recipes.standard[i];
     if (slot.created()) {
-      canonical_array.push_back(recipe_to_json(*slot.recipe));
+      standard_array.push_back(recipe_to_json(*slot.recipe));
     }
     else {
-      canonical_array.push_back(nullptr);
+      standard_array.push_back(nullptr);
     }
   }
-  j["canonical"] = std::move(canonical_array);
+  j["standard"] = std::move(standard_array);
 
   // Save user recipes
   json user_array = json::array();
@@ -756,13 +756,14 @@ core::food::PlayerRecipes json_to_player_recipes(
   PlayerRecipes recipes;
   recipes.next_id = core::RecipeId{j["next_id"].get<int>()};
 
-  // Restore canonical recipes
-  if (j.contains("canonical")) {
-    for (size_t i = 0; i < j["canonical"].size() && i < recipes.canon.size();
-         ++i) {
-      if (!j["canonical"][i].is_null()) {
-        auto recipe = json_to_recipe(j["canonical"][i], taste_profiles);
-        recipes.canon[i] = CanonicalSlot{std::move(recipe)};
+  // Saves from v1.0.0-beta.2 or earlier used 'canonical' as key.
+  const char* standard_key = j.contains("standard") ? "standard" : "canonical";
+  if (j.contains(standard_key)) {
+    const json& slots = j[standard_key];
+    for (size_t i = 0; i < slots.size() && i < recipes.standard.size(); ++i) {
+      if (!slots[i].is_null()) {
+        recipes.standard[i] =
+            StandardSlot{json_to_recipe(slots[i], taste_profiles)};
       }
     }
   }

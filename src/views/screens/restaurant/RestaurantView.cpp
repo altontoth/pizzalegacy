@@ -1572,9 +1572,9 @@ void RestaurantView::challenge_start(CompetitionFlow flow) {
   auto& zutaten_bob = context_.bob->get("bob/zutaten.bob");
   auto get_bob_size =
       make_ingredient_bob_size_fn<Bob, core::food::Topping>(zutaten_bob);
-  auto canonical = PizzaFactory::create_competition_pizza(
+  auto reference = PizzaFactory::create_competition_pizza(
       pizza_index, get_bob_size, state_.customer_taste_profiles());
-  if (!canonical) {
+  if (!reference) {
     Logger::warn("Challenge: failed to load pizza {}", pizza_index);
     return;
   }
@@ -1584,8 +1584,8 @@ void RestaurantView::challenge_start(CompetitionFlow flow) {
   session->speed_level = flow.speed_level;
   session->delay_ticks = 100 - flow.speed_level * 15;
   session->is_challenge = true;
-  session->canonical_pizza =
-      std::make_shared<core::food::Pizza>(std::move(*canonical));
+  session->reference_pizza =
+      std::make_shared<core::food::Pizza>(std::move(*reference));
   session->human_slot = static_cast<int>(session->participants.size());
   session->challenger_slot = flow.human_pid.value;
   session->participants.push_back(CompetitionParticipant{

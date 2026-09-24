@@ -96,6 +96,26 @@ template <typename Tag>
   return TypedRect<Tag>{p.x, p.y, r.w, r.h};
 }
 
+// r shifted to lie within bounds. When r is the larger, its top-left corner
+// stays inside.
+template <typename Tag>
+[[nodiscard]] constexpr TypedRect<Tag>
+move_inside(TypedRect<Tag> r, const TypedRect<Tag>& bounds) noexcept {
+  if (r.right() > bounds.right()) {
+    r.x = bounds.right() - r.w;
+  }
+  if (r.bottom() > bounds.bottom()) {
+    r.y = bounds.bottom() - r.h;
+  }
+  if (r.x < bounds.x) {
+    r.x = bounds.x;
+  }
+  if (r.y < bounds.y) {
+    r.y = bounds.y;
+  }
+  return r;
+}
+
 template <typename Tag>
 [[nodiscard]] static inline TypedRect<Tag> intersect(TypedRect<Tag> a,
                                                      TypedRect<Tag> b) {

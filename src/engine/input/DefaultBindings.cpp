@@ -100,7 +100,7 @@ void configure_default_bindings(InputManager& in) {
   in.begin_section("Debug tooling");
   in.declare_unbound(Action::ToggleConsole);
   in.declare_unbound(Action::ToggleDebug);
-  in.declare_unbound(Action::LoadCanonicalRecipe);
+  in.declare_unbound(Action::LoadStandardRecipe);
   in.declare_unbound(Action::CycleBackward);
   in.declare_unbound(Action::CycleForward);
   in.declare_unbound(Action::CycleUp);

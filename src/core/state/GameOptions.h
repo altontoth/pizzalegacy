@@ -123,6 +123,8 @@ struct GameOptions {
   bool automatic_report = true;
   // Mouse and UI modernizations:
   bool qol_improvements = true;
+  // Enable the 'cook book' that shows the reference pizza for standard pizzas.
+  bool cook_book = true;
   // Use 640x480 (4:3) CRT aspect ratio instead of 640x400
   bool crt_aspect_ratio = false;
   // Start the window at twice the 640x400 surface.

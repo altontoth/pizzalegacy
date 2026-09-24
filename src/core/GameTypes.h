@@ -69,7 +69,7 @@ enum class PizzaDesignMode {
   CompetitorChallenge,
   MonthlyChallenge,
   OwnPizzaJudging,
-  CanonicalPizzaJudging,
+  StandardPizzaJudging,
   CompetitionJudging,
   CompetitionReveal,
   CompetitionDesign,
@@ -79,6 +79,6 @@ enum class PizzaDesignMode {
 
 enum class JudgingMode {
   Own,
-  Canonical,
+  Standard,
   Competition,
 };

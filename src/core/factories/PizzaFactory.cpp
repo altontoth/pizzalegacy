@@ -6,10 +6,16 @@
 
 #include "core/factories/PizzaFactory.h"
 
+#include <algorithm>
+#include <cctype>
 #include <cstring>
+#include <filesystem>
 #include <string>
 
-#include "core/food/CanonicalPizza.h"
+#include "core/food/IngredientType.h"
+#include "core/food/PlayerRecipes.h"
+#include "core/food/Recipe.h"
+#include "core/food/StandardPizza.h"
 #include "core/food/Topping.h"
 #include "core/util/LegacyConstants.h"
 #include "engine/Endian.h"
@@ -36,8 +42,15 @@ std::unique_ptr<core::food::Topping> make_topping(uint8_t ingredient_id,
   return std::make_unique<core::food::Topping>(ingredient_id, state, center);
 }
 
-// Field offsets in a .GAM save's recipe node. User creations draw their UID
-// from a counter starting at 50, so anything below CANON_COUNT is canonical.
+// Field offsets in a .pc file. In a PREZ file all these are shifted by
+// prez_shift bytes.
+constexpr std::size_t pc_name = 28;
+constexpr std::size_t pc_stats = 76;
+constexpr std::size_t pc_counts = 294;
+constexpr std::size_t prez_shift = 8;
+
+// Field offsets in a .GAM save's recipe node. User creations start from a
+// counter at 50, so anything below STANDARD_PIZZA_COUNT is a standard pizza.
 constexpr std::size_t gam_daily_sales = 0x08; // 7 u16, oldest first
 constexpr std::size_t gam_uid = 0x17;
 constexpr std::size_t gam_name = 0x18;
@@ -54,58 +67,115 @@ std::unique_ptr<core::food::Pizza> PizzaFactory::create_pizza(
   // Extract recipe number from filename (e.g., "r/r13.pc" -> 13, "game/r3.pc"
   // -> 3)
   int recipe_id = -1;
-  size_t r_pos = filename.rfind('r');
-  if (r_pos != std::string::npos && r_pos + 1 < filename.size()) {
-    size_t dot_pos = filename.find('.', r_pos);
-    if (dot_pos != std::string::npos) {
-      std::string num_str = filename.substr(r_pos + 1, dot_pos - r_pos - 1);
-      try {
-        recipe_id = std::stoi(num_str);
-      }
-      catch (...) {
-        Logger::warn("Could not extract recipe number from filename: {}",
-                     filename);
-      }
-    }
+  const std::string stem = std::filesystem::path(filename).stem().string();
+  if (stem.size() > 1 && stem[0] == 'r' &&
+      std::all_of(stem.begin() + 1, stem.end(),
+                  [](unsigned char c) { return std::isdigit(c) != 0; })) {
+    recipe_id = std::stoi(stem.substr(1));
   }
 
   return create_pizza(fileutils::read_bytes(filename),
-                      core::food::canonical_from_index(recipe_id), get_size,
+                      core::food::standard_from_index(recipe_id), get_size,
                       taste_profiles);
+}
+
+std::optional<PizzaFactory::RecipeSummary>
+PizzaFactory::read_summary(const std::string& filename) {
+  const auto bytes = fileutils::read_bytes(filename);
+  if (bytes.size() < 4) {
+    return std::nullopt;
+  }
+  const bool is_prez = std::memcmp(bytes.data(), "PREZ", 4) == 0;
+  const std::size_t shift = is_prez ? prez_shift : 0;
+  const std::size_t name_offset = pc_name + shift;
+  const std::size_t count_offset = pc_counts + shift;
+  if (bytes.size() < count_offset + 2) {
+    return std::nullopt;
+  }
+
+  RecipeSummary summary;
+  constexpr std::size_t max_name_bytes = 64;
+  for (std::size_t i = name_offset;
+       i < name_offset + max_name_bytes && i < bytes.size() && bytes[i] != 0;
+       ++i) {
+    summary.name.push_back(static_cast<char>(bytes[i]));
+  }
+  while (!summary.name.empty() && summary.name.back() == ' ') {
+    summary.name.pop_back();
+  }
+  if (summary.name.empty()) {
+    return std::nullopt;
+  }
+
+  const int count = bytes[count_offset + 1];
+  const std::size_t items = count_offset + 2;
+  if (bytes.size() < items + (4 * static_cast<std::size_t>(count))) {
+    return std::nullopt;
+  }
+  for (int i = 0; i < count; ++i) {
+    const int id = bytes[items + (4 * static_cast<std::size_t>(i))];
+    const std::string name{
+        core::food::to_string(static_cast<core::food::IngredientType>(id))};
+    if (!name.empty() && std::ranges::find(summary.ingredients, name) ==
+                             summary.ingredients.end()) {
+      summary.ingredients.push_back(name);
+    }
+  }
+  return summary;
+}
+
+PizzaFactory::ImportResult PizzaFactory::import_recipe(
+    const std::string& filename, core::food::PlayerRecipes& recipes,
+    const BobSizeFn& get_size,
+    const core::food::CustomerTasteProfiles& taste_profiles) {
+  if (!read_summary(filename)) {
+    return ImportResult::Unreadable;
+  }
+  auto pizza = create_pizza(filename, get_size, taste_profiles);
+  if (!pizza) {
+    return ImportResult::Unreadable;
+  }
+  std::string name = pizza->name();
+  const bool listed =
+      std::ranges::any_of(recipes.all(), [&](const core::food::Recipe* r) {
+        return r->display_name() == name;
+      });
+  if (listed) {
+    return ImportResult::AlreadyListed;
+  }
+  const auto id = recipes.create_user(name, std::move(*pizza));
+  Logger::info("Imported recipe {} from {} into user slot {}", name, filename,
+               id.value);
+  return ImportResult::Imported;
 }
 
 std::unique_ptr<core::food::Pizza> PizzaFactory::create_pizza(
     std::span<const uint8_t> bytes,
-    std::optional<core::food::CanonicalPizza> canonical,
+    std::optional<core::food::StandardPizza> reference,
     const BobSizeFn& get_size,
     const core::food::CustomerTasteProfiles& taste_profiles) {
   fileutils::ByteReader r{bytes};
 
-  // Read the first 4 bytes: 'PREZ' for user-saved recipes, or empty for
-  // canonical
+  // Read the first 4 bytes: 'PREZ' for user-saved recipes, or empty for a
+  // reference
   char header[4];
   r.read(header, 4);
-  int offset = 302;
-  int name_offset = 36;
-  int stats_offset = 84; // Stats offset for PREZ files
   bool is_prez = (strncmp(header, "PREZ", 4) == 0);
-
-  if (!is_prez) {
-    offset = 294;
-    name_offset = 28;
-    stats_offset = 76; // Stats offset for non-PREZ files (28 + 48)
-  }
+  const std::size_t shift = is_prez ? prez_shift : 0;
+  const std::size_t offset = pc_counts + shift;
+  const std::size_t name_offset = pc_name + shift;
+  const std::size_t stats_offset = pc_stats + shift;
 
   // Skip to offset 0x20 (32 bytes) to read the recipe name
   r.seek(name_offset);
 
   std::string pizza_name_str;
-  if (!is_prez && canonical) {
-    // Non-PREZ canonical files: use the canonical name
-    pizza_name_str = to_string(*canonical);
+  if (!is_prez && reference) {
+    // Non-PREZ reference files: use the reference name
+    pizza_name_str = to_string(*reference);
   }
   else {
-    // PREZ (user-saved) or non-canonical: read name from file
+    // PREZ (user-saved) or not a reference: read name from file
     constexpr std::size_t max_name_bytes = 64;
 
     std::size_t read_count = 0;
@@ -182,9 +252,9 @@ std::unique_ptr<core::food::Pizza> PizzaFactory::create_pizza(
         termination_bytes[3]);
   }
 
-  // Mark canonical pizzas with the correct origin
-  if (canonical) {
-    pizza->set_origin(core::food::Origin::Canonical);
+  // Mark standard pizzas with the correct origin
+  if (reference) {
+    pizza->set_origin(core::food::Origin::Standard);
   }
 
   // Set stats from disk values
@@ -205,10 +275,10 @@ std::unique_ptr<core::food::Pizza> PizzaFactory::create_pizza(
 }
 
 std::unique_ptr<core::food::Pizza> PizzaFactory::create_pizza(
-    core::food::CanonicalPizza canonical, const BobSizeFn& get_size,
+    core::food::StandardPizza reference, const BobSizeFn& get_size,
     const core::food::CustomerTasteProfiles& taste_profiles) {
   return create_pizza(
-      fileutils::read_bytes(core::food::filename_for(canonical)), canonical,
+      fileutils::read_bytes(core::food::filename_for(reference)), reference,
       get_size, taste_profiles);
 }
 
@@ -217,12 +287,12 @@ std::unique_ptr<core::food::Pizza> PizzaFactory::create_competition_pizza(
     const core::food::CustomerTasteProfiles& taste_profiles) {
   const auto filename = compat::format("r/r{}.pc", recipe_number);
   return create_pizza(fileutils::read_bytes(filename),
-                      core::food::canonical_from_index(recipe_number), get_size,
+                      core::food::standard_from_index(recipe_number), get_size,
                       taste_profiles);
 }
 
 int PizzaFactory::gam_node_recipe_uid(std::span<const uint8_t> node) {
-  return node.size() > gam_uid ? node[gam_uid] : core::food::CANON_COUNT;
+  return node.size() > gam_uid ? node[gam_uid] : core::food::STANDARD_PIZZA_COUNT;
 }
 
 core::food::Recipe::DailySales
@@ -275,8 +345,8 @@ std::unique_ptr<core::food::Pizza> PizzaFactory::create_pizza_from_gam_node(
         make_topping(ingredient_id, state, x_pos, y_pos, get_size));
   }
 
-  if (uid < core::food::CANON_COUNT) {
-    pizza->set_origin(core::food::Origin::Canonical);
+  if (uid < core::food::STANDARD_PIZZA_COUNT) {
+    pizza->set_origin(core::food::Origin::Standard);
   }
 
   // Origin gates the appearance term in the demographic scores, so it must be

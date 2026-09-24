@@ -16,8 +16,9 @@
 #include "core/finance/Ledger.h"
 #include "core/finance/Loan.h"
 #include "core/finance/Money.h"
-#include "core/food/CanonicalPizza.h"
 #include "core/food/Pizza.h"
+#include "core/food/StandardPizza.h"
+#include "core/food/Topping.h"
 #include "core/inventory/Inventory.h"
 #include "core/item/Item.h"
 #include "core/marketing/AdvertisingCampaign.h"
@@ -444,16 +445,15 @@ static CommandDef make_player_inventory() {
 static CommandDef make_player_recipes_load() {
   return CommandDef{
       .name = "load",
-      .description = "Load canonical pizza recipes",
+      .description = "Load standard pizza recipes",
       .help_text = R"(Usage: player recipes load [player_id] [index]
 
-Loads canonical pizza recipes from disk. If index is provided, loads only
-that recipe. Otherwise loads all canonical recipes.
+Loads standard pizza recipes from disk. If index is provided, loads only
+that recipe. Otherwise loads all standard recipes.
 
 Examples:
-  player recipes load          # Load all canonical recipes for active player
-  player recipes load @        # Load all canonical recipes for active player (explicit)
-  player recipes load @ 5      # Load only canonical recipe 5 for active player
+  player recipes load          # Load all standard recipes for active player
+  player recipes load @ 5      # Load only standard recipe 5 for active player
   player recipes load 2        # Load all recipes for player 2
   player recipes load 2 0      # Load recipe 0 for player 2
 )",
@@ -465,11 +465,11 @@ Examples:
                   .type = ArgType::Int,
                   .optional = true,
                   .default_provider = DefaultProvider::None,
-                  .description = "Optional recipe index (0-" +
-                                 std::to_string(core::food::CANON_COUNT - 1) +
-                                 ")",
+                  .description =
+                      "Optional recipe index (0-" +
+                      std::to_string(core::food::STANDARD_PIZZA_COUNT - 1) + ")",
                   .min_value = 0,
-                  .max_value = core::food::CANON_COUNT - 1,
+                  .max_value = core::food::STANDARD_PIZZA_COUNT - 1,
               },
           },
       .handler = [](const CommandContext& ctx) -> CommandResult {
@@ -493,7 +493,7 @@ Examples:
         const int begin = only_index.has_value() ? *only_index : 0;
         const int end_exclusive = only_index.has_value()
                                       ? (*only_index + 1)
-                                      : core::food::CANON_COUNT;
+                                      : core::food::STANDARD_PIZZA_COUNT;
 
         auto& zutaten_bob = ctx.context.bob->get("bob/zutaten.bob");
         auto get_bob_size =
@@ -502,7 +502,7 @@ Examples:
         CommandResult result = CommandResult::success();
 
         for (int i = begin; i < end_exclusive; ++i) {
-          const auto cid = static_cast<core::food::CanonicalPizza>(i);
+          const auto cid = static_cast<core::food::StandardPizza>(i);
           auto pizza = PizzaFactory::create_pizza(
               cid, get_bob_size, ctx.state.customer_taste_profiles());
 
@@ -512,7 +512,7 @@ Examples:
             continue;
           }
 
-          auto rid = recipes.create_from_canonical(cid, std::move(*pizza));
+          auto rid = recipes.create_standard(cid, std::move(*pizza));
           result.add_message(compat::format(
               "ok: {} -> slot {}", core::food::filename_for(cid), rid.value));
           ++loaded;
@@ -520,12 +520,12 @@ Examples:
 
         if (only_index.has_value()) {
           result.add_message(
-              compat::format("Loaded canonical pizza {} (total loaded: {}).",
+              compat::format("Loaded standard pizza {} (total loaded: {}).",
                              *only_index, loaded));
         }
         else {
           result.add_message(
-              compat::format("Loaded {} canonical pizzas.", loaded));
+              compat::format("Loaded {} standard pizzas.", loaded));
         }
 
         return result;

@@ -15,7 +15,8 @@ public:
   using callback_t = std::function<void(std::string)>;
 
   TextInputPopup(const GameContext& context, std::string text,
-                 int max_characters, callback_t cb = nullptr);
+                 int max_characters, callback_t cb = nullptr,
+                 std::string initial = {});
   ~TextInputPopup() = default;
 
   void render(Surface& surface, ViewPoint origin) override;

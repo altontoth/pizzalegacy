@@ -1819,16 +1819,16 @@ void Restaurant::calculate_popularity(const Player& player, const City& city,
   // PizzaPrices: seems disabled in the original
   popularity_.pizza_prices = 0;
 
-  // RecipesOnMenu: penalize < 3 canonical pizzas, reward exceeding district
-  // desired counts for both user and canonical pizzas
+  // RecipesOnMenu: penalize < 3 standard pizzas, reward exceeding district
+  // desired counts for both user and standard pizzas
   int component2_score = 0;
   int total_pizza_count = static_cast<int>(menu_.count_total());
-  int canonical_pizza_count =
-      static_cast<int>(menu_.count_canonical(player.recipes()));
-  int user_pizza_count = total_pizza_count - canonical_pizza_count;
+  int standard_pizza_count =
+      static_cast<int>(menu_.count_standard(player.recipes()));
+  int user_pizza_count = total_pizza_count - standard_pizza_count;
 
-  if (canonical_pizza_count < 3) {
-    int penalty = (3 - canonical_pizza_count) * 20;
+  if (standard_pizza_count < 3) {
+    int penalty = (3 - standard_pizza_count) * 20;
     component2_score -= penalty;
   }
 
@@ -1838,8 +1838,8 @@ void Restaurant::calculate_popularity(const Player& player, const City& city,
     component2_score += bonus;
   }
 
-  int canonical_desire = district.minimum_desired_canonical_pizza_count();
-  int adjustment = (canonical_pizza_count - canonical_desire) * 2;
+  int standard_desire = district.minimum_desired_standard_pizza_count();
+  int adjustment = (standard_pizza_count - standard_desire) * 2;
   component2_score += adjustment;
   popularity_.recipes_on_menu = component2_score;
 

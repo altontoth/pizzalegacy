@@ -10,11 +10,11 @@
 #include "views/screens/pizza/PizzaDesign.h"
 
 #include "core/GameTypes.h"
+#include "core/factories/PizzaFactory.h"
 #include "core/finance/MoneyParse.h"
-#include "core/food/RecipeCodec.h"
+#include "core/food/StandardPizza.h"
 #include "core/state/GameState.h"
 #include "engine/Logger.h"
-#include "engine/PlatformPaths.h"
 #include "engine/Random.h"
 #include "engine/audio/AudioManager.h"
 #include "engine/geom/Spaces.h"
@@ -22,7 +22,6 @@
 #include "engine/input/InputManager.h"
 #include "engine/ui/ICursorManager.h"
 #include "resources/BobSizeFn.h"
-#include "resources/util/FileUtils.h"
 #include "views/base/ViewDefs.h"
 #include "views/screens/pizza/PizzaDesignHelpers.h"
 #include "views/screens/restaurant/RecipeListRow.h"
@@ -33,14 +32,12 @@
 #include "views/ui/popups/TextInputPopup.h"
 
 #include <algorithm>
-#include <filesystem>
 #include <memory>
 #include <optional>
 
 using namespace core::food;
 using namespace pizza_design;
 using core::finance::parse::from_input;
-using io::recipe::save_prez;
 
 namespace {
 // build an override that copies 0xC0..0xDF from src palette (e.g. 13)
@@ -83,7 +80,7 @@ PizzaDesign::PizzaDesign(GameContext& context, GameState& state,
 
         return dst;
       }()},
-      active_key_{pms.active_key.value_or(new_row_tag)},
+      active_key_{pms.active_key.value_or(new_row_tag)}, page_(pms.page),
       bake_(pms.bake ? std::make_optional(std::move(*pms.bake)) : std::nullopt),
       competing_player_id_(pms.competing_player_id),
       on_done_(std::move(pms.on_done)),
@@ -100,7 +97,7 @@ PizzaDesign::PizzaDesign(GameContext& context, GameState& state,
 
   // Check if we're returning from judging
   if (mode_ == PizzaDesignMode::OwnPizzaJudging ||
-      mode_ == PizzaDesignMode::CanonicalPizzaJudging ||
+      mode_ == PizzaDesignMode::StandardPizzaJudging ||
       mode_ == PizzaDesignMode::CompetitionJudging) {
     if (pms.competition_session) {
       competition_ = std::move(*pms.competition_session);
@@ -125,6 +122,14 @@ PizzaDesign::PizzaDesign(GameContext& context, GameState& state,
       Logger::warn("AnnualCompetitionDesign entered without a session!");
       state_.ui().pop();
     }
+  }
+  else if (pms.active_key &&
+           std::holds_alternative<core::food::StandardPizza>(
+               *pms.active_key) &&
+           (mode_ == PizzaDesignMode::View ||
+            mode_ == PizzaDesignMode::Ingredients ||
+            mode_ == PizzaDesignMode::Info)) {
+    show_reference_pizza(std::get<core::food::StandardPizza>(*pms.active_key));
   }
   else {
     status_.show_restaurant({.state = &state_,
@@ -166,27 +171,24 @@ bool PizzaDesign::on_action(const input::ActionEvent& ev) {
           [this](int number) { load_user_recipe_for_debug(number); });
     }
     else {
-      // Normal: Add to recipe list from game/ directory
-      context_.popup->create<NumberInputPopup>(
-          "Load which recipe?", "", 0, 0, 99, 1,
-          [this](int number) { load_user_recipe(number); });
+      import_recipe();
     }
     return true;
   }
 
-  // F3: Load canonical/competition recipe from r/ directory
-  if (ev.action == input::Action::LoadCanonicalRecipe) {
+  // F3: Load standard/competition recipe from r/ directory
+  if (ev.action == input::Action::LoadStandardRecipe) {
     if (mode_ == PizzaDesignMode::Design) {
-      // Debug mode: Load canonical pizza for testing scoring
+      // Debug mode: Load a reference pizza for testing scoring
       context_.popup->create<NumberInputPopup>(
-          "Load canonical pizza?", "", 0, 0, 99, 1,
-          [this](int number) { load_canonical_for_debug(number); });
+          "Load reference pizza?", "", 0, 0, 99, 1,
+          [this](int number) { load_standard_for_debug(number); });
     }
     else {
       // Normal: Add to recipe list from r/ directory
       context_.popup->create<NumberInputPopup>(
-          "Load canonical recipe (r/)?", "", 0, 0, 99, 1,
-          [this](int number) { load_canonical_recipe(number); });
+          "Load reference recipe (r/)?", "", 0, 0, 99, 1,
+          [this](int number) { load_standard_recipe(number); });
     }
     return true;
   }
@@ -201,7 +203,7 @@ bool PizzaDesign::on_action(const input::ActionEvent& ev) {
         mode_ == PizzaDesignMode::CompetitionResults ||
         mode_ == PizzaDesignMode::CompetitionJudging ||
         mode_ == PizzaDesignMode::OwnPizzaJudging ||
-        mode_ == PizzaDesignMode::CanonicalPizzaJudging ||
+        mode_ == PizzaDesignMode::StandardPizzaJudging ||
         mode_ == PizzaDesignMode::MonthlyChallenge ||
         mode_ == PizzaDesignMode::CompetitorChallenge ||
         mode_ == PizzaDesignMode::AnnualCompetitionDesign;
@@ -234,39 +236,52 @@ bool PizzaDesign::on_action(const input::ActionEvent& ev) {
   }
 
   switch (ev.action) {
-  case input::Action::SaveRecipe: {
-    auto bob_size_fn =
-        make_ingredient_bob_size_fn<Bob, core::food::Topping>(zutaten_bob_);
-    context_.popup->create<NumberInputPopup>(
-        "Save recipe as...", "", 0, 0, 99, 1, [this, bob_size_fn](int number) {
-          const auto& self = *this; // non-const function, but self is const-ref
-          const core::food::Pizza* pizza = self.current_pizza();
-          if (!pizza) {
-            Logger::warn("No current pizza!");
-            return;
-          }
-          std::filesystem::path path(platform_paths::recipes_dir() + "r" +
-                                     std::to_string(number) + ".pc");
-          std::filesystem::create_directories(path.parent_path());
-          if (fileutils::fexists(path.string())) {
-            context_.popup->create<ConfirmPopup>(
-                "File already exists, overwrite?",
-                [pizza, path, bob_size_fn](bool overwrite) {
-                  if (overwrite) {
-                    save_prez(*pizza, path, bob_size_fn);
-                  }
-                });
-          }
-          else {
-            save_prez(*pizza, path, bob_size_fn);
-          }
-        });
+  case input::Action::SaveRecipe:
+    export_recipe();
     break;
-  }
   default:
     break;
   }
   return true;
+}
+
+void PizzaDesign::import_recipe() {
+  if (bake_ || competition_) {
+    return;
+  }
+  keep_state_for_return();
+  state_.ui().push<RecipeImportState>(
+      RecipeImportState{.player = competing_player()->id()});
+}
+
+void PizzaDesign::export_recipe() {
+  if (bake_ || competition_) {
+    return;
+  }
+  const auto* id =
+      active_key_ ? std::get_if<core::RecipeId>(&*active_key_) : nullptr;
+  const auto* recipe = id ? competing_player()->recipes().find(*id) : nullptr;
+  if ((recipe && recipe->reference_id()) ||
+      (active_key_ &&
+       std::holds_alternative<core::food::StandardPizza>(*active_key_))) {
+    context_.popup->create<AlertPopup>("You can only save custom recipes!");
+    return;
+  }
+  if (!id) {
+    context_.popup->create<AlertPopup>("Select a recipe you have made first!");
+    return;
+  }
+  keep_state_for_return();
+  state_.ui().push<RecipeExportState>(
+      RecipeExportState{.player = competing_player()->id(), .recipe = *id});
+}
+
+void PizzaDesign::keep_state_for_return() {
+  state_.ui().replace_top<PizzaDesignState>(
+      PizzaDesignState{.initial_mode = mode_,
+                       .active_key = active_key_,
+                       .competing_player_id = competing_player_id_,
+                       .page = page_});
 }
 
 void PizzaDesign::render(const RenderContext& ctx) {
@@ -416,11 +431,13 @@ void PizzaDesign::create_input_panel() {
     rows.emplace_back(
         RecipeListRow({.name = "<NEW>"})); // last entry, not selectable
 
-    // Build an index of selectable rows (those with recipe_id or canonical)
+    // While the cook book is on screen the arrows flip through its entries,
+    // otherwise through every recipe the player has created.
     std::vector<int> selectable;
     selectable.reserve(rows.size());
     for (int i = 0; i < static_cast<int>(rows.size()); ++i) {
-      if (rows[i].recipe_id) {
+      if (reference_view_ ? rows[i].reference.has_value()
+                          : rows[i].recipe_id.has_value()) {
         selectable.push_back(i);
       }
     }
@@ -448,15 +465,11 @@ void PizzaDesign::create_input_panel() {
     int row_idx = selectable[new_pos];
     const auto& row = rows[row_idx];
 
-    // Update active_key_ (can only be recipe_id since un-created canonical
-    // pizzas can not be viewed):
-    if (row.recipe_id) {
-      change_active_key(RecipeKey{*row.recipe_id});
+    if (reference_view_) {
+      show_reference_pizza(*row.reference);
     }
     else {
-      // Shouldn't happen:
-      Logger::warn("We didn't find a recipe id in cycle_selection?!");
-      return;
+      change_active_key(RecipeKey{*row.recipe_id});
     }
 
     // Ensure page shows the newly selected row
@@ -514,10 +527,26 @@ void PizzaDesign::create_input_panel() {
           if (!state_.active_restaurant()) {
             return;
           }
+          // A standard pizza goes on the menu as the player's own version, once
+          // they have one.
+          std::optional<core::RecipeId> selected;
           if (active_key_ &&
               std::holds_alternative<core::RecipeId>(*active_key_)) {
+            selected = std::get<core::RecipeId>(*active_key_);
+          }
+          else if (active_key_ &&
+                   std::holds_alternative<core::food::StandardPizza>(
+                       *active_key_)) {
+            const auto cp = std::get<core::food::StandardPizza>(*active_key_);
+            const auto& slot =
+                competing_player()->recipes().standard[to_index(cp)];
+            if (slot.created()) {
+              selected = slot.recipe->id();
+            }
+          }
+          if (selected) {
             auto& menu = state_.active_restaurant()->menu();
-            auto id = std::get<core::RecipeId>(*active_key_);
+            auto id = *selected;
 
             context_.popup->origin(ViewPoint{30, 30});
             if (menu.find(id)) {
@@ -543,6 +572,13 @@ void PizzaDesign::create_input_panel() {
                     }
                   });
             }
+          }
+          else if (active_key_ &&
+                   std::holds_alternative<core::food::StandardPizza>(
+                       *active_key_)) {
+            context_.popup->origin(ViewPoint{30, 30});
+            context_.popup->create<AlertPopup>(
+                "Bake your own version of this pizza first!");
           }
           else {
             Logger::warn("No active key or not right type");
@@ -578,7 +614,7 @@ void PizzaDesign::create_input_panel() {
   case PizzaDesignMode::CompetitorChallenge:
   case PizzaDesignMode::MonthlyChallenge:
   case PizzaDesignMode::OwnPizzaJudging:
-  case PizzaDesignMode::CanonicalPizzaJudging:
+  case PizzaDesignMode::StandardPizzaJudging:
   case PizzaDesignMode::CompetitionJudging:
   case PizzaDesignMode::CompetitionReveal:
   case PizzaDesignMode::CompetitionResults:
@@ -653,6 +689,9 @@ const Pizza* PizzaDesign::current_pizza() const {
   if (bake_) {
     return &bake_->working;
   }
+  if (reference_view_) {
+    return reference_pizza_.get();
+  }
   auto* player = competing_player();
   auto& recipes = player->recipes();
 
@@ -668,10 +707,10 @@ const Pizza* PizzaDesign::current_pizza() const {
     }
   }
 
-  // Handle CanonicalPizza
-  if (std::holds_alternative<core::food::CanonicalPizza>(*active_key_)) {
-    auto cp = std::get<core::food::CanonicalPizza>(*active_key_);
-    const auto& slot = recipes.canon[static_cast<int>(cp)];
+  // Handle StandardPizza
+  if (std::holds_alternative<core::food::StandardPizza>(*active_key_)) {
+    auto cp = std::get<core::food::StandardPizza>(*active_key_);
+    const auto& slot = recipes.standard[static_cast<int>(cp)];
     if (slot.created()) {
       return &slot.recipe->pizza();
     }
@@ -683,6 +722,7 @@ const Pizza* PizzaDesign::current_pizza() const {
 
 void PizzaDesign::change_active_key(RecipeKey active_key) {
   active_key_ = active_key;
+  reference_view_ = false;
   const auto& recipes = competing_player()->recipes();
   if (std::holds_alternative<core::RecipeId>(*active_key_)) {
     auto id = std::get<core::RecipeId>(*active_key_);
@@ -697,6 +737,21 @@ void PizzaDesign::change_active_key(RecipeKey active_key) {
   else if (auto* rest = state_.active_restaurant()) {
     status_.show_restaurant(
         {.state = &state_, .rest = rest, .label = "RECIPES"});
+  }
+}
+
+void PizzaDesign::show_reference_pizza(core::food::StandardPizza cp) {
+  active_key_ = RecipeKey{cp};
+  auto get_bob_size =
+      make_ingredient_bob_size_fn<Bob, core::food::Topping>(zutaten_bob_);
+  reference_pizza_ = PizzaFactory::create_pizza(
+      cp, get_bob_size, state_.customer_taste_profiles());
+  reference_view_ = reference_pizza_ != nullptr;
+  if (reference_view_) {
+    status_.show_pizza({.state = &state_,
+                        .wip_pizza = reference_pizza_.get(),
+                        .recipe = nullptr,
+                        .cook_book = true});
   }
 }
 

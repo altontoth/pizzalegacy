@@ -12,16 +12,54 @@
 #include <fstream>
 #include <set>
 #include <span>
+#include <string>
+#include <string_view>
+#include <vector>
 #include "core/food/Pizza.h"
 #include "core/util/LegacyConstants.h"
+#include "engine/Logger.h"
 #include "engine/Math.h"
+#include "engine/PlatformPaths.h"
 #include "resources/BobSizeFn.h"
+#include "resources/util/FileUtils.h"
 
 namespace io::recipe {
-// Writes a custom PREZ recipe to the specified file
+
+std::vector<fileutils::FileEntry> list_recipe_files() {
+  return fileutils::list_files_in(platform_paths::recipes_dir(),
+                                  recipe_extension);
+}
+
+std::filesystem::path recipe_path(const std::string& filename) {
+  return std::filesystem::path(platform_paths::recipes_dir()) / filename;
+}
+
+std::string unused_recipe_stem(std::string_view name,
+                               const std::vector<fileutils::FileEntry>& files) {
+  std::string stem = fileutils::sanitize_filename(std::string(name));
+  if (stem.empty()) {
+    stem = "recipe";
+  }
+  auto taken = [&](const std::string& candidate) {
+    const std::string filename = candidate + recipe_extension;
+    return std::ranges::any_of(files, [&](const fileutils::FileEntry& f) {
+      return f.filename == filename;
+    });
+  };
+  if (!taken(stem)) {
+    return stem;
+  }
+  for (int n = 2;; ++n) {
+    const std::string candidate = stem + " " + std::to_string(n);
+    if (!taken(candidate)) {
+      return candidate;
+    }
+  }
+}
+
 bool save_prez(const core::food::Pizza& pizza,
-               const std::filesystem::path& path,
-               const BobSizeFn& get_bob_size) {
+               const std::filesystem::path& path, const BobSizeFn& get_bob_size,
+               std::string_view name) {
   // Gather toppings
   const auto& tops = pizza.toppings();
   const uint8_t ingredient_count =
@@ -50,14 +88,13 @@ bool save_prez(const core::food::Pizza& pizza,
   constexpr int y_offset = -LegacyConstants::WOOD_BORDER_HEIGHT_TOP;
 
   // Pizza ID byte: must be >= 0x0E to allow saving as custom,
-  // since the first 14 pizzas on the menu are always 'canonical'.
+  // since the first 14 pizzas on the menu are always 'standard'.
   // Ideally we'd make this the id of the pizza on the recipe list,
   // but it doesn't matter anyway, so let's just hardcode something > 14.
   blob[TAG_OFF] = 0x20;
 
   // Name (NUL-terminated)
   {
-    const std::string& name = pizza.name();
     const std::size_t max_name = TYPE_CNT_OFF - NAME_OFF; // safety
     const std::size_t n = std::min(name.size(), max_name ? max_name - 1 : 0);
     std::memcpy(&blob[NAME_OFF], name.data(), n);

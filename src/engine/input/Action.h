@@ -78,7 +78,7 @@ enum class Action {
 
   LoadRecipe,
   SaveRecipe,
-  LoadCanonicalRecipe,
+  LoadStandardRecipe,
 
   // Confirm popup
   ConfirmYes,

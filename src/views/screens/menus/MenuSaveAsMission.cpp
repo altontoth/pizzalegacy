@@ -108,7 +108,7 @@ void MenuSaveAsMission::write_mission(const std::string& filename) {
   if (name.ends_with(".mis")) {
     name = name.substr(0, name.size() - 4);
   }
-  name = core::mission::sanitize_mission_name(name);
+  name = fileutils::sanitize_filename(name);
   if (name.empty()) {
     name = "career";
   }

@@ -293,6 +293,14 @@ every ingredient is compared. This is called the Original setting, and we add a
 Relaxed option that only cares about having the right ingredients in roughly
 the right amount.
 
+### cook_book
+Lets the recipe list show a standard pizza's cook book entry, so its layout
+and its ingredients with their weights can be looked at in the game rather
+than in the printed book. Right click a standard pizza and pick "Show cook
+book" to get there; the page arrows then step through the cook book, and the
+label above the pizza says when you are looking at it. Off leaves the entry
+out, as in the original. On by default.
+
 ### win_condition
 This can take one of three options; the German release requires >= 5% market
 share in all ten cities to win the game (`all_cities`), the English version

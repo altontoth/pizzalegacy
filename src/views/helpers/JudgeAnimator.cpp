@@ -66,7 +66,7 @@ void JudgeAnimator::render(const RenderContext& ctx) {
 
   const int status_color = 26;
   std::string message = "evaluating your recipe...";
-  if (judging_mode_ == JudgingMode::Canonical) {
+  if (judging_mode_ == JudgingMode::Standard) {
     message = "comparing with standard recipe...";
   }
   else if (judging_mode_ == JudgingMode::Competition) {

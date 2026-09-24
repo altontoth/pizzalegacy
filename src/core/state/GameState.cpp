@@ -1411,20 +1411,20 @@ void GameState::load_initial_pizzas(GameContext& context,
   auto get_bob_size =
       make_ingredient_bob_size_fn<Bob, core::food::Topping>(zutaten_bob);
 
-  const int number_of_canonical_pizzas_to_load = 4;
-  for (int i = 0; i < number_of_canonical_pizzas_to_load; ++i) {
-    const auto cid = static_cast<core::food::CanonicalPizza>(i);
+  const int number_of_standard_pizzas_to_load = 4;
+  for (int i = 0; i < number_of_standard_pizzas_to_load; ++i) {
+    const auto cid = static_cast<core::food::StandardPizza>(i);
 
     // Create pizza from disk
     auto pizza =
         PizzaFactory::create_pizza(cid, get_bob_size, customer_taste_profiles_);
     if (!pizza) {
-      Logger::warn("Failed to load canonical pizza {}", i);
+      Logger::warn("Failed to load reference pizza {}", i);
       continue;
     }
 
     // Add to player's recipes
-    recipes.create_from_canonical(cid, std::move(*pizza));
+    recipes.create_standard(cid, std::move(*pizza));
   }
 }
 
@@ -1434,7 +1434,7 @@ void GameState::recalculate_all_pizza_demographics() {
       continue;
     }
     auto& recipes = player_ptr->recipes();
-    for (auto& slot : recipes.canon) {
+    for (auto& slot : recipes.standard) {
       if (slot.created()) {
         slot.recipe->pizza_mut().calculate_demographic_scores(
             customer_taste_profiles_);

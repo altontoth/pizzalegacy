@@ -282,21 +282,6 @@ std::vector<fileutils::FileEntry> list_player_mission_files() {
   return files;
 }
 
-std::string sanitize_mission_name(const std::string& name) {
-  std::string out;
-  for (char c : name) {
-    const bool safe = std::isalnum(static_cast<unsigned char>(c)) || c == ' ' ||
-                      c == '-' || c == '_';
-    out.push_back(safe ? c : '_');
-  }
-  // Trim surrounding whitespace so the filename is clean
-  auto first = out.find_first_not_of(' ');
-  if (first == std::string::npos) {
-    return {};
-  }
-  return out.substr(first, out.find_last_not_of(' ') - first + 1);
-}
-
 std::optional<fs::path>
 save_career_mission(const std::string& name,
                     const std::vector<TargetMilestone>& cv_entries,

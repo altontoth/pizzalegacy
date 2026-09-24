@@ -147,16 +147,16 @@ uint8_t District::service_quality_factor() const {
   return service_quality_factor_;
 }
 
-void District::minimum_desired_canonical_pizza_count(uint8_t count) {
-  minimum_desired_canonical_pizza_count_ = count;
+void District::minimum_desired_standard_pizza_count(uint8_t count) {
+  minimum_desired_standard_pizza_count_ = count;
 }
 
 void District::minimum_desired_user_pizza_count(uint8_t tolerance) {
   minimum_desired_user_pizza_count_ = tolerance;
 }
 
-uint8_t District::minimum_desired_canonical_pizza_count() const {
-  return minimum_desired_canonical_pizza_count_;
+uint8_t District::minimum_desired_standard_pizza_count() const {
+  return minimum_desired_standard_pizza_count_;
 }
 
 uint8_t District::minimum_desired_user_pizza_count() const {

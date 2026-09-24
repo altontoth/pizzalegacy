@@ -102,29 +102,28 @@ public:
   const std::vector<MenuEntry>& entries() const { return entries_; }
   std::vector<MenuEntry>& entries() { return entries_; }
 
-  // Get total count of all pizzas on menu (canonical + user)
+  // Get total count of all pizzas on menu (standard + user)
   size_t count_total() const { return entries_.size(); }
 
-  // Get count of canonical pizzas only (slot < 14)
-  size_t count_canonical(const core::food::PlayerRecipes& recipes) const {
+  // Get count of standard pizzas only (slot < 14)
+  size_t count_standard(const core::food::PlayerRecipes& recipes) const {
     int count = 0;
     for (const auto& entry : entries_) {
       const auto* recipe = recipes.find(entry.recipe_id);
-      if (recipe && recipe->canonical_id().has_value()) {
+      if (recipe && recipe->reference_id().has_value()) {
         count++;
       }
     }
     return count;
   }
 
-  // Mean imitation score of the canonical pizzas, 0 when there aren't any.
-  int average_canonical_imitation(
-      const core::food::PlayerRecipes& recipes) const {
+  // Mean imitation score of the standard pizzas, 0 when there aren't any.
+  int average_imitation(const core::food::PlayerRecipes& recipes) const {
     int count = 0;
     int sum = 0;
     for (const auto& entry : entries_) {
       const auto* recipe = recipes.find(entry.recipe_id);
-      if (recipe && recipe->canonical_id().has_value()) {
+      if (recipe && recipe->reference_id().has_value()) {
         count++;
         sum += recipe->pizza().imitation();
       }

@@ -24,7 +24,7 @@ struct CompetitionParticipant {
 
 struct CompetitionSession {
   std::vector<CompetitionParticipant> participants;
-  std::shared_ptr<core::food::Pizza> canonical_pizza;
+  std::shared_ptr<core::food::Pizza> reference_pizza;
   int pizza_index{0};
   int speed_level{1};
   int delay_ticks{0};

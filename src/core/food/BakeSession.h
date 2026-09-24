@@ -9,22 +9,22 @@
 // What are we doing?
 #include <optional>
 #include "core/common/Ids.h"
-#include "core/food/CanonicalPizza.h"
 #include "core/food/Pizza.h"
+#include "core/food/StandardPizza.h"
 
 namespace core::food {
 
 enum class BakeKind {
-  NewUser,              // <NEW>
-  InstantiateCanonical, // canonical row that doesn't exist yet
-  RecreateExisting,     // user or already-instantiated canonical
+  NewUser,             // <NEW>
+  InstantiateStandard, // standard row that doesn't exist yet
+  RecreateExisting,    // user or already-instantiated standard
 };
 
 struct BakeSession {
   BakeKind kind;
-  std::optional<core::food::CanonicalPizza> canonical_id; // if any
+  std::optional<core::food::StandardPizza> reference_id; // if any
   std::optional<core::RecipeId> existing_id;              // if any
-  std::string suggested_name; // e.g. canonical name or empty for <NEW>
+  std::string suggested_name; // the standard pizza's name, empty for <NEW>
   core::food::Pizza working;
 };
 
