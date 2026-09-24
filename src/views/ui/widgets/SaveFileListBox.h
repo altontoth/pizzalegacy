@@ -41,6 +41,8 @@ public:
     is_disabled_ = std::move(is_disabled);
   }
 
+  int max_scroll() const;
+
   void draw(Surface& screen, ViewPoint p, bool is_selected) override;
   void handle_action() override;
   Size measure() const override;

@@ -418,6 +418,7 @@ set(PLEGACY_HEADERS
     src/core/food/PlayerRecipes.h
     src/core/food/Recipe.h
     src/core/food/RecipeCodec.h
+    src/core/food/RecipeNode.h
     src/core/food/StandardPizza.h
     src/core/food/Topping.h
     src/core/init/NewGameConfig.h

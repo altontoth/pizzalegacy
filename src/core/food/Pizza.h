@@ -98,7 +98,7 @@ public:
 private:
   void compute_physical_stats();
   [[nodiscard]] Flavors calculate_flavor_percentages() const;
-  int calculate_calories();
+  [[nodiscard]] int calculate_calories() const;
 
   // Returns 0..100. Calculates appearance based on topping distribution
   // relative to pizza center. Uses approximation from notes.txt.

@@ -6,7 +6,6 @@
 
 #include "views/screens/menus/MenuGameLoad.h"
 
-#include <algorithm>
 #include <cassert>
 #include <filesystem>
 #include "core/save/SaveGameManager.h"
@@ -36,8 +35,6 @@ using namespace views::ui::menu;
 #define SAVE_BOX_H 216
 #define SAVE_BOX_ARROW_H 24
 
-constexpr int MAX_VISIBLE_FILES = 12;
-
 MenuGameLoad::MenuGameLoad(GameContext& context, GameState& state)
     : Menu(context, state, ViewPoint{SAVE_BOX_OFFSET_X, SAVE_BOX_OFFSET_Y}, 0),
       busy_cursor_(context) {
@@ -53,20 +50,20 @@ MenuGameLoad::MenuGameLoad(GameContext& context, GameState& state)
   }));
 
   // Save file list box - click selects, double-click loads directly
-  add_menu_item(std::make_unique<SaveFileListBox>(
+  auto list = std::make_unique<SaveFileListBox>(
       context, save_files_, &scroll_offset_,
       [this](const std::string& filename) { select_file(filename); },
       [this](const std::string& filename) {
         select_file(filename);
         load_selected_file();
-      }));
+      });
+  const auto* list_box = list.get();
+  add_menu_item(std::move(list));
 
   // Down arrow to scroll down in the list
-  add_menu_item(
-      std::make_unique<ArrowMenuItem>(context, ArrowType::Down, [this] {
-        int max_scroll = std::max(0, static_cast<int>(save_files_.size()) -
-                                         MAX_VISIBLE_FILES);
-        if (scroll_offset_ < max_scroll) {
+  add_menu_item(std::make_unique<ArrowMenuItem>(
+      context, ArrowType::Down, [this, list_box] {
+        if (scroll_offset_ < list_box->max_scroll()) {
           scroll_offset_++;
           mark_dirty();
         }

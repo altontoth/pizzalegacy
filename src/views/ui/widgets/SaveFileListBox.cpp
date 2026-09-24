@@ -6,6 +6,7 @@
 
 #include "views/ui/widgets/SaveFileListBox.h"
 
+#include <algorithm>
 #include <chrono>
 #include "core/time/GameDate.h"
 #include "engine/FormatCompat.h"
@@ -27,6 +28,10 @@ constexpr uint8_t MARKED_ACTIVE_ROW = 39;
 constexpr uint8_t FOCUS_COLOR = 29;
 constexpr uint8_t TEXT_COLOR = 1;
 constexpr uint8_t DISABLED_TEXT_COLOR = 12;
+
+int SaveFileListBox::max_scroll() const {
+  return std::max(0, static_cast<int>(save_files_.size()) - MAX_VISIBLE_FILES);
+}
 
 void SaveFileListBox::draw(Surface& screen, ViewPoint p, bool is_selected) {
   auto block = Surface(SAVE_BOX_W, SAVE_BOX_H, PaletteHandle{38}, 15);
@@ -163,8 +168,7 @@ bool SaveFileListBox::on_interaction(views::ui::InteractionEvent ie) {
   if (ie.type == views::ui::InteractionEvent::Type::Scroll) {
     // Scroll up (positive) = decrease offset, scroll down (negative) = increase
     // offset
-    int max_scroll =
-        std::max(0, static_cast<int>(save_files_.size()) - MAX_VISIBLE_FILES);
+    const int max_scroll = this->max_scroll();
     if (ie.scroll_delta > 0) {
       // Scroll up
       if (*scroll_offset_ > 0) {

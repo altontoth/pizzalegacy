@@ -6,7 +6,6 @@
 
 #include "views/screens/menus/MenuSaveAsGame.h"
 
-#include <algorithm>
 #include "core/save/SaveGameManager.h"
 #include "core/state/GameState.h"
 #include "engine/Logger.h"
@@ -28,8 +27,6 @@ using namespace views::ui::menu;
 #define SAVE_BOX_H 216
 #define SAVE_BOX_ARROW_H 24
 
-constexpr int MAX_VISIBLE_FILES = 12;
-
 MenuSaveAsGame::MenuSaveAsGame(GameContext& context, GameState& state)
     : Menu(context, state, ViewPoint{SAVE_BOX_OFFSET_X, SAVE_BOX_OFFSET_Y}, 0),
       busy_cursor_(context) {
@@ -45,17 +42,16 @@ MenuSaveAsGame::MenuSaveAsGame(GameContext& context, GameState& state)
   }));
 
   // Save file input box (with NEW NAME entry + existing saves)
-  add_menu_item(std::make_unique<SaveFileInputBox>(
+  auto box = std::make_unique<SaveFileInputBox>(
       context, save_files_, &scroll_offset_,
-      [this](const std::string& filename) { save_to_file(filename); }));
+      [this](const std::string& filename) { save_to_file(filename); });
+  const auto* input_box = box.get();
+  add_menu_item(std::move(box));
 
   // Down arrow to scroll down in the list
-  add_menu_item(
-      std::make_unique<ArrowMenuItem>(context, ArrowType::Down, [this] {
-        // Total items: 1 (NEW NAME) + save_files_.size()
-        int max_scroll = std::max(0, static_cast<int>(save_files_.size()) + 1 -
-                                         MAX_VISIBLE_FILES);
-        if (scroll_offset_ < max_scroll) {
+  add_menu_item(std::make_unique<ArrowMenuItem>(
+      context, ArrowType::Down, [this, input_box] {
+        if (scroll_offset_ < input_box->max_scroll()) {
           scroll_offset_++;
           mark_dirty();
         }

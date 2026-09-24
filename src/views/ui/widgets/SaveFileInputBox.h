@@ -43,6 +43,7 @@ public:
   bool on_text(const input::TextEvent& ev) override;
   bool on_action(const input::ActionEvent& ev) override;
 
+  int max_scroll() const;
   void end_input();
   void start_new_name_input(std::string initial = {});
 

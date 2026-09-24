@@ -37,7 +37,6 @@ constexpr int box_y = 125;
 constexpr int box_w = 224;
 constexpr int box_h = 216;
 constexpr int arrow_h = 24;
-constexpr int max_visible_files = 12;
 } // namespace
 
 MenuRecipeExport::MenuRecipeExport(GameContext& context, GameState& state,
@@ -61,13 +60,12 @@ MenuRecipeExport::MenuRecipeExport(GameContext& context, GameState& state,
     box->start_new_name_input(
         io::recipe::unused_recipe_stem(r->display_name(), files_));
   }
+  const auto* input_box = box.get();
   add_menu_item(std::move(box));
 
-  add_menu_item(
-      std::make_unique<ArrowMenuItem>(context, ArrowType::Down, [this] {
-        const int max_scroll = std::max(0, static_cast<int>(files_.size()) + 1 -
-                                               max_visible_files);
-        if (scroll_offset_ < max_scroll) {
+  add_menu_item(std::make_unique<ArrowMenuItem>(
+      context, ArrowType::Down, [this, input_box] {
+        if (scroll_offset_ < input_box->max_scroll()) {
           scroll_offset_++;
           mark_dirty();
         }
@@ -116,7 +114,7 @@ void MenuRecipeExport::write_recipe(const std::string& filename) {
   Bob& zutaten = context_.bob->get("bob/zutaten.bob");
   const auto bob_size =
       make_ingredient_bob_size_fn<Bob, core::food::Topping>(zutaten);
-  if (io::recipe::save_prez(r->pizza(), path, bob_size, path.stem().string())) {
+  if (io::recipe::save_prez(r->pizza(), path, bob_size, r->display_name())) {
     Logger::info("Exported recipe {} to {}", r->display_name(), path.string());
     state_.ui().pop();
   }

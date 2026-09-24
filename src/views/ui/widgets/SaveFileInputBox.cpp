@@ -5,6 +5,7 @@
  */
 
 #include "views/ui/widgets/SaveFileInputBox.h"
+#include <algorithm>
 #include "engine/geom/Spaces.h"
 #include "engine/gfx/Draw.h"
 #include "resources/FontManager.h"
@@ -19,6 +20,12 @@ constexpr int MAX_FILENAME_LENGTH = 16;
 constexpr uint8_t ACTIVE_ROW = 13;
 constexpr uint8_t INACTIVE_ROW = 14;
 constexpr uint8_t FOCUS_COLOR = 29;
+
+int SaveFileInputBox::max_scroll() const {
+  // Total items: 1 (NEW NAME) + save_files_.size()
+  return std::max(0,
+                  static_cast<int>(save_files_.size()) + 1 - MAX_VISIBLE_FILES);
+}
 
 void SaveFileInputBox::draw(Surface& screen, ViewPoint p, bool is_selected) {
   auto block = Surface(SAVE_BOX_W, SAVE_BOX_H, PaletteHandle{38}, 15);
@@ -164,8 +171,7 @@ bool SaveFileInputBox::on_interaction(views::ui::InteractionEvent ie) {
   if (ie.type == views::ui::InteractionEvent::Type::Scroll) {
     // Scroll up (positive) = decrease offset, scroll down (negative) = increase
     // offset
-    int max_scroll = std::max(0, static_cast<int>(save_files_.size()) + 1 -
-                                     MAX_VISIBLE_FILES);
+    const int max_scroll = this->max_scroll();
     if (ie.scroll_delta > 0) {
       // Scroll up
       if (*scroll_offset_ > 0) {

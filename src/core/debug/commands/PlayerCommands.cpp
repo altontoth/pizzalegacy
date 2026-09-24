@@ -5,6 +5,7 @@
  */
 
 #include "PlayerCommands.h"
+#include "core/Demographics.h"
 #include "core/character/Character.h"
 #include "core/character/Player.h"
 #include "core/city/City.h"
@@ -17,6 +18,9 @@
 #include "core/finance/Loan.h"
 #include "core/finance/Money.h"
 #include "core/food/Pizza.h"
+#include "core/food/PlayerRecipes.h"
+#include "core/food/Recipe.h"
+#include "core/food/RecipeCodec.h"
 #include "core/food/StandardPizza.h"
 #include "core/food/Topping.h"
 #include "core/inventory/Inventory.h"
@@ -31,6 +35,7 @@
 
 #include <array>
 #include <cstdint>
+#include <filesystem>
 #include <string>
 
 using namespace debug::command;
@@ -533,13 +538,134 @@ Examples:
   };
 }
 
+static CommandDef make_player_recipes_import() {
+  return CommandDef{
+      .name = "import",
+      .description = "Import a recipe file as a user recipe",
+      .help_text = R"(Usage: player recipes import <file> [player_id]
+
+Imports a .pc recipe file the way the import screen does, then prints the
+pizza's stats and its score with each customer group.
+
+Examples:
+  player recipes import "recipes/r1.pc"
+)",
+      .args =
+          {
+              ArgSpec{
+                  .name = "file",
+                  .type = ArgType::String,
+                  .description = "Path to the recipe file",
+              },
+              active_player_arg(),
+          },
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        const std::string filename = ctx.string_arg(0);
+        auto player_id = ctx.player_id(1);
+        auto* player = ctx.state.player(player_id);
+        if (!player) {
+          return CommandResult::error(
+              compat::format("Player {} not found", player_id.value));
+        }
+
+        auto& zutaten_bob = ctx.context.bob->get("bob/zutaten.bob");
+        auto get_bob_size =
+            make_ingredient_bob_size_fn<Bob, core::food::Topping>(zutaten_bob);
+
+        auto& recipes = player->recipes();
+        const auto outcome =
+            PizzaFactory::import_recipe(filename, recipes, get_bob_size,
+                                        ctx.state.customer_taste_profiles());
+        if (outcome == PizzaFactory::ImportResult::Unreadable) {
+          return CommandResult::error("Could not read " + filename);
+        }
+        if (outcome == PizzaFactory::ImportResult::AlreadyListed) {
+          return CommandResult::error("Already in the recipe list");
+        }
+
+        const auto all = recipes.all();
+        const auto& pizza = all.back()->pizza();
+        const auto flavors = pizza.flavors();
+        CommandResult result = CommandResult::success();
+        result.add_message(compat::format(
+            "{} (recipe {}): fat {} sweet {} salty {} hot {}, appearance {} "
+            "refinement {} normality {}",
+            pizza.name(), all.back()->id().value, flavors.fat, flavors.sweet,
+            flavors.salty, flavors.hot, pizza.appearance(), pizza.refinement(),
+            pizza.normality()));
+        const auto popularity = pizza.popularity();
+        for (const auto type : ALL_CONSUMER_TYPES) {
+          result.add_message(
+              compat::format("  {}: {}", to_string(type), popularity[type]));
+        }
+        return result;
+      },
+  };
+}
+
+static CommandDef make_player_recipes_export() {
+  return CommandDef{
+      .name = "export",
+      .description = "Export a recipe to a recipe file",
+      .help_text =
+          R"(Usage: player recipes export <recipe_id> <file> [player_id]
+
+Writes the recipe the way the export screen does.
+
+Examples:
+  player recipes export 50 "out/Pizza Roma.pc"
+)",
+      .args =
+          {
+              ArgSpec{
+                  .name = "recipe_id",
+                  .type = ArgType::RecipeId,
+                  .description = "Recipe to export",
+              },
+              ArgSpec{
+                  .name = "file",
+                  .type = ArgType::String,
+                  .description = "Path to write the recipe file to",
+              },
+              active_player_arg(),
+          },
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        const auto recipe_id = ctx.recipe_id(0);
+        const std::filesystem::path path = ctx.string_arg(1);
+        auto player_id = ctx.player_id(2);
+        auto* player = ctx.state.player(player_id);
+        if (!player) {
+          return CommandResult::error(
+              compat::format("Player {} not found", player_id.value));
+        }
+        const auto* recipe = player->recipes().find(recipe_id);
+        if (!recipe) {
+          return CommandResult::error(
+              compat::format("Recipe {} not found", recipe_id.value));
+        }
+
+        auto& zutaten_bob = ctx.context.bob->get("bob/zutaten.bob");
+        auto get_bob_size =
+            make_ingredient_bob_size_fn<Bob, core::food::Topping>(zutaten_bob);
+        if (!io::recipe::save_prez(recipe->pizza(), path, get_bob_size,
+                                   recipe->display_name())) {
+          return CommandResult::error("Could not write " + path.string());
+        }
+        return CommandResult::success().add_message(compat::format(
+            "Exported {} to {}", recipe->display_name(), path.string()));
+      },
+  };
+}
+
 static CommandDef make_player_recipes() {
   return CommandDef{
       .name = "recipes",
       .description = "Manage player's pizza recipes",
-      .help_text = "Subcommands: load",
+      .help_text = "Subcommands: load, import, export",
   }
-      .add_subcommand(make_player_recipes_load());
+      .add_subcommand(make_player_recipes_load())
+      .add_subcommand(make_player_recipes_import())
+      .add_subcommand(make_player_recipes_export());
 }
 
 static CommandDef make_player_weapon_profit() {

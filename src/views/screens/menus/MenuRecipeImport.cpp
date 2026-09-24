@@ -41,7 +41,6 @@ constexpr int box_y = 125;
 constexpr int box_w = 224;
 constexpr int box_h = 216;
 constexpr int arrow_h = 24;
-constexpr int max_visible_files = 12;
 constexpr int info_column_x = 230;
 constexpr int preview_margin = 14;
 constexpr int info_text_left = (preview_margin * 2) + RecipePreview::size;
@@ -81,13 +80,12 @@ MenuRecipeImport::MenuRecipeImport(GameContext& context, GameState& state,
   list->disable_rows([this](const std::string& filename) {
     return unreadable_.contains(filename);
   });
+  const auto* list_box = list.get();
   add_menu_item(std::move(list));
 
-  add_menu_item(
-      std::make_unique<ArrowMenuItem>(context, ArrowType::Down, [this] {
-        const int max_scroll =
-            std::max(0, static_cast<int>(files_.size()) - max_visible_files);
-        if (scroll_offset_ < max_scroll) {
+  add_menu_item(std::make_unique<ArrowMenuItem>(
+      context, ArrowType::Down, [this, list_box] {
+        if (scroll_offset_ < list_box->max_scroll()) {
           scroll_offset_++;
           mark_dirty();
         }

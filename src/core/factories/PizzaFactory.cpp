@@ -15,6 +15,7 @@
 #include "core/food/IngredientType.h"
 #include "core/food/PlayerRecipes.h"
 #include "core/food/Recipe.h"
+#include "core/food/RecipeNode.h"
 #include "core/food/StandardPizza.h"
 #include "core/food/Topping.h"
 #include "core/util/LegacyConstants.h"
@@ -49,15 +50,7 @@ constexpr std::size_t pc_stats = 76;
 constexpr std::size_t pc_counts = 294;
 constexpr std::size_t prez_shift = 8;
 
-// Field offsets in a .GAM save's recipe node. User creations start from a
-// counter at 50, so anything below STANDARD_PIZZA_COUNT is a standard pizza.
-constexpr std::size_t gam_daily_sales = 0x08; // 7 u16, oldest first
-constexpr std::size_t gam_uid = 0x17;
-constexpr std::size_t gam_name = 0x18;
-constexpr std::size_t gam_imitation = 0x41;
-constexpr std::size_t gam_appearance = 0x50; // refinement follows
-constexpr std::size_t gam_placed_count = 0x123;
-constexpr std::size_t gam_placements = 0x124;
+namespace layout = core::food::recipe_node;
 
 } // namespace
 
@@ -131,7 +124,8 @@ PizzaFactory::ImportResult PizzaFactory::import_recipe(
   if (!read_summary(filename)) {
     return ImportResult::Unreadable;
   }
-  auto pizza = create_pizza(filename, get_size, taste_profiles);
+  auto pizza = create_pizza(fileutils::read_bytes(filename), std::nullopt,
+                            get_size, taste_profiles);
   if (!pizza) {
     return ImportResult::Unreadable;
   }
@@ -292,14 +286,15 @@ std::unique_ptr<core::food::Pizza> PizzaFactory::create_competition_pizza(
 }
 
 int PizzaFactory::gam_node_recipe_uid(std::span<const uint8_t> node) {
-  return node.size() > gam_uid ? node[gam_uid] : core::food::STANDARD_PIZZA_COUNT;
+  return node.size() > layout::uid ? node[layout::uid]
+                                   : core::food::STANDARD_PIZZA_COUNT;
 }
 
 core::food::Recipe::DailySales
 PizzaFactory::gam_node_daily_sales(std::span<const uint8_t> node) {
   core::food::Recipe::DailySales sales{};
   fileutils::ByteReader r{node};
-  r.seek(gam_daily_sales);
+  r.seek(layout::daily_sales);
   for (auto& day : sales) {
     day = r.u16le();
   }
@@ -311,7 +306,7 @@ std::unique_ptr<core::food::Pizza> PizzaFactory::create_pizza_from_gam_node(
     const core::food::CustomerTasteProfiles& taste_profiles) {
   fileutils::ByteReader r{node};
 
-  r.seek(gam_name);
+  r.seek(layout::name);
   std::string name;
   constexpr std::size_t max_name_bytes = 32;
   for (std::size_t i = 0; i < max_name_bytes && r.has_more(); ++i) {
@@ -324,17 +319,17 @@ std::unique_ptr<core::food::Pizza> PizzaFactory::create_pizza_from_gam_node(
 
   const int uid = gam_node_recipe_uid(node);
 
-  r.seek(gam_imitation);
+  r.seek(layout::imitation);
   const uint8_t imitation = r.get();
 
-  r.seek(gam_appearance);
+  r.seek(layout::appearance);
   const uint8_t appearance = r.get();
   const uint8_t refinement = r.get();
 
-  r.seek(gam_placed_count);
+  r.seek(layout::placed_count);
   uint8_t placed_count = r.get();
 
-  r.seek(gam_placements);
+  r.seek(layout::placements);
   auto pizza = std::make_unique<core::food::Pizza>(name);
   for (uint8_t i = 0; i < placed_count; ++i) {
     uint8_t ingredient_id = r.get();

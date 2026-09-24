@@ -7,15 +7,23 @@
 #include "core/food/RecipeCodec.h"
 
 #include <algorithm>
+#include <array>
+#include <cstddef>
+#include <cstdint>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <functional>
 #include <set>
 #include <span>
 #include <string>
 #include <string_view>
 #include <vector>
+#include "core/Demographics.h"
+#include "core/food/Ingredient.h"
 #include "core/food/Pizza.h"
+#include "core/food/RecipeNode.h"
+#include "core/food/Topping.h"
 #include "core/util/LegacyConstants.h"
 #include "engine/Logger.h"
 #include "engine/Math.h"
@@ -57,56 +65,101 @@ std::string unused_recipe_stem(std::string_view name,
   }
 }
 
+namespace {
+
+void put_u16(std::vector<uint8_t>& blob, std::size_t offset, int value) {
+  const auto v = static_cast<uint16_t>(std::clamp(value, 0, 65535));
+  blob[offset] = static_cast<uint8_t>(v & 255);
+  blob[offset + 1] = static_cast<uint8_t>(v >> 8);
+}
+
+uint8_t to_byte(int value) {
+  return static_cast<uint8_t>(std::clamp(value, 0, 255));
+}
+
+} // namespace
+
 bool save_prez(const core::food::Pizza& pizza,
                const std::filesystem::path& path, const BobSizeFn& get_bob_size,
                std::string_view name) {
-  // Gather toppings
+  namespace node = core::food::recipe_node;
+
   const auto& tops = pizza.toppings();
-  const uint8_t ingredient_count =
-      static_cast<uint8_t>(std::min<std::size_t>(tops.size(), 255));
+  const std::size_t placed_count = std::min<std::size_t>(tops.size(), 255);
 
-  // Distinct ingredient types for the "type count" byte
   std::set<int> distinct_ids;
-  for (std::size_t i = 0; i < ingredient_count; ++i) {
-    distinct_ids.insert(static_cast<int>(tops[i]->ingredient_type()));
+  std::array<int, node::grams_entries> grams{};
+  std::array<int, node::grams_entries> intensity{};
+  for (std::size_t i = 0; i < placed_count; ++i) {
+    const auto& t = *tops[i];
+    const int id = static_cast<int>(t.ingredient_type());
+    distinct_ids.insert(id);
+    if (id >= 0 && id < static_cast<int>(node::grams_entries)) {
+      grams[id] += t.weight();
+      intensity[id] = t.ingredient()->intensity();
+    }
   }
-  const uint8_t type_count =
-      static_cast<uint8_t>(std::min<std::size_t>(distinct_ids.size(), 255));
 
-  // Build blob: N = 0x128 + 4 * ingredient_count
-  const uint32_t N = 0x128u + (static_cast<uint32_t>(ingredient_count) << 2);
-  std::vector<uint8_t> blob(N, 0);
-
-  // Offsets from reverse-engineering
-  constexpr int TAG_OFF = 0x17;
-  constexpr int NAME_OFF = 0x18;
-  constexpr int TYPE_CNT_OFF = 0x122;   // type count
-  constexpr int ING_CNT_OFF = 0x123;    // ingredient count (byte)
-  constexpr int ITEMS_BASE_OFF = 0x124; // then 4 bytes per item
-  // Position mapping used by our loader:
-  constexpr int x_offset = -LegacyConstants::WOOD_BORDER_WIDTH_LEFT;
-  constexpr int y_offset = -LegacyConstants::WOOD_BORDER_HEIGHT_TOP;
+  const std::size_t n = node::size_without_placements + (4 * placed_count);
+  std::vector<uint8_t> blob(n, 0);
 
   // Pizza ID byte: must be >= 0x0E to allow saving as custom,
   // since the first 14 pizzas on the menu are always 'standard'.
   // Ideally we'd make this the id of the pizza on the recipe list,
   // but it doesn't matter anyway, so let's just hardcode something > 14.
-  blob[TAG_OFF] = 0x20;
+  blob[node::uid] = 0x20;
 
   // Name (NUL-terminated)
   {
-    const std::size_t max_name = TYPE_CNT_OFF - NAME_OFF; // safety
-    const std::size_t n = std::min(name.size(), max_name ? max_name - 1 : 0);
-    std::memcpy(&blob[NAME_OFF], name.data(), n);
-    blob[NAME_OFF + n] = 0x00;
+    const std::size_t max_name = node::judged - node::name - 1;
+    const std::size_t len = std::min(name.size(), max_name);
+    std::memcpy(&blob[node::name], name.data(), len);
   }
 
-  // 2c) Counts
-  blob[TYPE_CNT_OFF] = type_count;
-  blob[ING_CNT_OFF] = ingredient_count;
+  blob[node::judged] = 1;
+  blob[node::imitation] = to_byte(pizza.imitation());
 
-  // 2d) Items: [id, state, x_pos, y_pos]
-  for (uint8_t i = 0; i < ingredient_count; ++i) {
+  // The ingredients weighing most on the taste, by grams times intensity.
+  std::vector<int> by_intensity;
+  for (int id = 0; id < static_cast<int>(node::grams_entries); ++id) {
+    if (grams[id] > 0) {
+      by_intensity.push_back(id);
+    }
+  }
+  std::ranges::stable_sort(by_intensity, std::greater{},
+                           [&](int id) { return grams[id] * intensity[id]; });
+  for (std::size_t i = 0; i < node::primary_ingredient_count; ++i) {
+    blob[node::primary_ingredients + i] =
+        i < by_intensity.size() ? static_cast<uint8_t>(by_intensity[i]) : 255;
+  }
+
+  const auto flavors = pizza.flavors();
+  put_u16(blob, node::flavors, flavors.fat / 10);
+  put_u16(blob, node::flavors + 2, flavors.sweet / 10);
+  put_u16(blob, node::flavors + 4, flavors.salty / 10);
+  put_u16(blob, node::flavors + 6, flavors.hot / 10);
+  blob[node::appearance] = to_byte(pizza.appearance());
+  blob[node::refinement] = to_byte(pizza.refinement());
+  blob[node::normality] = to_byte(pizza.normality());
+  blob[node::herbs] = to_byte(pizza.herb_score());
+  const auto popularity = pizza.popularity();
+  for (std::size_t i = 0; i < ALL_CONSUMER_TYPES.size(); ++i) {
+    blob[node::popularity + i] = to_byte(popularity[ALL_CONSUMER_TYPES[i]]);
+  }
+  put_u16(blob, node::calories, pizza.calories());
+  for (std::size_t id = 0; id < node::grams_entries; ++id) {
+    put_u16(blob, node::grams + (2 * id), grams[id]);
+  }
+
+  blob[node::type_count] = to_byte(static_cast<int>(distinct_ids.size()));
+  blob[node::placed_count] = static_cast<uint8_t>(placed_count);
+
+  // Position mapping used by our loader:
+  constexpr int x_offset = -LegacyConstants::WOOD_BORDER_WIDTH_LEFT;
+  constexpr int y_offset = -LegacyConstants::WOOD_BORDER_HEIGHT_TOP;
+
+  // Items: [id, state, x_pos, y_pos]
+  for (std::size_t i = 0; i < placed_count; ++i) {
     const auto& t = *tops[i];
     const int id = static_cast<int>(t.ingredient_type());
     const int state = t.state_raw();
@@ -134,22 +187,15 @@ bool save_prez(const core::food::Pizza& pizza,
       return static_cast<uint8_t>(std::clamp(grid, 0, 255));
     };
 
-    const uint8_t x_pos = pixel_to_grid(tl_x, x_offset);
-    const uint8_t y_pos = pixel_to_grid(tl_y, y_offset);
-
-    const int base = ITEMS_BASE_OFF + (4 * i);
+    const std::size_t base = node::placements + (4 * i);
     blob[base + 0] = static_cast<uint8_t>(id & 0xFF);
     blob[base + 1] = static_cast<uint8_t>(state & 0xFF);
-    blob[base + 2] = x_pos;
-    blob[base + 3] = y_pos;
+    blob[base + 2] = pixel_to_grid(tl_x, x_offset);
+    blob[base + 3] = pixel_to_grid(tl_y, y_offset);
   }
 
-  // 2e) The final 4 bytes after items are zero terminators (already zeroed).
-  //      They live at ITEMS_BASE_OFF + 4*ingredient_count .. +3.
-
-  // 3) Compute checksum over the entire blob
-  const uint32_t checksum =
-      math::sum_bytes(std::as_bytes(std::span{blob}).first(N));
+  const uint32_t checksum = math::sum_bytes(std::as_bytes(std::span{blob}));
+  const auto length = static_cast<uint32_t>(n);
 
   std::ofstream os(path, std::ios::binary);
   if (!os) {
@@ -161,7 +207,7 @@ bool save_prez(const core::food::Pizza& pizza,
   const uint32_t magic = 0x5A455250u; // 'PREZ' LE
   os.write(reinterpret_cast<const char*>(&magic), sizeof magic);
   os.write(reinterpret_cast<const char*>(&checksum), sizeof checksum);
-  os.write(reinterpret_cast<const char*>(&N), sizeof N);
+  os.write(reinterpret_cast<const char*>(&length), sizeof length);
 
   // blob
   os.write(reinterpret_cast<const char*>(blob.data()), blob.size());

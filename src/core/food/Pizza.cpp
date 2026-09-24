@@ -150,12 +150,7 @@ void Pizza::finalize_against(const Pizza& reference, PizzaJudging judging,
 
 void Pizza::compute_physical_stats() {
   flavors_ = calculate_flavor_percentages();
-
-  float calories_sum = 0;
-  for (const auto& topping : toppings()) {
-    calories_sum += topping->calories();
-  }
-  calories_ = static_cast<int>(calories_sum);
+  calories_ = calculate_calories();
 
   appearance_ = calculate_appearance();
   refinement_ = calculate_refinement();
@@ -458,6 +453,22 @@ int Pizza::calculate_refinement() const {
   return refinement;
 }
 
+int Pizza::calculate_calories() const {
+  // Grams are summed per ingredient, then its calories are rounded down.
+  std::map<IngredientType, std::pair<int, const Ingredient*>> by_type;
+  for (const auto& topping : toppings_) {
+    auto& [grams, ingredient] = by_type[topping->ingredient_type()];
+    grams += topping->weight();
+    ingredient = topping->ingredient();
+  }
+  int calories = 0;
+  for (const auto& [type, entry] : by_type) {
+    const auto& [grams, ingredient] = entry;
+    calories += grams * ingredient->calories_per_100g() / 100;
+  }
+  return calories;
+}
+
 int Pizza::calculate_normality() const {
   // Start at 100%
   int normality = 100;
@@ -692,12 +703,7 @@ void Pizza::set_disk_stats(const Flavors& flavors, int appearance,
   normality_ = normality;
   imitation_ = imitation;
 
-  // Still need to calculate calories from toppings
-  float calories_sum = 0;
-  for (const auto& topping : toppings()) {
-    calories_sum += topping->calories();
-  }
-  calories_ = static_cast<int>(calories_sum);
+  calories_ = calculate_calories();
 
   // Recalculate judge and demographic scores with the new stats
   calculate_judge_scores();
