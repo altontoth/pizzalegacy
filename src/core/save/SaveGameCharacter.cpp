@@ -244,6 +244,7 @@ json player_to_json(const Player& player) {
   j["social_score"] = player.social_status().social_score();
   j["underworld_score"] = player.social_status().underworld_score();
   j["weapon_dealing_profit"] = player.weapon_dealing_profit().cents;
+  j["trade_activity"] = player.trade_activity();
   json weapon_costs_obj = json::object();
   for (auto item : core::item::weapon_list) {
     Money unit = player.weapon_unit_cost(item);
@@ -450,6 +451,7 @@ json_to_player(const json& j, GameContext& context,
   }
   player->weapon_dealing_profit(
       Money{j.value("weapon_dealing_profit", int64_t{0})});
+  player->trade_activity(j.value("trade_activity", int64_t{0}));
   if (j.contains("weapon_unit_costs")) {
     const auto& costs = j["weapon_unit_costs"];
     for (auto item : core::item::weapon_list) {

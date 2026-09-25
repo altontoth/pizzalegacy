@@ -347,17 +347,14 @@ json mayor_office_to_json(const MayorOffice& mo) {
 
   json favor = json::array();
   json investment = json::array();
-  json trade = json::array();
   json fee_paid = json::array();
   for (int i = 0; i < NUMBER_OF_PLAYERS; ++i) {
     favor.push_back(mo.favor_score(i));
     investment.push_back(mo.investment_activity(i));
-    trade.push_back(mo.trade_activity(i));
     fee_paid.push_back(mo.fee_paid(i));
   }
   j["favor_score"] = std::move(favor);
   j["investment_activity"] = std::move(investment);
-  j["trade_activity"] = std::move(trade);
   j["fee_paid"] = std::move(fee_paid);
 
   json competition_wins = json::array();
@@ -390,13 +387,6 @@ void json_to_mayor_office(const json& j, MayorOffice& mo) {
                     i < static_cast<int>(j["investment_activity"].size());
          ++i) {
       mo.investment_activity(i, j["investment_activity"][i].get<int32_t>());
-    }
-  }
-  if (j.contains("trade_activity")) {
-    for (int i = 0; i < NUMBER_OF_PLAYERS &&
-                    i < static_cast<int>(j["trade_activity"].size());
-         ++i) {
-      mo.trade_activity(i, j["trade_activity"][i].get<int32_t>());
     }
   }
   if (j.contains("fee_paid")) {

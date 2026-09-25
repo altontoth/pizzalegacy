@@ -686,6 +686,22 @@ void GameState::score_and_grant_mayor_award(MayorAwardEvent& award_event,
       }
     }
 
+    else if (award_event.type == MayorAwardType::TransAtlanticTrade) {
+      int64_t best_score = 0;
+      award_event.winner_player_id = std::nullopt;
+      for (int i = 0; i < NUMBER_OF_PLAYERS; ++i) {
+        if (!all_players[i]) {
+          continue;
+        }
+        int64_t score = (int64_t{mayor_office.favor_score(i)} * 100) +
+                        all_players[i]->trade_activity();
+        if (score > best_score) {
+          best_score = score;
+          award_event.winner_player_id = i;
+        }
+      }
+    }
+
     // Grant a trophy level to the winner.
     if (award_event.winner_player_id.has_value()) {
       int winner_id = *award_event.winner_player_id;

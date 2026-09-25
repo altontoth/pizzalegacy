@@ -253,9 +253,11 @@ void DepotExportScreen::execute_export() {
     return;
   }
 
-  auto player_id = state_.active_player()->id();
+  auto* player = state_.active_player();
+  auto player_id = player->id();
   auto& source_depot = source_city_->central_depot(player_id);
   auto& target_depot = target_city_->central_depot(player_id);
+  int shipped_kg = 0;
 
   for (const auto& item : items_) {
     if (item.transfer_amount <= 0) {
@@ -271,7 +273,10 @@ void DepotExportScreen::execute_export() {
 
     source_depot.consume_ingredient(type, qty_grams);
     target_depot.add_ingredient(type, qty_grams, quality, cost);
+    shipped_kg += item.transfer_amount;
   }
+  player->add_trade_activity(shipped_kg);
+  state_.adjust_social_score(*player, shipped_kg / 1000);
 
   charge_exit();
   state_.ui().pop();

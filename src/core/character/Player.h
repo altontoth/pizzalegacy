@@ -196,6 +196,12 @@ public:
   }
   SocialStatus& social_status() { return social_status_; }
   const SocialStatus& social_status() const { return social_status_; }
+  // Kilograms shipped between their depots in different cities, for the
+  // trans-atlantic trade award.
+  int64_t trade_activity() const { return trade_activity_; }
+  void trade_activity(int64_t kg) { trade_activity_ = kg; }
+  void add_trade_activity(int kg) { trade_activity_ += kg; }
+
   Money weapon_dealing_profit() const { return weapon_dealing_profit_; }
   void weapon_dealing_profit(Money amount) { weapon_dealing_profit_ = amount; }
   void add_weapon_dealing_profit(Money amount) {
@@ -275,6 +281,7 @@ private:
   InsurancePlayerState insurance_state_;
   SocialStatus social_status_;
   Money weapon_dealing_profit_{0};
+  int64_t trade_activity_{0};
   std::array<Money, core::item::item_count> weapon_unit_cost_{};
   std::unordered_set<core::CityId> visited_city_ids_;
   uint8_t competition_willingness_{0};

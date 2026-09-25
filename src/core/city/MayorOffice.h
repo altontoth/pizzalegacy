@@ -55,12 +55,12 @@ public:
     favor_score_[player_id] = std::clamp(value, 0, 200);
   }
 
-  // Per-player investment and trade activity totals (used in award scoring).
+  // Per-player investment activity in this city (used in award scoring).
   int32_t investment_activity(int player_id) const {
     return investment_activity_[player_id];
   }
-  int32_t trade_activity(int player_id) const {
-    return trade_activity_[player_id];
+  void add_investment_activity(int player_id, Money amount) {
+    investment_activity_[player_id] += static_cast<int32_t>(amount.whole());
   }
 
   // Award participation fee payment (one entry per player).
@@ -89,9 +89,6 @@ public:
   void investment_activity(int player_id, int32_t value) {
     investment_activity_[player_id] = value;
   }
-  void trade_activity(int player_id, int32_t value) {
-    trade_activity_[player_id] = value;
-  }
   void appointment_day(int day) { appointment_day_ = day; }
   MayorAwardType current_quarterly_award() const {
     return current_quarterly_award_;
@@ -108,7 +105,8 @@ public:
   // and advances the appointment system.
   std::vector<MayorAwardEvent> process_daily_scheduling(const GameDate& date,
                                                         int player_count,
-                                                        bool current_city);
+                                                        bool current_city,
+                                                        bool fix_legacy_bugs);
 
 private:
   void schedule_quarterly_award(const GameDate& date);
@@ -122,7 +120,6 @@ private:
   // Mayor favor per player: incremented by donations / 1000, cap 200.
   std::array<int, NUMBER_OF_PLAYERS> favor_score_{};
   std::array<int32_t, NUMBER_OF_PLAYERS> investment_activity_{};
-  std::array<int32_t, NUMBER_OF_PLAYERS> trade_activity_{};
 
   // Per-player flag: true when the player has paid the $2000 award fee.
   std::array<bool, NUMBER_OF_PLAYERS> fee_paid_{};

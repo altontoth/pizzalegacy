@@ -15,6 +15,7 @@
 #include "core/character/Staff.h"
 #include "core/city/City.h"
 #include "core/city/JobMarket.h"
+#include "core/city/MayorOffice.h"
 #include "core/city/Property.h"
 #include "core/factories/RestaurantLayoutFactory.h"
 #include "core/finance/Ledger.h"
@@ -31,6 +32,13 @@
 #include "engine/Random.h"
 
 namespace {
+
+void add_investment(Property& property, const Player& player, Money amount) {
+  if (player.is_human_controlled()) {
+    property.city().mayor_office().add_investment_activity(player.id().value,
+                                                           amount);
+  }
+}
 
 // Depot properties add storage capacity proportional to their footprint.
 constexpr int depot_capacity_kg_per_tile = 100;
@@ -100,6 +108,7 @@ bool RealEstate::buy_restaurant(Property& property, Player& buyer, Money price,
     }
     buyer.financials().transfer(today, Account::Cash, Account::Property, price,
                                 balance_sheet_only);
+    add_investment(property, buyer, price);
   }
 
   property.buy(buyer.id());
@@ -133,6 +142,7 @@ Restaurant* RealEstate::rent_restaurant(Property& property, Player& player,
     // We already check player has enough money, so this can't be false.
     (void)player.spend_cash(today, MonthlyCategory::Rents, price,
                             restaurant->id());
+    add_investment(property, player, price);
     gs_->adjust_social_score(player, 50);
   }
   return restaurant;
@@ -147,6 +157,7 @@ bool RealEstate::buy_depot(Property& property, Player& buyer, Money price) {
   }
   buyer.financials().transfer(today, Account::Cash, Account::Property, price,
                               balance_sheet_only);
+  add_investment(property, buyer, price);
 
   // A tenant buying the depot they rent already has its capacity and score.
   const bool was_tenant =
@@ -171,6 +182,9 @@ bool RealEstate::rent_depot(Property& property, Player& player, bool free) {
 
   if (!free && !player.spend_cash(today, MonthlyCategory::Rents, price)) {
     return false;
+  }
+  if (!free) {
+    add_investment(property, player, price);
   }
   property.rent(player.id());
 

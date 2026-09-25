@@ -11,6 +11,7 @@
 #include "core/city/City.h"
 #include "core/city/CityTypes.h"
 #include "core/city/District.h"
+#include "core/city/MayorOffice.h"
 #include "core/city/Property.h"
 #include "core/events/MilestoneId.h"
 #include "core/food/IngredientCategory.h"
@@ -922,7 +923,7 @@ void Player::process_contracts(GameState& game_state) {
     // Charge payment: sum, plus charge if they delivered extra
     Money payment = c.daily_sum * (100 - c.discount_pct) / 100;
     if (c.deliver_as_required && extra_cost.cents > 0) {
-      payment += c.charge;
+      payment += extra_cost + c.charge;
     }
 
     if (!game_state.spend_cash(MonthlyCategory::Stock, payment,
@@ -944,6 +945,7 @@ void Player::process_contracts(GameState& game_state) {
       });
     }
     else {
+      city->mayor_office().add_investment_activity(id_.value, payment);
       for (const auto& [type, cost] : delivered) {
         restaurant->record_ingredient_spend(type, cost);
       }

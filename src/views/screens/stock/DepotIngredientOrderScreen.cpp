@@ -9,6 +9,7 @@
 #include "core/character/Player.h"
 #include "core/city/CentralDepot.h"
 #include "core/city/City.h"
+#include "core/city/MayorOffice.h"
 #include "core/factories/IngredientFactory.h"
 #include "core/finance/Ledger.h"
 #include "core/food/Ingredient.h"
@@ -320,6 +321,8 @@ void DepotIngredientOrderScreen::place_order() {
         !state_.spend_cash(MonthlyCategory::Stock, total_cost)) {
       return;
     }
+    state_.active_city()->mayor_office().add_investment_activity(
+        state_.active_player()->id().value, total_cost);
 
     auto& depot =
         state_.active_city()->central_depot(state_.active_player()->id());

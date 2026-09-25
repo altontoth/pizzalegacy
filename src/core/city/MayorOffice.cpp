@@ -63,7 +63,7 @@ void MayorOffice::advance_appointment(const GameDate& date) {
 
 std::vector<MayorAwardEvent>
 MayorOffice::process_daily_scheduling(const GameDate& date, int player_count,
-                                      bool current_city) {
+                                      bool current_city, bool fix_legacy_bugs) {
   std::vector<MayorAwardEvent> events;
 
   // Decay favor scores by 1 per day for all active players
@@ -79,27 +79,6 @@ MayorOffice::process_daily_scheduling(const GameDate& date, int player_count,
   auto day = static_cast<int>(date.day());
   auto month = static_cast<int>(date.month());
 
-  // June 30: Best Imitator of the Year (always names a winner), held only in
-  // the city the player is in when the day starts.
-  if (month == 6 && day == 30) {
-    if (current_city) {
-      std::optional<int> winner =
-          compute_award_winner(MayorAwardType::BestImitator, player_count);
-      events.push_back({.type = MayorAwardType::BestImitator,
-                        .winner_player_id = winner,
-                        .announces_winner = true});
-    }
-    return events;
-  }
-
-  // Pizza of the Year
-  if (month == 12 && day == 31) {
-    events.push_back({.type = MayorAwardType::PizzaOfTheYear,
-                      .winner_player_id = std::nullopt,
-                      .announces_winner = true});
-    return events;
-  }
-
   // Last day of every 3rd month: schedule a quarterly award for next month
   if (date.is_end_of_month() && month % 3 == 0) {
     schedule_quarterly_award(date);
@@ -111,6 +90,7 @@ MayorOffice::process_daily_scheduling(const GameDate& date, int player_count,
     events.push_back(
         {.type = current_quarterly_award_, .winner_player_id = std::nullopt});
     announcement_day_ = 0; // consumed
+    clear_fee_paid();
   }
 
   // Quarterly award result: work the winner out and deliver it
@@ -123,7 +103,28 @@ MayorOffice::process_daily_scheduling(const GameDate& date, int player_count,
                       .announces_winner = true});
     current_quarterly_award_ = MayorAwardType::None;
     winner_day_ = 0;
-    clear_fee_paid();
+  }
+
+  std::optional<MayorAwardType> yearly;
+  if (month == 6 && day == 30) {
+    yearly = MayorAwardType::BestImitator;
+  }
+  else if (month == 12 && day == 31) {
+    yearly = MayorAwardType::PizzaOfTheYear;
+  }
+  if (yearly && current_city) {
+    std::optional<int> winner;
+    if (*yearly == MayorAwardType::BestImitator) {
+      winner = compute_award_winner(*yearly, player_count);
+    }
+    events.push_back({.type = *yearly,
+                      .winner_player_id = winner,
+                      .announces_winner = true});
+    // Legacy bug: announcing the yearly winner resets next quarter's award,
+    // drawn earlier today, to the most beautiful restaurant.
+    if (!fix_legacy_bugs) {
+      current_quarterly_award_ = MayorAwardType::MostBeautifulRestaurant;
+    }
   }
 
   return events;
@@ -131,8 +132,9 @@ MayorOffice::process_daily_scheduling(const GameDate& date, int player_count,
 
 void MayorOffice::schedule_quarterly_award(const GameDate& /*date*/) {
   // Original probabilities (with override chain):
-  // 30% Best Investor, 20% Golden Bow Tie, 20% Trans-Atlantic Trade, ~45% none
-  MayorAwardType award = MayorAwardType::None;
+  // 30% Best Investor, 20% Golden Bow Tie, 20% Trans-Atlantic Trade, ~45% Most
+  // Beautiful Restaurant
+  MayorAwardType award = MayorAwardType::MostBeautifulRestaurant;
 
   if (engine::random::rand_percentage_chance(30)) {
     award = MayorAwardType::BestInvestorInTown;
@@ -145,19 +147,15 @@ void MayorOffice::schedule_quarterly_award(const GameDate& /*date*/) {
   }
 
   current_quarterly_award_ = award;
-
-  if (award != MayorAwardType::None) {
-    announcement_day_ = engine::random::rand_max_n(5) + 1;
-    winner_day_ = engine::random::rand_max_n(10) + 10;
-    public_bank_account_ = roll_public_account();
-  }
+  announcement_day_ = engine::random::rand_max_n(5) + 1;
+  winner_day_ = engine::random::rand_max_n(10) + 10;
+  public_bank_account_ = roll_public_account();
 }
 
 std::optional<int> MayorOffice::compute_award_winner(MayorAwardType type,
                                                      int player_count) const {
-  // MostBeautifulRestaurant and GoldenBowTie require iterating restaurant
-  // data not accessible here, Pizza of the Year has no winner until the
-  // competition is played.
+  // The other awards need access to restaurant or player data this class can't
+  // see. Pizza of the Year has no winner until the competition is played.
   switch (type) {
   case MayorAwardType::BestInvestorInTown: {
     int best_score = 0;
@@ -167,19 +165,6 @@ std::optional<int> MayorOffice::compute_award_winner(MayorAwardType type,
         continue;
       }
       int score = (favor_score_[i] * 100) + investment_activity_[i];
-      if (score > best_score) {
-        best_score = score;
-        winner = i;
-      }
-    }
-    return winner;
-  }
-  case MayorAwardType::TransAtlanticTrade: {
-    int32_t best_score = 0;
-    std::optional<int> winner;
-    for (int i = 0; i < player_count; i++) {
-      int32_t score =
-          (static_cast<int32_t>(favor_score_[i]) * 100) + trade_activity_[i];
       if (score > best_score) {
         best_score = score;
         winner = i;

@@ -45,6 +45,11 @@ public:
   price_level_for_ingredient(core::food::IngredientType ingredient_type) const;
 
   bool sells(core::food::IngredientType ingredient_type) const;
+  void price_level(int index, uint8_t level) {
+    if (index >= 0 && index < static_cast<int>(price_levels_.size())) {
+      price_levels_[index] = level;
+    }
+  }
 
   // Final price for an ingredient, empty when the supplier does not sell it.
   std::optional<Money>

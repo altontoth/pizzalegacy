@@ -8,6 +8,7 @@
 
 #include "core/character/Player.h"
 #include "core/city/City.h"
+#include "core/city/MayorOffice.h"
 #include "core/factories/IngredientFactory.h"
 #include "core/finance/Ledger.h"
 #include "core/food/Ingredient.h"
@@ -318,6 +319,8 @@ void IngredientOrderScreen::place_order() {
                          restaurant->id())) {
     return;
   }
+  state_.active_city()->mayor_office().add_investment_activity(
+      state_.active_player()->id().value, total_cost);
 
   for (const auto& batch : ingredients_) {
     if (batch.count > 0) {
