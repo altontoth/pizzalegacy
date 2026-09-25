@@ -1501,7 +1501,7 @@ void TurnOrchestrator::run_city_start_of_day(City& city) {
   city.newspaper_event_system().daily_update(*gs_, city);
   city.mayor_office().start_of_day(gs_->time_.current_date());
   auto awards = city.mayor_office().process_daily_scheduling(
-      gs_->time_.current_date(), gs_->human_player_count());
+      gs_->time_.current_date(), gs_->human_player_count(), first_city_today);
   for (auto& ev : awards) {
     gs_->score_and_grant_mayor_award(ev, city);
     queue_mayor_award(ev, gs_->active_player_);

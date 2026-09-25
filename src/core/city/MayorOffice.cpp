@@ -5,6 +5,7 @@
  */
 
 #include "core/city/MayorOffice.h"
+#include "core/util/Constants.h"
 #include "engine/Random.h"
 
 namespace {
@@ -61,7 +62,8 @@ void MayorOffice::advance_appointment(const GameDate& date) {
 }
 
 std::vector<MayorAwardEvent>
-MayorOffice::process_daily_scheduling(const GameDate& date, int player_count) {
+MayorOffice::process_daily_scheduling(const GameDate& date, int player_count,
+                                      bool current_city) {
   std::vector<MayorAwardEvent> events;
 
   // Decay favor scores by 1 per day for all active players
@@ -77,13 +79,16 @@ MayorOffice::process_daily_scheduling(const GameDate& date, int player_count) {
   auto day = static_cast<int>(date.day());
   auto month = static_cast<int>(date.month());
 
-  // June 30: Best Imitator of the Year (always names a winner)
+  // June 30: Best Imitator of the Year (always names a winner), held only in
+  // the city the player is in when the day starts.
   if (month == 6 && day == 30) {
-    std::optional<int> winner =
-        compute_award_winner(MayorAwardType::BestImitator, player_count);
-    events.push_back({.type = MayorAwardType::BestImitator,
-                      .winner_player_id = winner,
-                      .announces_winner = true});
+    if (current_city) {
+      std::optional<int> winner =
+          compute_award_winner(MayorAwardType::BestImitator, player_count);
+      events.push_back({.type = MayorAwardType::BestImitator,
+                        .winner_player_id = winner,
+                        .announces_winner = true});
+    }
     return events;
   }
 
@@ -183,11 +188,12 @@ std::optional<int> MayorOffice::compute_award_winner(MayorAwardType type,
     return winner;
   }
   case MayorAwardType::BestImitator: {
-    // Must exceed 4 pizza competition wins in this city to be eligible.
+    // Must exceed 4 pizza competition wins in this city to be eligible. AI
+    // players can win it too.
     constexpr int min_wins = 4;
     int best_wins = min_wins;
     std::optional<int> winner;
-    for (int i = 0; i < player_count; i++) {
+    for (int i = 0; i < NUMBER_OF_PLAYERS; i++) {
       if (pizza_competition_wins_[i] > best_wins) {
         best_wins = pizza_competition_wins_[i];
         winner = i;

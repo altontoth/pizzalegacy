@@ -107,7 +107,8 @@ public:
   // Returns any award events that should fire today. Also decays favor scores
   // and advances the appointment system.
   std::vector<MayorAwardEvent> process_daily_scheduling(const GameDate& date,
-                                                        int player_count);
+                                                        int player_count,
+                                                        bool current_city);
 
 private:
   void schedule_quarterly_award(const GameDate& date);

@@ -253,7 +253,6 @@ json player_to_json(const Player& player) {
   }
   j["weapon_unit_costs"] = std::move(weapon_costs_obj);
   j["competition_willingness"] = player.competition_willingness();
-  j["competition_win_count"] = player.competition_win_count();
 
   json ad_effectiveness_array = json::array();
   for (const auto& [city_id, channels] : player.ad_effectiveness()) {
@@ -465,7 +464,6 @@ json_to_player(const json& j, GameContext& context,
   }
   player->set_competition_willingness(
       j.value("competition_willingness", uint8_t{0}));
-  player->competition_win_count(j.value("competition_win_count", uint8_t{0}));
 
   if (j.contains("ad_effectiveness")) {
     for (const auto& entry : j["ad_effectiveness"]) {

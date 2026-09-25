@@ -266,9 +266,9 @@ static CommandDef make_mayor_status() {
       .description = "Show mayor office state",
       .help_text = R"(Usage: mayor status
 
-Shows the mayor's two bank account numbers, favor scores for all
-players, appointment day, and quarterly award schedule for the
-active city.
+Shows the mayor's two bank account numbers, favor scores and pizza
+competition wins for all players, appointment day, and quarterly award
+schedule for the active city.
 
 Example:
   mayor status
@@ -291,8 +291,10 @@ Example:
         for (int i = 0; i < static_cast<int>(players.size()); ++i) {
           if (players[i]) {
             result.add_message(
-                compat::format("Player {} favor: {}, fee paid: {}", i,
-                               mo.favor_score(i), mo.fee_paid(i)));
+                compat::format("Player {} favor: {}, fee paid: {}, "
+                               "competition wins: {}",
+                               i, mo.favor_score(i), mo.fee_paid(i),
+                               mo.pizza_competition_wins(i)));
           }
         }
 

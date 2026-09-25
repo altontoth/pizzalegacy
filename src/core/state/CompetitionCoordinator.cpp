@@ -238,10 +238,12 @@ CompetitionCoordinator::finalize_competition_results(
       gs_->adjust_social_score(*winner_player, 40);
     }
 
-    // Win counter
-    if (winner_player) {
-      winner_player->increment_competition_win_count();
-      uint8_t wins = winner_player->competition_win_count();
+    // Wins count toward the city the competition runs in.
+    auto* city = gs_->active_city();
+    if (winner_player && city) {
+      auto& mayor = city->mayor_office();
+      mayor.add_pizza_competition_win(winner.player_id.value);
+      const int wins = mayor.pizza_competition_wins(winner.player_id.value);
 
       if (winner.is_human) {
         if (wins == 1) {

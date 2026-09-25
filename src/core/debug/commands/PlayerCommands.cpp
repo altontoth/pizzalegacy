@@ -716,6 +716,7 @@ static CommandDef make_player_competition() {
 
 An AI player turns down a challenge while its willingness counter is above
 zero. Losing to the human sets the counter, and it decays by one each turn.
+The wins are the player's competition wins in the current city.
 
 Examples:
   player competition 0 2        # will accept a challenge, and has won twice
@@ -751,8 +752,13 @@ Examples:
               compat::format("Player {} not found", player_id.value));
         }
 
+        auto* city = ctx.state.active_city();
+        if (!city) {
+          return CommandResult::error("No active city");
+        }
+
         player->set_competition_willingness(willingness);
-        player->competition_win_count(wins);
+        city->mayor_office().pizza_competition_wins(player_id.value, wins);
 
         return CommandResult::success().add_message(compat::format(
             "Set player {}'s competition willingness to {} and wins to {}",

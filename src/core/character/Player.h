@@ -226,9 +226,6 @@ public:
     if (competition_willingness_ > 0)
       competition_willingness_--;
   }
-  uint8_t competition_win_count() const { return competition_win_count_; }
-  void competition_win_count(uint8_t count) { competition_win_count_ = count; }
-  void increment_competition_win_count() { competition_win_count_++; }
 
   // Pending notifications to be shown at the start of this player's next turn.
   void queue_notification(StatusMsg m);
@@ -280,7 +277,6 @@ private:
   std::array<Money, core::item::item_count> weapon_unit_cost_{};
   std::unordered_set<core::CityId> visited_city_ids_;
   uint8_t competition_willingness_{0};
-  uint8_t competition_win_count_{0};
   std::vector<ActiveContract> contracts_;
   std::vector<StatusMsg> pending_notifications_;
 };
