@@ -52,11 +52,14 @@ public:
   // screen has closed.
   void tick();
 
+  // Number of times a human player has won the competition; makes the reference
+  // pizza harder and stops counting at this point:
+  static constexpr int max_competition_count = 40;
   int competition_count() const { return competition_count_; }
   void competition_count(int count) { competition_count_ = count; }
-  void increment_competition_count() {
-    competition_count_ = std::min(competition_count_ + 1, 255);
-  }
+
+  // Draws the reference pizza for a monthly or challenge competition.
+  [[nodiscard]] int reference_pizza_index() const;
 
 private:
   void

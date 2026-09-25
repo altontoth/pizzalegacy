@@ -1564,10 +1564,7 @@ void RestaurantView::challenge_ask_speed(CompetitionFlow flow) {
 }
 
 void RestaurantView::challenge_start(CompetitionFlow flow) {
-  int comp_count = state_.competitions().competition_count();
-  // early game: lower IDs (starting at 20) then increasing with comp_count
-  int pizza_index =
-      std::min(comp_count, 40) + engine::random::rand_max_n(10) + 20;
+  int pizza_index = state_.competitions().reference_pizza_index();
 
   auto& zutaten_bob = context_.bob->get("bob/zutaten.bob");
   auto get_bob_size =

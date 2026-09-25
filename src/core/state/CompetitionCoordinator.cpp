@@ -26,6 +26,11 @@
 #include "engine/Random.h"
 #include "resources/BobSizeFn.h"
 
+namespace {
+// The competition reference pizzas start at r/r20.pc.
+constexpr int first_reference_pizza = 20;
+} // namespace
+
 void CompetitionCoordinator::run_monthly_competition() {
   std::vector<core::PlayerId> humans;
   for (int slot = 0; slot < gs_->human_player_count(); ++slot) {
@@ -80,8 +85,7 @@ void CompetitionCoordinator::run_monthly_competition_chain(
 
         if (!session->reference_pizza) {
           int speed_level = entry->speed_level.value_or(3);
-          int pizza_index = std::min(competition_count_, 40) +
-                            engine::random::rand_max_n(10) + 20;
+          int pizza_index = reference_pizza_index();
           auto& zutaten_bob = gs_->context_->bob->get("bob/zutaten.bob");
           auto get_bob_size =
               make_ingredient_bob_size_fn<Bob, core::food::Topping>(
@@ -109,6 +113,11 @@ void CompetitionCoordinator::run_monthly_competition_chain(
         });
         run_monthly_competition_chain(std::move(remaining), std::move(session));
       });
+}
+
+int CompetitionCoordinator::reference_pizza_index() const {
+  return std::min(competition_count_, max_competition_count) +
+         engine::random::rand_max_n(10) + first_reference_pizza;
 }
 
 void CompetitionCoordinator::launch_monthly_competition(
@@ -185,8 +194,10 @@ CompetitionCoordinator::finalize_competition_results(
     const auto& ch = ai->character();
     auto dex = ch.dexterity();
     auto cook = ch.cooking();
-    auto raw_time = 50 - engine::random::rand_max_n((dex / 2) + 1);
-    auto time_ticks = raw_time + (raw_time * competition_count_ * 5 / 100);
+    auto raw_time = 50 - engine::random::rand_max_n(dex / 2);
+    auto time_ticks =
+        raw_time +
+        (raw_time * (c.pizza_index - first_reference_pizza) * 5 / 100);
     auto difficulty = c.pizza_index - 10 + (c.speed_level * 5);
     int q = 100 - difficulty + engine::random::rand_max_n(14) +
             (static_cast<int>(cook) / 5);
@@ -245,7 +256,9 @@ CompetitionCoordinator::finalize_competition_results(
       mayor.add_pizza_competition_win(winner.player_id.value);
       const int wins = mayor.pizza_competition_wins(winner.player_id.value);
 
-      if (winner.is_human) {
+      // The win milestones are only awarded while the counter is below its max.
+      if (winner.is_human && competition_count_ < max_competition_count) {
+        ++competition_count_;
         if (wins == 1) {
           winner_message =
               core::events::MilestoneId::FirstPriceInPizzaCompetition;
@@ -280,8 +293,6 @@ CompetitionCoordinator::finalize_competition_results(
       }
     }
   }
-
-  increment_competition_count();
 
   return winner_message;
 }
