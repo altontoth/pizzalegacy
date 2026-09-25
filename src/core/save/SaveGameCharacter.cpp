@@ -386,10 +386,7 @@ json_to_player(const json& j, GameContext& context,
     player->holiday(j["holiday_days_left"].get<int>());
   }
   if (j.contains("criminal_record")) {
-    int cr = j["criminal_record"].get<int>();
-    for (int i = 0; i < cr; ++i) {
-      player->increment_criminal_record();
-    }
+    player->criminal_record(j["criminal_record"].get<int>());
   }
   if (j.contains("eliminated") && j["eliminated"].get<bool>()) {
     player->eliminate();

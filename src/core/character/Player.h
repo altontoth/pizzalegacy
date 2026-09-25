@@ -78,6 +78,7 @@ public:
   int jail_time() const;
   void jail_time(uint8_t jail_time);
   int criminal_record() const;
+  void criminal_record(int count) { criminal_record_ = count; }
   void increment_criminal_record();
   void jail(int days);
   bool is_in_jail() const;
