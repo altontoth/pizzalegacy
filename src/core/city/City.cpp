@@ -313,12 +313,32 @@ const District& City::district(core::DistrictIndex district_index) const {
   return *districts_.at(district_index.value);
 }
 
-void City::end_of_day(int difficulty) {
+void City::end_of_day(int difficulty, IngredientCategory price_update_category,
+                      bool end_of_week, int human_players) {
   replenish_supplier_stock_levels();
+
+  for (auto& supplier : suppliers_) {
+    supplier->daily_update(ingredient_trend_system_,
+                           supplier->category() == price_update_category);
+    for (int p = 0; p < NUMBER_OF_PLAYERS; ++p) {
+      auto& rel = supplier->relationship(core::PlayerId{p});
+      if (rel.delivery_issues_flag > 0) {
+        rel.delivery_issues_flag--;
+      }
+    }
+  }
 
   // Advance all active ingredient trend effects one day.
   ingredient_trend_system_.daily_tick();
 
+  clear_refused_calls();
+
+  if (end_of_week) {
+    end_of_week_tick(difficulty, human_players);
+  }
+}
+
+void City::end_of_week_tick(int difficulty, int human_players) {
   // The original doesn't actually seem to honor trade embargoes, but
   // we have an option to fix that 'bug', so update counters here
   // (it's safe regardless of the option because we check before using these
@@ -336,9 +356,18 @@ void City::end_of_day(int difficulty) {
     spoilage_rate_ = 1;
   }
 
-  job_market_.end_of_day(difficulty);
+  job_market_.end_of_week(difficulty);
 
-  clear_refused_calls();
+  // Supplier spend for human players is reduced every week by an amount per
+  // supplier.
+  for (auto& supplier : suppliers_) {
+    for (int p = 0; p < human_players; ++p) {
+      auto& rel = supplier->relationship(core::PlayerId{p});
+      rel.total_spent = rel.total_spent > supplier->loyalty_level_amount()
+                            ? rel.total_spent - supplier->loyalty_level_amount()
+                            : Money{0};
+    }
+  }
 }
 
 std::vector<core::ActorId> City::refused_call_actors() const {

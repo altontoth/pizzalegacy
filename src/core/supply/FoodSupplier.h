@@ -17,6 +17,8 @@
 #include "core/food/IngredientType.h"
 #include "core/supply/SupplierRelationship.h"
 
+class IngredientTrendSystem;
+
 constexpr int VEGETABLE_COUNT = 22;
 constexpr int MEAT_COUNT = 17;
 constexpr int FRUIT_COUNT = 13;
@@ -45,6 +47,7 @@ public:
   price_level_for_ingredient(core::food::IngredientType ingredient_type) const;
 
   bool sells(core::food::IngredientType ingredient_type) const;
+  uint8_t price_level(int index) const { return price_levels_.at(index); }
   void price_level(int index, uint8_t level) {
     if (index >= 0 && index < static_cast<int>(price_levels_.size())) {
       price_levels_[index] = level;
@@ -71,6 +74,16 @@ public:
   int stock(core::food::IngredientType ingredient_type) const;
   void set_stock(core::food::IngredientType ingredient_type, int quantity);
 
+  uint8_t price_factor() const { return price_factor_; }
+  void price_factor(uint8_t factor) { price_factor_ = factor; }
+  Money loyalty_level_amount() const { return loyalty_level_amount_; }
+  void loyalty_level_amount(Money amount) { loyalty_level_amount_ = amount; }
+
+  // Reduce stock of all ingredients based on how popular they are. If
+  // update_prices is true, also set the new price levels based on how much
+  // stock is left and how popular the ingredient is.
+  void daily_update(const IngredientTrendSystem& trends, bool update_prices);
+
   // Get the ingredient category this supplier handles (alias for type())
   IngredientCategory category() const { return category_; }
 
@@ -85,6 +98,8 @@ private:
   Money min_contract_amount_;
   std::array<uint8_t, 22> price_levels_; // Max 22 for vegetables
   std::array<int, 22> stock_levels_{};   // Stock levels in kg
+  uint8_t price_factor_{0};
+  Money loyalty_level_amount_{0};
   mutable std::unordered_map<core::PlayerId, SupplierRelationship>
       relationships_;
 };

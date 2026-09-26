@@ -100,7 +100,8 @@ public:
   std::string tile_description(int index) const;
   const std::vector<std::unique_ptr<District>>& districts() const;
   const District& district(core::DistrictIndex district_index) const;
-  void end_of_day(int difficulty);
+  void end_of_day(int difficulty, IngredientCategory price_update_category,
+                  bool end_of_week, int human_players);
   void end_of_month();
   static constexpr int index_to_x(int index) {
     return index % MAP_TILES_PER_ROW;
@@ -192,14 +193,14 @@ public:
   void spoilage_rate(int rate) { spoilage_rate_ = rate; }
   int spoilage_rate() const { return spoilage_rate_; }
 
-  void spoilage_duration_counter(int days) {
-    spoilage_duration_counter_ = days;
+  void spoilage_duration_counter(int weeks) {
+    spoilage_duration_counter_ = weeks;
   }
   int spoilage_duration_counter() const { return spoilage_duration_counter_; }
 
   // Trade embargo counters (4 slots)
-  void trade_embargo_counter(IngredientCategory cat, int days) {
-    trade_embargo_counters_[static_cast<int>(cat)] = days;
+  void trade_embargo_counter(IngredientCategory cat, int weeks) {
+    trade_embargo_counters_[static_cast<int>(cat)] = weeks;
   }
 
   int trade_embargo_counter(IngredientCategory cat) const {
@@ -362,6 +363,7 @@ public:
   }
 
 private:
+  void end_of_week_tick(int difficulty, int human_players);
   void init_supplier_stock_levels();
   void replenish_supplier_stock_levels();
 

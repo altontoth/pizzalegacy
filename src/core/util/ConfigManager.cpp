@@ -161,6 +161,9 @@ const auto option_defs = std::to_array({
     rule_bool_option<&GameRules::demand_fulfillment_popularity>(
         "demand_fulfillment_popularity", {},
         "fix bug in order fulfillment popularity"),
+    rule_bool_option<&GameRules::suppliers_remember_missed_payments>(
+        "suppliers_remember_missed_payments", {},
+        "a supplier holds a missed payment against you when negotiating"),
     rule_enum_option<&GameRules::win_condition,
                      &win_condition_from_config_value>(
         "win_condition", {}, "paris, any_city or all_cities"),

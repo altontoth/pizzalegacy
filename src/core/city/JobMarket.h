@@ -76,9 +76,9 @@ public:
   // player_chars: list of {character_id, player_index} pairs
   void init(const std::vector<std::pair<uint8_t, int>>& player_chars);
 
-  // End-of-day rotation: probabilistically moves characters between
+  // Weekly rotation: probabilistically moves characters between
   // available and reserve to maintain a target pool size per job type.
-  void end_of_day(int difficulty);
+  void end_of_week(int difficulty);
 
   MarketStatus status(int id) const { return slots_[id]; }
   void set_status(int id, MarketStatus value) { slots_[id] = value; }

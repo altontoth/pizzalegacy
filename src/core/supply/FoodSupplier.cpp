@@ -10,6 +10,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <optional>
+#include "core/city/IngredientTrendSystem.h"
 #include "core/food/Ingredient.h"
 #include "core/food/IngredientCategory.h"
 #include "engine/Fatal.h"
@@ -27,6 +28,37 @@ FoodSupplier::FoodSupplier(IngredientCategory category, uint8_t supplier_id,
   price_levels_.fill(0);
   for (int i = 0; i < price_level_count && i < 22; ++i) {
     price_levels_[i] = price_level[i];
+  }
+}
+
+void FoodSupplier::daily_update(const IngredientTrendSystem& trends,
+                                bool update_prices) {
+  constexpr int trend_offset = 130;
+  constexpr int kg_per_trend_step = 5;
+  constexpr double stock_scale = 12000.0;
+  constexpr double trend_weight = 0.25;
+  constexpr double min_level = 20.0;
+  constexpr double max_level = 250.0;
+
+  const int first_id = core::food::CategoryRegistry::start_id(category_);
+  for (int i = 0; i < number_of_products(); ++i) {
+    if (price_levels_[i] == 0) {
+      continue;
+    }
+    const auto type = static_cast<core::food::IngredientType>(first_id + i);
+    const int trend = trends.get_trend(type);
+    const int sold = (trend + trend_offset) * kg_per_trend_step;
+    if (stock_levels_[i] > sold) {
+      stock_levels_[i] -= sold;
+    }
+    if (!update_prices) {
+      continue;
+    }
+    stock_levels_[i] = std::max(stock_levels_[i], 1);
+    double level = (std::sqrt(stock_scale / stock_levels_[i]) * price_factor_) +
+                   (trend * trend_weight);
+    level = std::clamp(level, min_level, max_level);
+    price_levels_[i] = static_cast<uint8_t>(level);
   }
 }
 
@@ -109,13 +141,13 @@ FoodSupplier::relationship(core::PlayerId player_id) const {
 
 int FoodSupplier::spending_rank(core::PlayerId player_id) const {
   const auto& rel = relationship(player_id);
-  if (min_contract_amount_.cents == 0) {
+  if (loyalty_level_amount_.cents == 0) {
     return 0;
   }
-  // Ratio of total historical spend to (minimum order * 4), floored.
+  // Ratio of total historical spend to (loyalty level amount * 4), floored.
   // 0 = first-time, 1-5 = small customer, 6-10 = medium, >10 = VIP.
   return static_cast<int>(rel.total_spent.cents /
-                          (min_contract_amount_.cents * 4));
+                          (loyalty_level_amount_.cents * 4));
 }
 
 uint8_t FoodSupplier::chance_of_no_delivery() const {

@@ -258,6 +258,10 @@ static const OptionDef option_defs[] = {
     {.name = "demand_fulfillment_popularity",
      .member = &GameRules::demand_fulfillment_popularity,
      .description = "Fix bug in order fulfillment popularity"},
+    {.name = "suppliers_remember_missed_payments",
+     .member = &GameRules::suppliers_remember_missed_payments,
+     .description = "A supplier holds a missed payment against you when "
+                    "negotiating"},
     {.name = "win_condition",
      .member = &GameRules::win_condition,
      .description = "Cities to dominate to win: paris, any_city or "

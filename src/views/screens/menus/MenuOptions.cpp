@@ -310,6 +310,12 @@ void MenuOptions::build_rules(GameState& state) {
         .help_text(
             "On: popularity reflects unmet orders. "
             "Off: it always takes the full drop, as in the DOS original.");
+    toggle(rule_labels::suppliers_remember_missed_payments,
+           rules.suppliers_remember_missed_payments)
+        .advanced(true)
+        .help_text("On: after a missed contract payment a supplier won't halve "
+                   "the penalty or give extra discount for a while. Off: they "
+                   "forget, as in the original.");
     add_menu_item(std::make_unique<EnumMenuItem<WinCondition>>(
                       context_, rule_labels::win_condition, rules.win_condition,
                       std::vector{WinCondition::Paris, WinCondition::AnyCity,

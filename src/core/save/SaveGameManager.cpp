@@ -521,6 +521,8 @@ json rules_to_json(const GameRules& rules) {
       {"win_condition", to_config_value(rules.win_condition)},
       {"pizza_judging", to_config_value(rules.pizza_judging)},
       {"police", rules.police},
+      {"suppliers_remember_missed_payments",
+       rules.suppliers_remember_missed_payments},
   };
 }
 
@@ -532,6 +534,9 @@ GameRules json_to_rules(const json& j, GameRules rules) {
               rules.mafia_shakedowns_target_all_restaurants);
   rules.demand_fulfillment_popularity = j.value(
       "demand_fulfillment_popularity", rules.demand_fulfillment_popularity);
+  rules.suppliers_remember_missed_payments =
+      j.value("suppliers_remember_missed_payments",
+              rules.suppliers_remember_missed_payments);
   if (auto parsed = win_condition_from_config_value(
           j.value("win_condition", std::string{}))) {
     rules.win_condition = *parsed;
@@ -739,6 +744,7 @@ json SaveGameManager::state_to_json(const GameState& state,
 
   j["floor_editing_bonus_shown"] = state.turn().floor_editing_bonus_shown();
   j["competition_count"] = state.competitions().competition_count();
+  j["price_update_category"] = state.price_update_category();
   j["interruption_phase"] = static_cast<int>(state.interruption_phase());
   j["second_in_block"] = state.second_in_block();
   j["pit_tick_in_second"] = state.pit_tick_in_second();
@@ -1050,6 +1056,7 @@ void SaveGameManager::json_to_state(const json& j, GameState& state,
   state.turn().floor_editing_bonus_shown(
       j.value("floor_editing_bonus_shown", false));
   state.competitions().competition_count(j.value("competition_count", 0));
+  state.price_update_category(j.value("price_update_category", 0));
   // Saves from before the rate moved onto City hold one rate for every city.
   if (j.contains("global_interest_rate")) {
     int rate = j["global_interest_rate"].get<int>();

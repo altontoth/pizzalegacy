@@ -66,6 +66,9 @@ struct GameRules {
   PizzaJudging pizza_judging = PizzaJudging::Relaxed;
   // Off stops the police turning up by themselves. Console only.
   bool police = true;
+  // A supplier holds a missed contract payment against the player in
+  // negotiation for a while. The original reads the value but never sets it.
+  bool suppliers_remember_missed_payments = false;
 
   bool operator==(const GameRules&) const = default;
 };
@@ -80,6 +83,8 @@ constexpr const char* demand_fulfillment_popularity =
 constexpr const char* win_condition = "Win condition";
 constexpr const char* pizza_judging = "Standard pizza judging";
 constexpr const char* police = "Police";
+constexpr const char* suppliers_remember_missed_payments =
+    "Suppliers remember late payers";
 } // namespace rule_labels
 
 // Returns one line for each rule whose value differs, with their value.

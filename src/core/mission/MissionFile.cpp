@@ -52,6 +52,7 @@ std::vector<uint8_t> encode_rules(const GameRules& rules, bool rules_changed) {
       static_cast<uint8_t>(rules.win_condition),
       static_cast<uint8_t>(rules.pizza_judging),
       static_cast<uint8_t>(rules.police),
+      static_cast<uint8_t>(rules.suppliers_remember_missed_payments),
   };
 }
 
@@ -75,6 +76,7 @@ void decode_rules(const std::vector<uint8_t>& bytes, MissionTarget& target) {
     rules.pizza_judging = static_cast<PizzaJudging>(bytes[5]);
   }
   decode_bool(6, rules.police);
+  decode_bool(7, rules.suppliers_remember_missed_payments);
   target.rules = rules;
 }
 

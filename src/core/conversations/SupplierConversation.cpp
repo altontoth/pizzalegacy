@@ -7,6 +7,7 @@
 #include "core/conversations/SupplierConversation.h"
 
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <cstddef>
 #include <magic_enum/magic_enum.hpp>
@@ -24,6 +25,28 @@
 #include "engine/FormatCompat.h"
 #include "engine/Logger.h"
 #include "engine/Random.h"
+
+namespace {
+
+// The arguments a player can give when asked to justify a demand, and the
+// chance each one manages to convince the supplier.
+struct JustifyArgument {
+  SupplierLine line;
+  int chance;
+};
+
+constexpr std::array<JustifyArgument, 8> justify_arguments{{
+    {.line = SupplierLine::DONT_DELIVER_ON_TIME, .chance = 20},
+    {.line = SupplierLine::BUSINESS_IS_BAD, .chance = 38},
+    {.line = SupplierLine::WIFE_AND_CHILDREN_ILL, .chance = 60},
+    {.line = SupplierLine::BEEN_GOOD_CUSTOMER_LONG_TIME, .chance = 50},
+    {.line = SupplierLine::ITS_ABOUT_TIME, .chance = 45},
+    {.line = SupplierLine::OTHER_SUPPLIERS_CHEAPER, .chance = 70},
+    {.line = SupplierLine::NOT_ONLY_SUPPLIER, .chance = 50},
+    {.line = SupplierLine::NOBODY_WANTS_YOUR_RUBBISH, .chance = 10},
+}};
+
+} // namespace
 
 SupplierConversation::SupplierConversation(GameState& state,
                                            const FoodSupplier* supplier,
@@ -44,16 +67,6 @@ SupplierConversation::SupplierConversation(GameState& state,
   spending_rank_ = supplier_->spending_rank(player_id);
   negotiation_skill_ = state_.active_player()->negotiation_skill();
 
-  // Demand threshold (how often can you refuse an offer) based on customer tier
-  if (spending_rank_ >= 10) {
-    demand_limit_ = 4;
-  }
-  else if (spending_rank_ >= 4) {
-    demand_limit_ = 3;
-  }
-  else {
-    demand_limit_ = 2;
-  }
   const auto& rel = supplier_->relationship(player_id);
   contract_ = opening_contract_terms(*supplier_, rel, spending_rank_,
                                      total_order_value_);
@@ -68,9 +81,8 @@ SupplierConversation::SupplierConversation(GameState& state,
       }
     }
   }
-  Logger::debug(
-      "Player spending rank is {}, rip off is {}, demand threshold is {}",
-      spending_rank_, ripoff_, demand_limit_);
+  Logger::debug("Player spending rank is {}, rip off is {}", spending_rank_,
+                ripoff_);
 }
 
 SupplierLine
@@ -210,6 +222,10 @@ void SupplierConversation::handle_demand(SupplierLine demand) {
 
   // Repeat detection
   if (repeat_count == 2) {
+    auto player_id = state_.active_player()->id();
+    auto& rel = supplier_->relationship(player_id);
+    rel.frustration =
+        static_cast<uint8_t>(std::min<int>(rel.frustration + 1, 255));
     current_line(SupplierLine::YOU_JUST_SAID_THAT);
     return;
   }
@@ -228,28 +244,14 @@ void SupplierConversation::handle_demand(SupplierLine demand) {
     {
       auto player_id = state_.active_player()->id();
       if (supplier_->relationship(player_id).total_spent <
-          supplier_->minimum_contract_amount() * 2) {
+          supplier_->loyalty_level_amount() * 2) {
         contract_.charge = contract_.charge * 2;
         current_line(SupplierLine::HARDLY_BUY_ANYTHING_YET_DARE_TO_DEMAND);
         return;
       }
     }
 
-    // Count total discount demands
-    int demand_count = session_demand_counts_[0] + session_demand_counts_[1];
-
-    // Too many discount demands relative to customer size
-    if (demand_count * 2 > spending_rank_) {
-      auto player_id = state_.active_player()->id();
-      auto& rel = supplier_->relationship(player_id);
-      rel.frustration =
-          static_cast<uint8_t>(std::min<int>(rel.frustration + 1, 255));
-      current_line(SupplierLine::NO_REASON_FOR_SPECIAL_CONDITIONS);
-      return;
-    }
-
-    // Hard cap: too many demands or discount already maxed
-    if (demand_count >= demand_limit_ || contract_.discount_score >= 50) {
+    if (contract_.discount_score >= 50) {
       current_line(SupplierLine::NO_REASON_FOR_SPECIAL_CONDITIONS);
       return;
     }
@@ -258,7 +260,7 @@ void SupplierConversation::handle_demand(SupplierLine demand) {
     if (engine::random::rand_percentage_chance(
             std::max(0, negotiation_skill_ - 20))) {
       contract_.discount_score =
-          static_cast<uint8_t>(std::min<int>(contract_.discount_score + 5, 60));
+          static_cast<uint8_t>(contract_.discount_score + 5);
       current_line(SupplierLine::I_THINK_I_CAN_HELP);
       return;
     }
@@ -341,9 +343,6 @@ void SupplierConversation::handle_demand(SupplierLine demand) {
       current_line(SupplierLine::WE_ALWAYS_DELIVERED_ON_TIME);
       return;
     }
-    // From DOS version of Pizza Connection: if player has a payment default on
-    // record, supplier deflects instead of admitting fault and giving a
-    // discount (I think the jump was missing in PT).
     if (rel.missed_payment_penalty > 0) {
       current_line(SupplierLine::OTOH_YOU_WERE_BEHIND_ON_PAYMENTS);
       return;
@@ -384,10 +383,9 @@ void SupplierConversation::handle_demand(SupplierLine demand) {
 
 void SupplierConversation::trigger_justify_demands(JustifyContext ctx) {
   justify_context_ = ctx;
-  // Pool: enum 7-26 = LIEF.E lines 8-27
-  std::array<SupplierLine, 20> pool;
-  for (int i = 0; i < 20; ++i) {
-    pool[i] = static_cast<SupplierLine>(7 + i);
+  std::array<SupplierLine, justify_arguments.size()> pool;
+  for (size_t i = 0; i < pool.size(); ++i) {
+    pool[i] = justify_arguments[i].line;
   }
   for (size_t i = 0; i < 4; i++) {
     size_t j =
@@ -401,22 +399,25 @@ void SupplierConversation::trigger_justify_demands(JustifyContext ctx) {
 void SupplierConversation::handle_argument_pick(SupplierLine choice) {
   assert(justify_context_.has_value());
   active_argument_options_.clear();
-  // LIEF.E line = enum + 1; the original uses this directly as a % chance
-  int chance = static_cast<int>(choice) + 1;
-  bool success = engine::random::rand_percentage_chance(chance);
+  const auto argument =
+      std::ranges::find(justify_arguments, choice, &JustifyArgument::line);
+  assert(argument != justify_arguments.end());
+  bool success = engine::random::rand_percentage_chance(argument->chance);
 
   switch (*justify_context_) {
   case JustifyContext::DISCOUNT:
     if (success) {
-      int bonus =
-          engine::random::rand_percentage_chance(negotiation_skill_) ? 10 : 5;
-      contract_.discount_score = static_cast<uint8_t>(
-          std::min<int>(contract_.discount_score + bonus, 60));
+      int personality = state_.active_player()->character().personality();
+      int bonus = engine::random::rand_percentage_chance(personality) ? 10 : 5;
+      contract_.discount_score =
+          static_cast<uint8_t>(contract_.discount_score + bonus);
       current_line(SupplierLine::OK_GOOD_CUSTOMER_LETS_TALK);
     }
     else {
-      contract_.discount_score =
-          static_cast<uint8_t>(std::max<int>(contract_.discount_score - 4, 0));
+      if (contract_.discount_score > 4) {
+        contract_.discount_score =
+            static_cast<uint8_t>(contract_.discount_score - 4);
+      }
       current_line(SupplierLine::DOESNT_IMPRESS_ME);
     }
     break;

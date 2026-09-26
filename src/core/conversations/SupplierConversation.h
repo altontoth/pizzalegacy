@@ -57,7 +57,6 @@ private:
   SupplierContract contract_;
   int spending_rank_{0};
   int negotiation_skill_{0};
-  int demand_limit_{2};
   std::vector<SupplierLine> active_demand_options_;
   bool ripoff_{false};
   std::optional<JustifyContext> justify_context_;

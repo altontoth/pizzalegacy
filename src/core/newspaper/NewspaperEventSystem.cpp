@@ -141,19 +141,19 @@ bool NewspaperEventSystem::execute_named_event(NewspaperEvent event,
 
   // Trade embargoes
   case ImportHaltedVegetables:
-    city.trade_embargo_counter(IngredientCategory::VEGETABLES, 12 * 7);
+    city.trade_embargo_counter(IngredientCategory::VEGETABLES, 12);
     break;
 
   case ImportStoppedMeat:
-    city.trade_embargo_counter(IngredientCategory::MEAT, 4 * 7);
+    city.trade_embargo_counter(IngredientCategory::MEAT, 4);
     break;
 
   case TradeEmbargoFruit:
-    city.trade_embargo_counter(IngredientCategory::FRUIT, 8 * 7);
+    city.trade_embargo_counter(IngredientCategory::FRUIT, 8);
     break;
 
   case TradeEmbargoCheese:
-    city.trade_embargo_counter(IngredientCategory::CHEESE, 12 * 7);
+    city.trade_embargo_counter(IngredientCategory::CHEESE, 12);
     break;
 
   // Interest rate events

@@ -147,6 +147,12 @@ json supplier_to_json(const FoodSupplier& supplier) {
   }
   j["stock"] = std::move(stock_array);
 
+  json levels = json::array();
+  for (int i = 0; i < supplier.number_of_products(); ++i) {
+    levels.push_back(supplier.price_level(i));
+  }
+  j["price_levels"] = std::move(levels);
+
   // Save per-player relationships
   json relationships = json::array();
   for (int i = 0; i < NUMBER_OF_PLAYERS; ++i) {
@@ -171,6 +177,12 @@ json supplier_to_json(const FoodSupplier& supplier) {
 }
 
 void json_to_supplier(const json& j, FoodSupplier& supplier) {
+  if (j.contains("price_levels")) {
+    for (int i = 0; i < static_cast<int>(j["price_levels"].size()); ++i) {
+      supplier.price_level(i, j["price_levels"][i].get<uint8_t>());
+    }
+  }
+
   // Restore stock levels
   if (j.contains("stock")) {
     int idx = 0;

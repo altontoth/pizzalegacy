@@ -40,5 +40,8 @@ std::vector<std::string> rule_differences(const GameRules& theirs,
                  to_string(ours.pizza_judging));
   add_difference(rule_labels::police, on_off(theirs.police),
                  on_off(ours.police));
+  add_difference(rule_labels::suppliers_remember_missed_payments,
+                 on_off(theirs.suppliers_remember_missed_payments),
+                 on_off(ours.suppliers_remember_missed_payments));
   return lines;
 }

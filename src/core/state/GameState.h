@@ -13,6 +13,7 @@
 #include "core/events/CareerLog.h"
 #include "core/finance/Ledger.h"
 #include "core/food/CustomerTasteProfiles.h"
+#include "core/food/IngredientCategoryType.h"
 #include "core/init/NewGameConfig.h"
 #include "core/mission/MissionTarget.h"
 #include "core/newspaper/ArticleDatabase.h"
@@ -379,6 +380,19 @@ public:
   GameMode game_mode() const;
   void game_mode(GameMode);
   int human_player_count() const;
+
+  // Supplier price levels change, moving through categories one per day.
+  IngredientCategory next_price_update_category() {
+    ++price_update_category_;
+    if (price_update_category_ >= static_cast<int>(ingredient_category_count)) {
+      price_update_category_ = 0;
+    }
+    return static_cast<IngredientCategory>(price_update_category_);
+  }
+  int price_update_category() const { return price_update_category_; }
+  void price_update_category(int category) {
+    price_update_category_ = category;
+  }
   // Cities the simulation runs in today: the ones a human player is in.
   // Cities without a human stay dormant.
   std::vector<core::CityId> simulated_cities() const;
@@ -506,6 +520,7 @@ private:
   core::CityId active_city_{-1};
   // Where each human player is.
   std::array<std::optional<core::CityId>, NUMBER_OF_PLAYERS> player_city_;
+  int price_update_category_{0};
   // City whose restaurants the queued status notifications belong to.
   std::optional<core::CityId> status_queue_city_;
   ViewPoint city_position_{ViewPoint{-1, -1}};

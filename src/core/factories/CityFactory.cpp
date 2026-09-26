@@ -22,6 +22,7 @@
 #include "core/city/CityTypes.h"
 #include "core/city/District.h"
 #include "core/city/Property.h"
+#include "core/food/IngredientCategoryType.h"
 #include "engine/Endian.h"
 #include "engine/Fatal.h"
 #include "engine/Logger.h"
@@ -249,7 +250,7 @@ void CityFactory::load_suppliers(std::ifstream& is, int supplier_count) {
     // Logger::debug("Quality is {}", (int)quality);
 
     uint8_t supplier_id = (uint8_t)is.get();
-    [[maybe_unused]] uint8_t u1 = (uint8_t)is.get();
+    uint8_t price_factor = (uint8_t)is.get();
 
     // Now, the name of the supplier, I'm guessing 26 bytes this time:
     auto supplier_name = text::read_iso8859_1_string(is, 26);
@@ -259,7 +260,12 @@ void CityFactory::load_suppliers(std::ifstream& is, int supplier_count) {
 
     Money minimum_contract_amount = Money::from_dollars(endian::u16le(c1, c2));
 
-    is.seekg(201, std::ios_base::cur);
+    std::array<uint8_t, 4> loyalty_bytes{};
+    is.read(reinterpret_cast<char*>(loyalty_bytes.data()), 4);
+    Money loyalty_level_amount =
+        Money::from_dollars(endian::read_u32le(loyalty_bytes.data()));
+
+    is.seekg(197, std::ios_base::cur);
 
     uint8_t head_type = (uint8_t)is.get() + 1;
 
@@ -272,6 +278,7 @@ void CityFactory::load_suppliers(std::ifstream& is, int supplier_count) {
     std::array<uint8_t, 22> price_levels{};
     is.read((char*)price_levels.data(), 22);
 
+    // Stock per ingredient, zero in all data files (gets randomized later).
     is.seekg(48, std::ios_base::cur);
 
     // The original UI only ever requests categories 0-3. Categories 4-7 are cut
@@ -302,6 +309,8 @@ void CityFactory::load_suppliers(std::ifstream& is, int supplier_count) {
         *category, supplier_id, quality, supplier_name, head_type,
         minimum_contract_amount, price_levels.data(),
         static_cast<int>(price_levels.size()));
+    s->price_factor(price_factor);
+    s->loyalty_level_amount(loyalty_level_amount);
     suppliers_.push_back(std::move(s));
   }
 

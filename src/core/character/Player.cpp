@@ -278,7 +278,11 @@ void Player::end_of_week(GameState& game_state) {
   // A claim has to be made within the week.
   insurance_state_.pending_claim.reset();
 
-  for (City* city : game_state.initialized_cities()) {
+  for (auto city_id : game_state.simulated_cities_for(id_)) {
+    City* city = game_state.city(city_id);
+    if (!city) {
+      continue;
+    }
     for (const auto& s_ptr : city->suppliers()) {
       if (s_ptr->relationship(id_).outstanding_debt.cents > 0) {
         Logger::warn("[Finance] {} - BANKRUPT! Unpaid supplier debt", name_);
@@ -543,7 +547,9 @@ void Player::ad_effectiveness(core::CityId city,
 }
 
 int Player::negotiation_skill() const {
-  return (character_.charisma() + character_.intelligence()) / 2;
+  return ((2 * character_.personality()) + character_.intelligence() +
+          character_.charisma()) /
+         4;
 }
 
 Player::MonthlyLoanCosts
@@ -814,8 +820,13 @@ void Player::process_contracts(GameState& game_state) {
   using namespace core::food;
   using namespace engine;
 
+  const auto here = game_state.simulated_cities_for(id_);
+
   for (int i = static_cast<int>(contracts_.size()) - 1; i >= 0; --i) {
     auto& c = contracts_[static_cast<size_t>(i)];
+    if (std::ranges::find(here, c.city_id) == here.end()) {
+      continue;
+    }
 
     // Find the city and supplier
     City* city = game_state.city(c.city_id);
@@ -929,8 +940,10 @@ void Player::process_contracts(GameState& game_state) {
     if (!game_state.spend_cash(MonthlyCategory::Stock, payment,
                                c.restaurant_id)) {
       rel.outstanding_debt += payment;
-      rel.missed_payment_penalty =
-          static_cast<uint8_t>(std::max(1, supplier->spending_rank(id_)));
+      if (game_state.rules().suppliers_remember_missed_payments) {
+        rel.missed_payment_penalty =
+            static_cast<uint8_t>(std::max(1, supplier->spending_rank(id_)));
+      }
       // The original shows an unpaid delivery on the balance sheet, not in
       // the monthly overview.
       financials_.transfer(game_state.time().current_date(),
@@ -957,16 +970,17 @@ void Player::process_contracts(GameState& game_state) {
     }
 
     rel.total_spent += c.daily_sum;
-    if (rel.delivery_issues_flag > 0) {
-      rel.delivery_issues_flag--;
-    }
 
     c.remaining_term--;
   }
 
   // Daily retry for outstanding supplier debts; also decay
   // missed_payment_penalty
-  for (City* city : game_state.initialized_cities()) {
+  for (auto city_id : here) {
+    City* city = game_state.city(city_id);
+    if (!city) {
+      continue;
+    }
     for (const auto& s_ptr : city->suppliers()) {
       auto& rel = s_ptr->relationship(id_);
       if (rel.missed_payment_penalty > 0) {

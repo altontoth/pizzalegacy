@@ -75,8 +75,8 @@ void JobMarket::init(const std::vector<std::pair<uint8_t, int>>& player_chars) {
       ORIGINAL_SLOTS, double_slots_, player_chars.size());
 }
 
-void JobMarket::end_of_day(int difficulty) {
-  // We adjust the job market daily to make sure the number of candidates is in
+void JobMarket::end_of_week(int difficulty) {
+  // We adjust the job market weekly to make sure the number of candidates is in
   // line with the difficulty level.
   const int shrink_threshold = 16 - (difficulty * 2);
   const int grow_threshold = 26 - (difficulty * 2);

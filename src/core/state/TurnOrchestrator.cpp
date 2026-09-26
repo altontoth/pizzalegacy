@@ -1265,9 +1265,12 @@ void TurnOrchestrator::deliver_depot_stock(core::PlayerId player_id) {
 void TurnOrchestrator::tick_active_cities() {
   // Cities without a human stay dormant, matching the original. Each city
   // ticks exactly once regardless of how many players share it.
+  const bool end_of_week = gs_->time().current_date().is_end_of_week();
   for (auto city_id : gs_->simulated_cities()) {
     if (gs_->cities_[city_id.value]) {
-      gs_->cities_[city_id.value]->end_of_day(gs_->difficulty_level_);
+      gs_->cities_[city_id.value]->end_of_day(
+          gs_->difficulty_level_, gs_->next_price_update_category(),
+          end_of_week, gs_->human_player_count());
     }
   }
 }
