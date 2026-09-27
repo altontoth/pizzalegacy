@@ -27,20 +27,16 @@ class GameState;
  * (the 8 components + total) and fulfillment rate, and pushes
  * total_popularity into this class for use in demand calculations.
  *
- * Daily pipeline (called from Restaurant::start_of_day / end_of_day):
+ * Daily pipeline, in Restaurant::end_of_day while the restaurant is open:
  *
- *   start_of_day:
+ *     update_restaurant_range()
+ *     calculate_demand_with_competition() => customer_counts
  *     Restaurant calculates popularity components => total_popularity
  *     calculate_furniture_appeal()
  *     calculate_competitive_strength()
- *
- *   end_of_day:
- *     update_restaurant_range()
- *     Restaurant processes reputation decay
- *     sync total_popularity (captures mid-day reputation changes)
- *     calculate_demand_with_competition() => customer_counts
  *     Restaurant distributes customers to pizzas (also sets menu_factor)
  *     Restaurant fulfills orders => fulfillment_rate
+ *     Restaurant processes reputation decay
  */
 class RestaurantEconomy {
 public:

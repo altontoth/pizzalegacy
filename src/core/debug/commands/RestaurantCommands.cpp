@@ -18,6 +18,7 @@
 #include "core/food/IngredientCategory.h"
 #include "core/food/IngredientCategoryType.h"
 #include "core/restaurant/Restaurant.h"
+#include "core/restaurant/RestaurantEconomy.h"
 #include "core/state/GameState.h"
 #include "core/state/RealEstate.h"
 #include "core/supply/ActiveContract.h"
@@ -111,8 +112,18 @@ Examples:
                                        layout->furniture_value()));
         lines.push_back(compat::format(
             "Ever opened: {}", restaurant->ever_opened() ? "yes" : "no"));
-        lines.push_back(
-            compat::format("Popularity: {}", restaurant->total_popularity()));
+        lines.push_back(compat::format(
+            "Popularity: {}", restaurant->economy().total_popularity()));
+        const auto p = restaurant->popularity();
+        lines.push_back(compat::format(
+            "  waiting time {}, pizza prices {}, recipes on menu {}, "
+            "advertising {}",
+            p.waiting_time, p.pizza_prices, p.recipes_on_menu, p.advertising));
+        lines.push_back(compat::format(
+            "  star rating {}, furnishing {}, demand fulfillment {}, "
+            "unexpected events {}",
+            p.star_rating, p.furnishing, p.demand_fulfillment,
+            p.unexpected_events));
 
         return CommandResult::success(lines);
       },

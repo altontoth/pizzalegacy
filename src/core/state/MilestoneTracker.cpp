@@ -104,8 +104,7 @@ void MilestoneTracker::check_milestone_events(Player& player,
                             pid);
     }
 
-    int st = rest->service_time_minutes();
-    if (st > 0 && st <= 4) {
+    if (rest->calculate_service_time_minutes() <= 4) {
       gs_->record_milestone(MilestoneId::AverageServiceTimeLessThan4Minutes,
                             pid);
     }

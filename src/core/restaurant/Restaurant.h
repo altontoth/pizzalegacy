@@ -235,7 +235,6 @@ public:
   void popularity(const RestaurantPopularity& popularity) {
     popularity_ = popularity;
   }
-  int total_popularity() const;
 
   // Jukebox/TV settings (0 = none, 1-6 = demographic targeting)
   int jukebox_music() const { return economy_.jukebox_music(); }
@@ -504,17 +503,6 @@ public:
     manager_staff_shortage_ = role;
   }
 
-  // Calculates all 8 popularity components. Component 7 (UnexpectedEvents)
-  // flows into total_popularity() => competitive_strength => customer demand.
-  void calculate_popularity(const class Player& player, const class City& city,
-                            const class District& district,
-                            bool demand_fulfillment_popularity);
-
-  // Re-reads reputation slots into popularity_.unexpected_events so mid-day
-  // changes (e.g. forced closure) are captured before daily decay.
-  int sync_reputation_and_total_popularity();
-
-  int service_time_minutes() const { return service_time_minutes_; }
   int fulfillment_rate() const { return fulfillment_rate_; }
   void fulfillment_rate(int rate) { fulfillment_rate_ = rate; } // for save/load
   Money last_weekly_profit() const { return last_weekly_profit_; }
@@ -540,6 +528,11 @@ public:
 
 private:
   friend struct save::RestaurantLoader;
+  // With fix_legacy_bugs off, the unexpected-events component keeps the last
+  // hit once the slots are cleared.
+  void calculate_popularity(const class Player& player, const class City& city,
+                            const class District& district,
+                            const struct GameRules& rules);
   void wants_open(bool wants);
   int calculate_average_cook_quality() const;
   int calculate_average_oven_quality() const;
@@ -587,8 +580,7 @@ private:
   // 8 popularity component scores; total feeds into economy_ for demand
   RestaurantPopularity popularity_{};
 
-  int service_time_minutes_{0}; // max(chef, oven) + waiter
-  int fulfillment_rate_{0};     // can-make vs demanded, 0-100%
+  int fulfillment_rate_{0}; // can-make vs demanded, 0-100%
   // See daily_ingredient_demand_cache().
   core::food::IngredientDemand daily_ingredient_demand_cache_{};
 

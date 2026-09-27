@@ -17,6 +17,7 @@
 #include "core/city/Property.h"
 #include "core/restaurant/PizzaDemand.h"
 #include "core/restaurant/Restaurant.h"
+#include "core/restaurant/RestaurantEconomy.h"
 #include "core/status/StatusHub.h"
 
 template <class... Ts> struct Overload : Ts... {
@@ -361,16 +362,7 @@ StatusController::build_restaurant(const RestaurantCtx& rctx) {
                std::string(pad_right, ' ') + "----");
 
   auto* rest = rctx.rest;
-  auto* state = rctx.state;
-  const auto* city = state->active_city();
-  auto district_index = city->district_by_index(rest->property().index());
-  const auto& district = city->district(district_index);
-
-  // Get real values from restaurant
-  rctx.rest->calculate_popularity(*state->active_player(),
-                                  *state->active_city(), district,
-                                  state->rules().demand_fulfillment_popularity);
-  const int popularity = rest->total_popularity();
+  const int popularity = rest->economy().total_popularity();
   const int cooks = rest->count_cooks();
   const int waiters = rest->count_waiters();
   const bool has_manager = rest->manager().has_value();

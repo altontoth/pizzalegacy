@@ -33,6 +33,7 @@
 #include "core/restaurant/Menu.h"
 #include "core/restaurant/PizzaDemand.h"
 #include "core/restaurant/StaffEvents.h"
+#include "core/state/GameRules.h"
 #include "core/state/GameState.h"
 #include "core/status/StatusHub.h"
 #include "core/supply/FoodSupplier.h"
@@ -929,7 +930,6 @@ void Restaurant::end_of_day(GameState& game_state) {
 
     economy_.update_restaurant_range();
 
-    economy_.total_popularity(sync_reputation_and_total_popularity());
     economy_.calculate_competitive_strength(*this);
     process_daily_reputation_deltas();
 
@@ -1002,6 +1002,7 @@ void Restaurant::end_of_day(GameState& game_state) {
 
   if (!wants_open_ || forced_days_remaining_ > 0) {
     stats_.end_of_day(0);
+    process_daily_reputation_deltas();
     return;
   }
 
@@ -1018,10 +1019,6 @@ void Restaurant::end_of_day(GameState& game_state) {
     });
   }
 
-  // Sync popularity with current reputation, then decay for next day
-  economy_.total_popularity(sync_reputation_and_total_popularity());
-  process_daily_reputation_deltas();
-
   // Original game bug: sabotage contamination never decays, so multiple
   // sabotage attacks stack permanently. Fix: decay by 1 toward 0 each day.
   if (game_state.rules().fix_legacy_bugs && sabotage_contamination_ != 0) {
@@ -1033,8 +1030,11 @@ void Restaurant::end_of_day(GameState& game_state) {
   for (auto ct : ALL_CONSUMER_TYPES) {
     stats_.today.guests += economy_.customer_counts()[ct];
   }
+  // Runs after demand, which reads the popularity calculated the day before.
+  recalculate_economy_metrics(game_state);
   calculate_daily_pizza_sales_distribution(game_state);
   eod_batch_order_fulfillment(game_state);
+  process_daily_reputation_deltas();
 }
 
 void Restaurant::eod_batch_order_fulfillment(class GameState& game_state) {
@@ -1600,8 +1600,6 @@ void Restaurant::start_of_day(GameState& game_state) {
   core::restaurant::ManagerRoutine manager_routine(*this, game_state);
   manager_routine.run_daily();
 
-  recalculate_economy_metrics(game_state);
-
   if (wants_open_ && forced_days_remaining_ == 0) {
     int total_customers = 0;
     for (auto demo : ALL_CONSUMER_TYPES) {
@@ -1702,13 +1700,13 @@ void Restaurant::update_menu_factor(const core::food::PlayerRecipes& recipes,
 
 void Restaurant::recalculate_economy_metrics(GameState& game_state) {
   auto* player = game_state.active_player();
+  // An AI restaurant's popularity is never calculated, so its total stays 0.
   if (!player || !player->is_human_controlled()) {
     return;
   }
   const auto& city = property_.city();
   const auto& district = property_.district();
-  calculate_popularity(*player, city, district,
-                       game_state.rules().demand_fulfillment_popularity);
+  calculate_popularity(*player, city, district, game_state.rules());
   economy_.total_popularity(popularity_.total());
   update_demographics(player->recipes());
 }
@@ -1720,6 +1718,7 @@ void Restaurant::open_for_business(GameState& game_state) {
                        property_.district());
   }
   wants_open(true);
+  economy_.total_popularity(0);
   recalculate_economy_metrics(game_state);
 }
 
@@ -1799,10 +1798,8 @@ void Restaurant::calculate_daily_pizza_sales_distribution(
 
 void Restaurant::calculate_popularity(const Player& player, const City& city,
                                       const District& district,
-                                      bool demand_fulfillment_popularity) {
-  auto service_data = calculate_service_time_data();
-  service_time_minutes_ = service_data.service_time_minutes;
-
+                                      const GameRules& rules) {
+  const RestaurantPopularity previous = popularity_;
   popularity_ = RestaurantPopularity{};
 
   if (!ever_opened_) {
@@ -1810,9 +1807,9 @@ void Restaurant::calculate_popularity(const Player& player, const City& city,
   }
 
   // WaitingTime: (18 - service_time) * district_factor / 50
-  if (service_time_minutes_ > 0 && district.service_quality_factor() > 0) {
-    int raw_bonus =
-        (18 - service_time_minutes_) * district.service_quality_factor();
+  if (district.service_quality_factor() > 0) {
+    int raw_bonus = (18 - calculate_service_time_minutes()) *
+                    district.service_quality_factor();
     popularity_.waiting_time = std::clamp(raw_bonus / 50, -127, 127);
   }
 
@@ -1859,32 +1856,20 @@ void Restaurant::calculate_popularity(const Player& player, const City& city,
   // DemandFulfillment: -((100 - fulfillment) >> 3). The original's daily tick
   // zeroes the fulfillment byte before this reads it, so it always stores -12.
   int fulfillment = 0;
-  if (demand_fulfillment_popularity) {
+  if (rules.demand_fulfillment_popularity) {
     fulfillment = std::clamp(fulfillment_rate_, 0, 100);
   }
   popularity_.demand_fulfillment = -((100 - fulfillment) >> 3);
 
-  // UnexpectedEvents: last non-zero penalty from the 4 event slots
-  int last_nonzero_penalty = 0;
-  for (int i = 0; i < 4; i++) {
-    if (event_reputation_penalties_[i] != 0) {
-      last_nonzero_penalty = event_reputation_penalties_[i];
-    }
+  // UnexpectedEvents
+  popularity_.unexpected_events = previous.unexpected_events;
+  const int penalty = get_active_reputation_penalty();
+  if (penalty != 0) {
+    popularity_.unexpected_events = std::clamp(penalty, -127, 127);
   }
-  popularity_.unexpected_events = std::clamp(last_nonzero_penalty, -127, 127);
-}
-
-int Restaurant::total_popularity() const { return popularity_.total(); }
-
-int Restaurant::sync_reputation_and_total_popularity() {
-  int last_nonzero = 0;
-  for (int i = 0; i < 4; i++) {
-    if (event_reputation_penalties_[i] != 0) {
-      last_nonzero = event_reputation_penalties_[i];
-    }
+  else if (rules.fix_legacy_bugs) {
+    popularity_.unexpected_events = 0;
   }
-  popularity_.unexpected_events = std::clamp(last_nonzero, -127, 127);
-  return total_popularity();
 }
 
 Money Restaurant::purchase_furniture(const Furniture* furniture, int quantity) {
