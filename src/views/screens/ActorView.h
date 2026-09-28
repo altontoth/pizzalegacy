@@ -48,6 +48,7 @@ private:
   void advance_conversation();
   void advance_conversation(LineEnum choice);
   void advance_proposal(bool accept);
+  void end_conversation();
   void apply_emotion_if_needed(
       bool state_changed,
       std::vector<ConversationLine<LineEnum>> previous_lines = {});

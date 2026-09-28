@@ -64,7 +64,10 @@ ActorView<LineEnum>::ActorView(
 
   input_panel_->add_button(Icon::ARROW_BACK, ButtonType::Square,
                            ButtonPosition::BottomRight, "Back", [this, &state] {
-                             if (conversation_->back_allowed()) {
+                             if (conversation_->is_terminal()) {
+                               end_conversation();
+                             }
+                             else if (conversation_->back_allowed()) {
                                state.ui().pop();
                              }
                              else {
@@ -80,8 +83,7 @@ ActorView<LineEnum>::ActorView(
                                advance_proposal(true);
                              }
                              else if (conversation_->is_terminal()) {
-                               current_phase_ = ConversationPhase::ENDING;
-                               phase_timer_ = 10;
+                               end_conversation();
                              }
                              else {
                                advance_conversation();
@@ -94,8 +96,7 @@ ActorView<LineEnum>::ActorView(
                                advance_proposal(false);
                              }
                              else if (conversation_->is_terminal()) {
-                               current_phase_ = ConversationPhase::ENDING;
-                               phase_timer_ = 10;
+                               end_conversation();
                              }
                            });
 }
@@ -164,6 +165,11 @@ template <typename LineEnum> void ActorView<LineEnum>::tick() {
   }
 }
 
+template <typename LineEnum> void ActorView<LineEnum>::end_conversation() {
+  current_phase_ = ConversationPhase::ENDING;
+  phase_timer_ = 10;
+}
+
 template <typename LineEnum> void ActorView<LineEnum>::on_phase_finished() {
   Logger::debug("phase finished");
   switch (current_phase_) {
@@ -178,8 +184,7 @@ template <typename LineEnum> void ActorView<LineEnum>::on_phase_finished() {
   case ConversationPhase::TALKING:
     phase_timer_ = 0;
     if (conversation_->has_ended()) {
-      current_phase_ = ConversationPhase::ENDING;
-      phase_timer_ = 10;
+      end_conversation();
     }
     else {
       current_phase_ = ConversationPhase::WAITING;
@@ -371,8 +376,7 @@ void ActorView<LineEnum>::render_dialog(const RenderContext& ctx) {
           Logger::debug("catch all advance conversation with a click at {}, {}",
                         ie.pos.x, ie.pos.y);
           if (conversation_->is_terminal()) {
-            current_phase_ = ConversationPhase::ENDING;
-            phase_timer_ = 10;
+            end_conversation();
           }
           else if (conversation_->is_proposal()) {
             // Only accept via click-through if easy_accept is set;
