@@ -107,6 +107,7 @@ static void populate_character_data(core::character::CharacterData* c,
   c->courage = cf.courage;
   c->experience = cf.experience;
   c->trustworthiness = cf.trustworthiness;
+  c->honesty = cf.honesty;
   c->cooking = cf.cooking;
   c->serving = cf.serving;
   c->management = cf.management;
