@@ -106,6 +106,7 @@ set(GAME_PLEGACY_SOURCES
     src/core/state/TurnOrchestrator.cpp
     src/core/status/StatusHub.cpp
     src/core/supply/FoodSupplier.cpp
+    src/core/supply/StockOrder.cpp
     src/core/supply/Supplier.cpp
     src/core/supply/SupplierContract.cpp
     src/core/util/ConfigManager.cpp
@@ -492,6 +493,7 @@ set(PLEGACY_HEADERS
     src/core/supply/ActiveContract.h
     src/core/supply/FoodSupplier.h
     src/core/supply/IngredientBatch.h
+    src/core/supply/StockOrder.h
     src/core/supply/Supplier.h
     src/core/supply/SupplierContract.h
     src/core/supply/SupplierRelationship.h

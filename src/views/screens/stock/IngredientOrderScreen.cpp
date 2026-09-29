@@ -8,17 +8,15 @@
 
 #include "core/character/Player.h"
 #include "core/city/City.h"
-#include "core/city/MayorOffice.h"
 #include "core/factories/IngredientFactory.h"
-#include "core/finance/Ledger.h"
 #include "core/food/Ingredient.h"
 #include "core/food/IngredientCategory.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/state/GameState.h"
 #include "core/state/UIState.h"
 #include "core/supply/FoodSupplier.h"
+#include "core/supply/StockOrder.h"
 #include "engine/FormatCompat.h"
-#include "engine/Logger.h"
 #include "engine/geom/Spaces.h"
 #include "engine/gfx/Blit.h"
 #include "engine/gfx/Draw.h"
@@ -280,7 +278,7 @@ void IngredientOrderScreen::draw_ingredient_list(const RenderContext& ctx) {
                                     FontFace::SUPERSMA, text_color);
   }
 
-  Money total_cost = calculate_total_cost();
+  Money total_cost = order_total(ingredients_);
 
   std::string total_text = compat::format("{:n}", total_cost);
   context_.font->render_text_onto(
@@ -305,53 +303,10 @@ void IngredientOrderScreen::charge_exit(GameState& state) {
 }
 
 void IngredientOrderScreen::place_order() {
-  Money total_cost = calculate_total_cost();
-  int total_items = 0;
-  for (const auto& batch : ingredients_) {
-    total_items += batch.count;
-  }
-
-  Logger::info("[Order] Total: {} items for {}", total_items, total_cost);
-
-  auto* restaurant = state_.active_restaurant();
-  if (total_cost.cents > 0 &&
-      !state_.spend_cash(MonthlyCategory::Stock, total_cost,
-                         restaurant->id())) {
+  if (!buy_for_restaurant(state_, *state_.active_player(),
+                          *state_.active_city(), *state_.active_restaurant(),
+                          supplier_, ingredients_)) {
     return;
-  }
-  state_.active_city()->mayor_office().add_investment_activity(
-      state_.active_player()->id().value, total_cost);
-
-  for (const auto& batch : ingredients_) {
-    if (batch.count > 0) {
-      Money cost =
-          restaurant->purchase_ingredients(batch.ingredient_type, batch.count,
-                                           batch.quality, batch.price_per_unit);
-      restaurant->record_ingredient_spend(batch.ingredient_type, cost);
-      if (supplier_) {
-        int remaining =
-            std::max(0, supplier_->stock(batch.ingredient_type) - batch.count);
-        supplier_->set_stock(batch.ingredient_type, remaining);
-      }
-
-      Logger::info("[Order] {} x{} @ {} each (quality {})",
-                   batch.ingredient->name(), batch.count, batch.price_per_unit,
-                   batch.quality);
-    }
-  }
-
-  // Record vendor spending for this week and update supplier relationship
-  if (supplier_ && total_cost.cents > 0) {
-    auto* city = state_.active_city();
-    auto player_id = state_.active_player()->id();
-    city->record_vendor_purchase(player_id, supplier_->id(), total_cost);
-
-    auto& rel = supplier_->relationship(player_id);
-    rel.total_spent += total_cost;
-  }
-
-  if (supplier_ && total_items > 0) {
-    restaurant->preferred_suppliers()[supplier_->category()] = supplier_->id();
   }
 
   // Return to supplier list
@@ -375,16 +330,6 @@ Money IngredientOrderScreen::calculate_ingredient_price(
       .value_or(Money{0});
 }
 
-Money IngredientOrderScreen::calculate_total_cost() const {
-  Money total{0};
-  for (const auto& batch : ingredients_) {
-    if (batch.count > 0) {
-      total += Money{batch.price_per_unit.cents * batch.count};
-    }
-  }
-  return total;
-}
-
 bool IngredientOrderScreen::on_action(const input::ActionEvent& ev) {
   if (ev.action == input::Action::NextRestaurant ||
       ev.action == input::Action::PreviousRestaurant) {
@@ -403,12 +348,7 @@ void IngredientOrderScreen::set_up_input_panel() {
   input_panel_->add_button(
       Icon::SHAKING_HANDS, ButtonType::Horizontal, ButtonPosition::MiddleLeft,
       "Make Contract", [this] {
-        Money total{0};
-        for (const auto& batch : ingredients_) {
-          if (batch.count > 0) {
-            total += Money{batch.price_per_unit.cents * batch.count};
-          }
-        }
+        const Money total = order_total(ingredients_);
         if (total.cents == 0) {
           return;
         }

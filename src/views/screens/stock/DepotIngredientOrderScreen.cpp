@@ -9,16 +9,14 @@
 #include "core/character/Player.h"
 #include "core/city/CentralDepot.h"
 #include "core/city/City.h"
-#include "core/city/MayorOffice.h"
 #include "core/factories/IngredientFactory.h"
-#include "core/finance/Ledger.h"
 #include "core/food/Ingredient.h"
 #include "core/food/IngredientCategory.h"
 #include "core/state/GameState.h"
 #include "core/state/UIState.h"
 #include "core/supply/FoodSupplier.h"
+#include "core/supply/StockOrder.h"
 #include "engine/FormatCompat.h"
-#include "engine/Logger.h"
 #include "engine/geom/Spaces.h"
 #include "engine/gfx/Blit.h"
 #include "engine/input/Action.h"
@@ -251,7 +249,7 @@ void DepotIngredientOrderScreen::draw_ingredient_list(
     y += line_height;
   }
 
-  Money total_cost = calculate_total_cost();
+  Money total_cost = order_total(ingredients_);
 
   context_.font->render_text_onto(
       *ctx.surface,
@@ -273,87 +271,13 @@ void DepotIngredientOrderScreen::charge_exit() {
 }
 
 void DepotIngredientOrderScreen::place_order() {
-  Money total_cost = calculate_total_cost();
-  int total_items = 0;
-  for (const auto& batch : ingredients_) {
-    total_items += batch.count;
-  }
-
-  Logger::info("[Order] Total: {} items for {}", total_items, total_cost);
-
+  auto& player = *state_.active_player();
+  auto& city = *state_.active_city();
   if (is_sell_) {
-    auto& depot =
-        state_.active_city()->central_depot(state_.active_player()->id());
-    Money book_value{0};
-    for (const auto& batch : ingredients_) {
-      if (batch.count > 0) {
-        const auto& stock = depot.get_stock(batch.ingredient_type);
-        book_value =
-            book_value + Money{stock.weighted_avg_cost.cents * batch.count};
-        depot.consume_ingredient(batch.ingredient_type, batch.count * 1000);
-        Logger::info("[Depot Sale] {} x{} @ {} each", batch.ingredient->name(),
-                     batch.count, batch.price_per_unit);
-      }
-    }
-
-    // Supplies is relieved of the full book value; the difference against the
-    // proceeds is the gain or loss on the disposal.
-    auto* player = state_.active_player();
-    auto date = state_.time().current_date();
-    Money relieved{std::min(book_value.cents, total_cost.cents)};
-    if (relieved.cents > 0) {
-      player->financials().transfer(date, Account::Stock, Account::Cash,
-                                    relieved, balance_sheet_only);
-    }
-    if (book_value.cents > total_cost.cents) {
-      player->financials().transfer(
-          date, Account::Stock, Account::ProfitAndLoss,
-          Money{book_value.cents - total_cost.cents}, balance_sheet_only);
-    }
-    else if (total_cost.cents > book_value.cents) {
-      player->financials().transfer(date, Account::ProfitAndLoss, Account::Cash,
-                                    Money{total_cost.cents - book_value.cents},
-                                    balance_sheet_only);
-    }
+    sell_from_depot(state_, player, city, ingredients_);
   }
-  else {
-    if (total_cost.cents > 0 &&
-        !state_.spend_cash(MonthlyCategory::Stock, total_cost)) {
-      return;
-    }
-    state_.active_city()->mayor_office().add_investment_activity(
-        state_.active_player()->id().value, total_cost);
-
-    auto& depot =
-        state_.active_city()->central_depot(state_.active_player()->id());
-    for (const auto& batch : ingredients_) {
-      if (batch.count > 0) {
-        depot.add_ingredient(batch.ingredient_type, batch.count * 1000,
-                             batch.quality, batch.price_per_unit);
-        if (supplier_) {
-          int remaining = std::max(0, supplier_->stock(batch.ingredient_type) -
-                                          batch.count);
-          supplier_->set_stock(batch.ingredient_type, remaining);
-        }
-        Logger::info("[Depot Order] {} x{} @ {} (quality {})",
-                     batch.ingredient->name(), batch.count,
-                     batch.price_per_unit, batch.quality);
-      }
-    }
-
-    int social_gain = total_items / 1000;
-    if (social_gain > 0) {
-      state_.adjust_social_score(*state_.active_player(), social_gain);
-    }
-
-    if (supplier_ && total_cost.cents > 0) {
-      auto* city = state_.active_city();
-      auto player_id = state_.active_player()->id();
-      city->record_vendor_purchase(player_id, supplier_->id(), total_cost);
-
-      auto& rel = supplier_->relationship(player_id);
-      rel.total_spent += total_cost;
-    }
+  else if (!buy_for_depot(state_, player, city, supplier_, ingredients_)) {
+    return;
   }
 
   charge_exit();
@@ -374,16 +298,6 @@ Money DepotIngredientOrderScreen::calculate_ingredient_price(
           ingredient_type, base_price,
           FoodSupplier::price_multiplier(state_.difficulty_level()))
       .value_or(Money{0});
-}
-
-Money DepotIngredientOrderScreen::calculate_total_cost() const {
-  Money total{0};
-  for (const auto& batch : ingredients_) {
-    if (batch.count > 0) {
-      total += Money{batch.price_per_unit.cents * batch.count};
-    }
-  }
-  return total;
 }
 
 bool DepotIngredientOrderScreen::check_depot_quality(

@@ -145,19 +145,23 @@ bool GameState::spend_cash(MonthlyCategory category, Money amount) {
   return spend_cash(*player, category, amount);
 }
 
+bool GameState::spend_cash(Player& player, MonthlyCategory category,
+                           Money amount, core::RestaurantId restaurant_id) {
+  if (player.spend_cash(time().current_date(), category, amount,
+                        restaurant_id)) {
+    return true;
+  }
+  post_insufficient_funds();
+  return false;
+}
+
 bool GameState::spend_cash(MonthlyCategory category, Money amount,
                            core::RestaurantId restaurant_id) {
   auto* player = active_player();
   if (!player) {
     return false;
   }
-
-  if (player->spend_cash(time().current_date(), category, amount,
-                         restaurant_id)) {
-    return true;
-  }
-  post_insufficient_funds();
-  return false;
+  return spend_cash(*player, category, amount, restaurant_id);
 }
 
 void GameState::deduct_staff_wages_for_restaurant(

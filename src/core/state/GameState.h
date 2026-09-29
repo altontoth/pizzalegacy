@@ -166,6 +166,8 @@ public:
   [[nodiscard]] bool spend_cash(MonthlyCategory category,
                                 Money amount);             // Uses active player
   [[nodiscard]] bool spend_cash(Account to, Money amount); // Uses active player
+  [[nodiscard]] bool spend_cash(Player& player, MonthlyCategory category,
+                                Money amount, core::RestaurantId restaurant_id);
   [[nodiscard]] bool spend_cash(MonthlyCategory category, Money amount,
                                 core::RestaurantId restaurant_id);
 

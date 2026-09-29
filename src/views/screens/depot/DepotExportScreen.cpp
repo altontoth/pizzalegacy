@@ -7,15 +7,15 @@
 #include "views/screens/depot/DepotExportScreen.h"
 
 #include <algorithm>
+#include <vector>
 
 #include "core/city/CentralDepot.h"
 #include "core/city/City.h"
 #include "core/factories/IngredientFactory.h"
-#include "core/finance/Ledger.h"
 #include "core/food/IngredientCategory.h"
 #include "core/state/GameState.h"
+#include "core/supply/StockOrder.h"
 #include "engine/FormatCompat.h"
-#include "engine/Logger.h"
 #include "engine/geom/Spaces.h"
 #include "engine/gfx/Blit.h"
 #include "engine/ui/InteractionEvent.h"
@@ -247,36 +247,16 @@ void DepotExportScreen::execute_export() {
     return;
   }
 
-  // Pay transport costs
-  if (transport_cost_ > 0_usd &&
-      !state_.spend_cash(MonthlyCategory::Stock, transport_cost_)) {
+  std::vector<ShippedIngredient> shipment;
+  for (const auto& item : items_) {
+    shipment.push_back(
+        {.type = static_cast<core::food::IngredientType>(item.ingredient_id),
+         .kg = item.transfer_amount});
+  }
+  if (!ship_between_depots(state_, *state_.active_player(), *source_city_,
+                           *target_city_, shipment, transport_cost_)) {
     return;
   }
-
-  auto* player = state_.active_player();
-  auto player_id = player->id();
-  auto& source_depot = source_city_->central_depot(player_id);
-  auto& target_depot = target_city_->central_depot(player_id);
-  int shipped_kg = 0;
-
-  for (const auto& item : items_) {
-    if (item.transfer_amount <= 0) {
-      continue;
-    }
-    auto type = static_cast<core::food::IngredientType>(item.ingredient_id);
-    int qty_grams = item.transfer_amount * 1000;
-
-    // Read source quality and cost before consuming
-    const auto* stock = source_depot.get_ingredient_stock(item.ingredient_id);
-    int quality = stock ? stock->weighted_avg_quality : 100;
-    Money cost = stock ? stock->weighted_avg_cost : Money{0};
-
-    source_depot.consume_ingredient(type, qty_grams);
-    target_depot.add_ingredient(type, qty_grams, quality, cost);
-    shipped_kg += item.transfer_amount;
-  }
-  player->add_trade_activity(shipped_kg);
-  state_.adjust_social_score(*player, shipped_kg / 1000);
 
   charge_exit();
   state_.ui().pop();

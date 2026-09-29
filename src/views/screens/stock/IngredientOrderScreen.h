@@ -40,7 +40,6 @@ protected:
 private:
   Money
   calculate_ingredient_price(core::food::IngredientType ingredient_type) const;
-  Money calculate_total_cost() const;
 
   // Button hold handling helpers
   void handle_button_press(size_t ingredient_index, bool is_left_button);

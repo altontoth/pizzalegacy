@@ -40,7 +40,6 @@ private:
 
   Money
   calculate_ingredient_price(core::food::IngredientType ingredient_type) const;
-  Money calculate_total_cost() const;
   bool check_depot_quality(const IngredientBatch& batch) const;
 
   void handle_button_press(size_t ingredient_index, bool is_left_button);
