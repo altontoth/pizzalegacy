@@ -20,6 +20,8 @@ enum class Season {
 
 class GameTime {
 public:
+  static constexpr int BLOCKS_PER_DAY = 144;
+
   GameTime() : blocks_since_start_() {}
 
   void advance_10_minutes() { blocks_since_start_++; }
@@ -127,7 +129,6 @@ public:
   }
 
 private:
-  static constexpr int BLOCKS_PER_DAY = 144;
   int blocks_since_start_;
 };
 

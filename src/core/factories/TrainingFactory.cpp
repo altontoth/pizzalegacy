@@ -22,7 +22,7 @@ std::map<TrainingType, TrainingData> trainings_;
 TrainingData read_training(const data_file::json& entry, TrainingType course) {
   return TrainingData{
       .name = entry.at("name").get<std::string>(),
-      .type = data_file::enum_field<SkillType>(entry, "type"),
+      .job = data_file::enum_field<core::character::JobRole>(entry, "job"),
       .duration = entry.at("duration").get<int>(),
       .min_level = entry.at("min_level").get<int>(),
       .cost = Money::from_dollars(entry.at("cost").get<int>()),
@@ -52,11 +52,12 @@ std::vector<Training> TrainingFactory::all_trainings() {
   return list;
 }
 
-std::vector<Training> TrainingFactory::trainings_by_skill(SkillType skill) {
+std::vector<Training>
+TrainingFactory::trainings_for(core::character::JobRole job) {
   std::vector<Training> list;
 
   for (const auto& training : all_trainings()) {
-    if (training.type() == skill) {
+    if (training.job() == job) {
       list.push_back(training);
     }
   }

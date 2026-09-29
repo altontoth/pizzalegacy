@@ -212,10 +212,9 @@ Examples:
           return CommandResult::error("Date must be on or after 01-03-1995");
         }
 
-        constexpr int BLOCKS_PER_DAY = 144;
         auto time = ctx.state.time();
-        int time_of_day = time.time_blocks() % BLOCKS_PER_DAY;
-        time.time_blocks(days * BLOCKS_PER_DAY + time_of_day);
+        int time_of_day = time.time_blocks() % GameTime::BLOCKS_PER_DAY;
+        time.time_blocks(days * GameTime::BLOCKS_PER_DAY + time_of_day);
         ctx.state.set_time(time);
 
         auto season = GameTime::to_string(time.season());

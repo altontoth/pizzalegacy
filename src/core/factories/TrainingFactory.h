@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include "core/character/Character.h"
 #include "core/character/Training.h"
 
 #include <vector>
@@ -14,5 +15,5 @@ class TrainingFactory {
 public:
   static Training create_training(TrainingType type);
   static std::vector<Training> all_trainings();
-  static std::vector<Training> trainings_by_skill(SkillType skill);
+  static std::vector<Training> trainings_for(core::character::JobRole job);
 };

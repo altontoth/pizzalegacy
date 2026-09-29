@@ -944,14 +944,14 @@ void Restaurant::end_of_day(GameState& game_state) {
   // and manager routine are skipped for closed restaurants.
   {
     // Fullscreen shown when a staff member masters the top course.
-    auto master_milestone = [](SkillType skill) {
-      switch (skill) {
-      case SkillType::SERVING:
+    auto master_milestone = [](core::character::JobRole job) {
+      switch (job) {
+      case core::character::JobRole::WAITER:
         return core::events::MilestoneId::FullyQualifiedWaiter;
-      case SkillType::MANAGEMENT:
+      case core::character::JobRole::MANAGER:
         return core::events::MilestoneId::ManagerIsExpertInBusinessStudies;
-      case SkillType::COOKING:
-      case SkillType::NONE:
+      case core::character::JobRole::CHEF:
+      case core::character::JobRole::NONE:
         break;
       }
       return core::events::MilestoneId::FullyTrainedMasterchef;
@@ -977,7 +977,7 @@ void Restaurant::end_of_day(GameState& game_state) {
             .scope = StatusScope::Restaurant,
         });
         if (res.mastered) {
-          game_state.deliver_milestone(master_milestone(res.skill));
+          game_state.deliver_milestone(master_milestone(res.job));
         }
       }
     };

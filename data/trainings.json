@@ -1,7 +1,7 @@
 {
   "COOKERY_COURSE_1": {
     "name": "Cookery Course 1",
-    "type": "COOKING",
+    "job": "CHEF",
     "duration": 4,
     "min_level": 0,
     "cost": 1500,
@@ -10,7 +10,7 @@
   },
   "COOKERY_COURSE_2": {
     "name": "Cookery Course 2",
-    "type": "COOKING",
+    "job": "CHEF",
     "duration": 4,
     "min_level": 50,
     "cost": 2500,
@@ -19,7 +19,7 @@
   },
   "AVANTI_AVANTI": {
     "name": "Avanti Avanti",
-    "type": "COOKING",
+    "job": "CHEF",
     "duration": 6,
     "min_level": 40,
     "cost": 6000,
@@ -28,7 +28,7 @@
   },
   "SPECIALITIES": {
     "name": "Specialities",
-    "type": "COOKING",
+    "job": "CHEF",
     "duration": 7,
     "min_level": 60,
     "cost": 8000,
@@ -37,7 +37,7 @@
   },
   "SUPER_COOK": {
     "name": "Super Cook",
-    "type": "COOKING",
+    "job": "CHEF",
     "duration": 14,
     "min_level": 70,
     "cost": 10000,
@@ -46,7 +46,7 @@
   },
   "MASTER_COOK": {
     "name": "Master Cook",
-    "type": "COOKING",
+    "job": "CHEF",
     "duration": 20,
     "min_level": 75,
     "cost": 18000,
@@ -55,7 +55,7 @@
   },
   "SERVING_COURSE": {
     "name": "Serving Course",
-    "type": "SERVING",
+    "job": "WAITER",
     "duration": 4,
     "min_level": 0,
     "cost": 2000,
@@ -64,7 +64,7 @@
   },
   "SALES_COURSE": {
     "name": "Sales Course",
-    "type": "SERVING",
+    "job": "WAITER",
     "duration": 7,
     "min_level": 40,
     "cost": 5000,
@@ -73,7 +73,7 @@
   },
   "FAST_SELLING": {
     "name": "Fast-Selling",
-    "type": "SERVING",
+    "job": "WAITER",
     "duration": 7,
     "min_level": 40,
     "cost": 7500,
@@ -82,7 +82,7 @@
   },
   "CUSTOMER_RELATIONS": {
     "name": "Customer Relations",
-    "type": "SERVING",
+    "job": "WAITER",
     "duration": 14,
     "min_level": 60,
     "cost": 9000,
@@ -91,7 +91,7 @@
   },
   "SUPER_SELLING": {
     "name": "Super-Selling",
-    "type": "SERVING",
+    "job": "WAITER",
     "duration": 21,
     "min_level": 70,
     "cost": 12000,
@@ -100,7 +100,7 @@
   },
   "WAITER_DIPLOMA": {
     "name": "Waiter Diploma",
-    "type": "SERVING",
+    "job": "WAITER",
     "duration": 28,
     "min_level": 75,
     "cost": 20000,
@@ -109,7 +109,7 @@
   },
   "ACCOUNTING": {
     "name": "Accounting",
-    "type": "MANAGEMENT",
+    "job": "MANAGER",
     "duration": 7,
     "min_level": 40,
     "cost": 8000,
@@ -118,7 +118,7 @@
   },
   "BOOK_KEEPING": {
     "name": "Book-keeping",
-    "type": "MANAGEMENT",
+    "job": "MANAGER",
     "duration": 7,
     "min_level": 45,
     "cost": 8000,
@@ -127,7 +127,7 @@
   },
   "STOCK_MANAGEMENT": {
     "name": "Stock Management",
-    "type": "MANAGEMENT",
+    "job": "MANAGER",
     "duration": 14,
     "min_level": 50,
     "cost": 10000,
@@ -136,7 +136,7 @@
   },
   "PROFIT_MAXIMIZING": {
     "name": "Profit Maximizing",
-    "type": "MANAGEMENT",
+    "job": "MANAGER",
     "duration": 21,
     "min_level": 60,
     "cost": 16000,
@@ -145,7 +145,7 @@
   },
   "MANAGING_PERSONNEL": {
     "name": "Managing Personnel",
-    "type": "MANAGEMENT",
+    "job": "MANAGER",
     "duration": 28,
     "min_level": 70,
     "cost": 25000,
@@ -154,7 +154,7 @@
   },
   "MASTER_OF_BUSINESS": {
     "name": "Master Of Business",
-    "type": "MANAGEMENT",
+    "job": "MANAGER",
     "duration": 56,
     "min_level": 80,
     "cost": 50000,

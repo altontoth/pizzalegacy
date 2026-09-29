@@ -16,7 +16,7 @@
 struct CourseResult {
   bool success{false};
   bool mastered{false}; // final course completed
-  SkillType skill{SkillType::NONE};
+  core::character::JobRole job{core::character::JobRole::NONE};
   std::string course_name;
 };
 

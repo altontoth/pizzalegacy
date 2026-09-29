@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <span>
 
@@ -15,6 +16,14 @@ class RestaurantLayoutFactory {
 public:
   // Prebuilt restaurants in f/, numbered from 1, that AI restaurants use.
   static constexpr int ai_layout_count = 24;
+
+  // A layout file is a fixed header ending in the two record counts, then the
+  // furniture records and the oven records.
+  static constexpr std::size_t header_size = 41;
+  static constexpr std::size_t floor_offset = 9;
+  static constexpr std::size_t furniture_count_offset = 39;
+  static constexpr std::size_t oven_count_offset = 40;
+  static constexpr std::size_t record_size = 9;
 
   static std::unique_ptr<RestaurantLayout> create_layout(const std::string&);
 

@@ -7,7 +7,7 @@
 #include "core/character/Training.h"
 
 Training::Training(const TrainingData& d)
-    : name_(d.name), type_(d.type), duration_(d.duration),
+    : name_(d.name), job_(d.job), duration_(d.duration),
       min_level_(d.min_level), cost_(d.cost), score_increase_(d.score_increase),
       pizzas_day_increase_(d.pizzas_day_increase), course_(d.course) {}
 

@@ -50,20 +50,20 @@ CourseResult Staff::complete_course() {
     auto raise = [](uint8_t current, int gain) {
       return static_cast<uint8_t>(std::clamp(current + gain, 0, 100));
     };
-    switch (training.type()) {
-    case SkillType::COOKING:
+    switch (training.job()) {
+    case core::character::JobRole::CHEF:
       character_.cooking(
           raise(character_.cooking(), training.score_increase()));
       break;
-    case SkillType::SERVING:
+    case core::character::JobRole::WAITER:
       character_.serving(
           raise(character_.serving(), training.score_increase()));
       break;
-    case SkillType::MANAGEMENT:
+    case core::character::JobRole::MANAGER:
       character_.management(
           raise(character_.management(), training.score_increase()));
       break;
-    case SkillType::NONE:
+    case core::character::JobRole::NONE:
       break;
     }
     character_.pizzas_per_day(character_.pizzas_per_day() +
@@ -77,7 +77,7 @@ CourseResult Staff::complete_course() {
 
   CourseResult result{.success = success,
                       .mastered = success && index == 5,
-                      .skill = training.type(),
+                      .job = training.job(),
                       .course_name = training.name()};
 
   current_course_.reset();

@@ -9,6 +9,7 @@
 #include <algorithm>
 
 #include "core/character/Character.h"
+#include "core/character/Staff.h"
 #include "core/city/JobMarket.h"
 #include "core/factories/CharacterFactory.h"
 #include "core/factories/TrainingFactory.h"
@@ -71,21 +72,6 @@ namespace {
 // handled separately by callers.
 auto& staff_array_for(Restaurant& r, core::character::JobRole job) {
   return job == core::character::JobRole::CHEF ? r.cooks() : r.waiters();
-}
-
-// Map a job role to the skill its training courses improve.
-SkillType skill_for_job(core::character::JobRole job) {
-  switch (job) {
-  case core::character::JobRole::CHEF:
-    return SkillType::COOKING;
-  case core::character::JobRole::WAITER:
-    return SkillType::SERVING;
-  case core::character::JobRole::MANAGER:
-    return SkillType::MANAGEMENT;
-  case core::character::JobRole::NONE:
-    return SkillType::NONE;
-  }
-  return SkillType::NONE;
 }
 
 // The character's score in the skill relevant to their job. Trainings gate on
@@ -1007,7 +993,7 @@ Surface StaffView::create_training_card(const Staff& staff) {
   // the staff member currently qualifies for (score >= required level); an
   // ineligible course shows the same row, just without the button.
   auto gray_button = blitmap3_.icon_surface(Blitmap3Icon::GRAY_BOX);
-  auto courses = TrainingFactory::trainings_by_skill(skill_for_job(job_));
+  auto courses = TrainingFactory::trainings_for(job_);
 
   // Column-header row.
   context_.font->render_line_onto(card, "course name    scores  costs days",
@@ -1081,7 +1067,7 @@ void StaffView::draw_training_interactions() {
 
   int score = relevant_skill_value(staff->character(), job_);
   auto gray_button = blitmap3_.icon_surface(Blitmap3Icon::GRAY_BOX);
-  auto courses = TrainingFactory::trainings_by_skill(skill_for_job(job_));
+  auto courses = TrainingFactory::trainings_for(job_);
 
   int row = 0;
   int y = TRAINING_COURSE_Y0;

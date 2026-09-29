@@ -27,11 +27,6 @@ int decode_rotation(uint8_t raw) {
   return (rotation >= 0 && rotation < 4) ? rotation : 0;
 }
 
-// Layout-file byte layout: a fixed header ending in the two record counts, then
-// the furniture records and the oven records, all one stride wide.
-constexpr std::size_t header_size = 41;
-constexpr std::size_t furniture_count_offset = 39;
-constexpr std::size_t record_size = 9;
 } // namespace
 
 std::unique_ptr<RestaurantLayout>

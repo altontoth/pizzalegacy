@@ -9,9 +9,8 @@
 #include <stdint.h>
 #include <string>
 #include <vector>
+#include "core/character/Character.h"
 #include "core/finance/Money.h"
-
-enum class SkillType { NONE, COOKING, SERVING, MANAGEMENT };
 
 enum class TrainingType {
   // Cooking:
@@ -41,7 +40,7 @@ enum class TrainingType {
 
 struct TrainingData {
   std::string name;
-  SkillType type;
+  core::character::JobRole job;
   int duration;  // days
   int min_level; // score requirement
   Money cost;
@@ -60,7 +59,7 @@ public:
 
   // Getters
   const std::string& name() const { return name_; }
-  SkillType type() const { return type_; }
+  core::character::JobRole job() const { return job_; }
   TrainingType course() const { return course_; }
   // 0-5 position of this course within its skill category.
   int course_index() const;
@@ -72,7 +71,7 @@ public:
 
 private:
   std::string name_;
-  SkillType type_;
+  core::character::JobRole job_;
   int duration_;
   int min_level_;
   Money cost_;
