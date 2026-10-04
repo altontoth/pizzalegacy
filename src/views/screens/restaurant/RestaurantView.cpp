@@ -108,7 +108,7 @@ RestaurantView::RestaurantView(GameContext& context, GameState& state,
   }
 
   if (r_state.reopen_restaurant) {
-    restaurant_->open_for_business(state_);
+    restaurant_->reopen_after_placement();
   }
 
   if (view_mode_ == RestaurantViewMode::OPPONENT_VIEW &&

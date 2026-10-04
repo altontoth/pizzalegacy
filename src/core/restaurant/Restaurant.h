@@ -286,6 +286,7 @@ public:
   // open restaurant and recalculate economy metrics
   void open_for_business(class GameState& game_state);
   void close_for_business();
+  void reopen_after_placement() { wants_open(true); }
 
   Popularity
   calculate_menu_popularity(const core::food::PlayerRecipes& recipes) const;

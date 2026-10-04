@@ -1549,12 +1549,23 @@ Popularity Restaurant::calculate_furniture_appeal_popularity() const {
 }
 
 void Restaurant::start_of_day(GameState& game_state) {
-  // Tick down forced closures. On re-open you get the reputation hit.
-  if (forced_days_remaining_ > 0) {
-    --forced_days_remaining_;
-    if (forced_days_remaining_ == 0) {
-      add_reputation_damage(-30, 15);
+  const auto* owner = game_state.restaurant_owner(*this);
+  const bool ai_owned = owner && !owner->is_human_controlled();
+  // The original counts an AI closure down twice a day for unknown reasons;
+  // for now we match that.
+  const int countdowns = ai_owned ? 2 : 1;
+  for (int i = 0; i < countdowns; ++i) {
+    if (forced_days_remaining_ > 0) {
+      --forced_days_remaining_;
+      if (forced_days_remaining_ == 0) {
+        add_reputation_damage(-30, 15);
+      }
     }
+  }
+  // A human player has to reopen manually but an AI restaurant opens as soon
+  // as the forced closure ends.
+  if (ai_owned && !is_force_closed()) {
+    wants_open(true);
   }
 
   decrement_protection_timer();

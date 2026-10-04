@@ -172,6 +172,7 @@ void StaffEvents::apply_event_effect(StaffEventData::Type type, Staff& staff,
     restaurant.add_reputation_damage(-30, 10);
     break;
   case Type::ForgotToOpen:
+    restaurant.close_for_business();
     restaurant.force_close(1);
     break;
   default:

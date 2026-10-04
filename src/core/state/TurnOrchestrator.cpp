@@ -572,6 +572,7 @@ void TurnOrchestrator::show_next_deferred_inspection() {
 
   // Force-close for 7 days on first inspection with star loss (original rule)
   if (outcome.star_lost && outcome.is_first) {
+    restaurant->close_for_business();
     restaurant->force_close(7);
   }
 

@@ -250,7 +250,7 @@ void run_daily_evaluation(Player& player, GameState& game_state) {
 
   for (auto id : ids) {
     auto* rest = game_state.restaurant(id);
-    if (!rest || !rest->wants_open() || rest->is_force_closed()) {
+    if (!rest || rest->is_force_closed()) {
       continue;
     }
     const auto city = rest->property().city().id();
