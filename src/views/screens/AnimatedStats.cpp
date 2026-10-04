@@ -1008,13 +1008,13 @@ void AnimatedStats::render_production(const RenderContext& ctx) {
     };
 
     tip({(76 * 2) - WL, (34 * 2) - WT, 63 * 2, 44 * 2}, "prod_north",
-        "Orders from customers");
+        "How busy your chefs are");
     tip({(15 * 2) - WL, (86 * 2) - WT, 63 * 2, 44 * 2}, "prod_west",
-        "Pizzas paid for");
+        "How full your restaurant is");
     tip({(139 * 2) - WL, (87 * 2) - WT, 61 * 2, 42 * 2}, "prod_east",
-        "Oven output");
+        "How busy your ovens are");
     tip({(76 * 2) - WL, (139 * 2) - WT, 63 * 2, 44 * 2}, "prod_south",
-        "Delivered pizzas");
+        "How busy your waiters are");
   }
 
   // South Box: baked pizza count
