@@ -210,22 +210,16 @@ void RestaurantView::update_restaurant_noise() {
     return;
   }
 
-  const auto [guests, seats] = restaurant_->guest_occupancy();
-  if (guests <= 0 || seats <= 0) {
-    return;
-  }
-
-  const float occupancy =
-      static_cast<float>(guests) / static_cast<float>(seats);
+  const int utilization = restaurant_->seating_utilization();
 
   audio::SoundId noise;
-  if (occupancy > 0.81f) {
+  if (utilization > 81) {
     noise = audio::SoundId::RESTAURANT_NOISE_3;
   }
-  else if (occupancy > 0.51f) {
+  else if (utilization > 51) {
     noise = audio::SoundId::RESTAURANT_NOISE_2;
   }
-  else if (occupancy > 0.21f) {
+  else if (utilization > 21) {
     noise = audio::SoundId::RESTAURANT_NOISE_1;
   }
   else {
@@ -931,12 +925,21 @@ void RestaurantView::render_guest_pizzas() {
 // We determine guest_type and face_index when a guest is spawned
 // and store it on the controller so sprite and portrait always match.
 void RestaurantView::seed_seated_guests() {
-  const auto [guests, seats] = restaurant_->guest_occupancy();
-  if (guests <= 0 || seats <= 0) {
-    return;
+  int occupied_percent = 0;
+  int eating_percent = 50;
+  const auto owner_id = restaurant_->property().owner_or_tenant();
+  const auto* owner = owner_id ? state_.player(*owner_id) : nullptr;
+  if (owner && !owner->is_human_controlled()) {
+    // An AI restaurant is filled at random each time it is looked at.
+    occupied_percent = engine::random::presentation::rand_max_n(100);
   }
-  // A chair's chance to start occupied is the average occupancy.
-  const int occupied_percent = guests * 100 / seats;
+  else {
+    occupied_percent = restaurant_->seating_utilization();
+    // A guest has a pizza for the part of the visit spent eating.
+    const auto service = restaurant_->calculate_service_time_data();
+    eating_percent = static_cast<int>(service.avg_eating_time * 100.0f /
+                                      service.avg_seating_time);
+  }
   const auto& customer_counts = restaurant_->economy().customer_counts();
 
   for (const auto& pf : restaurant_->layout()->placed_furniture()) {
@@ -951,9 +954,6 @@ void RestaurantView::seed_seated_guests() {
     const ConsumerType demo = pick_weighted_demographic(customer_counts);
     CharacterController controller;
     controller.set_customer_type(demo);
-    // The crowd is already mid-visit, so most have a pizza.
-    const int eating_percent =
-        60 + engine::random::presentation::rand_max_n(25);
     controller.set_eating(
         engine::random::presentation::rand_percentage_chance(eating_percent));
     const int gt = pick_guest_type(demo);

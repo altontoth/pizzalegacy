@@ -61,6 +61,13 @@ public:
   // Actual customers per demographic after competition and capacity limiting
   CustomerCounts& customer_counts() { return customer_counts_; }
   const CustomerCounts& customer_counts() const { return customer_counts_; }
+  int total_customers() const {
+    int total = 0;
+    for (int count : customer_counts_) {
+      total += count;
+    }
+    return total;
+  }
 
   int demand_ratio() const { return demand_ratio_; }
   void demand_ratio(int ratio) { demand_ratio_ = ratio; }

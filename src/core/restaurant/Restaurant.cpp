@@ -448,26 +448,17 @@ int Restaurant::calculate_seating_capacity(
   return capacity;
 }
 
-Restaurant::Occupancy Restaurant::guest_occupancy() const {
-  const int seat_count = layout_ ? layout_->seated_chair_count() : 0;
-  if (seat_count == 0) {
-    return {.guests = 0, .seats = 0};
-  }
-
-  int total_daily = 0;
-  for (auto ct : ALL_CONSUMER_TYPES) {
-    total_daily += economy_.customer_counts()[ct];
-  }
-
+int Restaurant::seating_utilization() const {
   const auto service_data = calculate_service_time_data();
-  const float avg_seating_time = std::max(service_data.avg_seating_time, 1.0f);
-  const float current_demand = static_cast<float>(total_daily) *
-                               avg_seating_time /
-                               static_cast<float>(operating_minutes_per_day());
+  const int customers_per_day = calculate_seating_capacity(&service_data);
+  if (customers_per_day == 0) {
+    return 0;
+  }
 
-  const int guests = std::min(
-      static_cast<int>(std::lround(current_demand + 0.5f)), seat_count);
-  return {.guests = guests, .seats = seat_count};
+  constexpr int first_night_demand = 20;
+  const int demand = stats_.days_in_operation() == 0 ? first_night_demand
+                                                     : stats_.yesterday.guests;
+  return std::clamp(demand * 100 / customers_per_day, 0, 100);
 }
 
 CapacityAnalysis Restaurant::calculate_capacity_analysis(
@@ -755,13 +746,7 @@ FurnitureStats Restaurant::calculate_furniture_stats() const {
   auto service_data = calculate_service_time_data();
   stats.customers_per_day = calculate_seating_capacity(&service_data);
 
-  if (stats.customers_per_day > 0) {
-    int demand = stats_.yesterday.orders_generated;
-    if (demand > 0) {
-      stats.seating_utilization = (demand * 100) / stats.customers_per_day;
-      stats.seating_utilization = std::min(stats.seating_utilization, 100);
-    }
-  }
+  stats.seating_utilization = seating_utilization();
 
   return stats;
 }
@@ -1026,10 +1011,7 @@ void Restaurant::end_of_day(GameState& game_state) {
   }
 
   economy_.calculate_demand_with_competition(*this, game_state);
-  stats_.today.guests = 0;
-  for (auto ct : ALL_CONSUMER_TYPES) {
-    stats_.today.guests += economy_.customer_counts()[ct];
-  }
+  stats_.today.guests = economy_.total_customers();
   // Runs after demand, which reads the popularity calculated the day before.
   recalculate_economy_metrics(game_state);
   calculate_daily_pizza_sales_distribution(game_state);
@@ -1731,6 +1713,13 @@ void Restaurant::open_for_business(GameState& game_state) {
   wants_open(true);
   economy_.total_popularity(0);
   recalculate_economy_metrics(game_state);
+
+  // Reopening books the last calculated demand as the latest day's guests.
+  if (player && player->is_human_controlled() && !stats_.history.empty()) {
+    const int guests = economy_.total_customers();
+    stats_.yesterday.guests = guests;
+    stats_.history.back().guests = guests;
+  }
 }
 
 void Restaurant::close_for_business() { wants_open(false); }

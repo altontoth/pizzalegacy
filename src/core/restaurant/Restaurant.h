@@ -341,12 +341,8 @@ public:
   // (seat_count * operating minutes) / avg_seating_time
   int calculate_seating_capacity(const ServiceTimeData* service_data) const;
 
-  struct Occupancy {
-    int guests;
-    int seats;
-  };
-  // How many guests are concurrently seated vs total linked seats
-  Occupancy guest_occupancy() const;
+  // The day's demand against what the seats can take, 0-100.
+  int seating_utilization() const;
 
   // Live demand/capacity analysis. Serves both capacity and production
   // AnimatedStats screens
