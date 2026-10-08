@@ -562,9 +562,8 @@ Example:
                       },
                   .handler = [](const CommandContext& ctx) -> CommandResult {
                     ctx.state.bootstrap_minimal_playable_world(ctx.context);
-                    if (!ctx.state.options().cook_book) {
-                      return CommandResult::error(
-                          "The cook_book option is off");
+                    if (!ctx.state.rules().cook_book) {
+                      return CommandResult::error("The cook_book rule is off");
                     }
                     PizzaDesignMode mode = PizzaDesignMode::View;
                     if (ctx.has_arg(1)) {

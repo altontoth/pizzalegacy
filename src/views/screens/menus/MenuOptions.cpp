@@ -232,9 +232,6 @@ void MenuOptions::build_gameplay(GameState& state) {
                  "the turn.");
   toggle("Quality of Life improvements", options.qol_improvements)
       .help_text("Enable various modernizations of the UI and mouse behavior.");
-  toggle("In-game cook book", options.cook_book)
-      .help_text("On: a right click on a standard pizza offers to show its "
-                 "cook book entry. Off: the entry is not shown.");
   add_menu_item(
       std::make_unique<EnumMenuItem<AutosaveFrequency>>(
           context_, "Auto save", options.autosave_frequency,
@@ -298,6 +295,9 @@ void MenuOptions::build_rules(GameState& state) {
                     changed, face))
       .help_text("Original: match the cook book exactly. "
                  "Relaxed: the right ingredients in the right amounts.");
+  toggle(rule_labels::cook_book, rules.cook_book)
+      .help_text("On: a right click on a standard pizza offers to show its "
+                 "cook book entry. Off: the entry is not shown.");
   if (state.options().show_advanced_options) {
     toggle(rule_labels::mafia_shakedowns_target_all_restaurants,
            rules.mafia_shakedowns_target_all_restaurants)

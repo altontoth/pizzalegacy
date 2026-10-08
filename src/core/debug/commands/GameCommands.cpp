@@ -269,7 +269,7 @@ static const OptionDef option_defs[] = {
      .member = &GameRules::pizza_judging,
      .description = "How a standard recipe is judged: original or relaxed"},
     {.name = "cook_book",
-     .member = &GameOptions::cook_book,
+     .member = &GameRules::cook_book,
      .description = "Let the recipe list show a standard pizza's cook book "
                     "entry"},
     {.name = "attack_scene_hz",

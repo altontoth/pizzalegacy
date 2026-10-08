@@ -128,7 +128,7 @@ void PizzaDesign::open_recipe_menu(const RecipeListRow& row, ViewPoint at) {
                        mark_dirty();
                      }});
   }
-  if (row.reference && state_.options().cook_book) {
+  if (row.reference && state_.rules().cook_book) {
     const auto cp = *row.reference;
     items.push_back({"Show cook book", [this, cp] {
                        show_reference_pizza(cp);

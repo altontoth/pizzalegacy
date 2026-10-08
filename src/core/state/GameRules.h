@@ -64,6 +64,8 @@ struct GameRules {
   bool demand_fulfillment_popularity = true;
   WinCondition win_condition = WinCondition::AnyCity;
   PizzaJudging pizza_judging = PizzaJudging::Relaxed;
+  // A standard pizza's cook book entry can be shown in the recipe list.
+  bool cook_book = true;
   // Off stops the police turning up by themselves. Console only.
   bool police = true;
   // A supplier holds a missed contract payment against the player in
@@ -82,6 +84,7 @@ constexpr const char* demand_fulfillment_popularity =
     "Fulfillment affects popularity";
 constexpr const char* win_condition = "Win condition";
 constexpr const char* pizza_judging = "Standard pizza judging";
+constexpr const char* cook_book = "In-game cook book";
 constexpr const char* police = "Police";
 constexpr const char* suppliers_remember_missed_payments =
     "Suppliers remember late payers";

@@ -520,6 +520,7 @@ json rules_to_json(const GameRules& rules) {
       {"demand_fulfillment_popularity", rules.demand_fulfillment_popularity},
       {"win_condition", to_config_value(rules.win_condition)},
       {"pizza_judging", to_config_value(rules.pizza_judging)},
+      {"cook_book", rules.cook_book},
       {"police", rules.police},
       {"suppliers_remember_missed_payments",
        rules.suppliers_remember_missed_payments},
@@ -546,6 +547,7 @@ GameRules json_to_rules(const json& j, GameRules rules) {
     rules.pizza_judging = *parsed;
   }
   rules.police = j.value("police", rules.police);
+  rules.cook_book = j.value("cook_book", rules.cook_book);
   return rules;
 }
 

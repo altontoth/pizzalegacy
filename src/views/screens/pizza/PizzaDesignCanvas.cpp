@@ -224,7 +224,7 @@ void PizzaDesign::draw_pizza(const RenderContext& ctx) const {
 
   // A text box over the dropdown graphics with the pizza's name, and whether it
   // is the cook book entry.
-  if (mode_ == PizzaDesignMode::View && state_.options().cook_book) {
+  if (mode_ == PizzaDesignMode::View && state_.rules().cook_book) {
     constexpr ViewRect label_box{34, 2, 316, 64};
     constexpr uint8_t label_fill = 250;
     constexpr uint8_t label_edge = 254;
