@@ -391,6 +391,7 @@ Restaurant* RealEstate::create_ai_restaurant(Player& player, Property& property,
                              tenure);
   if (rest) {
     rest->ai_layout(layout_index, ai::opening_furniture_count);
+    ai::grow_customers_per_day(*rest);
   }
   return rest;
 }

@@ -323,7 +323,7 @@ void RestaurantEconomy::calculate_demand_with_competition(
     daily_capacity = restaurant.calculate_seating_capacity(&service_time);
   }
 
-  if (total_customers > daily_capacity && daily_capacity > 0) {
+  if (total_customers > daily_capacity) {
     int scale = (daily_capacity * 100) / total_customers;
     for (ConsumerType demo : ALL_CONSUMER_TYPES) {
       customer_counts_[demo] = (customer_counts_[demo] * scale) / 100;

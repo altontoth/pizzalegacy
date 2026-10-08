@@ -29,6 +29,10 @@ void update_ai_menu(Player& player, int restaurant_count);
 // competitive strength (the original game's dual-economy model).
 void process_restaurant_revenue(Restaurant& restaurant, Player& player);
 
+// Increases how many guests an AI restaurant can serve per day, once when it
+// opens and then every time an investment is made.
+void grow_customers_per_day(Restaurant& restaurant);
+
 // Daily chance for an AI restaurant to add a few more of its layout's items.
 void invest_in_restaurant(Restaurant& restaurant, Player& player);
 

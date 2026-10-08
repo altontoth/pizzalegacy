@@ -36,6 +36,13 @@ constexpr int bare_restaurant = 10;
 // The check runs before the increase, so the number can end up a bit higher.
 constexpr int customers_per_day_ceiling = 500;
 
+void grow_customers_per_day(Restaurant& restaurant) {
+  if (restaurant.ai_customers_per_day() < customers_per_day_ceiling) {
+    restaurant.ai_customers_per_day(restaurant.ai_customers_per_day() +
+                                    engine::random::rand_max_n(40));
+  }
+}
+
 void invest_in_restaurant(Restaurant& restaurant, Player& player) {
   const auto& character = player.character();
   if (!engine::random::rand_percentage_chance(character.management())) {
@@ -48,10 +55,7 @@ void invest_in_restaurant(Restaurant& restaurant, Player& player) {
     return;
   }
   int step = engine::random::rand_max_n(5) + 1;
-  if (restaurant.ai_customers_per_day() < customers_per_day_ceiling) {
-    restaurant.ai_customers_per_day(restaurant.ai_customers_per_day() +
-                                    engine::random::rand_max_n(40));
-  }
+  grow_customers_per_day(restaurant);
   if (restaurant.ai_furniture_count() < bare_restaurant) {
     step = opening_furniture_count;
   }
