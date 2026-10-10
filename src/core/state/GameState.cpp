@@ -17,6 +17,7 @@
 #include <utility>
 #include "core/character/Actor.h"
 #include "core/character/Awards.h"
+#include "core/character/Character.h"
 #include "core/character/MafiaPlayerState.h"
 #include "core/character/Player.h"
 #include "core/character/Staff.h"
@@ -342,6 +343,15 @@ std::array<Player*, NUMBER_OF_PLAYERS> GameState::players() const {
 void GameState::players(
     std::array<std::unique_ptr<Player>, NUMBER_OF_PLAYERS> players) {
   players_ = std::move(players);
+}
+
+void GameState::create_placeholder_players() {
+  for (int i = 0; i < NUMBER_OF_PLAYERS; i++) {
+    players_[i] = std::make_unique<Player>(
+        core::PlayerId{i},
+        core::character::Character(CharacterFactory::create_character(i)));
+    players_[i]->name("Player " + std::to_string(i));
+  }
 }
 
 void GameState::last_clicked_property_index(int index) {
@@ -1056,8 +1066,13 @@ Restaurant* GameState::active_restaurant() const {
 }
 
 void GameState::begin_initialization() {
-  initializer_ = init::Config{};
   tutorial_.finish();
+  // The new game menus stay on the stack until the game starts.
+  auto ui = std::move(ui_);
+  reset();
+  ui_ = std::move(ui);
+  create_placeholder_players();
+  initializer_ = init::Config{};
 }
 
 init::Config& GameState::initializer() {
@@ -1179,7 +1194,7 @@ void GameState::remove_restaurant(Property& property) {
                 [r_id](const auto& r) { return r->id() == r_id; });
 }
 
-void GameState::reset_for_load() {
+void GameState::reset() {
   // UI-layer presenters are registered once at startup; keep them across
   // the reset. The status hub is kept whole so the panel it feeds (owned by
   // the engine, outliving this reset) stays subscribed.

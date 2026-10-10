@@ -786,7 +786,7 @@ json SaveGameManager::state_to_json(const GameState& state,
 void SaveGameManager::json_to_state(const json& j, GameState& state,
                                     GameContext& context) {
   // Clear all existing restaurants and reset property states before loading
-  state.reset_for_load();
+  state.reset();
 
   // Load game time
   if (j.contains("time")) {

@@ -14,10 +14,9 @@
 #include <limits>
 #include <numeric>
 
-#include "core/character/Player.h"
+#include "core/common/Ids.h"
 #include "core/debug/DebugCommands.h"
 #include "core/debug/DebugConsole.h"
-#include "core/factories/CharacterFactory.h"
 #include "core/restaurant/StaffEventData.h"
 #include "core/state/TurnOrchestrator.h"
 #include "core/state/UIState.h"
@@ -272,7 +271,7 @@ int Game::run() {
   auto begin_game = [&](const std::string& path) {
     fileutils::game_data_path(path);
     load_game_data();
-    create_some_players(state);
+    state.create_placeholder_players();
 
     if (!exec_script_) {
       state.staff_event_presenter(
@@ -1004,18 +1003,6 @@ bool Game::enforce_aspect_ratio(SDL_Window* window, int new_width,
   }
   window_resizing_in_progress_ = false;
   return true;
-}
-
-/* Just for debugging for if you skip player selections screen */
-void Game::create_some_players(GameState& state) {
-  std::array<std::unique_ptr<Player>, NUMBER_OF_PLAYERS> players;
-  for (int i = 0; i < NUMBER_OF_PLAYERS; i++) {
-    players[i] = std::make_unique<Player>(
-        core::PlayerId{i},
-        core::character::Character(CharacterFactory::create_character(i)));
-    players[i]->name(std::string("Player " + std::to_string(i)));
-  }
-  state.players(std::move(players));
 }
 
 int Game::get_display_height(bool crt_mode) {

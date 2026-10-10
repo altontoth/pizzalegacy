@@ -160,6 +160,8 @@ public:
   Player* restaurant_owner(const Restaurant& restaurant) const;
   void active_player(core::PlayerId player_id);
   void players(std::array<std::unique_ptr<Player>, NUMBER_OF_PLAYERS>);
+  // Stand-ins until a new game or a load sets up the real players.
+  void create_placeholder_players();
 
   // Spending money with insufficient funds notification
   // Returns true if successful, false if insufficient funds (and posts message)
@@ -262,7 +264,7 @@ public:
   // For save/load:
   void add_restaurant(std::unique_ptr<Restaurant> restaurant);
   void remove_restaurant(Property& property);
-  void reset_for_load();
+  void reset();
 
   // Property transactions and restaurant creation.
   RealEstate& real_estate() { return real_estate_; }
@@ -593,7 +595,7 @@ private:
   // Context pointer for creating popups from GameState
   GameContext* context_{nullptr};
   // UI-layer callbacks; registered once at startup and preserved across
-  // reset_for_load.
+  // reset.
   StaffEventPresenter staff_event_presenter_;
   MonthlyEntryPresenter monthly_entry_presenter_;
   std::unique_ptr<TurnPresenter> turn_presenter_;

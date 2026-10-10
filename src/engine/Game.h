@@ -74,7 +74,6 @@ private:
   void apply_fullscreen(bool enabled);
   void load_game_data();
   bool enforce_aspect_ratio(SDL_Window*, int, int);
-  void create_some_players(GameState&);
   void handle_events(LoopState& loop_state);
   void handle_resize_event(const SDL_Event& event, LoopState& loop_state);
   ScreenPoint global_cursor_pos_clamped() const;
