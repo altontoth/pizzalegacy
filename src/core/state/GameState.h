@@ -31,6 +31,7 @@
 #include "core/state/UIStateStack.h"
 #include "core/status/StatusHub.h"
 #include "core/time/GameTime.h"
+#include "core/tutorial/Tutorial.h"
 #include "core/util/Constants.h"
 #include "engine/DisplayConstants.h"
 #include "engine/geom/Spaces.h"
@@ -45,6 +46,7 @@
 class GameContext;
 class TurnPresenter;
 class FadePresenter;
+class TutorialPresenter;
 class Property;
 
 constexpr int simulation_ticks_per_second = 30;
@@ -212,6 +214,9 @@ public:
   // Achievement milestone checks.
   MilestoneTracker& milestones() { return milestones_; }
 
+  core::tutorial::Tutorial& tutorial() { return tutorial_; }
+  const core::tutorial::Tutorial& tutorial() const { return tutorial_; }
+
   // City  management
   core::CityId active_city_id() const;
   ViewPoint city_position() const;
@@ -265,6 +270,7 @@ public:
 
   void restaurant_placement(std::vector<FurnitureBatch> batch);
   std::vector<FurnitureBatch>& restaurant_placement();
+  const std::vector<FurnitureBatch>& restaurant_placement() const;
 
   // State management
   UIStateStack& ui() { return ui_; }
@@ -496,6 +502,11 @@ public:
   void fade_presenter(std::unique_ptr<FadePresenter> presenter);
   FadePresenter& fade_presenter();
 
+  void tutorial_presenter(TutorialPresenter* presenter) {
+    tutorial_presenter_ = presenter;
+  }
+  TutorialPresenter& tutorial_presenter();
+
 private:
   bool is_past_player_end_of_day() const;
   void advance_time_block();
@@ -568,6 +579,7 @@ private:
   CompetitionCoordinator competitions_{*this};
   MilestoneTracker milestones_{*this};
   RealEstate real_estate_{*this};
+  core::tutorial::Tutorial tutorial_{*this};
   std::optional<bool> pending_double_size_;
   std::optional<bool> pending_fullscreen_;
   std::optional<std::string> pending_game_path_;
@@ -587,4 +599,5 @@ private:
   std::unique_ptr<TurnPresenter> turn_presenter_;
   std::unique_ptr<TurnPresenter> no_turn_presenter_;
   std::unique_ptr<FadePresenter> fade_presenter_;
+  TutorialPresenter* tutorial_presenter_{nullptr};
 };

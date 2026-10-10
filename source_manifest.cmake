@@ -48,6 +48,7 @@ set(GAME_PLEGACY_SOURCES
     src/core/debug/commands/PlayerCommands.cpp
     src/core/debug/commands/RestaurantCommands.cpp
     src/core/debug/commands/StaffCommands.cpp
+    src/core/debug/commands/TutorialCommands.cpp
     src/core/economy/WeaponMarket.cpp
     src/core/events/CareerLog.cpp
     src/core/factories/CharacterFactory.cpp
@@ -72,6 +73,7 @@ set(GAME_PLEGACY_SOURCES
     src/core/food/Pizza.cpp
     src/core/food/RecipeCodec.cpp
     src/core/food/Topping.cpp
+    src/core/init/CompanyNames.cpp
     src/core/inventory/Inventory.cpp
     src/core/item/ActionText.cpp
     src/core/marketing/Commercial.cpp
@@ -109,6 +111,9 @@ set(GAME_PLEGACY_SOURCES
     src/core/supply/StockOrder.cpp
     src/core/supply/Supplier.cpp
     src/core/supply/SupplierContract.cpp
+    src/core/tutorial/Tutorial.cpp
+    src/core/tutorial/TutorialGame.cpp
+    src/core/tutorial/TutorialSteps.cpp
     src/core/util/ConfigManager.cpp
     src/core/util/Tools.cpp
     src/views/base/BobRenderer.cpp
@@ -132,6 +137,7 @@ set(GAME_PLEGACY_SOURCES
     src/views/layers/GameInfoLayer.cpp
     src/views/layers/PauseLayer.cpp
     src/views/layers/TurnLockLayer.cpp
+    src/views/layers/TutorialLayer.cpp
     src/views/screens/Advertising.cpp
     src/views/screens/AnimatedStats.cpp
     src/views/screens/EuroMap.cpp
@@ -231,6 +237,7 @@ set(GAME_PLEGACY_SOURCES
     src/views/ui/popups/OptionsPopup.cpp
     src/views/ui/popups/PopupButton.cpp
     src/views/ui/popups/TextInputPopup.cpp
+    src/views/ui/popups/TutorialPopup.cpp
     src/views/ui/popups/TvPopup.cpp
     src/views/ui/staff/StaffEventPopups.cpp
     src/views/ui/status/StatusController.cpp
@@ -243,6 +250,7 @@ set(GAME_PLEGACY_SOURCES
     src/views/ui/widgets/CompanySelectionBox.cpp
     src/views/ui/widgets/IntSliderMenuItem.cpp
     src/views/ui/widgets/MissionTypeBox.cpp
+    src/views/ui/widgets/PanelDrag.cpp
     src/views/ui/widgets/RecipeFileInfoBox.cpp
     src/views/ui/widgets/SaveFileInfoBox.cpp
     src/views/ui/widgets/SaveFileInputBox.cpp
@@ -384,6 +392,7 @@ set(PLEGACY_HEADERS
     src/core/debug/commands/PlayerCommands.h
     src/core/debug/commands/RestaurantCommands.h
     src/core/debug/commands/StaffCommands.h
+    src/core/debug/commands/TutorialCommands.h
     src/core/economy/WeaponMarket.h
     src/core/events/CareerLog.h
     src/core/events/MilestoneId.h
@@ -422,6 +431,7 @@ set(PLEGACY_HEADERS
     src/core/food/RecipeNode.h
     src/core/food/StandardPizza.h
     src/core/food/Topping.h
+    src/core/init/CompanyNames.h
     src/core/init/NewGameConfig.h
     src/core/inventory/Inventory.h
     src/core/item/ActionLine.h
@@ -485,6 +495,7 @@ set(PLEGACY_HEADERS
     src/core/state/TurnOrchestrator.h
     src/core/state/TurnPipeline.h
     src/core/state/TurnPresenter.h
+    src/core/state/TutorialPresenter.h
     src/core/state/UIState.h
     src/core/state/UIStateStack.h
     src/core/state/ViewerType.h
@@ -501,6 +512,10 @@ set(PLEGACY_HEADERS
     src/core/time/GameTime.h
     src/core/time/GameTimestamp.h
     src/core/time/TimeOfDay.h
+    src/core/tutorial/Tutorial.h
+    src/core/tutorial/TutorialGame.h
+    src/core/tutorial/TutorialStep.h
+    src/core/tutorial/TutorialSteps.h
     src/core/util/Colors.h
     src/core/util/ConfigManager.h
     src/core/util/Constants.h
@@ -635,6 +650,7 @@ set(PLEGACY_HEADERS
     src/views/layers/PauseLayer.h
     src/views/layers/TooltipLayer.h
     src/views/layers/TurnLockLayer.h
+    src/views/layers/TutorialLayer.h
     src/views/screens/ActorView.h
     src/views/screens/ActorView.inl
     src/views/screens/Advertising.h
@@ -742,6 +758,7 @@ set(PLEGACY_HEADERS
     src/views/ui/popups/OptionsPopup.h
     src/views/ui/popups/PopupButton.h
     src/views/ui/popups/TextInputPopup.h
+    src/views/ui/popups/TutorialPopup.h
     src/views/ui/popups/TvPopup.h
     src/views/ui/staff/StaffEventPopups.h
     src/views/ui/status/StatusController.h
@@ -759,6 +776,7 @@ set(PLEGACY_HEADERS
     src/views/ui/widgets/ListCursor.h
     src/views/ui/widgets/MenuItem.h
     src/views/ui/widgets/MissionTypeBox.h
+    src/views/ui/widgets/PanelDrag.h
     src/views/ui/widgets/PositionMarkerMenuItem.h
     src/views/ui/widgets/RecipeFileInfoBox.h
     src/views/ui/widgets/SaveFileInfoBox.h

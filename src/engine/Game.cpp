@@ -22,6 +22,7 @@
 #include "core/state/TurnOrchestrator.h"
 #include "core/state/UIState.h"
 #include "core/state/ViewerType.h"
+#include "core/tutorial/Tutorial.h"
 #include "core/util/ConfigManager.h"
 #include "engine/FpsManager.h"
 #include "engine/GameLocationPrompt.h"
@@ -53,6 +54,7 @@
 #include "views/layers/PauseLayer.h"
 #include "views/layers/TooltipLayer.h"
 #include "views/layers/TurnLockLayer.h"
+#include "views/layers/TutorialLayer.h"
 #include "views/screens/StatusDisplay.h"
 #include "views/ui/PopupManager.h"
 #include "views/ui/TurnPresenterView.h"
@@ -91,6 +93,7 @@ struct Overlays {
     manager.push<TooltipLayer>(context, state, tooltips);
     manager.push<TurnLockLayer>(context, state);
     popup = &manager.push<PopupManager>(context);
+    tutorial = &manager.push<TutorialLayer>(context, state);
     manager.push<PauseLayer>(context, state);
     debug = &manager.push<DebugLayer>(context, state);
     manager.push<ConsoleLayer>(context, state, console);
@@ -99,6 +102,7 @@ struct Overlays {
   OverlayManager manager;
   PopupManager* popup = nullptr;
   DebugLayer* debug = nullptr;
+  TutorialLayer* tutorial = nullptr;
 };
 
 } // end namespace
@@ -298,6 +302,10 @@ int Game::run() {
 
     overlays.emplace(context, state, *tooltip_manager_, debug_console);
     context.popup = overlays->popup;
+    tutorial_layer_ = overlays->tutorial;
+    if (!exec_script_) {
+      state.tutorial_presenter(overlays->tutorial);
+    }
     interaction_manager_->on_hot_changed(
         [&overlays] { overlays->debug->mark_dirty(); });
     loop_state.overlays = &overlays->manager;
@@ -878,6 +886,9 @@ bool Game::capture_screenshot(GameState& gs, const std::string& path) {
   if (result.view) {
     Renderer renderer(sdl_, display_height_);
     renderer.add_layers(result.view.get());
+    if (tutorial_layer_ && gs.tutorial().active()) {
+      renderer.add_layers(tutorial_layer_);
+    }
     renderer.render();
     renderer.with_current_frame([&](SDL_Surface* surface) {
       saved = engine::save_screenshot(surface, path);

@@ -37,6 +37,7 @@
 #include "core/status/StatusHub.h"
 #include "core/time/GameDate.h"
 #include "core/time/TimeOfDay.h"
+#include "core/tutorial/Tutorial.h"
 #include "engine/Logger.h"
 #include "engine/Random.h"
 
@@ -109,6 +110,13 @@ bool TurnOrchestrator::tick_pipeline_delay() {
     advance_pipeline();
   }
   return true;
+}
+
+InterruptionRate TurnOrchestrator::interruption_rate() const {
+  if (gs_->tutorial().active()) {
+    return InterruptionRate::None;
+  }
+  return interruption_rate_;
 }
 
 bool TurnOrchestrator::may_auto_end_turn() const {
@@ -863,12 +871,13 @@ void TurnOrchestrator::build_turn_pipeline(
   turn_pipeline_.clear();
   pipeline_activity_ = {};
 
-  // Skip it on a day no human player could act, so a holiday or a jail
-  // sentence doesn't push a real save out of the rotation.
+  // Skip it on a day no human player could act, so a holiday, a jail
+  // sentence or the tutorial doesn't push a real save out of the rotation.
   const bool autosave_due = wrapped &&
                             is_autosave_due(gs_->options().autosave_frequency,
                                             is_end_of_week, is_end_of_month) &&
-                            !all_human_players_away(*gs_);
+                            !all_human_players_away(*gs_) &&
+                            !gs_->tutorial().active();
 
   // You get this even when you're in prison or on holiday
   const bool one_year_played_reached =

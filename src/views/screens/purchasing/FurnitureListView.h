@@ -28,11 +28,13 @@ private:
                               const Furniture& furniture, int y);
   void handle_furniture_selection(int furniture_id);
   void show_invoice();
+  [[nodiscard]] int ordered(const Furniture& furniture) const;
+  void order(const Furniture& furniture, int count);
   void draw_page_header(const RenderContext& ctx) override;
   void set_up_input_panel() override;
 
   const Supplier* supplier_;
-  std::vector<FurnitureBatch> furniture_;
+  std::vector<const Furniture*> furniture_;
   int current_page_{0};
   std::vector<std::size_t> page_starts_;
   Bob& furniture_bob_;

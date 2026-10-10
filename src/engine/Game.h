@@ -31,6 +31,7 @@
 
 class ConsoleLayer;
 class DebugConsole;
+class TutorialLayer;
 
 class Game {
 public:
@@ -98,6 +99,7 @@ private:
   std::unique_ptr<audio::AudioManager> audio_manager_;
   std::unique_ptr<View> current_view_{nullptr};
   std::unique_ptr<GlobalActionHandler> global_actions_;
+  TutorialLayer* tutorial_layer_{nullptr};
   GameContext context;
   SDLContext sdl_;
   SDL_Surface_unique_ptr screen_;

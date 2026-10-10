@@ -21,6 +21,7 @@
 #include "engine/ui/InteractionLayers.h"
 #include "views/base/OverlayBehavior.h"
 #include "views/ui/popups/BasePopup.h"
+#include "views/ui/widgets/PanelDrag.h"
 
 class PopupManager : public Renderable,
                      public OverlayBehavior<PopupManager>,
@@ -60,6 +61,8 @@ public:
   bool freezes_view() const override;
   bool freezes_simulation() const override;
   ViewPoint origin() const;
+  // Where the active popup is drawn.
+  std::optional<ViewRect> active_rect() const;
 
   std::vector<LayerInfo> get_layers() override;
 
@@ -94,11 +97,14 @@ private:
     return align_in_rect(screen, sz, HAlign::Center, VAlign::Center);
   }
 
+  void on_frame_event(const views::ui::InteractionEvent& ev);
+
   const GameContext& context_;
   std::optional<ViewPoint> pending_origin_;
   std::optional<ViewPoint> pending_anchor_;
   std::unique_ptr<BasePopup> active_popup_;
   ViewPoint active_origin_;
+  PanelDrag drag_;
   std::queue<std::function<void()>> pending_creates_;
   views::ui::InteractionLayers interactions_;
 };

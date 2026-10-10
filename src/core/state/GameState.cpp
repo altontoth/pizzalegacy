@@ -8,6 +8,7 @@
 
 #include "core/state/FadePresenter.h"
 #include "core/state/TurnPresenter.h"
+#include "core/state/TutorialPresenter.h"
 
 #include <algorithm>
 #include <cassert>
@@ -31,6 +32,7 @@
 #include "core/factories/PizzaFactory.h"
 #include "core/factories/RestaurantLayoutFactory.h"
 #include "core/finance/TurnInvoices.h"
+#include "core/init/CompanyNames.h"
 #include "core/init/NewGameConfig.h"
 #include "core/restaurant/AIEconomy.h"
 #include "core/restaurant/Restaurant.h"
@@ -70,6 +72,11 @@ void GameState::fade_presenter(std::unique_ptr<FadePresenter> presenter) {
 FadePresenter& GameState::fade_presenter() {
   static NoFadePresenter nobody;
   return fade_presenter_ ? *fade_presenter_ : nobody;
+}
+
+TutorialPresenter& GameState::tutorial_presenter() {
+  static NoTutorialPresenter nobody;
+  return tutorial_presenter_ ? *tutorial_presenter_ : nobody;
 }
 
 std::ostream& operator<<(std::ostream& os, const GameState& state) {
@@ -641,6 +648,7 @@ void GameState::update(uint32_t elapsed_ms) {
   }
 
   competitions_.tick();
+  tutorial_.tick();
 
   turn_.run_pending_end_of_turn();
 }
@@ -1047,7 +1055,10 @@ Restaurant* GameState::active_restaurant() const {
   return nullptr;
 }
 
-void GameState::begin_initialization() { initializer_ = init::Config{}; }
+void GameState::begin_initialization() {
+  initializer_ = init::Config{};
+  tutorial_.finish();
+}
 
 init::Config& GameState::initializer() {
   if (!initializer_) {
@@ -1176,12 +1187,13 @@ void GameState::reset_for_load() {
   auto entry_presenter = std::move(monthly_entry_presenter_);
   auto turn_presenter = std::move(turn_presenter_);
   auto fade_presenter = std::move(fade_presenter_);
+  auto* tutorial_presenter = tutorial_presenter_;
   auto hub = std::move(status_hub_);
 
   // We don't save these fields, so keep the ones we have.
   const ClockRate clock_rate = clock_rate_;
   const uint32_t accumulator = pit_accumulator_us_;
-  const InterruptionRate rate = turn_.interruption_rate();
+  const InterruptionRate rate = turn_.requested_interruption_rate();
   const GameOptions options = options_;
 
   *this = GameState{};
@@ -1193,6 +1205,7 @@ void GameState::reset_for_load() {
   competitions_ = CompetitionCoordinator{*this};
   milestones_ = MilestoneTracker{*this};
   real_estate_ = RealEstate{*this};
+  tutorial_ = core::tutorial::Tutorial{*this};
 
   clock_rate_ = clock_rate;
   pit_accumulator_us_ = accumulator;
@@ -1203,6 +1216,7 @@ void GameState::reset_for_load() {
   monthly_entry_presenter_ = std::move(entry_presenter);
   turn_presenter_ = std::move(turn_presenter);
   fade_presenter_ = std::move(fade_presenter);
+  tutorial_presenter_ = tutorial_presenter;
 }
 
 const CityViewMapState& GameState::city_view_view_state() const {
@@ -1336,9 +1350,9 @@ void GameState::bootstrap_minimal_playable_world(GameContext& context) {
   cfg.city_id = core::CityId{6}; // Madrid because that's where I like to start
 
   cfg.players.resize(NUMBER_OF_PLAYERS);
+  const auto company_names = init::random_company_names();
   for (int i = 0; i < NUMBER_OF_PLAYERS; ++i) {
-    auto* character = CharacterFactory::create_character(i);
-    cfg.players[i].name = character->last_name + " Pizza";
+    cfg.players[i].name = company_names[i];
     cfg.players[i].character_id = i;
     cfg.players[i].is_human = (i == 0);
   }
@@ -1355,6 +1369,9 @@ void GameState::restaurant_placement(std::vector<FurnitureBatch> batch) {
   furniture_placement_ = std::move(batch);
 }
 std::vector<FurnitureBatch>& GameState::restaurant_placement() {
+  return furniture_placement_;
+}
+const std::vector<FurnitureBatch>& GameState::restaurant_placement() const {
   return furniture_placement_;
 }
 

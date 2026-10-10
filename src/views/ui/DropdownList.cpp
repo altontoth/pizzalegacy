@@ -9,14 +9,18 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <utility>
+#include "engine/FormatCompat.h"
 #include "engine/geom/Spaces.h"
 #include "views/ui/DropdownDecoration.h"
 
-DropdownList::DropdownList(ViewRect header_rect, ViewPoint origin,
+DropdownList::DropdownList(std::string_view name, ViewRect header_rect,
+                           ViewPoint origin,
                            std::optional<std::function<void()>> on_activate_cb)
-    : header_rect_(header_rect), header_bar_(Surface(bar_width_, bar_height_)),
-      origin_(origin), on_activate_cb_(std::move(on_activate_cb)) {
+    : name_(name), header_rect_(header_rect),
+      header_bar_(Surface(bar_width_, bar_height_)), origin_(origin),
+      on_activate_cb_(std::move(on_activate_cb)) {
 
   views::ui::dropdowndecoration::draw_dropdown_decoration(header_bar_, 0);
 }
@@ -120,8 +124,6 @@ bool DropdownList::is_expanded() const { return expanded_; }
 
 void DropdownList::add_interactions(views::ui::InteractionContext& ui,
                                     std::function<void()> on_pick) {
-  auto id = std::hash<ViewRect>{}(header_rect_);
-
   int max_rows = current_visible_height_ / entry_height_;
   for (int i = 0; i < max_rows && i < (int)entries_.size(); ++i) {
     ViewRect row_rect{origin_.x,
@@ -129,7 +131,7 @@ void DropdownList::add_interactions(views::ui::InteractionContext& ui,
                           (i * entry_height_),
                       bar_width_, entry_height_};
     ui.layers.create_frame_item(
-        row_rect, compat::format("dd_row_{}_{}", id, i),
+        row_rect, compat::format("dd_row_{}_{}", name_, i),
         [this, i, on_pick,
          inv = ui.invalidate](const views::ui::InteractionEvent& ev) {
           switch (ev.type) {

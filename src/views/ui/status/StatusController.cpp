@@ -131,6 +131,7 @@ StatusDisplayRecipe StatusController::build_city_default(const CityCtx& c) {
   auto district_index = state->active_district_index();
   r.add_single(district_index ? c.city->district(*district_index).name()
                               : "- NONE -");
+  r.last_line_interaction_item("status_district");
   return r;
 }
 

@@ -34,19 +34,18 @@ bool BasePopup::on_action(const input::ActionEvent& ev) {
 }
 
 Surface BasePopup::text_button(const std::string& text, int width, int height,
-                               bool mouse_down) {
+                               bool mouse_down, FontFace face) {
   auto surface = button_surface(width, height, mouse_down);
   if (text.empty()) {
     return surface;
   }
 
-  auto metrics = font_->size_text(text, FontFace::ASTANDAR);
+  auto metrics = font_->size_text(text, face);
 
   ViewPoint origin{(width - metrics.width) / 2, (height - metrics.height) / 2};
 
   constexpr int button_color_idx = 9;
-  font_->render_text_onto(surface, text, origin, FontFace::ASTANDAR,
-                          button_color_idx);
+  font_->render_text_onto(surface, text, origin, face, button_color_idx);
   return surface;
 }
 

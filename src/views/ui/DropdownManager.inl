@@ -13,7 +13,8 @@ template <typename DropdownType>
 void DropdownManager<DropdownType>::add_dropdown(
     DropdownType type, ViewRect header, ViewPoint origin,
     std::optional<std::function<void()>> on_activate) {
-  dropdowns_.emplace(type, DropdownList(header, origin, on_activate));
+  dropdowns_.emplace(type, DropdownList(magic_enum::enum_name(type), header,
+                                        origin, on_activate));
 }
 
 template <typename DropdownType>

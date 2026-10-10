@@ -77,8 +77,16 @@ void PizzaDesign::on_bake_pressed() {
   begin_bake(std::move(s));
 }
 
+void PizzaDesign::bake_session(
+    std::shared_ptr<core::food::BakeSession> session) {
+  bake_ = std::move(session);
+  if (auto* top = state_.ui().top_as<PizzaDesignState>()) {
+    top->bake = bake_;
+  }
+}
+
 void PizzaDesign::begin_bake(core::food::BakeSession s) {
-  bake_ = std::move(s);
+  bake_session(std::make_shared<core::food::BakeSession>(std::move(s)));
   design_mode_ = true;
   bake_->working.update_stats(state_.customer_taste_profiles());
   status_.show_pizza(PizzaCtx{
@@ -144,7 +152,7 @@ void PizzaDesign::finish_new_user(std::string name) {
     return;
   }
 
-  bake_.reset();
+  bake_session(nullptr);
   design_mode_ = false;
   // Replace the OwnPizzaJudging state on the stack with a clean Recipes state.
   // Any subsequent view rebuild (e.g. when the CreatedFirstPizza fullscreen is
@@ -179,7 +187,7 @@ void PizzaDesign::finish_recreate_existing() {
 }
 
 void PizzaDesign::post_bake() {
-  auto bake_ptr = std::make_shared<core::food::BakeSession>(std::move(*bake_));
+  auto bake_ptr = bake_;
   auto active_key = active_key_;
   JudgingMode jmode = bake_ptr->reference_id.has_value() ? JudgingMode::Standard
                                                          : JudgingMode::Own;
@@ -207,7 +215,7 @@ void PizzaDesign::cancel_bake() {
   active_topping_.reset();
   context_.cursor->clear_custom_cursor();
   change_mode(PizzaDesignMode::Recipes);
-  bake_.reset();
+  bake_session(nullptr);
 }
 
 void PizzaDesign::handle_post_judging() {
@@ -234,7 +242,7 @@ void PizzaDesign::handle_post_judging() {
                        0, 200);
         c.participants[c.human_slot].final_score = final_score;
       }
-      bake_.reset();
+      bake_session(nullptr);
     }
 
     // If more human players remain in the session, chain to the next one
@@ -309,7 +317,7 @@ void PizzaDesign::handle_post_judging() {
       int reference_id = static_cast<int>(*bake_->reference_id);
       constexpr int cook_book_page_offset = 9;
       int page = (reference_id + cook_book_page_offset) / 2;
-      bake_.reset();
+      bake_session(nullptr);
       // Replace OwnPizzaJudging so dismissing the reminder returns to Recipes.
       state_.ui().replace_top<PizzaDesignState>(PizzaDesignState{
           .initial_mode = PizzaDesignMode::Recipes,
@@ -327,6 +335,6 @@ void PizzaDesign::handle_post_judging() {
     }
 
     change_mode(PizzaDesignMode::Recipes);
-    bake_.reset();
+    bake_session(nullptr);
   }
 }

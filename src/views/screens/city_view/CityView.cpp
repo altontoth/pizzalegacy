@@ -16,6 +16,7 @@
 #include <optional>
 #include <unordered_map>
 #include <utility>
+#include <variant>
 #include <vector>
 #include "core/GameTypes.h"
 #include "core/character/MafiaPlayerState.h"
@@ -33,6 +34,8 @@
 #include "core/state/TurnOrchestrator.h"
 #include "core/status/StatusHub.h"
 #include "core/time/GameTime.h"
+#include "core/tutorial/Tutorial.h"
+#include "core/tutorial/TutorialStep.h"
 #include "core/util/Constants.h"
 #include "engine/Random.h"
 #include "engine/audio/AudioManager.h"
@@ -206,12 +209,8 @@ void CityView::ui_push_store_position(CityViewReentryMode mode,
 
 void CityView::register_map_interactions_viewport() {
   // one full-viewport item, rebuilt every frame
-  ZoomConfig zoom = ZoomConfig::for_zoom_level(zoom_);
-  const ViewRect viewport{zoom.x_borders_offset, zoom.y_borders_offset,
-                          zoom.viewport_width, zoom.viewport_height};
-
   interactions_.create_frame_item(
-      viewport, "citymap_viewport",
+      viewport_rect(), "citymap_viewport",
       [this](const views::ui::InteractionEvent& ie) {
         switch (ie.type) {
 
@@ -298,6 +297,43 @@ void CityView::register_map_interactions_viewport() {
       });
 }
 
+ViewRect CityView::viewport_rect() const {
+  const auto zoom = ZoomConfig::for_zoom_level(zoom_);
+  return {zoom.x_borders_offset, zoom.y_borders_offset, zoom.viewport_width,
+          zoom.viewport_height};
+}
+
+ViewRect CityView::tile_view_rect(int index) const {
+  constexpr int tile_w = BASE_MAP_TILE_WIDTH * BASE_MAP_ZOOM_MULTIPLIER;
+  constexpr int tile_h = BASE_MAP_TILE_HEIGHT * BASE_MAP_ZOOM_MULTIPLIER;
+  const auto zoom = ZoomConfig::for_zoom_level(zoom_);
+  const WorldPoint world{City::index_to_x(index) * tile_w,
+                         City::index_to_y(index) * tile_h};
+  const ViewPoint pos = camera_.world_to_view(world) +
+                        PxOffset{zoom.x_borders_offset, zoom.y_borders_offset};
+  return {pos.x, pos.y, tile_w / camera_.zoom(), tile_h / camera_.zoom()};
+}
+
+void CityView::register_tutorial_tile() {
+  const auto* step = state_.tutorial().current_step();
+  if (!step || !step->target) {
+    return;
+  }
+  const auto* tile = std::get_if<core::tutorial::MapTile>(&*step->target);
+  if (!tile) {
+    return;
+  }
+  const auto visible =
+      intersect_rect(viewport_rect(), tile_view_rect(tile->index()));
+  if (!visible) {
+    return;
+  }
+  // Only so the tutorial can highlight the tile; it does not handle clicks.
+  interactions_.create_frame_item(
+      *visible, tile->item_name(), [](const views::ui::InteractionEvent&) {},
+      {.layer = views::ui::InteractionLayer::Background});
+}
+
 void CityView::disable_zoom_cursor() {
   zoom_selector_ = false;
   context_.cursor->clear_custom_cursor();
@@ -319,7 +355,7 @@ void CityView::zoom_in(ViewPoint p_view_local) {
   const WorldPoint anchor_world = camera_.view_to_world(p_view_local);
 
   // Commit camera + controller config first to update zoom
-  zoom_ = new_zoom;
+  zoom(new_zoom);
   disable_zoom_cursor();
   apply_zoom_profile(zoom_);
 
@@ -402,7 +438,7 @@ void CityView::zoom_out(ViewPoint p_view_local) {
   const WorldPoint anchor_world = camera_.view_to_world(p_view_local);
 
   // Commit zoom level and apply camera profile
-  zoom_ = new_zoom;
+  zoom(new_zoom);
   apply_zoom_profile(zoom_);
 
   // Calculate new scroll position based on new camera state
@@ -454,7 +490,7 @@ void CityView::zoom_scroll(int direction, ViewPoint cursor) {
     state_.status().clear_overlay();
   }
 
-  zoom_ = new_zoom;
+  zoom(new_zoom);
   disable_zoom_cursor();
   apply_zoom_profile(zoom_);
 
@@ -647,6 +683,7 @@ void CityView::render(const RenderContext& ctx) {
   interactions_.begin_frame();
 
   register_map_interactions_viewport();
+  register_tutorial_tile();
 
   if (zoom_ == ZoomLevel::CLOSE) {
     // Always update water palette when animation is active since Renderer
@@ -1055,6 +1092,7 @@ void CityView::set_active_tab(CityViewTabType type) {
     tabs_.erase(it);
     tabs_.push_back(tab);
     active_tab_type_ = type;
+    publish_view_state();
     update_tab_positions();
   }
 }
@@ -1348,30 +1386,13 @@ void CityView::render_highlights(const RenderContext& ctx) {
     return;
   }
 
-  const PxOffset tab_offset{TABBED_VIEW_OFFSET_X, TABBED_VIEW_OFFSET_Y};
-
   for (std::size_t i = 0; i < highlighted_cells_.size(); ++i) {
     if (highlighted_cells_[i] == HighlightType::DOT) {
-      // Get world position of this tile (always in CLOSE scale: 32-pixel tiles)
-      const int tx = City::index_to_x(static_cast<int>(i));
-      const int ty = City::index_to_y(static_cast<int>(i));
-      const WorldPoint world_pos{
-          tx * BASE_MAP_TILE_WIDTH * BASE_MAP_ZOOM_MULTIPLIER,
-          ty * BASE_MAP_TILE_HEIGHT * BASE_MAP_ZOOM_MULTIPLIER};
-
-      // Convert to view coordinates
-      const ViewPoint view_pos = camera_.world_to_view(world_pos);
-
-      // Add tab offset for MEDIUM/FAR zoom (at CLOSE, offset is 0)
-      const ViewPoint screen_pos = view_pos + tab_offset;
-
-      // Cell size in view space (scaled by camera zoom)
-      const int world_box_size = BASE_MAP_TILE_WIDTH * BASE_MAP_ZOOM_MULTIPLIER;
-      const int cell_view_size = world_box_size / camera_.zoom();
+      const ViewRect cell = tile_view_rect(static_cast<int>(i));
 
       // At zoom FAR a cell-sized dot is too small to see, so it's always
       // doubled there; qol_improvements doubles it again on top of that
-      int view_box_size = cell_view_size;
+      int view_box_size = cell.w;
       if (zoom_ == ZoomLevel::FAR) {
         view_box_size *= 2;
         if (state_.options().qol_improvements) {
@@ -1380,10 +1401,9 @@ void CityView::render_highlights(const RenderContext& ctx) {
       }
 
       // Center the (possibly enlarged) box on the cell
-      const int center_offset = (cell_view_size - view_box_size) / 2;
-      const ViewRect dest_rect{screen_pos.x + center_offset,
-                               screen_pos.y + center_offset, view_box_size,
-                               view_box_size};
+      const int center_offset = (cell.w - view_box_size) / 2;
+      const ViewRect dest_rect{cell.x + center_offset, cell.y + center_offset,
+                               view_box_size, view_box_size};
 
       // Clip to viewport
       const auto view_sz = camera_.view_size();
@@ -1399,14 +1419,7 @@ void CityView::render_highlights(const RenderContext& ctx) {
       ctx.surface->fill_rect(*clipped_opt, yellow_idx);
     }
     else if (highlighted_cells_[i] == HighlightType::RANGE) {
-      const int tx = City::index_to_x(static_cast<int>(i));
-      const int ty = City::index_to_y(static_cast<int>(i));
-      const WorldPoint world_pos{
-          tx * BASE_MAP_TILE_WIDTH * BASE_MAP_ZOOM_MULTIPLIER,
-          ty * BASE_MAP_TILE_HEIGHT * BASE_MAP_ZOOM_MULTIPLIER};
-
-      const ViewPoint view_pos = camera_.world_to_view(world_pos);
-      const ViewPoint screen_pos = view_pos + tab_offset;
+      const ViewPoint screen_pos = tile_view_rect(static_cast<int>(i)).point();
 
       // Original: 2x2 at far zoom, 4x4 at medium zoom (doubled for 2x scale)
       const int view_box_size = zoom_ == ZoomLevel::MEDIUM ? 8 : 4;
@@ -1541,6 +1554,17 @@ core::DistrictIndex CityView::district_at(WorldPoint pw) {
 void CityView::store_state_in_city(CityViewReentryMode entry_mode) {
   state_.city_view_view_state(capture_view_state(entry_mode));
   should_save_map_state_on_exit_ = false;
+}
+
+void CityView::zoom(ZoomLevel level) {
+  zoom_ = level;
+  publish_view_state();
+}
+
+void CityView::publish_view_state() {
+  if (auto* top = state_.ui().top_as<CityViewState>()) {
+    top->shown = {.zoom = zoom_, .tab = active_tab_type_};
+  }
 }
 
 void CityView::update_water_palette(const RenderContext& ctx) {
@@ -1711,7 +1735,7 @@ CityViewMapState CityView::capture_view_state(CityViewReentryMode mode) const {
 }
 
 void CityView::restore_view_state(const CityViewMapState& state) {
-  zoom_ = state.zoom;
+  zoom(state.zoom);
   set_active_tab(state.active_tab);
   apply_zoom_profile(zoom_);
 

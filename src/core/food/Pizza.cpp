@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <iterator>
 #include <map>
 #include <set>
 #include <utility>
@@ -166,6 +167,21 @@ void Pizza::update_stats(const CustomerTasteProfiles& taste_profiles) {
 
 const std::vector<std::unique_ptr<Topping>>& Pizza::toppings() const {
   return toppings_;
+}
+
+std::vector<IngredientGrams> Pizza::ingredient_grams() const {
+  std::vector<IngredientGrams> grams;
+  for (const auto& topping : toppings_) {
+    const Ingredient* ingredient = topping->ingredient();
+    auto it =
+        std::ranges::find(grams, ingredient, &IngredientGrams::ingredient);
+    if (it == grams.end()) {
+      grams.push_back({.ingredient = ingredient, .grams = 0});
+      it = std::prev(grams.end());
+    }
+    it->grams += topping->weight();
+  }
+  return grams;
 }
 
 const std::array<int, NUMBER_OF_JUDGES>& Pizza::scores() const {

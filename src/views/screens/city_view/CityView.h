@@ -97,6 +97,9 @@ private:
   void create_dropdowns();
   void create_buttons();
   void register_map_interactions_viewport();
+  void register_tutorial_tile();
+  [[nodiscard]] ViewRect viewport_rect() const;
+  [[nodiscard]] ViewRect tile_view_rect(int index) const;
 
   // Helper for coordinate conversions
   ViewPoint local_to_viewport_coords(ViewPoint local_pos) const;
@@ -115,6 +118,8 @@ private:
 
   // State
   void store_state_in_city(CityViewReentryMode entry_mode);
+  void zoom(ZoomLevel level);
+  void publish_view_state();
   CityViewMapState capture_view_state(CityViewReentryMode mode) const;
   void restore_view_state(const CityViewMapState& state);
   void current_highlight(CityViewMapState);

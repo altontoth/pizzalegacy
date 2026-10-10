@@ -97,12 +97,13 @@ public:
   // of the turn.
   [[nodiscard]] bool may_auto_end_turn() const;
   void interruption_rate(InterruptionRate rate) { interruption_rate_ = rate; }
-  [[nodiscard]] InterruptionRate interruption_rate() const {
+  [[nodiscard]] InterruptionRate interruption_rate() const;
+  [[nodiscard]] InterruptionRate requested_interruption_rate() const {
     return interruption_rate_;
   }
   [[nodiscard]] bool interruptions_allowed() const {
-    return interruption_rate_ == InterruptionRate::Half ||
-           interruption_rate_ == InterruptionRate::Full;
+    const InterruptionRate rate = interruption_rate();
+    return rate == InterruptionRate::Half || rate == InterruptionRate::Full;
   }
   [[nodiscard]] bool is_processing_end_of_turn() const {
     return processing_end_of_turn_;

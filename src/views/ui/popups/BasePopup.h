@@ -20,6 +20,7 @@
 #include "engine/input/ListenerToken.h"
 #include "engine/ui/InteractionLayers.h"
 #include "resources/FontManager.h"
+#include "resources/FontTypes.h"
 #include "resources/VgaManager.h"
 #include "views/base/Dirtyable.h"
 
@@ -51,7 +52,7 @@ public:
   static constexpr int popup_border = 10;
   Surface popup_surface(int width, int height);
   Surface text_button(const std::string& text, int width, int height,
-                      bool mouse_down);
+                      bool mouse_down, FontFace face = FontFace::ASTANDAR);
 
 protected:
   // Fire button->trigger() when action arrives

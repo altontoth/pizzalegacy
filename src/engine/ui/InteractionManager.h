@@ -60,6 +60,7 @@ enum class InteractionLayer {
 constexpr int priority_default = 0;
 constexpr int priority_turn_lock = 100;
 constexpr int priority_popup = 200;
+constexpr int priority_tutorial = 300;
 
 // Returning nothing hides the tooltip.
 using TooltipCb =
@@ -170,6 +171,21 @@ public:
     on_hot_changed_ = std::move(cb);
   }
 
+  [[nodiscard]] std::optional<ViewRect>
+  find_item_rect(std::string_view name) const;
+  // The item the mouse is over, or an empty string if none.
+  [[nodiscard]] const std::string& hot_item_name() const {
+    return hot_item_name_;
+  }
+
+  // If set, hit testing skips every item the filter rejects.
+  using HitFilter = std::function<bool(std::string_view name)>;
+  void hit_filter(HitFilter filter) { hit_filter_ = std::move(filter); }
+
+  // Called with the name of every item that gets a Click.
+  using ClickObserver = std::function<void(std::string_view name, MouseButton)>;
+  void on_click(ClickObserver cb) { on_click_ = std::move(cb); }
+
   bool is_dragging() const { return drag_active_; }
 
   void cancel_drag() {
@@ -265,6 +281,9 @@ private:
     std::optional<Rank> blocker;
   };
   [[nodiscard]] HitResult hit_test(ViewPoint p) const;
+  [[nodiscard]] bool hit_testable(const InteractionItem& item) const;
+  void dispatch_click(const InteractionItem& item, MouseButton btn,
+                      ViewPoint p);
 
   [[nodiscard]] static MouseButton to_button(const SDL_Event& e) noexcept;
   void handle_tooltip(const TooltipCb& tooltip_cb, const InteractionEvent& ev);
@@ -283,7 +302,6 @@ private:
     }
     return nullptr;
   }
-  std::string hot_item_name() const { return hot_item_name_; }
   ViewPoint screen_to_view_point(ScreenPoint sp) const;
 
   TooltipManager& tt_mgr_;
@@ -294,6 +312,8 @@ private:
   ItemID current_hover_{0};
   std::string hot_item_name_;
   std::function<void()> on_hot_changed_;
+  HitFilter hit_filter_;
+  ClickObserver on_click_;
   int display_height_{DisplayConstants::LOGICAL_HEIGHT};
   ViewPoint last_logical_mouse_pos_;
 

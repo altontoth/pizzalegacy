@@ -27,6 +27,7 @@ using ViewRect = TypedRect<ViewGeomTag>;
 using ScreenRect = TypedRect<ScreenGeomTag>;
 
 using WorldDelta = TypedDelta<WorldGeomTag>;
+using ViewDelta = TypedDelta<ViewGeomTag>;
 
 template <typename Tag>
 constexpr TypedDelta<Tag> operator-(TypedPoint<Tag> a,

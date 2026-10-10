@@ -18,6 +18,7 @@
 #include "core/debug/commands/PlayerCommands.h"
 #include "core/debug/commands/RestaurantCommands.h"
 #include "core/debug/commands/StaffCommands.h"
+#include "core/debug/commands/TutorialCommands.h"
 #include "core/util/GameContext.h"
 
 void register_debug_commands(DebugConsole& console, GameState& state,
@@ -39,6 +40,7 @@ void register_debug_commands(DebugConsole& console, GameState& state,
   registry.register_command(debug::commands::make_mayor_commands());
   registry.register_command(debug::commands::make_staff_commands());
   registry.register_command(debug::commands::make_armsdealer_commands());
+  registry.register_command(debug::commands::make_tutorial_commands());
 
   // Register top-level convenience commands
   registry.register_command(debug::commands::make_dump_command());

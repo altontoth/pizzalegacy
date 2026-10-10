@@ -8,6 +8,7 @@
 
 #include <cassert>
 #include "core/state/GameState.h"
+#include "core/tutorial/TutorialGame.h"
 #include "views/screens/menus/MenuTheme.h"
 #include "views/ui/widgets/PositionMarkerMenuItem.h"
 #include "views/ui/widgets/SpacerMenuItem.h"
@@ -53,6 +54,15 @@ MenuNewGame::MenuNewGame(GameContext& context, GameState& state)
         state.begin_initialization();
         state.initializer().mode = GameMode::QUICKSTART;
         state.ui().push<ScreenTag>(ScreenTag::Kind::MenuQuickstart);
+      },
+      face, style, sel_style, item_align));
+  add_menu_item(std::make_unique<SpacerMenuItem>(context, space_between_lines));
+
+  add_menu_item(std::make_unique<TextMenuItem>(
+      context, "Tutorial",
+      [this] {
+        Logger::debug("Starting the tutorial");
+        core::tutorial::start_tutorial_game(state_, context_);
       },
       face, style, sel_style, item_align));
 

@@ -32,6 +32,12 @@ struct Flavors {
   int hot = 0;
 };
 
+// The total grams of any given ingredient on a pizza.
+struct IngredientGrams {
+  const Ingredient* ingredient;
+  int grams;
+};
+
 std::ostream& operator<<(std::ostream& os, const class Pizza& pizza);
 
 class Pizza {
@@ -49,6 +55,7 @@ public:
   void add_topping(std::unique_ptr<Topping>);
   std::unique_ptr<Topping> remove_latest_topping();
   const std::vector<std::unique_ptr<Topping>>& toppings() const;
+  std::vector<IngredientGrams> ingredient_grams() const;
   const std::array<int, NUMBER_OF_JUDGES>& scores() const;
   void finalize(const CustomerTasteProfiles& taste_profiles,
                 const std::string& name = "");

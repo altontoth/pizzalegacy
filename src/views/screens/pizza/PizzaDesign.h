@@ -70,6 +70,7 @@ private:
   void change_mode(PizzaDesignMode mode);
   bool is_new_selected() const;
   void on_bake_pressed();
+  void bake_session(std::shared_ptr<core::food::BakeSession> session);
   void on_design_finished();
   void begin_bake(core::food::BakeSession s);
   void finish_new_user(std::string name);
@@ -92,6 +93,7 @@ private:
   void add_pizza_main_panel_item();
   void update_status_ingredient();
   void handle_post_judging();
+  void publish_shown();
 
   // Competition
   Player* competing_player() const;
@@ -128,7 +130,7 @@ private:
   static constexpr int recipes_per_page_ = 14;
   static constexpr int max_recipe_name_length = 18;
   size_t recipe_count_{0};
-  std::optional<core::food::BakeSession> bake_;
+  std::shared_ptr<core::food::BakeSession> bake_;
   std::optional<CompetitionSession> competition_;
   std::optional<core::PlayerId> competing_player_id_;
   std::function<void()> on_done_;

@@ -9,6 +9,8 @@
 #include <cstdint>
 #include <functional>
 #include <optional>
+#include <string>
+#include <string_view>
 #include <vector>
 #include "engine/geom/Spaces.h"
 #include "engine/ui/InteractionLayers.h"
@@ -17,7 +19,7 @@
 
 class DropdownList {
 public:
-  DropdownList(ViewRect header, ViewPoint origin,
+  DropdownList(std::string_view name, ViewRect header, ViewPoint origin,
                std::optional<std::function<void()>> on_activate_cb);
   void render(Surface& target, FontManager* font);
   bool tick();
@@ -40,6 +42,7 @@ private:
   };
   std::optional<int> entry_index_at(ViewPoint p) const;
 
+  std::string name_;
   ViewRect header_rect_;
   bool expanded_ = false;
   std::vector<DropdownEntry> entries_;

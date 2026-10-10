@@ -50,7 +50,7 @@ void PizzaDesign::begin_competition(std::shared_ptr<CompetitionSession> s) {
 void PizzaDesign::begin_annual_competition(
     std::shared_ptr<CompetitionSession> s) {
   competition_ = std::move(*s);
-  bake_ = core::food::BakeSession{};
+  bake_session(std::make_shared<core::food::BakeSession>());
   bake_->kind = BakeKind::NewUser;
   bake_->working = Pizza("annual competition pizza");
   bake_->working.update_stats(state_.customer_taste_profiles());
@@ -156,7 +156,7 @@ void PizzaDesign::on_reveal_complete() {
 
   // Set up empty bake session and switch to design mode BEFORE showing the
   // popup so the background already shows an empty pizza canvas.
-  bake_ = core::food::BakeSession{};
+  bake_session(std::make_shared<core::food::BakeSession>());
   bake_->kind = BakeKind::NewUser;
   bake_->working = Pizza("competition pizza");
   bake_->working.update_stats(state_.customer_taste_profiles());
@@ -185,8 +185,8 @@ void PizzaDesign::on_competition_design_finished() {
       state_.customer_taste_profiles(), "competition pizza");
   auto imitation_scores = bake_->working.scores();
 
-  auto bake_ptr = std::make_shared<core::food::BakeSession>(std::move(*bake_));
-  bake_.reset();
+  auto bake_ptr = bake_;
+  bake_session(nullptr);
   competition_->human_design_ticks = competition_design_ticks_;
   auto comp_ptr =
       std::make_shared<CompetitionSession>(std::move(*competition_));

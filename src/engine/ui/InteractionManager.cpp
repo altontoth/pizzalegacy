@@ -8,6 +8,9 @@
 
 #include <algorithm>
 #include <cstdlib>
+#include <optional>
+#include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -22,7 +25,7 @@ InteractionManager::HitResult InteractionManager::hit_test(ViewPoint p) const {
 
   for (const auto& item : items_) {
     if (item.layer_type == InteractionLayer::Background ||
-        !item.rect.contains(p)) {
+        !item.rect.contains(p) || !hit_testable(item)) {
       continue;
     }
     const Rank rank = rank_of(item);
@@ -39,7 +42,7 @@ InteractionManager::HitResult InteractionManager::hit_test(ViewPoint p) const {
   std::vector<std::pair<Rank, ItemID>> background;
   for (const auto& item : items_) {
     if (item.layer_type != InteractionLayer::Background ||
-        !item.rect.contains(p)) {
+        !item.rect.contains(p) || !hit_testable(item)) {
       continue;
     }
     const Rank rank = rank_of(item);
@@ -179,7 +182,7 @@ void InteractionManager::process(const SDL_Event& e) {
           if (clicks >= 2) {
             dispatch(*item, InteractionEvent::Type::DoubleClick, btn, p);
           }
-          dispatch(*item, InteractionEvent::Type::Click, btn, p);
+          dispatch_click(*item, btn, p);
         }
         else {
           dispatch(*item, InteractionEvent::Type::Cancelled, btn, p);
@@ -212,7 +215,7 @@ void InteractionManager::process(const SDL_Event& e) {
           if (clicks >= 2) {
             dispatch(*item, InteractionEvent::Type::DoubleClick, btn, p);
           }
-          dispatch(*item, InteractionEvent::Type::Click, btn, p);
+          dispatch_click(*item, btn, p);
         }
         else {
           dispatch(*item, InteractionEvent::Type::Cancelled, btn, p);
@@ -266,6 +269,30 @@ void InteractionManager::process(const SDL_Event& e) {
 
   default:
     break;
+  }
+}
+
+std::optional<ViewRect>
+InteractionManager::find_item_rect(std::string_view name) const {
+  for (const auto& item : items_) {
+    if (item.name == name) {
+      return item.rect;
+    }
+  }
+  return std::nullopt;
+}
+
+bool InteractionManager::hit_testable(const InteractionItem& item) const {
+  return !hit_filter_ || hit_filter_(item.name);
+}
+
+void InteractionManager::dispatch_click(const InteractionItem& item,
+                                        MouseButton btn, ViewPoint p) {
+  // Copy because the callback could destroy the item.
+  const std::string name = item.name;
+  dispatch(item, InteractionEvent::Type::Click, btn, p);
+  if (on_click_) {
+    on_click_(name, btn);
   }
 }
 
@@ -392,7 +419,8 @@ void InteractionManager::update_mouse(ScreenPoint sp) {
       const bool blocked = blocker && !rank_of(item).outranks(*blocker);
       bg_states.push_back({.id = item.id,
                            .was_hovered = item.hovered,
-                           .now_inside = !blocked && item.rect.contains(p)});
+                           .now_inside = !blocked && hit_testable(item) &&
+                                         item.rect.contains(p)});
     }
 
     for (const auto& state : bg_states) {

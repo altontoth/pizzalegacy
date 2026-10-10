@@ -7,6 +7,7 @@
 #include "views/ui/PopupManager.h"
 #include "engine/DisplayConstants.h"
 #include "engine/ui/ICursorManager.h"
+#include "engine/ui/InteractionEvent.h"
 #include "engine/ui/InteractionLayers.h"
 
 PopupManager::PopupManager(GameContext& gc)
@@ -72,6 +73,11 @@ void PopupManager::render(const RenderContext& ctx) {
         "popup_backdrop",
         [](const views::ui::InteractionEvent& ev) { /* No-op */ },
         {.layer = views::ui::InteractionLayer::Exclusive});
+    // Before the popup's own items, so they sit on top of it.
+    interactions_.create_frame_item(
+        ViewRect{active_origin_, active_popup_->popup_size()}, "popup_frame",
+        [this](const views::ui::InteractionEvent& ev) { on_frame_event(ev); },
+        {.drag_button = views::ui::MouseButton::Left});
 
     views::ui::InteractionContext ui{
         .layers = interactions_, .invalidate = [this] { mark_self_dirty(); }};
@@ -79,6 +85,20 @@ void PopupManager::render(const RenderContext& ctx) {
 
     active_popup_->add_interactions(ui, active_origin_);
   }
+}
+
+void PopupManager::on_frame_event(const views::ui::InteractionEvent& ev) {
+  if (!active_popup_) {
+    return;
+  }
+  const auto to = drag_.on_interaction(
+      ev, ViewRect{active_origin_, active_popup_->popup_size()});
+  if (!to) {
+    return;
+  }
+  active_origin_ = *to;
+  request_recompose();
+  mark_dirty();
 }
 
 bool PopupManager::is_dirty() const {
@@ -118,6 +138,13 @@ bool PopupManager::freezes_simulation() const {
 
 ViewPoint PopupManager::origin() const {
   return active_popup_ ? active_origin_ : ViewPoint{0, 0};
+}
+
+std::optional<ViewRect> PopupManager::active_rect() const {
+  if (!active_popup_) {
+    return std::nullopt;
+  }
+  return ViewRect{active_origin_, active_popup_->popup_size()};
 }
 
 std::vector<LayerInfo> PopupManager::get_layers() {

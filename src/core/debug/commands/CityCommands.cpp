@@ -13,13 +13,16 @@
 #include "core/character/AiMenuSlot.h"
 #include "core/character/Player.h"
 #include "core/city/City.h"
+#include "core/city/CityTypes.h"
 #include "core/city/District.h"
 #include "core/city/PizzaCharts.h"
 #include "core/city/Property.h"
 #include "core/food/IngredientCategory.h"
 #include "core/food/PlayerRecipes.h"
 #include "core/food/Recipe.h"
+#include "core/restaurant/Restaurant.h"
 #include "core/state/GameState.h"
+#include "core/state/RealEstate.h"
 #include "core/supply/FoodSupplier.h"
 #include "core/util/Constants.h"
 #include "engine/FormatCompat.h"
@@ -414,6 +417,86 @@ Example:
   };
 }
 
+static CommandDef make_click() {
+  return CommandDef{
+      .name = "click",
+      .description = "Select a map tile as a click at close zoom does",
+      .help_text = R"(Usage: city click <index>
+
+Makes a tile the one last clicked on the city map, and its district the
+active one. The status panel is not redrawn, and a second click does not
+enter a restaurant.
+)",
+      .args =
+          {
+              ArgSpec{
+                  .name = "index",
+                  .type = ArgType::Int,
+                  .optional = false,
+                  .description = "Map index of the tile",
+                  .min_value = 0,
+                  .max_value = MAP_TILES_PER_ROW * MAP_TILES_PER_COLUMN - 1,
+              },
+          },
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        auto* city = ctx.state.active_city();
+        if (!city) {
+          return CommandResult::error("No active city");
+        }
+        const auto index = static_cast<int>(ctx.int_arg(0));
+        ctx.state.last_clicked_property_index(index);
+        ctx.state.active_district_index(city->district_by_index(index));
+        return CommandResult::success().add_message(
+            compat::format("Tile {} selected", index));
+      },
+  };
+}
+
+static CommandDef make_rent() {
+  return CommandDef{
+      .name = "rent",
+      .description = "Rent a premise for the active player",
+      .help_text = R"(Usage: city rent <index>
+
+Rents the premise at a map index for the active player, as agreeing to a
+realtor's rent does, and opens a restaurant there.
+)",
+      .args =
+          {
+              ArgSpec{
+                  .name = "index",
+                  .type = ArgType::Int,
+                  .optional = false,
+                  .description = "Map index of the premise",
+                  .min_value = 0,
+                  .max_value = MAP_TILES_PER_ROW * MAP_TILES_PER_COLUMN - 1,
+              },
+          },
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        auto* city = ctx.state.active_city();
+        auto* player = ctx.state.active_player();
+        if (!city || !player) {
+          return CommandResult::error("No active city or player");
+        }
+        const auto index = static_cast<int>(ctx.int_arg(0));
+        auto* property = city->property_by_index(index);
+        if (!property || property->type() != PropertyType::BUSINESS_PREMISE ||
+            !property->is_for_rent()) {
+          return CommandResult::error(
+              compat::format("No premise for rent at index {}", index));
+        }
+        auto* restaurant =
+            ctx.state.real_estate().rent_restaurant(*property, *player);
+        if (!restaurant) {
+          return CommandResult::error("Could not rent the premise");
+        }
+        return CommandResult::success().add_message(
+            compat::format("Rented premise {} as restaurant {}", index,
+                           restaurant->id().value));
+      },
+  };
+}
+
 CommandDef make_city_commands() {
   return CommandDef{
       .name = "city",
@@ -424,7 +507,9 @@ CommandDef make_city_commands() {
       .add_subcommand(make_districts())
       .add_subcommand(make_investigation())
       .add_subcommand(make_suppliers())
-      .add_subcommand(make_property());
+      .add_subcommand(make_property())
+      .add_subcommand(make_click())
+      .add_subcommand(make_rent());
 }
 
 } // namespace debug::commands

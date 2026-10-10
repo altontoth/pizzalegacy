@@ -17,6 +17,7 @@
 #include "core/finance/Ledger.h"
 #include "core/finance/Loan.h"
 #include "core/finance/Money.h"
+#include "core/food/Ingredient.h"
 #include "core/food/Pizza.h"
 #include "core/food/PlayerRecipes.h"
 #include "core/food/Recipe.h"
@@ -36,6 +37,7 @@
 #include <array>
 #include <cstdint>
 #include <filesystem>
+#include <map>
 #include <string>
 
 using namespace debug::command;
@@ -472,7 +474,8 @@ Examples:
                   .default_provider = DefaultProvider::None,
                   .description =
                       "Optional recipe index (0-" +
-                      std::to_string(core::food::STANDARD_PIZZA_COUNT - 1) + ")",
+                      std::to_string(core::food::STANDARD_PIZZA_COUNT - 1) +
+                      ")",
                   .min_value = 0,
                   .max_value = core::food::STANDARD_PIZZA_COUNT - 1,
               },
@@ -657,15 +660,78 @@ Examples:
   };
 }
 
+static CommandDef make_player_recipes_show() {
+  return CommandDef{
+      .name = "show",
+      .description = "List a recipe's toppings",
+      .help_text = R"(Usage: player recipes show <recipe_id> [player_id]
+
+Prints the recipe's imitation score, then each ingredient on it: how many
+pieces, how many of those are whole, chopped and minced, and the grams.
+
+Examples:
+  player recipes show 1
+)",
+      .args =
+          {
+              ArgSpec{
+                  .name = "recipe_id",
+                  .type = ArgType::RecipeId,
+                  .description = "Recipe to show",
+              },
+              active_player_arg(),
+          },
+      .handler = [](const CommandContext& ctx) -> CommandResult {
+        const auto recipe_id = ctx.recipe_id(0);
+        auto player_id = ctx.player_id(1);
+        const auto* player = ctx.state.player(player_id);
+        if (!player) {
+          return CommandResult::error(
+              compat::format("Player {} not found", player_id.value));
+        }
+        const auto* recipe = player->recipes().find(recipe_id);
+        if (!recipe) {
+          return CommandResult::error(
+              compat::format("Recipe {} not found", recipe_id.value));
+        }
+
+        const auto& pizza = recipe->pizza();
+        std::map<const core::food::Ingredient*, std::array<int, 3>>
+            pieces_by_chop;
+        for (const auto& topping : pizza.toppings()) {
+          auto& pieces = pieces_by_chop[topping->ingredient()];
+          const int chop = topping->chopped_state();
+          if (chop >= 0 && chop < static_cast<int>(pieces.size())) {
+            ++pieces[chop];
+          }
+        }
+
+        CommandResult result = CommandResult::success();
+        result.add_message(compat::format(
+            "{}: imitation {}, {} toppings", recipe->display_name(),
+            pizza.imitation(), pizza.toppings().size()));
+        for (const auto& [ingredient, grams] : pizza.ingredient_grams()) {
+          const auto& chop = pieces_by_chop[ingredient];
+          result.add_message(compat::format(
+              "  {}: {} pieces ({} whole, {} chopped, {} minced), {} g",
+              ingredient->name(), chop[0] + chop[1] + chop[2], chop[0], chop[1],
+              chop[2], grams));
+        }
+        return result;
+      },
+  };
+}
+
 static CommandDef make_player_recipes() {
   return CommandDef{
       .name = "recipes",
       .description = "Manage player's pizza recipes",
-      .help_text = "Subcommands: load, import, export",
+      .help_text = "Subcommands: load, import, export, show",
   }
       .add_subcommand(make_player_recipes_load())
       .add_subcommand(make_player_recipes_import())
-      .add_subcommand(make_player_recipes_export());
+      .add_subcommand(make_player_recipes_export())
+      .add_subcommand(make_player_recipes_show());
 }
 
 static CommandDef make_player_weapon_profit() {

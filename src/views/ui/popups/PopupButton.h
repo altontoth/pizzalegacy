@@ -7,9 +7,11 @@
 #pragma once
 
 #include <functional>
+#include <string>
 
 #include "engine/geom/Spaces.h"
 #include "engine/ui/InteractionLayers.h"
+#include "resources/FontTypes.h"
 
 class PopupButton {
 public:
@@ -26,7 +28,8 @@ public:
 
   template <class BasePopupLike>
   void render_with(BasePopupLike& popup_helpers, Surface& target) const {
-    auto s = popup_helpers.text_button(text_, rect_.w, rect_.h, pressed_);
+    auto s =
+        popup_helpers.text_button(text_, rect_.w, rect_.h, pressed_, face_);
     target.blit_raw(s, rect_.point());
 
     if (painter_) {
@@ -36,6 +39,9 @@ public:
 
   void set_painter(Painter p) { painter_ = std::move(p); }
   void set_rect(ViewRect r) { rect_ = r; }
+  void face(FontFace face) { face_ = face; }
+  // Overrides the item name, which is otherwise built from the text.
+  void id(std::string id) { id_ = std::move(id); }
 
   // Invoke the click callback directly, as if the button were pressed. Used by
   // BasePopup to map keyboard actions onto buttons.
@@ -48,6 +54,8 @@ public:
 private:
   ViewRect rect_;
   std::string text_;
+  std::string id_;
+  FontFace face_{FontFace::ASTANDAR};
   Callback on_click_;
   Painter painter_;
 

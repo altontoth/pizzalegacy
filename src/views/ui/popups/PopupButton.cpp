@@ -13,8 +13,11 @@ void PopupButton::add_interactions(views::ui::InteractionContext ctx,
   // If we don't have a string we just hash the rect to make sure we have
   // something unique
   const std::string btn_id =
-      "button_" +
-      (text_.empty() ? std::to_string(std::hash<ViewRect>{}(rect_)) : text_);
+      !id_.empty()
+          ? id_
+          : "button_" + (text_.empty()
+                             ? std::to_string(std::hash<ViewRect>{}(rect_))
+                             : text_);
   ctx.layers.create_frame_item(
       add_origin(rect_, popup_origin), btn_id,
       [this, btn_id,

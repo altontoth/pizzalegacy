@@ -12,6 +12,7 @@
 
 #include "core/character/Character.h"
 #include "core/factories/CharacterFactory.h"
+#include "core/init/CompanyNames.h"
 #include "core/state/GameState.h"
 #include "engine/Random.h"
 #include "views/screens/menus/MenuTheme.h"
@@ -120,20 +121,7 @@ void CharacterSelection::generate_player_items() {
   static std::vector<std::string> active_player_names;
 
   if (active_player_names.empty()) {
-    // First-time initialization: Pick 8 random names
-    std::vector<std::string> company_names = {
-        "Pizza King",   "Pizza World", "Pizza Land",   "Fast Slime",
-        "Mac Fat",      "Paradiso",    "KF Pizza",     "Pizza-U-Eat",
-        "Pizza 2000",   "Kwik Pizza",  "Salmo Pizza",  "Geno-Pizza",
-        "Panda Pizza",  "Piz Perfect", "Dino-Pizza",   "Thai Ching",
-        "Pizza Parlor", "Ripley's",    "Rick's Diner", "SoftRock Pizza"};
-
-    // Shuffle the names
-    engine::random::shuffle(company_names.begin(), company_names.end());
-
-    // Select the first 8 names
-    active_player_names.assign(company_names.begin(),
-                               company_names.begin() + MAX_HUMAN_PLAYERS);
+    active_player_names = init::random_company_names();
   }
 
   std::vector<int> character_ids(NUMBER_OF_CHARACTERS);
@@ -151,7 +139,7 @@ void CharacterSelection::generate_player_items() {
         .is_selected = i == 0,
         .is_human = i < human_players_,
         .character_id = character_ids[i],
-        .character_name = char_data->first_name + " " + char_data->last_name,
+        .character_name = char_data->name(),
     });
   }
 }
@@ -159,8 +147,7 @@ void CharacterSelection::generate_player_items() {
 void CharacterSelection::reload_character() {
   auto character_id = player_items_[active_player_].character_id;
   character_ = CharacterFactory::create_character(character_id);
-  player_items_[active_player_].character_name =
-      character_->first_name + " " + character_->last_name;
+  player_items_[active_player_].character_name = character_->name();
   mark_dirty();
 }
 

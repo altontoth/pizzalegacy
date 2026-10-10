@@ -14,6 +14,7 @@
 #include "core/finance/MoneyParse.h"
 #include "core/food/StandardPizza.h"
 #include "core/state/GameState.h"
+#include "core/state/UIState.h"
 #include "engine/Logger.h"
 #include "engine/Random.h"
 #include "engine/audio/AudioManager.h"
@@ -34,6 +35,7 @@
 #include <algorithm>
 #include <memory>
 #include <optional>
+#include <variant>
 
 using namespace core::food;
 using namespace pizza_design;
@@ -81,8 +83,7 @@ PizzaDesign::PizzaDesign(GameContext& context, GameState& state,
         return dst;
       }()},
       active_key_{pms.active_key.value_or(new_row_tag)}, page_(pms.page),
-      bake_(pms.bake ? std::make_optional(std::move(*pms.bake)) : std::nullopt),
-      competing_player_id_(pms.competing_player_id),
+      bake_(pms.bake), competing_player_id_(pms.competing_player_id),
       on_done_(std::move(pms.on_done)),
       listener_(context.input->register_listener(*this)),
       status_(state_.status()) {
@@ -94,6 +95,7 @@ PizzaDesign::PizzaDesign(GameContext& context, GameState& state,
   previous_topping_ = nullptr;
 
   create_input_panel();
+  publish_shown();
 
   // Check if we're returning from judging
   if (mode_ == PizzaDesignMode::OwnPizzaJudging ||
@@ -124,8 +126,7 @@ PizzaDesign::PizzaDesign(GameContext& context, GameState& state,
     }
   }
   else if (pms.active_key &&
-           std::holds_alternative<core::food::StandardPizza>(
-               *pms.active_key) &&
+           std::holds_alternative<core::food::StandardPizza>(*pms.active_key) &&
            (mode_ == PizzaDesignMode::View ||
             mode_ == PizzaDesignMode::Ingredients ||
             mode_ == PizzaDesignMode::Info)) {
@@ -155,6 +156,23 @@ void PizzaDesign::tick() {
   }
 
   tick_chop();
+}
+
+void PizzaDesign::publish_shown() {
+  auto* top = state_.ui().top_as<PizzaDesignState>();
+  if (!top) {
+    return;
+  }
+  auto& shown = top->shown;
+  shown.mode = mode_;
+  shown.selected = active_key_;
+  shown.cook_book.reset();
+  if (reference_view_ && active_key_) {
+    if (const auto* cp =
+            std::get_if<core::food::StandardPizza>(&*active_key_)) {
+      shown.cook_book = *cp;
+    }
+  }
 }
 
 bool PizzaDesign::on_action(const input::ActionEvent& ev) {
@@ -370,6 +388,7 @@ void PizzaDesign::change_mode(PizzaDesignMode mode) {
     state_.advance_time_blocks(1);
   }
   mode_ = mode;
+  publish_shown();
   create_input_panel();
   mark_dirty();
 }
@@ -640,7 +659,7 @@ void PizzaDesign::create_input_panel() {
             mode_ == PizzaDesignMode::CompetitionDesign ||
             mode_ == PizzaDesignMode::CompetitionResults) {
           competition_.reset();
-          bake_.reset();
+          bake_session(nullptr);
           state_.ui().pop();
           if (pending_competition_message_) {
             state_.deliver_milestone(*pending_competition_message_);
@@ -738,6 +757,7 @@ void PizzaDesign::change_active_key(RecipeKey active_key) {
     status_.show_restaurant(
         {.state = &state_, .rest = rest, .label = "RECIPES"});
   }
+  publish_shown();
 }
 
 void PizzaDesign::show_reference_pizza(core::food::StandardPizza cp) {
@@ -753,6 +773,7 @@ void PizzaDesign::show_reference_pizza(core::food::StandardPizza cp) {
                         .recipe = nullptr,
                         .cook_book = true});
   }
+  publish_shown();
 }
 
 void PizzaDesign::update_status_ingredient() {

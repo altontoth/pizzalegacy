@@ -9,11 +9,13 @@
 #include <cstddef>
 #include <filesystem>
 #include <functional>
+#include <map>
 #include <optional>
 #include <string>
 #include <variant>
 #include <vector>
 #include "core/GameTypes.h"
+#include "core/city/CityViewCommon.h"
 #include "core/common/Ids.h"
 #include "core/conversations/MafiaLine.h"
 #include "core/conversations/MayorLine.h"
@@ -23,6 +25,7 @@
 #include "core/food/IngredientCategoryType.h"
 #include "core/food/Pizza.h"
 #include "core/food/PlayerRecipes.h"
+#include "core/food/StandardPizza.h"
 #include "core/restaurant/RestaurantTypes.h"
 #include "core/state/AnimatedStatsScreen.h"
 #include "core/state/CompetitionSession.h"
@@ -67,8 +70,13 @@ enum class RestaurantViewMode;
 
 enum class OptionsScreen { Audio, Graphics, Controls, Gameplay, Rules };
 
+struct CityViewShown {
+  ZoomLevel zoom = ZoomLevel::FAR;
+  CityViewTabType tab = CityViewTabType::MAP;
+};
 struct CityViewState {
   core::CityId city_id;
+  CityViewShown shown{};
 };
 struct OptionsMenuState {
   OptionsScreen screen;
@@ -103,6 +111,11 @@ struct RestaurantViewState {
   bool reopen_restaurant = false;
   bool kitchen_view = false;
 };
+struct PizzaDesignShown {
+  PizzaDesignMode mode = PizzaDesignMode::Recipes;
+  std::optional<RecipeKey> selected;
+  std::optional<core::food::StandardPizza> cook_book;
+};
 struct PizzaDesignState {
   PizzaDesignMode initial_mode;
   std::optional<core::PlayerId> opponent = std::nullopt;
@@ -115,6 +128,7 @@ struct PizzaDesignState {
   // Called when the screen is dismissed after a competition (optional).
   std::function<void()> on_done = nullptr;
   int page = 0;
+  PizzaDesignShown shown{};
 };
 // Save one of the player's recipes as a file in the recipes directory.
 struct RecipeExportState {
@@ -176,6 +190,12 @@ struct CategoryOverviewState {
 };
 struct FurnitureListState {
   SupplierID supplier_id;
+  std::map<FurnitureType, int> order{};
+
+  [[nodiscard]] int ordered(FurnitureType type) const {
+    const auto it = order.find(type);
+    return it == order.end() ? 0 : it->second;
+  }
 };
 struct FloorListState {
   SupplierID supplier_id;

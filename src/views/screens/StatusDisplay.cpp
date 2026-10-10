@@ -16,6 +16,15 @@
 #include "resources/FontManager.h"
 #include "views/base/ViewDefs.h"
 
+namespace {
+constexpr int first_line_y = 16;
+constexpr int line_height = 12;
+
+int line_count(const StatusItem& item) {
+  return item.kind == StatusItemKind::Spacer ? item.lines : 1;
+}
+} // namespace
+
 StatusDisplay::StatusDisplay(GameContext& context, GameState& state,
                              StatusHub& hub)
     : PanelView(context, state,
@@ -48,6 +57,16 @@ void StatusDisplay::tick() {
         }
         mark_dirty();
       });
+  int y = first_line_y;
+  for (const auto& item : recipe_.items()) {
+    if (item.interaction_item) {
+      interactions_.create_frame_item(
+          ViewRect{0, y, views::base::STATUS_PANEL_WIDTH, line_height},
+          *item.interaction_item, [](const views::ui::InteractionEvent&) {},
+          {.layer = views::ui::InteractionLayer::Background});
+    }
+    y += line_count(item) * line_height;
+  }
 
   const auto blocks = state_.time().time_blocks();
   if (previous_time_ != blocks) {
@@ -105,7 +124,7 @@ void StatusDisplay::render_recipe(const StatusDisplayRecipe& recipe,
     }
     return {.x = col.x, .anchor = TextAnchor::Start};
   };
-  int y = 16;
+  int y = first_line_y;
   const uint8_t color_white = 14;
   for (const auto& item : recipe.items()) {
     uint8_t c = (item.color != 0) ? item.color : color_white;
@@ -114,7 +133,7 @@ void StatusDisplay::render_recipe(const StatusDisplayRecipe& recipe,
       context_.font->render_text_onto(*ctx.surface, item.col1.text,
                                       ViewPoint{item.col1.x, y},
                                       FontFace::SUPERSMA, c);
-      y += 12;
+      y += line_height;
       break;
     case StatusItemKind::TwoColumn: {
       const auto col1 = anchor_of(item.col1);
@@ -125,7 +144,7 @@ void StatusDisplay::render_recipe(const StatusDisplayRecipe& recipe,
       context_.font->render_text_onto(*ctx.surface, item.col2.text,
                                       ViewPoint{col2.x, y}, FontFace::SUPERSMA,
                                       c, col2.anchor);
-      y += 12;
+      y += line_height;
       break;
     }
     case StatusItemKind::Single: {
@@ -133,11 +152,11 @@ void StatusDisplay::render_recipe(const StatusDisplayRecipe& recipe,
       context_.font->render_line_onto(*ctx.surface, item.col1.text,
                                       ViewPoint{col.x, y}, FontFace::SUPERSMA,
                                       c, col.anchor);
-      y += 12;
+      y += line_height;
       break;
     }
     case StatusItemKind::Spacer:
-      y += item.lines * 12;
+      y += line_count(item) * line_height;
       break;
     }
   }

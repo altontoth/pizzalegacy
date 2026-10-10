@@ -70,6 +70,9 @@ struct CharacterData : public RawRenderable {
   uint8_t gender_flag{
       0}; // 0=male, 1=female (for pregnancy) - character file +0x2B
   virtual ~CharacterData() = default;
+  [[nodiscard]] std::string name() const {
+    return first_name + " " + last_name;
+  }
   [[nodiscard]] int picture_width() const override {
     // Use actual dimensions if set, otherwise fall back to defaults
     return picture_width_ > 0 ? picture_width_ : PICTURE_WIDTH;

@@ -7,11 +7,13 @@
 #include "views/screens/purchasing/FurnitureListView.h"
 #include <algorithm>
 #include <optional>
+#include <vector>
 #include "core/factories/FurnitureFactory.h"
 #include "core/factories/SupplierFactory.h"
 #include "core/finance/Ledger.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/state/GameState.h"
+#include "core/state/UIState.h"
 #include "core/supply/Supplier.h"
 #include "engine/FormatCompat.h"
 #include "engine/gfx/Blit.h"
@@ -52,20 +54,13 @@ FurnitureListView::FurnitureListView(GameContext& context, GameState& state,
       kitchen_bob_(context_.bob->get("bob/kuebobs.bob")),
       green_purchase_mark_(furniture_bob_.frame(GREEN_MARK_BOB_INDEX)) {
 
-  auto raw = FurnitureFactory::all_furniture_by_supplier(s_id);
-  furniture_.reserve(raw.size());
-
-  std::ranges::transform(
-      raw, std::back_inserter(furniture_), [](const Furniture* f) {
-        return FurnitureBatch{
-            .furniture = f, .count = 0, .bob_state = std::nullopt};
-      });
+  furniture_ = FurnitureFactory::all_furniture_by_supplier(s_id);
 
   int used_height = 0;
   page_starts_.push_back(0);
 
   for (std::size_t i = 0; i < furniture_.size(); ++i) {
-    auto f = furniture_[i].furniture;
+    auto f = furniture_[i];
     auto& bob_mgr = supplier_type() == SupplierType::KITCHENWARE
                         ? kitchen_bob_
                         : furniture_bob_;
@@ -120,9 +115,8 @@ void FurnitureListView::draw_furniture_list(const RenderContext& ctx) {
   int y_pos = 58; // top of where we start drawing
 
   for (int i = this_page_start; i < next_page_start; ++i) {
-    auto ol = furniture_.at(i);
-    const auto* f = ol.furniture;
-    auto count = ol.count;
+    const auto* f = furniture_.at(i);
+    const int count = ordered(*f);
 
     auto& bob_mgr = supplier_type() == SupplierType::KITCHENWARE
                         ? kitchen_bob_
@@ -148,7 +142,8 @@ void FurnitureListView::draw_furniture_list(const RenderContext& ctx) {
         compat::format("furniture_list.{}.{}",
                        magic_enum::enum_name(supplier_type()), f->name()),
         [this, i](views::ui::InteractionEvent ie) {
-          auto& c = furniture_.at(i).count;
+          const Furniture& furniture = *furniture_.at(i);
+          const int c = ordered(furniture);
           if (ie.type == views::ui::InteractionEvent::Type::Scroll) {
             // scroll up (positive delta) increases, scroll down decreases
             // clamp delta to 1 so fast scrolling doesn't jump by large amounts
@@ -161,8 +156,7 @@ void FurnitureListView::draw_furniture_list(const RenderContext& ctx) {
               };
               state_.status().post_direct(msg);
             }
-            c = new_c;
-            mark_dirty();
+            order(furniture, new_c);
             return;
           }
           if (ie.type != views::ui::InteractionEvent::Type::ButtonDown) {
@@ -177,13 +171,12 @@ void FurnitureListView::draw_furniture_list(const RenderContext& ctx) {
               };
               state_.status().post_direct(msg);
             }
-            c = std::min(c + 1, 99);
+            order(furniture, std::min(c + 1, 99));
             break;
           case views::ui::MouseButton::Right:
-            c = std::max(c - 1, 0);
+            order(furniture, std::max(c - 1, 0));
             break;
           }
-          mark_dirty();
         });
 
     // We also want a "border rectangle" that encloses bg_box:
@@ -269,13 +262,31 @@ void FurnitureListView::draw_furniture_list(const RenderContext& ctx) {
       FontFace::PIZ_NUMB, COLOR_BLACK, TextAnchor::Middle);
 }
 
+int FurnitureListView::ordered(const Furniture& furniture) const {
+  const auto* list = state_.ui().top_as<FurnitureListState>();
+  return list ? list->ordered(furniture.type()) : 0;
+}
+
+void FurnitureListView::order(const Furniture& furniture, int count) {
+  if (auto* list = state_.ui().top_as<FurnitureListState>()) {
+    list->order[furniture.type()] = count;
+  }
+  mark_dirty();
+}
+
 void FurnitureListView::draw_furniture_preview(const RenderContext& ctx,
                                                const Furniture& furniture,
                                                int y) {}
 void FurnitureListView::handle_furniture_selection(int furniture_id) {}
 
 void FurnitureListView::show_invoice() {
-  if (std::ranges::none_of(furniture_, [](const FurnitureBatch& batch) {
+  std::vector<FurnitureBatch> batches;
+  batches.reserve(furniture_.size());
+  for (const auto* f : furniture_) {
+    batches.push_back(FurnitureBatch{
+        .furniture = f, .count = ordered(*f), .bob_state = std::nullopt});
+  }
+  if (std::ranges::none_of(batches, [](const FurnitureBatch& batch) {
         return batch.count > 0;
       })) {
     alert_no_selection();
@@ -301,7 +312,7 @@ void FurnitureListView::show_invoice() {
   cfg.lines.push_back({"", std::nullopt});
 
   Money total_cost{0};
-  for (const auto& order_line : furniture_) {
+  for (const auto& order_line : batches) {
     if (order_line.count == 0) {
       continue;
     }
@@ -316,7 +327,7 @@ void FurnitureListView::show_invoice() {
   cfg.lines.push_back({"", total_cost});
 
   // Capture by value what we need for the callback
-  auto furniture_copy = furniture_;
+  auto furniture_copy = std::move(batches);
   const auto* supplier = supplier_;
   cfg.on_dismiss = [this, total_cost, furniture_copy, supplier]() mutable {
     auto* restaurant = state_.active_restaurant();
@@ -341,6 +352,9 @@ void FurnitureListView::show_invoice() {
       state_.advance_time_blocks(3);
     }
 
+    if (auto* top = state_.ui().top_as<FurnitureListState>()) {
+      top->order.clear();
+    }
     state_.restaurant_placement(std::move(furniture_copy));
     state_.ui().push<RestaurantViewState>(RestaurantViewState{
         .id = state_.active_restaurant()->id(),
