@@ -469,6 +469,7 @@ CommandDef make_nav_commands() {
                   .name = "design",
                   .description = "Pizza design screen",
                   .handler = [](const CommandContext& ctx) -> CommandResult {
+                    ctx.state.bootstrap_minimal_playable_world(ctx.context);
                     ctx.state.ui().push<PizzaDesignState>(
                         PizzaDesignMode::Design);
                     return CommandResult::success().add_message(
