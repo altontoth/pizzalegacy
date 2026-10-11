@@ -38,7 +38,7 @@ constexpr int MIS_YEAR_OFFSET = 3 * MIS_SLOT_COUNT;
 // The rules trailer sits behind the 400 bytes the original reads.
 constexpr std::array<uint8_t, 4> trailer_magic{'P', 'L', 'R', 'S'};
 constexpr uint8_t trailer_version = 1;
-constexpr int trailer_header_size = trailer_magic.size() + 2;
+constexpr int trailer_header_size = static_cast<int>(trailer_magic.size()) + 2;
 
 // The trailer: the something-changed flag, then the rules in a fixed order (so
 // we can load missions from newer versions by just ignoring the bytes beyond

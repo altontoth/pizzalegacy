@@ -724,8 +724,8 @@ void CityFactory::populate_properties(City& city) {
         status = premise_status_from_original(
             static_cast<uint8_t>(engine::random::rand_max_n(3) + 1));
       }
-      auto bp = std::make_unique<Property>(index, prop_type, Size{w, h}, r_id,
-                                           status, city);
+      auto bp = std::make_unique<Property>(static_cast<int>(index), prop_type,
+                                           Size{w, h}, r_id, status, city);
       // Money is in cents, so the original's whole-dollar figure scales up.
       int base_price = district->price_level() * w * h * 100;
       if (prop_type == PropertyType::DEPOT) {

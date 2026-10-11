@@ -145,7 +145,7 @@ bool InsuranceConversation::advance_line_choice(InsuranceLine choice) {
       pending_max_coverage_ =
           Money{static_cast<int64_t>(type_multiplier(selected_type_)) *
                 insurance_settings_.willingness_threshold * 800 * 100 /
-                (1 << state_.difficulty_level())};
+                (int64_t{1} << state_.difficulty_level())};
       current_line(InsuranceLine::OK_THE_MONTHLY_PREMIUM_IS);
     }
     else if (previous_line_ ==
