@@ -11,6 +11,7 @@
 #include "engine/gfx/Draw.h"
 #include "engine/ui/TextAnchor.h"
 #include "resources/FontManager.h"
+#include "resources/Upscaling.h"
 
 constexpr int box_size = 14;
 constexpr int box_thickness = 1;
@@ -46,9 +47,11 @@ void CheckboxMenuItem::draw(Surface& screen, ViewPoint p, bool is_selected) {
     const int end = box_size - start - 2;
     // Draw the cross.
     gfx::draw::line_2x(screen, ViewPoint{box.x + start, box.y + start},
-                       ViewPoint{box.x + end, box.y + end}, color);
+                       ViewPoint{box.x + end, box.y + end}, color,
+                       resources::upscaling().pictures);
     gfx::draw::line_2x(screen, ViewPoint{box.x + end, box.y + start},
-                       ViewPoint{box.x + start, box.y + end}, color);
+                       ViewPoint{box.x + start, box.y + end}, color,
+                       resources::upscaling().pictures);
   }
 
   RenderedTextMetrics metrics = context_.font->render_text_onto(

@@ -45,6 +45,20 @@ inline std::string to_string(AutosaveFrequency freq) {
   return "??";
 }
 
+enum class Smoothing : int { Off, Text, TextAndGraphics };
+
+inline std::string to_string(Smoothing smoothing) {
+  switch (smoothing) {
+  case Smoothing::Off:
+    return "Off";
+  case Smoothing::Text:
+    return "Text";
+  case Smoothing::TextAndGraphics:
+    return "Text and graphics";
+  }
+  return "??";
+}
+
 inline std::string_view to_config_value(FpsOption fps) {
   switch (fps) {
   case FpsOption::Fps30:
@@ -102,6 +116,32 @@ autosave_frequency_from_config_value(std::string_view value) {
   return std::nullopt;
 }
 
+inline std::string_view to_config_value(Smoothing smoothing) {
+  switch (smoothing) {
+  case Smoothing::Off:
+    return "off";
+  case Smoothing::Text:
+    return "text";
+  case Smoothing::TextAndGraphics:
+    return "all";
+  }
+  return "off";
+}
+
+inline std::optional<Smoothing>
+smoothing_from_config_value(std::string_view value) {
+  if (value == "off") {
+    return Smoothing::Off;
+  }
+  if (value == "text") {
+    return Smoothing::Text;
+  }
+  if (value == "all") {
+    return Smoothing::TextAndGraphics;
+  }
+  return std::nullopt;
+}
+
 struct GameOptions {
   static constexpr int AUTOSAVE_COUNT_MIN = 1;
   static constexpr int AUTOSAVE_COUNT_MAX = 9;
@@ -134,6 +174,8 @@ struct GameOptions {
   bool rmb_drag_inverted = false;
   bool scroll_wheel_inverted = false;
   bool software_cursor = true;
+  // Read once at startup.
+  Smoothing smoothing = Smoothing::Off;
   FpsOption render_fps = FpsOption::Fps60;
   bool vsync = true;
 

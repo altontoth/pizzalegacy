@@ -14,6 +14,7 @@
 #include "engine/geom/Spaces.h"
 #include "engine/gfx/ColorIndex.h"
 #include "engine/gfx/PaletteBank.h"
+#include "engine/gfx/Upscaler.h"
 
 namespace gfx {
 
@@ -37,10 +38,10 @@ public:
 
   [[nodiscard]] Surface clone() const;
 
-  [[nodiscard]] static Surface from_indexed(std::span<const uint8_t> src,
-                                            int width, int height,
-                                            PaletteHandle palette,
-                                            int scale = asset_pixel_scale);
+  [[nodiscard]] static Surface
+  from_indexed(std::span<const uint8_t> src, int width, int height,
+               PaletteHandle palette, int scale = asset_pixel_scale,
+               Upscaler upscaler = Upscaler::Double);
 
   [[nodiscard]] int width() const noexcept { return width_; }
   [[nodiscard]] int height() const noexcept { return height_; }

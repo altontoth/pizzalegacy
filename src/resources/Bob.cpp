@@ -10,6 +10,7 @@
 #include <cstring>
 
 #include "resources/AssetMetadata.h"
+#include "resources/Upscaling.h"
 
 Bob::Bob(std::string filename, std::vector<uint8_t> raw_data,
          std::vector<FrameInfo> frames)
@@ -56,7 +57,8 @@ Surface Bob::frame(std::size_t frame_index,
   memcpy(picture.data(), raw_data_.data() + offset,
          static_cast<std::size_t>(w * h));
 
-  return Surface::from_indexed(picture, w, h, palette, 2);
+  return Surface::from_indexed(picture, w, h, palette, 2,
+                               resources::upscaling().pictures);
 }
 
 std::size_t Bob::frame_count() const { return frames_.size(); }

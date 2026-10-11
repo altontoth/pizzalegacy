@@ -11,6 +11,7 @@
 #include <utfcpp/utf8.h>
 #include <vector>
 #include "engine/gfx/Surface.h"
+#include "engine/gfx/Upscaler.h"
 #include "resources/Font.h"
 #include "resources/FontHeader.h"
 #include "resources/FontTypes.h"
@@ -38,6 +39,10 @@ private:
 
   [[nodiscard]] static gfx::Surface build_atlas(const ParsedFont& pf, int scale,
                                                 gfx::PaletteHandle palette);
+
+  // Each glyph is scaled on its own, with blank space around it.
+  [[nodiscard]] static gfx::Surface mmpx_atlas(const ParsedFont& pf,
+                                               const gfx::Surface& atlas);
 
   [[nodiscard]] static std::unordered_map<uint32_t, Glyph>
   build_glyph_table(const ParsedFont& pf, int scale);

@@ -7,6 +7,7 @@
 #include "resources/Vga.h"
 
 #include "resources/AssetMetadata.h"
+#include "resources/Upscaling.h"
 #include "resources/VgaLoader.h"
 
 #include <cassert>
@@ -28,7 +29,9 @@ void Vga::render_onto_surface(Surface& target_surface, bool transparent) const {
   }
 
   PaletteHandle pal{palette_index};
-  Surface raw = Surface::from_indexed(picture_, width_, height_, pal);
+  Surface raw = Surface::from_indexed(picture_, width_, height_, pal,
+                                      gfx::asset_pixel_scale,
+                                      resources::upscaling().pictures);
   target_surface.blit_raw(raw);
 }
 

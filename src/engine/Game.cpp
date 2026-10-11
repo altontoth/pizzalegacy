@@ -18,6 +18,7 @@
 #include "core/debug/DebugCommands.h"
 #include "core/debug/DebugConsole.h"
 #include "core/restaurant/StaffEventData.h"
+#include "core/state/GameOptions.h"
 #include "core/state/TurnOrchestrator.h"
 #include "core/state/UIState.h"
 #include "core/state/ViewerType.h"
@@ -37,11 +38,13 @@
 #include "engine/Version.h"
 #include "engine/debug/ScreenCommands.h"
 #include "engine/gfx/Surface.h"
+#include "engine/gfx/Upscaler.h"
 #include "engine/input/BindingsFile.h"
 #include "engine/input/InputManager.h"
 #include "engine/ui/CursorManager.h"
 #include "engine/ui/TooltipManager.h"
 #include "resources/PaletteLoader.h"
+#include "resources/Upscaling.h"
 #include "resources/VgaLoader.h"
 #include "resources/VgaWriter.h"
 #include "resources/util/FileUtils.h"
@@ -174,6 +177,14 @@ int Game::run() {
     // Make sure no clicks are required
     loaded_options.automatic_report = false;
   }
+
+  resources::upscaling({
+      .pictures = loaded_options.smoothing == Smoothing::TextAndGraphics
+                      ? gfx::Upscaler::Mmpx
+                      : gfx::Upscaler::Double,
+      .text = loaded_options.smoothing == Smoothing::Off ? gfx::Upscaler::Double
+                                                         : gfx::Upscaler::Mmpx,
+  });
 
   const int display_height =
       get_display_height(loaded_options.crt_aspect_ratio);

@@ -11,8 +11,11 @@
 #include <iostream>
 #include <unordered_map>
 #include "engine/Fatal.h"
+#include "engine/gfx/Mmpx.h"
+#include "engine/gfx/Upscaler.h"
 #include "resources/FontManager.h"
 #include "resources/FontTypes.h"
+#include "resources/Upscaling.h"
 #include "resources/util/FileUtils.h"
 
 FontLoader::ParsedFont FontLoader::parse(std::span<const uint8_t> bytes) {
@@ -116,6 +119,26 @@ gfx::Surface FontLoader::build_atlas(const ParsedFont& pf, int scale,
   return atlas;
 }
 
+gfx::Surface FontLoader::mmpx_atlas(const ParsedFont& pf,
+                                    const gfx::Surface& atlas) {
+  // Blank counts as brighter than ink.
+  gfx::LumaTable luma{};
+  luma.fill(1);
+  luma[gfx::TRANSPARENT] = 256;
+
+  gfx::Surface scaled{atlas.width() * 2, atlas.height() * 2, atlas.palette(),
+                      0};
+  for (const auto& cp : pf.positions) {
+    if (cp.width == 0) {
+      continue;
+    }
+    gfx::mmpx(atlas.data() + cp.start_pos, atlas.width(), cp.width,
+              atlas.height(), scaled.data() + (cp.start_pos * 2),
+              scaled.width(), gfx::UpscaleEdge::Blank, luma);
+  }
+  return scaled;
+}
+
 std::unordered_map<uint32_t, Glyph>
 FontLoader::build_glyph_table(const ParsedFont& pf, int scale) {
   std::unordered_map<uint32_t, Glyph> tbl;
@@ -153,7 +176,10 @@ std::unique_ptr<Font> FontLoader::load(const std::string& filename) {
 
   const int scale = render_scale(face);
 
-  auto atlas = build_atlas(parsed, scale, gfx::PaletteHandle{0});
+  auto atlas =
+      scale == 2 && resources::upscaling().text == gfx::Upscaler::Mmpx
+          ? mmpx_atlas(parsed, build_atlas(parsed, 1, gfx::PaletteHandle{0}))
+          : build_atlas(parsed, scale, gfx::PaletteHandle{0});
 
   // Our font atlases has index 1 as the ink color,
   // disable palette translation so indices pass through unchanged

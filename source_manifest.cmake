@@ -281,6 +281,7 @@ set(GAME_PLEGACY_SOURCES
     src/resources/FontManager.cpp
     src/resources/MFileLoader.cpp
     src/resources/PaletteLoader.cpp
+    src/resources/Upscaling.cpp
     src/resources/Vga.cpp
     src/resources/VgaLoader.cpp
     src/resources/VgaWriter.cpp
@@ -304,6 +305,7 @@ set(ENGINE_PLEGACY_SOURCES
     src/engine/geom/Camera.cpp
     src/engine/gfx/ColorIndex.cpp
     src/engine/gfx/Draw.cpp
+    src/engine/gfx/Mmpx.cpp
     src/engine/gfx/Surface.cpp
     src/engine/gfx/SurfaceBuilder.cpp
     src/engine/input/BindingsFile.cpp
@@ -572,12 +574,14 @@ set(PLEGACY_HEADERS
     src/engine/gfx/Color.h
     src/engine/gfx/ColorIndex.h
     src/engine/gfx/Draw.h
+    src/engine/gfx/Mmpx.h
     src/engine/gfx/PaletteBank.h
     src/engine/gfx/PaletteCycleController.h
     src/engine/gfx/PaletteHandle.h
     src/engine/gfx/RawRenderable.h
     src/engine/gfx/Surface.h
     src/engine/gfx/SurfaceBuilder.h
+    src/engine/gfx/Upscaler.h
     src/engine/input/Action.h
     src/engine/input/BindingsFile.h
     src/engine/input/Gamepad.h
@@ -616,6 +620,7 @@ set(PLEGACY_HEADERS
     src/resources/MFileLoader.h
     src/resources/PaletteLoader.h
     src/resources/ResourceManager.h
+    src/resources/Upscaling.h
     src/resources/Vga.h
     src/resources/VgaLoader.h
     src/resources/VgaManager.h

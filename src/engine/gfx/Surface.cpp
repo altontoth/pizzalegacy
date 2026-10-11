@@ -10,6 +10,7 @@
 #include <cstring>
 #include <numeric>
 #include "engine/Fatal.h"
+#include "engine/gfx/Mmpx.h"
 #include "engine/gfx/PaletteBank.h"
 
 namespace gfx {
@@ -30,7 +31,7 @@ Surface::Surface(int width, int height, std::optional<PaletteHandle> palette,
 }
 
 Surface Surface::from_indexed(std::span<const uint8_t> src, int w, int h,
-                              PaletteHandle pal, int scale) {
+                              PaletteHandle pal, int scale, Upscaler upscaler) {
 
   if (src.size() != static_cast<std::size_t>(w * h)) {
     fatal("Surface::from_indexed: size mismatch");
@@ -40,6 +41,12 @@ Surface Surface::from_indexed(std::span<const uint8_t> src, int w, int h,
 
   if (scale == 1) {
     std::memcpy(dst.pixels_.data(), src.data(), src.size());
+    return dst;
+  }
+
+  if (upscaler == Upscaler::Mmpx) {
+    mmpx(src.data(), w, w, h, dst.pixels_.data(), dst.pitch_,
+         UpscaleEdge::Repeat, luma_table(pal));
     return dst;
   }
 

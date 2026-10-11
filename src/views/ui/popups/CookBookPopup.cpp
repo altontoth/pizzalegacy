@@ -25,6 +25,7 @@
 #include "resources/BobManager.h"
 #include "resources/FontManager.h"
 #include "resources/FontTypes.h"
+#include "resources/Upscaling.h"
 #include "resources/VgaManager.h"
 #include "views/screens/pizza/HalfSizePizza.h"
 
@@ -65,10 +66,10 @@ void draw_chevron(Surface& target, ViewPoint top_left, Size button,
     const ViewPoint point{center.x + tip + dx, center.y};
     gfx::draw::line_2x(target,
                        {center.x - tip + dx, center.y - arrow_half_height},
-                       point, arrow_color);
+                       point, arrow_color, resources::upscaling().pictures);
     gfx::draw::line_2x(target, point,
                        {center.x - tip + dx, center.y + arrow_half_height},
-                       arrow_color);
+                       arrow_color, resources::upscaling().pictures);
   }
 }
 } // namespace

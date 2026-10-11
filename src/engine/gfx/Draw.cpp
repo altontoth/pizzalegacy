@@ -9,6 +9,7 @@
 #include <cmath>
 #include <cstdlib>
 #include "engine/gfx/Surface.h"
+#include "engine/gfx/Upscaler.h"
 
 namespace gfx::draw {
 
@@ -66,7 +67,13 @@ void line(Surface& dst, ViewPoint from, ViewPoint to, ColorIndex color_idx,
   }
 }
 
-void line_2x(Surface& dst, ViewPoint from, ViewPoint to, ColorIndex color_idx) {
+void line_2x(Surface& dst, ViewPoint from, ViewPoint to, ColorIndex color_idx,
+             Upscaler upscaler) {
+  if (upscaler != Upscaler::Double) {
+    line(dst, from, to, color_idx, 2);
+    return;
+  }
+
   int x = from.x / 2;
   int y = from.y / 2;
   const int to_x = to.x / 2;

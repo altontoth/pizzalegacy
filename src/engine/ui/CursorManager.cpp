@@ -11,6 +11,7 @@
 #include "engine/DisplayConstants.h"
 #include "engine/Renderer.h"
 #include "engine/gfx/Surface.h"
+#include "resources/Upscaling.h"
 
 using DisplayConstants::SCREEN_WIDTH;
 using gfx::Surface;
@@ -36,7 +37,8 @@ constexpr int CURSOR_HEIGHT = 11;
 
 gfx::Surface create_cursor_surface() {
   return Surface::from_indexed(mouse_cursor_data, CURSOR_WIDTH, CURSOR_HEIGHT,
-                               gfx::PaletteHandle{0});
+                               gfx::PaletteHandle{0}, gfx::asset_pixel_scale,
+                               resources::upscaling().pictures);
 }
 } // namespace
 

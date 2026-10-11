@@ -21,6 +21,7 @@
 #include "engine/ui/TextAnchor.h"
 #include "resources/BlitmapIcons.h"
 #include "resources/BlitmapManager.h"
+#include "resources/Upscaling.h"
 #include "views/base/ViewDefs.h"
 #include "views/ui/PageDecoration.h"
 
@@ -532,7 +533,7 @@ void MarketResearch::render_economy(const RenderContext& ctx) {
 
     for (int i = 0; i < count - 1; ++i) {
       gfx::draw::line_2x(*ctx.surface, graph_point(i), graph_point(i + 1),
-                         graph_color);
+                         graph_color, resources::upscaling().pictures);
     }
   }
 

@@ -215,6 +215,13 @@ void MenuOptions::build_graphics(GameState& state) {
                     }))
       .help_text("Synchronize drawing with the screen's refresh rate to prevent"
                  " tearing.");
+  add_menu_item(std::make_unique<EnumMenuItem<Smoothing>>(
+                    context_, "Smoothing", state.options().smoothing,
+                    std::vector{Smoothing::Off, Smoothing::Text,
+                                Smoothing::TextAndGraphics},
+                    [this] { mark_dirty(); }, face))
+      .help_text("Round off the blocky edges of letters, or of letters and "
+                 "pictures. Takes effect after a restart.");
 }
 
 void MenuOptions::build_gameplay(GameState& state) {

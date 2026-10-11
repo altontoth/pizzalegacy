@@ -8,6 +8,7 @@
 
 #include "engine/gfx/ColorIndex.h"
 #include "engine/gfx/Surface.h"
+#include "engine/gfx/Upscaler.h"
 
 using gfx::Surface;
 
@@ -15,8 +16,10 @@ namespace gfx::draw {
 void line(Surface& dst, ViewPoint from, ViewPoint to, ColorIndex color_idx,
           int thickness = 1);
 // A line at 2x resolution (so each pixel is a 2x2 block) to match the look of
-// the original graphs.
-void line_2x(Surface& dst, ViewPoint from, ViewPoint to, ColorIndex color_idx);
+// the original graphs. When smoothing is on we don't do the 2x style to prevent
+// the blocky look that 2x is supposed to give.
+void line_2x(Surface& dst, ViewPoint from, ViewPoint to, ColorIndex color_idx,
+             Upscaler upscaler);
 void box(Surface& dst, ViewPoint from, ViewPoint to, ColorIndex color,
          int thickness = 1);
 void box(Surface& dst, ViewRect r, ColorIndex color, int thickness = 1);

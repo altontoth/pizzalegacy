@@ -69,3 +69,13 @@ Usage: String conversion of enums for debugging
 
     Copyright: Copyright (c) 2019-2024 Daniil Goncharov
     License:   MIT (see LICENSES/MIT-magic-enum.txt)
+
+### Adapted code
+
+#### MMPX
+
+Usage: Smoothing of the original art and fonts, ported to work on palette
+colors (`src/engine/gfx/Mmpx.cpp`)
+
+    Copyright: Copyright 2020 Morgan McGuire & Mara Gagiu
+    License:   MIT (see LICENSES/MIT-mmpx.txt)

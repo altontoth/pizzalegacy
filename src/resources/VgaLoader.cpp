@@ -16,6 +16,7 @@
 #include "engine/Endian.h"
 #include "engine/Fatal.h"
 #include "resources/AssetMetadata.h"
+#include "resources/Upscaling.h"
 #include "resources/Vga.h"
 #include "resources/util/FileUtils.h"
 
@@ -127,6 +128,7 @@ Surface VgaLoader::load(const std::string& filename) {
   auto palette_opt = resources::AssetMetadataRegistry::get_palette(filename);
   uint8_t index = palette_opt.value_or(0);
 
-  return Surface::from_indexed(std::move(picture), width, height,
-                               gfx::PaletteHandle{index});
+  return Surface::from_indexed(
+      std::move(picture), width, height, gfx::PaletteHandle{index},
+      gfx::asset_pixel_scale, resources::upscaling().pictures);
 }

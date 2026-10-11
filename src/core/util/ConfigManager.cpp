@@ -122,6 +122,9 @@ const auto option_defs = std::to_array({
         "render_fps", {}, "30, 60 or 120"),
     bool_option<&GameOptions::vsync>("vsync"),
     bool_option<&GameOptions::software_cursor>("software_cursor"),
+    enum_option<&GameOptions::smoothing, &smoothing_from_config_value>(
+        "smoothing", {},
+        "off, text or all; round off the blocky edges of the original art"),
 
     bool_option<&GameOptions::map_fx>("map_fx", "Sound"),
     bool_option<&GameOptions::restaurant_fx>("restaurant_fx"),

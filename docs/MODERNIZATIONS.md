@@ -111,6 +111,12 @@ there are some that are just always in effect.
   any animation afterwards lacks these titles. In Pizza Legacy they are always
   visible.
 
+### Smoothing
+
+There is an option to smooth the text, or the text and the images, because we
+scale the original art up to double size. If the option is off you get the
+pixelated look of the original, and on smooths everything a bit.
+
 ## Life quality improvements option
 
 We have a new option to optionally make some more improvements:
