@@ -12,16 +12,13 @@
 #include "engine/audio/AudioManager.h"
 #include "engine/geom/Spaces.h"
 #include "engine/gfx/Blit.h"
-#include "engine/gfx/Draw.h"
 #include "engine/ui/ICursorManager.h"
-#include "engine/ui/TextAnchor.h"
 #include "views/base/ViewDefs.h"
 #include "views/screens/pizza/PizzaDesign.h"
 #include "views/screens/pizza/PizzaDesignHelpers.h"
 
 #include <array>
 #include <memory>
-#include <string>
 #include <string_view>
 
 static constexpr int CHOP_FLIP_PERIOD_MS = 55;
@@ -220,26 +217,6 @@ void PizzaDesign::draw_pizza(const RenderContext& ctx) const {
 
   for (const auto& topping : pizza->toppings()) {
     renderer_.render(*topping, *ctx.surface, camera_);
-  }
-
-  // A text box over the dropdown graphics with the pizza's name, and whether it
-  // is the cook book entry.
-  if (mode_ == PizzaDesignMode::View && state_.rules().cook_book) {
-    constexpr ViewRect label_box{34, 2, 316, 64};
-    constexpr uint8_t label_fill = 250;
-    constexpr uint8_t label_edge = 254;
-    ctx.surface->fill_rect(label_box, label_fill);
-    gfx::draw::box(*ctx.surface, label_box, label_edge);
-    const std::string label =
-        reference_view_ ? "COOK BOOK: " + pizza->name() : pizza->name();
-    const int text_height =
-        context_.font->size_text(label, FontFace::CSTANDAR).height;
-    context_.font->render_text_onto(
-        *ctx.surface, label,
-        ViewPoint{label_box.x + label_box.w / 2,
-                  label_box.y + (label_box.h - text_height) / 2},
-        FontFace::CSTANDAR,
-        TextStyle{.color = 240, .align = TextAnchor::Middle});
   }
 }
 

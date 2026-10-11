@@ -21,6 +21,7 @@
 #include "core/state/UIState.h"
 #include "core/time/GameDate.h"
 #include "core/time/GameTime.h"
+#include "core/tutorial/Tutorial.h"
 #include "core/util/GameContext.h"
 #include "engine/DisplayConstants.h"
 #include "engine/FormatCompat.h"
@@ -270,8 +271,7 @@ static const OptionDef option_defs[] = {
      .description = "How a standard recipe is judged: original or relaxed"},
     {.name = "cook_book",
      .member = &GameRules::cook_book,
-     .description = "Let the recipe list show a standard pizza's cook book "
-                    "entry"},
+     .description = "Show the cook book inside the game"},
     {.name = "attack_scene_hz",
      .member = &GameOptions::attack_scene_hz,
      .description = "Attack scene updates per second, 70 or 35 in the original",
@@ -1135,6 +1135,7 @@ Example:
         }
         for (int i = 0; i < count; ++i) {
           ctx.state.update(simulation_tick_ms);
+          ctx.state.tutorial().tick();
         }
         return CommandResult::success().add_message(compat::format(
             "Ran {} tick(s); now {}", count, ctx.state.time().to_string()));

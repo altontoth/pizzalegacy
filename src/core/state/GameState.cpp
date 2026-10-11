@@ -33,6 +33,7 @@
 #include "core/factories/PizzaFactory.h"
 #include "core/factories/RestaurantLayoutFactory.h"
 #include "core/finance/TurnInvoices.h"
+#include "core/food/ToppingSize.h"
 #include "core/init/CompanyNames.h"
 #include "core/init/NewGameConfig.h"
 #include "core/restaurant/AIEconomy.h"
@@ -46,7 +47,6 @@
 #include "engine/Logger.h"
 #include "engine/Random.h"
 #include "engine/geom/Spaces.h"
-#include "resources/BobSizeFn.h"
 
 GameState::GameState() = default;
 GameState::~GameState() = default;
@@ -658,7 +658,6 @@ void GameState::update(uint32_t elapsed_ms) {
   }
 
   competitions_.tick();
-  tutorial_.tick();
 
   turn_.run_pending_end_of_turn();
 }
@@ -1453,9 +1452,7 @@ void GameState::load_initial_pizzas(GameContext& context,
   auto& recipes = player->recipes();
 
   // Get the bob resource and create the pizza size function
-  auto& zutaten_bob = context.bob->get("bob/zutaten.bob");
-  auto get_bob_size =
-      make_ingredient_bob_size_fn<Bob, core::food::Topping>(zutaten_bob);
+  auto get_bob_size = core::food::topping_size_fn(*context.bob);
 
   const int number_of_standard_pizzas_to_load = 4;
   for (int i = 0; i < number_of_standard_pizzas_to_load; ++i) {

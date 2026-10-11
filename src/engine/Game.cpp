@@ -460,6 +460,8 @@ int Game::run() {
         state.clock_rate(current_view_->clock_rate());
         state.update(simulation_tick_ms);
       }
+      // A step may wait on a popup, which freezes the simulation.
+      state.tutorial().tick();
 
       bool fade_completed = renderer.tick_fade();
 

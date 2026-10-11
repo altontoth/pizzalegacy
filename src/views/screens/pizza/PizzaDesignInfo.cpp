@@ -8,7 +8,11 @@
 
 #include "core/Demographics.h"
 #include "core/city/Property.h"
+#include "core/factories/PizzaFactory.h"
 #include "core/finance/Money.h"
+#include "core/food/Ingredient.h"
+#include "core/food/Topping.h"
+#include "core/food/ToppingSize.h"
 #include "core/state/GameState.h"
 #include "engine/FormatCompat.h"
 #include "engine/Logger.h"
@@ -18,10 +22,20 @@
 #include "views/screens/pizza/PizzaDesign.h"
 #include "views/ui/widgets/StatBar.h"
 
+#include <algorithm>
+#include <memory>
 #include <string>
-#include <unordered_map>
+#include <vector>
 
 using namespace core::food;
+
+namespace {
+constexpr int weight_x = 134;
+constexpr int name_x = 140;
+constexpr int compare_name_x = 50;
+constexpr int compare_ours_x = 236;
+constexpr int compare_cook_book_x = 340;
+} // namespace
 
 void PizzaDesign::draw_ingredients(const RenderContext& ctx) const {
   gfx::blit::blit_raw_with_palette(*ctx.surface,
@@ -38,44 +52,75 @@ void PizzaDesign::draw_ingredients(const RenderContext& ctx) const {
                                   ViewPoint{40, 40}, FontFace::ASTANDAR,
                                   text_color);
 
-  std::unordered_map<std::string, uint32_t> summary_map;
-  uint32_t total_weight = 0;
-  for (const auto& topping : pizza->toppings()) {
-    std::string ingredient_name = topping->ingredient()->name();
-    auto weight = topping->weight();
-    summary_map[ingredient_name] += weight;
-    total_weight += weight;
+  const Pizza* cook_book = nullptr;
+  if (bake_ && bake_->reference_id && state_.rules().cook_book) {
+    if (!bake_->cook_book) {
+      bake_->cook_book = PizzaFactory::read_pizza(
+          *bake_->reference_id, core::food::topping_size_fn(*context_.bob));
+    }
+    cook_book = bake_->cook_book.get();
   }
-  const int weight_x = ctx.surface->width() - 250;
-  int name_x = 140;
+
+  struct Row {
+    std::string name;
+    int ours{0};
+    int cook_book{0};
+  };
+  // In the cook book's order, then whatever else is on our pizza.
+  std::vector<Row> rows;
+  const auto row = [&rows](const IngredientGrams& grams) -> Row& {
+    const auto name = grams.ingredient->name();
+    auto it = std::ranges::find(rows, name, &Row::name);
+    if (it == rows.end()) {
+      return rows.emplace_back(Row{.name = name});
+    }
+    return *it;
+  };
+  Row total{.name = "TOTAL WEIGHT"};
+  if (cook_book) {
+    for (const auto& grams : cook_book->ingredient_grams()) {
+      row(grams).cook_book = grams.grams;
+      total.cook_book += grams.grams;
+    }
+  }
+  const auto ours = pizza->ingredient_grams();
+  for (const auto& grams : ours) {
+    row(grams).ours = grams.grams;
+    total.ours += grams.grams;
+  }
+  const auto ingredients_used = ours.size();
+
+  const int ours_x = cook_book ? compare_ours_x : weight_x;
+  const int names_x = cook_book ? compare_name_x : name_x;
+  constexpr int row_height = 14;
   int y = 70;
+  const auto draw_text = [&](const std::string& text, int x, TextAnchor align) {
+    context_.font->render_text_onto(*ctx.surface, text, ViewPoint{x, y},
+                                    FontFace::CSTANDAR, text_color, align);
+  };
+  const auto draw_row = [&](const Row& r) {
+    draw_text(r.name, names_x, TextAnchor::Start);
+    draw_text(std::to_string(r.ours) + " G", ours_x, TextAnchor::End);
+    if (cook_book) {
+      draw_text(std::to_string(r.cook_book) + " G", compare_cook_book_x,
+                TextAnchor::End);
+    }
+    y += row_height;
+  };
 
-  context_.font->render_text_onto(*ctx.surface, "TOTAL WEIGHT",
-                                  ViewPoint{name_x, y}, FontFace::CSTANDAR,
-                                  text_color);
-  context_.font->render_text_onto(
-      *ctx.surface, std::to_string(total_weight) + " G", ViewPoint{weight_x, y},
-      FontFace::CSTANDAR, text_color, TextAnchor::End);
-
-  for (const auto& item : summary_map) {
-    y += 14;
-    context_.font->render_text_onto(*ctx.surface, item.first,
-                                    ViewPoint{name_x, y}, FontFace::CSTANDAR,
-                                    text_color);
-    context_.font->render_text_onto(*ctx.surface,
-                                    std::to_string(item.second) + " G",
-                                    ViewPoint{weight_x, y}, FontFace::CSTANDAR,
-                                    text_color, TextAnchor::End);
+  if (cook_book) {
+    draw_text("YOURS", ours_x, TextAnchor::End);
+    draw_text("COOK BOOK", compare_cook_book_x, TextAnchor::End);
+    y += row_height;
+  }
+  draw_row(total);
+  for (const auto& r : rows) {
+    draw_row(r);
   }
 
   context_.font->render_text_onto(
-      *ctx.surface, std::to_string(summary_map.size()) + " ingredients used",
+      *ctx.surface, std::to_string(ingredients_used) + " ingredients used",
       ViewPoint{130, 306}, FontFace::CSTANDAR, text_color);
-  if (reference_view_) {
-    context_.font->render_text_onto(*ctx.surface, "COOK BOOK",
-                                    ViewPoint{130, 292}, FontFace::CSTANDAR,
-                                    text_color);
-  }
 }
 
 void PizzaDesign::draw_pizza_info(const RenderContext& ctx) const {

@@ -52,102 +52,18 @@ constexpr std::size_t prez_shift = 8;
 
 namespace layout = core::food::recipe_node;
 
-} // namespace
+struct PcFile {
+  std::unique_ptr<core::food::Pizza> pizza;
+  std::string name;
+  core::food::Flavors disk_flavors;
+  uint8_t appearance{0};
+  uint8_t refinement{0};
+  uint8_t normality{0};
+};
 
-std::unique_ptr<core::food::Pizza> PizzaFactory::create_pizza(
-    const std::string& filename, const BobSizeFn& get_size,
-    const core::food::CustomerTasteProfiles& taste_profiles) {
-  // Extract recipe number from filename (e.g., "r/r13.pc" -> 13, "game/r3.pc"
-  // -> 3)
-  int recipe_id = -1;
-  const std::string stem = std::filesystem::path(filename).stem().string();
-  if (stem.size() > 1 && stem[0] == 'r' &&
-      std::all_of(stem.begin() + 1, stem.end(),
-                  [](unsigned char c) { return std::isdigit(c) != 0; })) {
-    recipe_id = std::stoi(stem.substr(1));
-  }
-
-  return create_pizza(fileutils::read_bytes(filename),
-                      core::food::standard_from_index(recipe_id), get_size,
-                      taste_profiles);
-}
-
-std::optional<PizzaFactory::RecipeSummary>
-PizzaFactory::read_summary(const std::string& filename) {
-  const auto bytes = fileutils::read_bytes(filename);
-  if (bytes.size() < 4) {
-    return std::nullopt;
-  }
-  const bool is_prez = std::memcmp(bytes.data(), "PREZ", 4) == 0;
-  const std::size_t shift = is_prez ? prez_shift : 0;
-  const std::size_t name_offset = pc_name + shift;
-  const std::size_t count_offset = pc_counts + shift;
-  if (bytes.size() < count_offset + 2) {
-    return std::nullopt;
-  }
-
-  RecipeSummary summary;
-  constexpr std::size_t max_name_bytes = 64;
-  for (std::size_t i = name_offset;
-       i < name_offset + max_name_bytes && i < bytes.size() && bytes[i] != 0;
-       ++i) {
-    summary.name.push_back(static_cast<char>(bytes[i]));
-  }
-  while (!summary.name.empty() && summary.name.back() == ' ') {
-    summary.name.pop_back();
-  }
-  if (summary.name.empty()) {
-    return std::nullopt;
-  }
-
-  const int count = bytes[count_offset + 1];
-  const std::size_t items = count_offset + 2;
-  if (bytes.size() < items + (4 * static_cast<std::size_t>(count))) {
-    return std::nullopt;
-  }
-  for (int i = 0; i < count; ++i) {
-    const int id = bytes[items + (4 * static_cast<std::size_t>(i))];
-    const std::string name{
-        core::food::to_string(static_cast<core::food::IngredientType>(id))};
-    if (!name.empty() && std::ranges::find(summary.ingredients, name) ==
-                             summary.ingredients.end()) {
-      summary.ingredients.push_back(name);
-    }
-  }
-  return summary;
-}
-
-PizzaFactory::ImportResult PizzaFactory::import_recipe(
-    const std::string& filename, core::food::PlayerRecipes& recipes,
-    const BobSizeFn& get_size,
-    const core::food::CustomerTasteProfiles& taste_profiles) {
-  if (!read_summary(filename)) {
-    return ImportResult::Unreadable;
-  }
-  auto pizza = create_pizza(fileutils::read_bytes(filename), std::nullopt,
-                            get_size, taste_profiles);
-  if (!pizza) {
-    return ImportResult::Unreadable;
-  }
-  std::string name = pizza->name();
-  const bool listed =
-      std::ranges::any_of(recipes.all(), [&](const core::food::Recipe* r) {
-        return r->display_name() == name;
-      });
-  if (listed) {
-    return ImportResult::AlreadyListed;
-  }
-  const auto id = recipes.create_user(name, std::move(*pizza));
-  Logger::info("Imported recipe {} from {} into user slot {}", name, filename,
-               id.value);
-  return ImportResult::Imported;
-}
-
-std::unique_ptr<core::food::Pizza> PizzaFactory::create_pizza(
-    std::span<const uint8_t> bytes,
-    std::optional<core::food::StandardPizza> reference,
-    const BobSizeFn& get_size,
-    const core::food::CustomerTasteProfiles& taste_profiles) {
+PcFile read_pc_file(std::span<const uint8_t> bytes,
+                    std::optional<core::food::StandardPizza> reference,
+                    const BobSizeFn& get_size) {
   fileutils::ByteReader r{bytes};
 
   // Read the first 4 bytes: 'PREZ' for user-saved recipes, or empty for a
@@ -260,12 +176,134 @@ std::unique_ptr<core::food::Pizza> PizzaFactory::create_pizza(
   disk_flavors.salty = static_cast<int>(salty_raw) * 10;
   disk_flavors.hot = static_cast<int>(hot_raw) * 10;
 
-  pizza->finalize(taste_profiles, pizza_name_str);
-  pizza->set_disk_stats(disk_flavors, appearance_raw, refinement_raw,
-                        normality_raw, core::food::Pizza::full_imitation,
-                        taste_profiles);
+  return PcFile{.pizza = std::move(pizza),
+                .name = pizza_name_str,
+                .disk_flavors = disk_flavors,
+                .appearance = appearance_raw,
+                .refinement = refinement_raw,
+                .normality = normality_raw};
+}
 
-  return pizza;
+} // namespace
+
+std::unique_ptr<core::food::Pizza> PizzaFactory::create_pizza(
+    const std::string& filename, const BobSizeFn& get_size,
+    const core::food::CustomerTasteProfiles& taste_profiles) {
+  // Extract recipe number from filename (e.g., "r/r13.pc" -> 13, "game/r3.pc"
+  // -> 3)
+  int recipe_id = -1;
+  const std::string stem = std::filesystem::path(filename).stem().string();
+  if (stem.size() > 1 && stem[0] == 'r' &&
+      std::all_of(stem.begin() + 1, stem.end(),
+                  [](unsigned char c) { return std::isdigit(c) != 0; })) {
+    recipe_id = std::stoi(stem.substr(1));
+  }
+
+  return create_pizza(fileutils::read_bytes(filename),
+                      core::food::standard_from_index(recipe_id), get_size,
+                      taste_profiles);
+}
+
+std::optional<PizzaFactory::RecipeSummary>
+PizzaFactory::read_summary(const std::string& filename) {
+  return read_summary(fileutils::read_bytes(filename));
+}
+
+std::optional<PizzaFactory::RecipeSummary>
+PizzaFactory::read_summary(std::span<const uint8_t> bytes) {
+  if (bytes.size() < 4) {
+    return std::nullopt;
+  }
+  const bool is_prez = std::memcmp(bytes.data(), "PREZ", 4) == 0;
+  const std::size_t shift = is_prez ? prez_shift : 0;
+  const std::size_t name_offset = pc_name + shift;
+  const std::size_t count_offset = pc_counts + shift;
+  if (bytes.size() < count_offset + 2) {
+    return std::nullopt;
+  }
+
+  RecipeSummary summary;
+  constexpr std::size_t max_name_bytes = 64;
+  for (std::size_t i = name_offset;
+       i < name_offset + max_name_bytes && i < bytes.size() && bytes[i] != 0;
+       ++i) {
+    summary.name.push_back(static_cast<char>(bytes[i]));
+  }
+  while (!summary.name.empty() && summary.name.back() == ' ') {
+    summary.name.pop_back();
+  }
+  if (summary.name.empty()) {
+    return std::nullopt;
+  }
+
+  const int count = bytes[count_offset + 1];
+  const std::size_t items = count_offset + 2;
+  if (bytes.size() < items + (4 * static_cast<std::size_t>(count))) {
+    return std::nullopt;
+  }
+  for (int i = 0; i < count; ++i) {
+    const int id = bytes[items + (4 * static_cast<std::size_t>(i))];
+    const std::string name{
+        core::food::to_string(static_cast<core::food::IngredientType>(id))};
+    if (!name.empty() && std::ranges::find(summary.ingredients, name) ==
+                             summary.ingredients.end()) {
+      summary.ingredients.push_back(name);
+    }
+  }
+  return summary;
+}
+
+PizzaFactory::ImportResult PizzaFactory::import_recipe(
+    const std::string& filename, core::food::PlayerRecipes& recipes,
+    const BobSizeFn& get_size,
+    const core::food::CustomerTasteProfiles& taste_profiles) {
+  const auto bytes = fileutils::read_bytes(filename);
+  if (!read_summary(bytes)) {
+    return ImportResult::Unreadable;
+  }
+  auto pizza = create_pizza(bytes, std::nullopt, get_size, taste_profiles);
+  if (!pizza) {
+    return ImportResult::Unreadable;
+  }
+  std::string name = pizza->name();
+  const bool listed =
+      std::ranges::any_of(recipes.all(), [&](const core::food::Recipe* r) {
+        return r->display_name() == name;
+      });
+  if (listed) {
+    return ImportResult::AlreadyListed;
+  }
+  const auto id = recipes.create_user(name, std::move(*pizza));
+  Logger::info("Imported recipe {} from {} into user slot {}", name, filename,
+               id.value);
+  return ImportResult::Imported;
+}
+
+std::unique_ptr<core::food::Pizza> PizzaFactory::create_pizza(
+    std::span<const uint8_t> bytes,
+    std::optional<core::food::StandardPizza> reference,
+    const BobSizeFn& get_size,
+    const core::food::CustomerTasteProfiles& taste_profiles) {
+  auto pc = read_pc_file(bytes, reference, get_size);
+  pc.pizza->finalize(taste_profiles, pc.name);
+  pc.pizza->set_disk_stats(pc.disk_flavors, pc.appearance, pc.refinement,
+                           pc.normality, core::food::Pizza::full_imitation,
+                           taste_profiles);
+  return std::move(pc.pizza);
+}
+
+std::unique_ptr<core::food::Pizza>
+PizzaFactory::read_pizza(std::span<const uint8_t> bytes,
+                         std::optional<core::food::StandardPizza> reference,
+                         const BobSizeFn& get_size) {
+  return read_pc_file(bytes, reference, get_size).pizza;
+}
+
+std::unique_ptr<core::food::Pizza>
+PizzaFactory::read_pizza(core::food::StandardPizza reference,
+                         const BobSizeFn& get_size) {
+  return read_pizza(fileutils::read_bytes(core::food::filename_for(reference)),
+                    reference, get_size);
 }
 
 std::unique_ptr<core::food::Pizza> PizzaFactory::create_pizza(

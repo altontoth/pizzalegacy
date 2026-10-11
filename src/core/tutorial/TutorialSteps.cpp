@@ -162,9 +162,16 @@ const PizzaDesignShown* pizza_screen(const GameState& gs) {
   return design ? &design->shown : nullptr;
 }
 
-bool cook_book_open(const GameState& gs, PizzaDesignMode mode) {
+bool cook_book_open(const GameState& gs) {
   const auto* shown = pizza_screen(gs);
-  return shown && shown->mode == mode && shown->cook_book == margherita;
+  return shown && shown->cook_book.has_value();
+}
+
+bool margherita_picked(const GameState& gs) {
+  const auto* shown = pizza_screen(gs);
+  return shown && shown->selected &&
+         std::holds_alternative<StandardPizza>(*shown->selected) &&
+         std::get<StandardPizza>(*shown->selected) == margherita;
 }
 
 bool baking_margherita(const GameState& gs, PizzaDesignMode mode) {
@@ -713,47 +720,20 @@ const std::vector<Step>& tutorial_steps() {
           .click_filter = ClickFilter::target_only(),
       },
       Step{
-          .name = "open_cook_book",
-          .text = "Right-click Pizza Margherita and choose Show cook book.",
+          .name = "pick_margherita",
+          .text = "Click Pizza Margherita.",
           .screen = on_screen<PizzaDesignState>,
           .target = margherita_row,
-          .click_filter = ClickFilter::target_only(),
+          .click_filter = ClickFilter::allow({margherita_row}),
           .completion = Completion::Condition,
-          .condition =
-              [](const GameState& gs) {
-                return cook_book_open(gs, PizzaDesignMode::View);
-              },
-      },
-      Step{
-          .name = "cook_book_picture",
-          .text = "This is the Margherita from the cook book. It has "
-                  "tomatoes, mozzarella, parmesan, oregano and a few olives. "
-                  "Where each piece lies hardly matters. What counts is "
-                  "what goes on it, and how much.",
-          .screen = on_screen<PizzaDesignState>,
-          .click_filter = ClickFilter::target_only(),
-          .panel = PanelPlace::Top,
-      },
-      Step{
-          .name = "cook_book_ingredients",
-          .text = "Click Ingredients to see how much of each it takes.",
-          .screen = on_screen<PizzaDesignState>,
-          .target = "Ingredients",
-          .click_filter = ClickFilter::target_only(),
-          .completion = Completion::Condition,
-          .condition =
-              [](const GameState& gs) {
-                return cook_book_open(gs, PizzaDesignMode::Ingredients);
-              },
+          .condition = margherita_picked,
       },
       Step{
           .name = "bake",
-          .text = "Your own pizza should come as close to these weights as "
-                  "you can get it. Click Bake pizza to make one.",
+          .text = "Click Bake pizza to make your own Pizza Margherita.",
           .screen = on_screen<PizzaDesignState>,
           .target = "Bake pizza",
-          .click_filter = ClickFilter::target_only(),
-          .panel = PanelPlace::Bottom,
+          .click_filter = ClickFilter::allow({margherita_row}),
           .completion = Completion::Condition,
           .condition =
               [](const GameState& gs) {
@@ -761,11 +741,32 @@ const std::vector<Step>& tutorial_steps() {
               },
       },
       Step{
+          .name = "open_cook_book",
+          .text = "Here is your pizza base. Click Cook book to see how the "
+                  "cook book makes a Pizza Margherita.",
+          .screen = on_screen<PizzaDesignState>,
+          .target = "Cook book",
+          .click_filter = ClickFilter::target_only(),
+          .completion = Completion::Condition,
+          .condition = cook_book_open,
+      },
+      Step{
+          .name = "read_cook_book",
+          .text = "This is its page in the cook book: how much of each "
+                  "ingredient goes on, and three pictures of the pizza being "
+                  "put together. Close it when you have read it.",
+          .screen = on_screen<PizzaDesignState>,
+          .panel = PanelPlace::Top,
+          .completion = Completion::Condition,
+          .condition = [](const GameState& gs) { return !cook_book_open(gs); },
+      },
+      Step{
           .name = "pizza_base",
-          .text = "Here is your pizza base. The four boxes at the top hold "
-                  "the ingredients: vegetables, meat, fruit, and cheese with "
-                  "the herbs. The chopper at the bottom left cuts a piece "
-                  "smaller.",
+          .text = "Now make it as close to the cook book as you can. The four "
+                  "boxes at the top hold the ingredients: vegetables, meat, "
+                  "fruit, and cheese with the herbs. The chopper at the "
+                  "bottom left cuts a piece smaller, and Cook book shows the "
+                  "page again.",
           .screen = on_screen<PizzaDesignState>,
           .click_filter = ClickFilter::target_only(),
       },
@@ -788,7 +789,8 @@ const std::vector<Step>& tutorial_steps() {
       },
       Step{
           .name = "weigh_tomatoes",
-          .text = "Click Ingredients to see what is on your pizza.",
+          .text = "Click Ingredients to see what is on your pizza, next to "
+                  "what the cook book asks for.",
           .screen = on_screen<PizzaDesignState>,
           .target = "Ingredients",
           .click_filter = ClickFilter::target_only(),
@@ -920,10 +922,9 @@ const std::vector<Step>& tutorial_steps() {
       },
       Step{
           .name = "bake_again",
-          .text = "That is too far from the cook book. Right-click Pizza "
-                  "Margherita and look at the cook book and its ingredients "
-                  "again. Then pick Pizza Margherita, click Bake pizza and "
-                  "make it once more.",
+          .text = "That is too far from the cook book. Click Bake pizza and "
+                  "make it once more. The Cook book button there shows its "
+                  "page again.",
           .screen = on_screen<PizzaDesignState>,
           .completion = Completion::Condition,
           .condition = margherita_good_enough,

@@ -19,6 +19,7 @@
 #include "core/city/Property.h"
 #include "core/factories/PizzaFactory.h"
 #include "core/finance/Money.h"
+#include "core/food/ToppingSize.h"
 #include "core/item/ActionText.h"
 #include "core/restaurant/Furniture.h"
 #include "core/restaurant/RestaurantTypes.h"
@@ -37,7 +38,6 @@
 #include "engine/gfx/Blit.h"
 #include "engine/ui/ICursorManager.h"
 #include "engine/ui/InteractionEvent.h"
-#include "resources/BobSizeFn.h"
 #include "views/base/BobRenderer.h"
 #include "views/base/ViewDefs.h"
 #include "views/screens/city_view/ZoomConfig.h"
@@ -1566,9 +1566,7 @@ void RestaurantView::challenge_ask_speed(CompetitionFlow flow) {
 void RestaurantView::challenge_start(CompetitionFlow flow) {
   int pizza_index = state_.competitions().reference_pizza_index();
 
-  auto& zutaten_bob = context_.bob->get("bob/zutaten.bob");
-  auto get_bob_size =
-      make_ingredient_bob_size_fn<Bob, core::food::Topping>(zutaten_bob);
+  auto get_bob_size = core::food::topping_size_fn(*context_.bob);
   auto reference = PizzaFactory::create_competition_pizza(
       pizza_index, get_bob_size, state_.customer_taste_profiles());
   if (!reference) {

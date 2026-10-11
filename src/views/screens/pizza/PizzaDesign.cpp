@@ -10,7 +10,6 @@
 #include "views/screens/pizza/PizzaDesign.h"
 
 #include "core/GameTypes.h"
-#include "core/factories/PizzaFactory.h"
 #include "core/finance/MoneyParse.h"
 #include "core/food/StandardPizza.h"
 #include "core/state/GameState.h"
@@ -29,6 +28,7 @@
 #include "views/ui/PopupManager.h"
 #include "views/ui/popups/AlertPopup.h"
 #include "views/ui/popups/ConfirmPopup.h"
+#include "views/ui/popups/CookBookPopup.h"
 #include "views/ui/popups/NumberInputPopup.h"
 #include "views/ui/popups/TextInputPopup.h"
 
@@ -125,13 +125,6 @@ PizzaDesign::PizzaDesign(GameContext& context, GameState& state,
       state_.ui().pop();
     }
   }
-  else if (pms.active_key &&
-           std::holds_alternative<core::food::StandardPizza>(*pms.active_key) &&
-           (mode_ == PizzaDesignMode::View ||
-            mode_ == PizzaDesignMode::Ingredients ||
-            mode_ == PizzaDesignMode::Info)) {
-    show_reference_pizza(std::get<core::food::StandardPizza>(*pms.active_key));
-  }
   else {
     status_.show_restaurant({.state = &state_,
                              .rest = state_.active_restaurant(),
@@ -166,13 +159,7 @@ void PizzaDesign::publish_shown() {
   auto& shown = top->shown;
   shown.mode = mode_;
   shown.selected = active_key_;
-  shown.cook_book.reset();
-  if (reference_view_ && active_key_) {
-    if (const auto* cp =
-            std::get_if<core::food::StandardPizza>(&*active_key_)) {
-      shown.cook_book = *cp;
-    }
-  }
+  shown.cook_book = cook_book_page_;
 }
 
 bool PizzaDesign::on_action(const input::ActionEvent& ev) {
@@ -450,13 +437,11 @@ void PizzaDesign::create_input_panel() {
     rows.emplace_back(
         RecipeListRow({.name = "<NEW>"})); // last entry, not selectable
 
-    // While the cook book is on screen the arrows flip through its entries,
-    // otherwise through every recipe the player has created.
+    // The arrows flip through every recipe the player has created.
     std::vector<int> selectable;
     selectable.reserve(rows.size());
     for (int i = 0; i < static_cast<int>(rows.size()); ++i) {
-      if (reference_view_ ? rows[i].reference.has_value()
-                          : rows[i].recipe_id.has_value()) {
+      if (rows[i].recipe_id.has_value()) {
         selectable.push_back(i);
       }
     }
@@ -484,12 +469,7 @@ void PizzaDesign::create_input_panel() {
     int row_idx = selectable[new_pos];
     const auto& row = rows[row_idx];
 
-    if (reference_view_) {
-      show_reference_pizza(*row.reference);
-    }
-    else {
-      change_active_key(RecipeKey{*row.recipe_id});
-    }
+    change_active_key(RecipeKey{*row.recipe_id});
 
     // Ensure page shows the newly selected row
     int target_page = row_idx / recipes_per_page_;
@@ -625,6 +605,12 @@ void PizzaDesign::create_input_panel() {
       input_panel_->add_button(Icon::THUMBS_UP, ButtonType::Horizontal,
                                ButtonPosition::BottomLeft, "O.K.",
                                [this] { on_design_finished(); });
+      if (bake_ && bake_->reference_id && state_.rules().cook_book) {
+        const auto cp = *bake_->reference_id;
+        input_panel_->add_button(Icon::WRITTEN_REPORT, ButtonType::Square,
+                                 ButtonPosition::MiddleCenter, "Cook book",
+                                 [this, cp] { open_cook_book(cp); });
+      }
     }
     else {
       recipes_buttons();
@@ -708,9 +694,6 @@ const Pizza* PizzaDesign::current_pizza() const {
   if (bake_) {
     return &bake_->working;
   }
-  if (reference_view_) {
-    return reference_pizza_.get();
-  }
   auto* player = competing_player();
   auto& recipes = player->recipes();
 
@@ -741,7 +724,6 @@ const Pizza* PizzaDesign::current_pizza() const {
 
 void PizzaDesign::change_active_key(RecipeKey active_key) {
   active_key_ = active_key;
-  reference_view_ = false;
   const auto& recipes = competing_player()->recipes();
   if (std::holds_alternative<core::RecipeId>(*active_key_)) {
     auto id = std::get<core::RecipeId>(*active_key_);
@@ -760,20 +742,12 @@ void PizzaDesign::change_active_key(RecipeKey active_key) {
   publish_shown();
 }
 
-void PizzaDesign::show_reference_pizza(core::food::StandardPizza cp) {
-  active_key_ = RecipeKey{cp};
-  auto get_bob_size =
-      make_ingredient_bob_size_fn<Bob, core::food::Topping>(zutaten_bob_);
-  reference_pizza_ = PizzaFactory::create_pizza(
-      cp, get_bob_size, state_.customer_taste_profiles());
-  reference_view_ = reference_pizza_ != nullptr;
-  if (reference_view_) {
-    status_.show_pizza({.state = &state_,
-                        .wip_pizza = reference_pizza_.get(),
-                        .recipe = nullptr,
-                        .cook_book = true});
-  }
-  publish_shown();
+void PizzaDesign::open_cook_book(core::food::StandardPizza cp) {
+  context_.popup->create<CookBookPopup>(
+      cp, [this](std::optional<core::food::StandardPizza> page) {
+        cook_book_page_ = page;
+        publish_shown();
+      });
 }
 
 void PizzaDesign::update_status_ingredient() {

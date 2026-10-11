@@ -285,21 +285,20 @@ The Player and Range dropdowns on the city map show each player's control
 map color in front of their name. On by default.
 
 ### pizza_judging
-The original wants you to create at least some standard recipes on your menu
-and provides fourteen standard pizzas for you to recreate from the manual. It
-then compares your creation to the on-disk version and gives you a penalty for
-every deviation from that on-disk file. This is very strict, the position of
-every ingredient is compared. This is called the Original setting, and we add a
-Relaxed option that only cares about having the right ingredients in roughly
-the right amount.
+In the original game you have to recreate at least three standard pizzas from
+the cook book that was supplied along with the manual; the game compares your
+attempt to the on-disk version of the recipe and gives you a penalty for every
+deviation. This is very strict, the position of every ingredient is compared.
+This is now called the Original setting, and we
+add a Relaxed option that only cares about having the right ingredients in
+roughly the right amount.
 
 ### cook_book
-Lets the recipe list show a standard pizza's cook book entry, so its layout
-and its ingredients with their weights can be looked at in the game rather
-than in the printed book. Right click a standard pizza and pick "Show cook
-book" to get there; the page arrows then step through the cook book, and the
-label above the pizza says when you are looking at it. Off leaves the entry
-out, as in the original. On by default.
+If you can't be bothered to open the PDF of the cook book you now have the
+option of showing the cook book entry from the game. If this option is on you
+can right click any standard pizza row in the recipe overview and select "Show
+cook book". While you are baking a standard pizza a new button "Cook book" is
+available to show it as well.
 
 ### win_condition
 This can take one of three options; the German release requires >= 5% market

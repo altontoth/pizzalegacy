@@ -24,6 +24,7 @@
 #include "core/food/RecipeCodec.h"
 #include "core/food/StandardPizza.h"
 #include "core/food/Topping.h"
+#include "core/food/ToppingSize.h"
 #include "core/inventory/Inventory.h"
 #include "core/item/Item.h"
 #include "core/marketing/AdvertisingCampaign.h"
@@ -32,7 +33,6 @@
 #include "core/util/Constants.h"
 #include "core/util/GameContext.h"
 #include "engine/FormatCompat.h"
-#include "resources/BobSizeFn.h"
 
 #include <array>
 #include <cstdint>
@@ -503,9 +503,7 @@ Examples:
                                       ? (*only_index + 1)
                                       : core::food::STANDARD_PIZZA_COUNT;
 
-        auto& zutaten_bob = ctx.context.bob->get("bob/zutaten.bob");
-        auto get_bob_size =
-            make_ingredient_bob_size_fn<Bob, core::food::Topping>(zutaten_bob);
+        auto get_bob_size = core::food::topping_size_fn(*ctx.context.bob);
 
         CommandResult result = CommandResult::success();
 
@@ -571,9 +569,7 @@ Examples:
               compat::format("Player {} not found", player_id.value));
         }
 
-        auto& zutaten_bob = ctx.context.bob->get("bob/zutaten.bob");
-        auto get_bob_size =
-            make_ingredient_bob_size_fn<Bob, core::food::Topping>(zutaten_bob);
+        auto get_bob_size = core::food::topping_size_fn(*ctx.context.bob);
 
         auto& recipes = player->recipes();
         const auto outcome =
@@ -647,9 +643,7 @@ Examples:
               compat::format("Recipe {} not found", recipe_id.value));
         }
 
-        auto& zutaten_bob = ctx.context.bob->get("bob/zutaten.bob");
-        auto get_bob_size =
-            make_ingredient_bob_size_fn<Bob, core::food::Topping>(zutaten_bob);
+        auto get_bob_size = core::food::topping_size_fn(*ctx.context.bob);
         if (!io::recipe::save_prez(recipe->pizza(), path, get_bob_size,
                                    recipe->display_name())) {
           return CommandResult::error("Could not write " + path.string());

@@ -70,4 +70,28 @@ static_assert(standard_pizza_names.size() == STANDARD_PIZZA_COUNT);
 constexpr std::string_view to_string(StandardPizza id) {
   return standard_pizza_names[to_index(id)];
 }
+
+// The manual's first two pictures of a pizza show this many of its steps (the
+// third picture always shows the complete pizza).
+inline constexpr std::array<std::array<int, 2>, STANDARD_PIZZA_COUNT>
+    cook_book_stages{{
+        {21, 38},
+        {22, 31},
+        {17, 41},
+        {13, 35},
+        {18, 30},
+        {27, 51},
+        {20, 41},
+        {15, 28},
+        {7, 15},
+        {12, 29},
+        {20, 39},
+        {11, 31},
+        {9, 22},
+        {14, 27},
+    }};
+
+constexpr const std::array<int, 2>& stages_for(StandardPizza id) {
+  return cook_book_stages[to_index(id)];
+}
 }; // namespace core::food

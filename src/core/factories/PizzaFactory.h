@@ -17,9 +17,7 @@
 #include "core/food/PlayerRecipes.h"
 #include "core/food/Recipe.h"
 #include "core/food/StandardPizza.h"
-#include "engine/Size.h"
-
-using BobSizeFn = std::function<Size(int ingredient_id, int state)>;
+#include "resources/BobSizeFn.h"
 
 class PizzaFactory {
 public:
@@ -29,6 +27,8 @@ public:
     std::vector<std::string> ingredients;
   };
   static std::optional<RecipeSummary> read_summary(const std::string& filename);
+  static std::optional<RecipeSummary>
+  read_summary(std::span<const uint8_t> bytes);
 
   enum class ImportResult { Imported, AlreadyListed, Unreadable };
   // Adds the recipe file to the list as a user recipe, under the name stored in
@@ -48,6 +48,15 @@ public:
   static std::unique_ptr<core::food::Pizza>
   create_pizza(core::food::StandardPizza reference, const BobSizeFn& get_size,
                const core::food::CustomerTasteProfiles& taste_profiles);
+
+  // A recipe's name and toppings, without the stats that depend on the
+  // customers' tastes.
+  static std::unique_ptr<core::food::Pizza>
+  read_pizza(std::span<const uint8_t> bytes,
+             std::optional<core::food::StandardPizza> reference,
+             const BobSizeFn& get_size);
+  static std::unique_ptr<core::food::Pizza>
+  read_pizza(core::food::StandardPizza reference, const BobSizeFn& get_size);
 
   // Parse a recipe from an in-memory .pc-format buffer. A reference supplies
   // its name and marks the pizza standard; nullopt reads the name from the

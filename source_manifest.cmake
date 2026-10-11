@@ -73,6 +73,7 @@ set(GAME_PLEGACY_SOURCES
     src/core/food/Pizza.cpp
     src/core/food/RecipeCodec.cpp
     src/core/food/Topping.cpp
+    src/core/food/ToppingSize.cpp
     src/core/init/CompanyNames.cpp
     src/core/inventory/Inventory.cpp
     src/core/item/ActionText.cpp
@@ -180,6 +181,7 @@ set(GAME_PLEGACY_SOURCES
     src/views/screens/menus/MenuSaveAsGame.cpp
     src/views/screens/menus/MenuSaveAsMission.cpp
     src/views/screens/menus/RecipePreview.cpp
+    src/views/screens/pizza/HalfSizePizza.cpp
     src/views/screens/pizza/PizzaDesign.cpp
     src/views/screens/pizza/PizzaDesignBake.cpp
     src/views/screens/pizza/PizzaDesignCanvas.cpp
@@ -230,6 +232,7 @@ set(GAME_PLEGACY_SOURCES
     src/views/ui/popups/ChequePopup.cpp
     src/views/ui/popups/ConfirmPopup.cpp
     src/views/ui/popups/ContextMenuPopup.cpp
+    src/views/ui/popups/CookBookPopup.cpp
     src/views/ui/popups/GuestTalkPopup.cpp
     src/views/ui/popups/InvoicePopup.cpp
     src/views/ui/popups/JukeboxPopup.cpp
@@ -431,6 +434,7 @@ set(PLEGACY_HEADERS
     src/core/food/RecipeNode.h
     src/core/food/StandardPizza.h
     src/core/food/Topping.h
+    src/core/food/ToppingSize.h
     src/core/init/CompanyNames.h
     src/core/init/NewGameConfig.h
     src/core/inventory/Inventory.h
@@ -699,6 +703,7 @@ set(PLEGACY_HEADERS
     src/views/screens/menus/MenuSaveAsMission.h
     src/views/screens/menus/MenuTheme.h
     src/views/screens/menus/RecipePreview.h
+    src/views/screens/pizza/HalfSizePizza.h
     src/views/screens/pizza/PizzaDesign.h
     src/views/screens/pizza/PizzaDesignHelpers.h
     src/views/screens/purchasing/CategoryOverviewScreen.h
@@ -751,6 +756,7 @@ set(PLEGACY_HEADERS
     src/views/ui/popups/ChequePopup.h
     src/views/ui/popups/ConfirmPopup.h
     src/views/ui/popups/ContextMenuPopup.h
+    src/views/ui/popups/CookBookPopup.h
     src/views/ui/popups/GuestTalkPopup.h
     src/views/ui/popups/InvoicePopup.h
     src/views/ui/popups/JukeboxPopup.h

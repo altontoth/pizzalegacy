@@ -14,11 +14,10 @@
 #include "core/food/Recipe.h"
 #include "core/food/RecipeCodec.h"
 #include "core/food/Topping.h"
+#include "core/food/ToppingSize.h"
 #include "core/state/GameState.h"
 #include "engine/Logger.h"
-#include "resources/Bob.h"
 #include "resources/BobManager.h"
-#include "resources/BobSizeFn.h"
 #include "resources/FontTypes.h"
 #include "views/screens/menus/MenuTheme.h"
 #include "views/ui/PopupManager.h"
@@ -111,9 +110,7 @@ void MenuRecipeExport::write_recipe(const std::string& filename) {
   std::error_code ec;
   std::filesystem::create_directories(path.parent_path(), ec);
 
-  Bob& zutaten = context_.bob->get("bob/zutaten.bob");
-  const auto bob_size =
-      make_ingredient_bob_size_fn<Bob, core::food::Topping>(zutaten);
+  const auto bob_size = core::food::topping_size_fn(*context_.bob);
   if (io::recipe::save_prez(r->pizza(), path, bob_size, r->display_name())) {
     Logger::info("Exported recipe {} to {}", r->display_name(), path.string());
     state_.ui().pop();

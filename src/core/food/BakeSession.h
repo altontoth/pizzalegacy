@@ -6,7 +6,7 @@
 
 #pragma once
 
-// What are we doing?
+#include <memory>
 #include <optional>
 #include "core/common/Ids.h"
 #include "core/food/Pizza.h"
@@ -23,9 +23,11 @@ enum class BakeKind {
 struct BakeSession {
   BakeKind kind;
   std::optional<core::food::StandardPizza> reference_id; // if any
-  std::optional<core::RecipeId> existing_id;              // if any
+  std::optional<core::RecipeId> existing_id;             // if any
   std::string suggested_name; // the standard pizza's name, empty for <NEW>
   core::food::Pizza working;
+  // The reference pizza from the cook book.
+  std::unique_ptr<core::food::Pizza> cook_book;
 };
 
 } // namespace core::food

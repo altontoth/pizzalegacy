@@ -10,16 +10,15 @@
 #include <memory>
 #include "core/food/Pizza.h"
 #include "engine/RenderContext.h"
-#include "engine/geom/Camera.h"
 #include "views/base/BobRenderer.h"
 #include "views/base/View.h"
-#include "views/screens/pizza/PizzaDesignHelpers.h"
+#include "views/screens/pizza/HalfSizePizza.h"
 
 // A recipe file's pizza at half size, drawn as its own layer so we don't have
 // to worry about mismatched palettes.
 class RecipePreview : public View {
 public:
-  static constexpr int size = pizza_design::PIZZA_RADIUS;
+  static constexpr int size = pizza_design::half_size_pizza;
 
   RecipePreview(GameContext& context, GameState& state);
 
@@ -31,5 +30,4 @@ public:
 private:
   std::unique_ptr<core::food::Pizza> pizza_;
   BobRenderer renderer_;
-  Camera camera_;
 };

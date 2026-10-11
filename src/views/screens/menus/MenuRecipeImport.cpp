@@ -16,11 +16,10 @@
 #include "core/food/PlayerRecipes.h"
 #include "core/food/RecipeCodec.h"
 #include "core/food/Topping.h"
+#include "core/food/ToppingSize.h"
 #include "core/state/GameState.h"
 #include "engine/FormatCompat.h"
-#include "resources/Bob.h"
 #include "resources/BobManager.h"
-#include "resources/BobSizeFn.h"
 #include "resources/FontTypes.h"
 #include "views/screens/menus/MenuTheme.h"
 #include "views/screens/menus/RecipePreview.h"
@@ -167,9 +166,7 @@ void MenuRecipeImport::import_marked() {
   }
   auto& recipes = player->recipes();
 
-  Bob& zutaten = context_.bob->get("bob/zutaten.bob");
-  const auto bob_size =
-      make_ingredient_bob_size_fn<Bob, core::food::Topping>(zutaten);
+  const auto bob_size = core::food::topping_size_fn(*context_.bob);
 
   int imported = 0;
   int listed = 0;

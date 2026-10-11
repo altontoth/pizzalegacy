@@ -89,7 +89,7 @@ private:
   void load_user_recipe_for_debug(int number);
   void load_standard_for_debug(int number);
   void change_active_key(RecipeKey change_active_key);
-  void show_reference_pizza(core::food::StandardPizza cp);
+  void open_cook_book(core::food::StandardPizza cp);
   void add_pizza_main_panel_item();
   void update_status_ingredient();
   void handle_post_judging();
@@ -124,8 +124,7 @@ private:
   uint64_t chop_start_ms_{0};
   uint64_t chop_last_phase_{0};
   std::optional<RecipeKey> active_key_{new_row_tag};
-  std::unique_ptr<core::food::Pizza> reference_pizza_;
-  bool reference_view_{false};
+  std::optional<core::food::StandardPizza> cook_book_page_;
   int page_{0};
   static constexpr int recipes_per_page_ = 14;
   static constexpr int max_recipe_name_length = 18;

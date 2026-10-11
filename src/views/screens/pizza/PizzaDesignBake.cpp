@@ -11,11 +11,12 @@
 #include "core/factories/PizzaFactory.h"
 #include "core/food/PizzaJudging.h"
 #include "core/food/StandardPizza.h"
+#include "core/food/ToppingSize.h"
+#include "core/state/GameRules.h"
 #include "core/state/GameState.h"
 #include "engine/FormatCompat.h"
 #include "engine/Logger.h"
 #include "engine/ui/ICursorManager.h"
-#include "resources/BobSizeFn.h"
 #include "views/screens/pizza/PizzaDesign.h"
 #include "views/screens/pizza/PizzaDesignHelpers.h"
 #include "views/screens/restaurant/RecipeListRow.h"
@@ -29,6 +30,26 @@
 
 using namespace core::food;
 using pizza_design::find_row_by_key;
+
+namespace {
+std::string cook_book_reminder(StandardPizza reference, bool cook_book) {
+  std::string text =
+      "You need a bit more practice baking the standard recipes. ";
+  if (cook_book) {
+    text += "Press the Cook book button while baking this recipe to see its "
+            "page in the great Pizza Tycoon cook book.";
+    return text;
+  }
+  constexpr int cook_book_page_offset = 9;
+  const int page = (static_cast<int>(reference) + cook_book_page_offset) / 2;
+  text += compat::format(
+      "This recipe can be found on page {} of the great Pizza Tycoon cook "
+      "book. You can also turn on the {} rule under Options, Rules to look it "
+      "up while baking.",
+      page, rule_labels::cook_book);
+  return text;
+}
+} // namespace
 
 void PizzaDesign::on_bake_pressed() {
   auto* player = competing_player();
@@ -107,8 +128,7 @@ void PizzaDesign::on_design_finished() {
   }
 
   if (bake_->reference_id) {
-    auto get_bob_size =
-        make_ingredient_bob_size_fn<Bob, core::food::Topping>(zutaten_bob_);
+    auto get_bob_size = core::food::topping_size_fn(*context_.bob);
     auto reference_pizza = PizzaFactory::create_pizza(
         *bake_->reference_id, get_bob_size, state_.customer_taste_profiles());
 
@@ -314,9 +334,7 @@ void PizzaDesign::handle_post_judging() {
     }
 
     if (poor_imitation) {
-      int reference_id = static_cast<int>(*bake_->reference_id);
-      constexpr int cook_book_page_offset = 9;
-      int page = (reference_id + cook_book_page_offset) / 2;
+      const StandardPizza reference = *bake_->reference_id;
       bake_session(nullptr);
       // Replace OwnPizzaJudging so dismissing the reminder returns to Recipes.
       state_.ui().replace_top<PizzaDesignState>(PizzaDesignState{
@@ -324,11 +342,7 @@ void PizzaDesign::handle_post_judging() {
           .active_key = active_key_,
       });
       state_.ui().push<MaestroMessageState>(MaestroMessageState{
-          .text = compat::format(
-              "You need a bit more practice baking the standard recipes. This "
-              "recipe can be found on page {} of the great Pizza Tycoon cook "
-              "book.",
-              page),
+          .text = cook_book_reminder(reference, state_.rules().cook_book),
           .on_dismiss = {},
       });
       return;

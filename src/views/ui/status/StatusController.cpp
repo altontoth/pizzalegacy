@@ -396,9 +396,7 @@ StatusDisplayRecipe StatusController::build_pizza(const PizzaCtx& pctx) {
 
   std::size_t total_count = recipes.recipe_count();
   size_t cur_id = recipe ? recipe->id().value + 1 : total_count + 1;
-  r.add_header(pctx.cook_book
-                   ? "COOK BOOK"
-                   : compat::format("RECIPE {} OF {}", cur_id, total_count));
+  r.add_header(compat::format("RECIPE {} OF {}", cur_id, total_count));
   r.add_header(p->name().empty() ? "" : p->name());
 
   // recompute fat/sweet/salty/hot + calories

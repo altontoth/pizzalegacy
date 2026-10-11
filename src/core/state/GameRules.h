@@ -64,7 +64,7 @@ struct GameRules {
   bool demand_fulfillment_popularity = true;
   WinCondition win_condition = WinCondition::AnyCity;
   PizzaJudging pizza_judging = PizzaJudging::Relaxed;
-  // A standard pizza's cook book entry can be shown in the recipe list.
+  // A standard pizza's cook book page can be opened in the game.
   bool cook_book = true;
   // Off stops the police turning up by themselves. Console only.
   bool police = true;

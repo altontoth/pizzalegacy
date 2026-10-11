@@ -17,6 +17,7 @@
 #include "core/finance/Ledger.h"
 #include "core/food/IngredientCategory.h"
 #include "core/food/IngredientCategoryType.h"
+#include "core/food/ToppingSize.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/restaurant/RestaurantEconomy.h"
 #include "core/state/GameState.h"
@@ -26,8 +27,6 @@
 #include "core/supply/SupplierContract.h"
 #include "core/supply/SupplierRelationship.h"
 #include "core/util/GameContext.h"
-#include "resources/Bob.h"
-#include "resources/BobSizeFn.h"
 
 using namespace debug::command;
 
@@ -972,9 +971,7 @@ Examples:
         auto& recipes = player->recipes();
         int loaded = 0;
 
-        auto& zutaten_bob = ctx.context.bob->get("bob/zutaten.bob");
-        auto get_bob_size =
-            make_ingredient_bob_size_fn<Bob, core::food::Topping>(zutaten_bob);
+        auto get_bob_size = core::food::topping_size_fn(*ctx.context.bob);
 
         for (int i = 0; i < core::food::STANDARD_PIZZA_COUNT; ++i) {
           const auto cid = static_cast<core::food::StandardPizza>(i);

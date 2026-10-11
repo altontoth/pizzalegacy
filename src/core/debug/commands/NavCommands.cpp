@@ -462,8 +462,7 @@ CommandDef make_nav_commands() {
           CommandDef{
               .name = "pizza",
               .description = "Pizza designer/recipes",
-              .help_text =
-                  "Usage: nav pizza <design|recipes|book|export|import>",
+              .help_text = "Usage: nav pizza <design|recipes|export|import>",
           }
               .add_subcommand(CommandDef{
                   .name = "design",
@@ -528,65 +527,6 @@ CommandDef make_nav_commands() {
                         RecipeImportState{.player = player->id()});
                     return CommandResult::success().add_message(
                         "Navigated to the recipe import screen");
-                  },
-              })
-              .add_subcommand(CommandDef{
-                  .name = "book",
-                  .description = "Look at a cook book pizza",
-                  .help_text = R"(Usage: nav pizza book <index> [screen]
-
-Opens the pizza screen on a cook book pizza. The screen is view, ingredients
-or info; view when left out.
-
-Example:
-  nav pizza book 0               # Pizza Napoletana
-  nav pizza book 0 ingredients   # its ingredient list
-)",
-                  .args =
-                      {
-                          ArgSpec{
-                              .name = "index",
-                              .type = ArgType::Int,
-                              .optional = false,
-                              .default_provider = DefaultProvider::None,
-                              .description = "Cook book pizza index",
-                              .min_value = 0,
-                              .max_value = core::food::STANDARD_PIZZA_COUNT - 1,
-                          },
-                          ArgSpec{
-                              .name = "screen",
-                              .type = ArgType::String,
-                              .optional = true,
-                              .default_provider = DefaultProvider::None,
-                              .description = "view, ingredients or info",
-                          },
-                      },
-                  .handler = [](const CommandContext& ctx) -> CommandResult {
-                    ctx.state.bootstrap_minimal_playable_world(ctx.context);
-                    if (!ctx.state.rules().cook_book) {
-                      return CommandResult::error("The cook_book rule is off");
-                    }
-                    PizzaDesignMode mode = PizzaDesignMode::View;
-                    if (ctx.has_arg(1)) {
-                      const std::string screen = ctx.string_arg(1);
-                      if (screen == "ingredients") {
-                        mode = PizzaDesignMode::Ingredients;
-                      }
-                      else if (screen == "info") {
-                        mode = PizzaDesignMode::Info;
-                      }
-                      else if (screen != "view") {
-                        return CommandResult::error(
-                            "Expected view, ingredients or info");
-                      }
-                    }
-                    ctx.state.ui().push<PizzaDesignState>(PizzaDesignState{
-                        .initial_mode = mode,
-                        .active_key =
-                            RecipeKey{static_cast<core::food::StandardPizza>(
-                                ctx.int_arg(0))}});
-                    return CommandResult::success().add_message(
-                        "Navigated to the cook book pizza");
                   },
               }))
 

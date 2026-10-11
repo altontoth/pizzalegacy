@@ -7,13 +7,13 @@
 // The recipe list view and loading recipes from disk.
 
 #include "core/factories/PizzaFactory.h"
+#include "core/food/ToppingSize.h"
 #include "core/state/GameState.h"
 #include "engine/Logger.h"
 #include "engine/PlatformPaths.h"
 #include "engine/StringUtil.h"
 #include "engine/gfx/Blit.h"
 #include "engine/ui/TextAnchor.h"
-#include "resources/BobSizeFn.h"
 #include "resources/util/FileUtils.h"
 #include "views/screens/pizza/PizzaDesign.h"
 #include "views/screens/pizza/PizzaDesignHelpers.h"
@@ -130,11 +130,7 @@ void PizzaDesign::open_recipe_menu(const RecipeListRow& row, ViewPoint at) {
   }
   if (row.reference && state_.rules().cook_book) {
     const auto cp = *row.reference;
-    items.push_back({"Show cook book", [this, cp] {
-                       show_reference_pizza(cp);
-                       change_mode(PizzaDesignMode::View);
-                       mark_dirty();
-                     }});
+    items.push_back({"Show cook book", [this, cp] { open_cook_book(cp); }});
   }
   if (row.recipe_id && !row.reference) {
     const auto id = *row.recipe_id;
@@ -197,8 +193,7 @@ void PizzaDesign::load_standard_recipe(int number) {
     return;
   }
 
-  auto get_bob_size =
-      make_ingredient_bob_size_fn<Bob, core::food::Topping>(zutaten_bob_);
+  auto get_bob_size = core::food::topping_size_fn(*context_.bob);
 
   auto pizza = PizzaFactory::create_pizza(filename, get_bob_size,
                                           state_.customer_taste_profiles());
@@ -252,8 +247,7 @@ void PizzaDesign::load_recipe_for_debug(const std::string& filename) {
     return;
   }
 
-  auto get_bob_size =
-      make_ingredient_bob_size_fn<Bob, core::food::Topping>(zutaten_bob_);
+  auto get_bob_size = core::food::topping_size_fn(*context_.bob);
 
   // Load the pizza from the specified file
   auto pizza = PizzaFactory::create_pizza(filename, get_bob_size,

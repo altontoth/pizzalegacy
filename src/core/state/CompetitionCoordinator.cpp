@@ -18,13 +18,13 @@
 #include "core/finance/Ledger.h"
 #include "core/finance/Money.h"
 #include "core/food/Pizza.h"
+#include "core/food/ToppingSize.h"
 #include "core/state/GameState.h"
 #include "core/state/UIState.h"
 #include "core/util/Constants.h"
 #include "core/util/GameContext.h"
 #include "engine/Logger.h"
 #include "engine/Random.h"
-#include "resources/BobSizeFn.h"
 
 namespace {
 // The competition reference pizzas start at r/r20.pc.
@@ -86,10 +86,7 @@ void CompetitionCoordinator::run_monthly_competition_chain(
         if (!session->reference_pizza) {
           int speed_level = entry->speed_level.value_or(3);
           int pizza_index = reference_pizza_index();
-          auto& zutaten_bob = gs_->context_->bob->get("bob/zutaten.bob");
-          auto get_bob_size =
-              make_ingredient_bob_size_fn<Bob, core::food::Topping>(
-                  zutaten_bob);
+          auto get_bob_size = core::food::topping_size_fn(*gs_->context_->bob);
           auto reference = PizzaFactory::create_competition_pizza(
               pizza_index, get_bob_size, gs_->customer_taste_profiles());
           if (!reference) {
