@@ -1102,8 +1102,6 @@ void GameState::finalize_initialization(GameContext& context) {
   if (cfg.mode == GameMode::MISSION_MODE) {
     mission_target_ = std::move(cfg.mission);
   }
-  active_city(cfg.city_id); // Set the active city before pushing UI state
-  ui().push<CityViewState>(cfg.city_id);
   difficulty_level_ = static_cast<int>(cfg.difficulty);
   weapon_market_.init();
 
@@ -1127,7 +1125,7 @@ void GameState::finalize_initialization(GameContext& context) {
                                 : (idx4 * 2 + 2);     // 2,4,6,8
 
       auto* rest = real_estate_.create_restaurant_with_layout(
-          *players_[i], *active_city(), layout_id);
+          *players_[i], city_or_create(cfg.city_id), layout_id);
       if (!rest) {
         Logger::warn("Failed to create restaurant for player {}", i);
         continue;
@@ -1147,7 +1145,9 @@ void GameState::finalize_initialization(GameContext& context) {
     }
   }
 
-  initialise_city_for_ai(*active_city());
+  // Entering the city sets up its AI and runs its first day.
+  active_city(cfg.city_id);
+  ui().push<CityViewState>(cfg.city_id);
 
   // We start at 9 in the morning on the first day, so 9 times 6 time blocks:
   time_.time_blocks(9 * 6);
@@ -1163,12 +1163,6 @@ void GameState::finalize_initialization(GameContext& context) {
     }
   }
   active_player(core::PlayerId{0});
-
-  // Build initial pizza charts so they're not empty on the first day.
-  // AI menu slots are pre-warmed so they'll populate the chart immediately.
-  if (auto* city = active_city()) {
-    city->pizza_charts().build(*this);
-  }
 
   initializer_.reset(); // Clear after use
 }
