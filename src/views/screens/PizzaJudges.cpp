@@ -49,6 +49,7 @@ void PizzaJudges::tick() {
 
 void PizzaJudges::render(const RenderContext& ctx) {
   interactions_.begin_frame();
+  ctx.surface->fill(240);
   animator_.render(ctx);
   register_interactions();
 }

@@ -62,7 +62,7 @@ bool JudgeAnimator::tick() {
 }
 
 void JudgeAnimator::render(const RenderContext& ctx) {
-  gfx::blit::blit_raw_with_palette(*ctx.surface, context_.vga->get("gfx/jury"));
+  gfx::blit::blit_with_palette(*ctx.surface, context_.vga->get("gfx/jury"));
 
   const int status_color = 26;
   std::string message = "evaluating your recipe...";
