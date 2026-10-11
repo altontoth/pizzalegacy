@@ -33,6 +33,7 @@ protected:
   void alert_no_selection();
   void draw_icon(const RenderContext& ctx);
   virtual SupplierType supplier_type() const;
+  void show(SupplierType type, bool demographics);
 
   std::map<SupplierType, std::string> category_titles;
   std::map<SupplierType, ViewRect> category_offsets;

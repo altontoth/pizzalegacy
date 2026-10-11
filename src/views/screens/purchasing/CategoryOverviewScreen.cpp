@@ -504,32 +504,20 @@ void CategoryOverviewScreen::set_up_input_panel() {
   input_panel_->delete_buttons();
 
   input_panel_->add_button(Icon::CHAIR, ButtonType::Square,
-                           ButtonPosition::TopLeft, "Furniture", [this]() {
-                             supplier_type_ = SupplierType::FURNITURE;
-                             showing_demographics_ = false;
-                             mark_dirty();
-                           });
+                           ButtonPosition::TopLeft, "Furniture",
+                           [this]() { show(SupplierType::FURNITURE, false); });
 
-  input_panel_->add_button(Icon::OVEN, ButtonType::Square,
-                           ButtonPosition::TopCenter, "Kitchenware", [this]() {
-                             supplier_type_ = SupplierType::KITCHENWARE;
-                             showing_demographics_ = false;
-                             mark_dirty();
-                           });
+  input_panel_->add_button(
+      Icon::OVEN, ButtonType::Square, ButtonPosition::TopCenter, "Kitchenware",
+      [this]() { show(SupplierType::KITCHENWARE, false); });
 
   input_panel_->add_button(Icon::PLANT, ButtonType::Square,
-                           ButtonPosition::MiddleLeft, "Extras", [this]() {
-                             supplier_type_ = SupplierType::EXTRAS;
-                             showing_demographics_ = false;
-                             mark_dirty();
-                           });
+                           ButtonPosition::MiddleLeft, "Extras",
+                           [this]() { show(SupplierType::EXTRAS, false); });
 
   input_panel_->add_button(Icon::FOOT, ButtonType::Square,
-                           ButtonPosition::MiddleCenter, "Flooring", [this]() {
-                             supplier_type_ = SupplierType::FLOORING;
-                             showing_demographics_ = false;
-                             mark_dirty();
-                           });
+                           ButtonPosition::MiddleCenter, "Flooring",
+                           [this]() { show(SupplierType::FLOORING, false); });
 
   input_panel_->add_button(Icon::ARROW_BACK, ButtonType::Square,
                            ButtonPosition::BottomRight, "Back",
@@ -552,10 +540,7 @@ void CategoryOverviewScreen::set_up_input_panel() {
 
   input_panel_->add_button(Icon::GRAPH, ButtonType::Vertical,
                            ButtonPosition::TopRight, "Customer ratings",
-                           [this]() {
-                             showing_demographics_ = true;
-                             mark_dirty();
-                           });
+                           [this]() { show(supplier_type_, true); });
 }
 
 Surface CategoryOverviewScreen::create_floor_preview(
@@ -745,6 +730,16 @@ void CategoryOverviewScreen::draw_scrollable_text_box(
 
   // Blit the visible portion of text_surface onto screen
   ctx.surface->blit(text_surface, src_rect, dst_point);
+}
+
+void CategoryOverviewScreen::show(SupplierType type, bool demographics) {
+  supplier_type_ = type;
+  showing_demographics_ = demographics;
+  if (auto* top = state_.ui().top_as<CategoryOverviewState>()) {
+    top->type = type;
+    top->demographics = demographics;
+  }
+  mark_dirty();
 }
 
 SupplierType CategoryOverviewScreen::supplier_type() const {
