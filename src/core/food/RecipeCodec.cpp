@@ -30,6 +30,7 @@
 #include "engine/PlatformPaths.h"
 #include "resources/BobSizeFn.h"
 #include "resources/util/FileUtils.h"
+#include "resources/util/TextEncoding.h"
 
 namespace io::recipe {
 
@@ -111,9 +112,9 @@ bool save_prez(const core::food::Pizza& pizza,
 
   // Name (NUL-terminated)
   {
-    const std::size_t max_name = node::judged - node::name - 1;
-    const std::size_t len = std::min(name.size(), max_name);
-    std::memcpy(&blob[node::name], name.data(), len);
+    std::string stored(name);
+    text::truncate_utf8(stored, node::judged - node::name - 1);
+    std::memcpy(&blob[node::name], stored.data(), stored.size());
   }
 
   blob[node::judged] = 1;

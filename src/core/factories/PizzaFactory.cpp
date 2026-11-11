@@ -25,6 +25,7 @@
 #include "engine/geom/Spaces.h"
 #include "resources/util/ByteReader.h"
 #include "resources/util/FileUtils.h"
+#include "resources/util/TextEncoding.h"
 
 namespace {
 
@@ -102,6 +103,7 @@ PcFile read_pc_file(std::span<const uint8_t> bytes,
     while (!pizza_name_str.empty() && pizza_name_str.back() == ' ') {
       pizza_name_str.pop_back();
     }
+    pizza_name_str = text::convert_platform_text(pizza_name_str);
   }
 
   // Read stats from disk at the stats offset
@@ -232,6 +234,7 @@ PizzaFactory::read_summary(std::span<const uint8_t> bytes) {
   while (!summary.name.empty() && summary.name.back() == ' ') {
     summary.name.pop_back();
   }
+  summary.name = text::convert_platform_text(summary.name);
   if (summary.name.empty()) {
     return std::nullopt;
   }
