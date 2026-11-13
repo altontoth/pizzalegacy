@@ -1050,9 +1050,10 @@ void RestaurantStats::render_sales_curve(const RenderContext& ctx) {
   ctx.surface->blit_masked(stabo.frame(1), ViewPoint{y_axis_x, y_axis_y});
 
   // Render title and scale
-  context_.font->render_line_onto(*ctx.surface, "Sales curve",
-                                  ViewPoint{title_x, title_y}, FontFace::RUBY,
-                                  header_color, TextAnchor::Start);
+  const bool enhanced = state_.options().qol_improvements;
+  context_.font->render_line_onto(*ctx.surface, enhanced ? "Sales & purchases" : "Sales curve",
+                                  ViewPoint{enhanced ? 192 : title_x, title_y}, FontFace::RUBY,
+                                  header_color, enhanced ? TextAnchor::Middle : TextAnchor::Start);
   context_.font->render_line_onto(
       *ctx.surface, compat::format("in ${} units", scale * 10),
       ViewPoint{scale_text_x, scale_text_y}, FontFace::PIZ_NUMB, header_color,
@@ -1062,6 +1063,14 @@ void RestaurantStats::render_sales_curve(const RenderContext& ctx) {
   const auto& sales_bar = stabo.frame(10);
   const auto& expenditure_bar = stabo.frame(12);
 
+  if (enhanced) {
+    ctx.surface->blit_masked(sales_bar, ViewPoint{24, 310});
+    context_.font->render_line_onto(*ctx.surface, "Sales revenue",
+        ViewPoint{62, 310}, FontFace::SUPERSMA, label_color, TextAnchor::Start);
+    ctx.surface->blit_masked(expenditure_bar, ViewPoint{24, 330});
+    context_.font->render_line_onto(*ctx.surface, "Stock + furniture purchases",
+        ViewPoint{62, 330}, FontFace::SUPERSMA, label_color, TextAnchor::Start);
+  }
   auto current_date = state_.time().current_date();
 
   for (int i = 0; i < 7; ++i) {

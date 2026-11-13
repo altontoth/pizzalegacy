@@ -206,7 +206,7 @@ void Player::end_of_day_human(GameState& game_state, EndOfDayCause cause) {
         // Deduct daily cost (can go negative)
         Account expense_account = Account::ProfitAndLoss;
         financials_.transfer(current_date, Account::Cash, expense_account,
-                             campaign_opt->rate.cost, balance_sheet_only);
+                             campaign_opt->rate.cost, MonthlyCategory::Advertising);
         financials_.add_to_profit_today(-campaign_opt->rate.cost.whole());
       }
     }

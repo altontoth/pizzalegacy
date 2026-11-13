@@ -240,7 +240,7 @@ void GlobalStats::render_month_overview(const RenderContext& ctx) {
 
   // Clickable row size, in original coords * 2.
   constexpr int row_width = 340;
-  constexpr int row_height = 18;
+  const int row_height = state_.options().qol_improvements ? 16 : 18;
 
   auto create_clickable_row = [&](MonthlyCategory category, ViewPoint pos,
                                   bool is_receipt, bool is_total,
@@ -285,6 +285,9 @@ void GlobalStats::render_month_overview(const RenderContext& ctx) {
     }
   }
 
+  // Advertising is city-wide, so it has no per-restaurant drill-down.
+  const bool enhanced = state_.options().qol_improvements;
+  const int expense_spacing = enhanced ? 16 : line_spacing;
   // Draw expenditure section with clickable rows
   Money exp_this = 0_usd;
   Money exp_last = 0_usd;
@@ -295,16 +298,26 @@ void GlobalStats::render_month_overview(const RenderContext& ctx) {
       exp_last += financials.previous_month(category, date);
       exp_this += financials.current_month(category, date);
     }
+    if (enhanced) {
+      exp_last += financials.previous_month(MonthlyCategory::Advertising, date);
+      exp_this += financials.current_month(MonthlyCategory::Advertising, date);
+    }
     draw_label_and_amounts("expenditure", exp_last, exp_this, pos);
     create_clickable_row(MonthlyCategory::Staff, pos, false, true,
                          "expenditure_total");
 
     for (auto category : expenditure_categories) {
-      pos.y += line_spacing;
+      pos.y += expense_spacing;
       Money this_m = financials.current_month(category, date);
       Money last_m = financials.previous_month(category, date);
       draw_label_and_amounts(to_string(category), last_m, this_m, pos);
       create_clickable_row(category, pos, false, false, to_string(category));
+    }
+    if (enhanced) {
+      pos.y += expense_spacing;
+      draw_label_and_amounts("advertising",
+          financials.previous_month(MonthlyCategory::Advertising, date),
+          financials.current_month(MonthlyCategory::Advertising, date), pos);
     }
   }
 

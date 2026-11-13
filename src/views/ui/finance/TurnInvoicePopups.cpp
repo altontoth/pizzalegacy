@@ -136,7 +136,9 @@ void show_weekly_city_invoice_popup(GameContext& context, GameState& gs,
 
   InvoiceConfig cfg;
   cfg.subtitle = "for " + player->name();
-  cfg.lines.push_back({"week's profit", std::nullopt});
+  cfg.lines.push_back({gs.options().qol_improvements
+                           ? "profits while away"
+                           : "week's profit", std::nullopt});
   cfg.lines.push_back(empty_line);
   for (const auto& entry : profits.entries) {
     cfg.lines.push_back(

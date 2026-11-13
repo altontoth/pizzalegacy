@@ -54,10 +54,11 @@ enum class MonthlyCategory {
   Protection,
   Repayment,
   Others,
+  Advertising,
 };
 
 inline constexpr std::size_t category_count =
-    static_cast<std::size_t>(MonthlyCategory::Others) + 1;
+    static_cast<std::size_t>(MonthlyCategory::Advertising) + 1;
 
 inline constexpr std::array receipt_categories = {
     MonthlyCategory::Sales,
@@ -132,6 +133,8 @@ inline std::string_view to_string(MonthlyCategory category) {
     return "repayment";
   case MonthlyCategory::Others:
     return "others";
+  case MonthlyCategory::Advertising:
+    return "advertising";
   }
   return "unknown";
 }
