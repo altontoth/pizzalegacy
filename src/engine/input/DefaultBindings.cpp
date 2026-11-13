@@ -77,6 +77,10 @@ void configure_default_bindings(InputManager& in) {
   in.bind_button(chord("Down"), Action::ScrollDown);
   in.bind_button(chord("Left"), Action::ScrollLeft);
   in.bind_button(chord("Right"), Action::ScrollRight);
+  in.bind_button(chord("W"), Action::ScrollUp);
+  in.bind_button(chord("S"), Action::ScrollDown);
+  in.bind_button(chord("A"), Action::ScrollLeft);
+  in.bind_button(chord("D"), Action::ScrollRight);
 
   in.begin_section("Recipes");
   in.bind_button(chord("F1"), Action::LoadRecipe);

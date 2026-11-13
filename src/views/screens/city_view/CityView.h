@@ -166,6 +166,7 @@ private:
   Surface zoom_box_far_;
   Surface zoom_box_medium_;
   std::optional<CarManager> car_mgr_;
+  int traffic_tick_phase_ = 0;
   std::optional<audio::SoundId> current_city_sound_;
   DropdownManager<Dropdown> dropdowns_;
   std::vector<uint8_t> water_indices_;

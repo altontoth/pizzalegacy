@@ -658,7 +658,10 @@ void CityView::tick() {
   water_animation_.update();
   if (zoom_ == ZoomLevel::CLOSE) {
     WorldRect view = camera_.visible_world_rect();
-    car_mgr_->update(view);
+    // Advance traffic on three of every four presentation ticks.
+    // Keep the existing car movement, collision and spawning logic intact.
+    traffic_tick_phase_ = (traffic_tick_phase_ + 1) % 4;
+    car_mgr_->update(view, traffic_tick_phase_ == 0 ? 0 : 1);
     mark_dirty();
   }
   else {
