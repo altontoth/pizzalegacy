@@ -50,6 +50,7 @@ private:
                                 const std::vector<std::string>& fragments,
                                 NewspaperAdFormat ad_format);
   void finalize_purchase();
+  void commit_campaign(const AdvertisingCampaign& campaign);
 
   void set_up_input_panel();
   void reset_new_campaign(AdvertisingChannel channel);

@@ -18,6 +18,7 @@
 #include "resources/FontManager.h"
 #include "views/base/ViewDefs.h"
 #include "views/ui/PageDecoration.h"
+#include "views/helpers/FinancialReview.h"
 
 #include <algorithm>
 
@@ -48,6 +49,10 @@ void RestaurantStats::render(const RenderContext& ctx) {
   uint8_t bg_color = 21;
   ctx.surface->fill(bg_color);
 
+  if (automatic_mode_ && financial_review_) {
+    render_financial_review(ctx);
+    return;
+  }
   if (automatic_mode_ && daily_review_) {
     render_daily_review(ctx);
     return;
@@ -82,20 +87,31 @@ void RestaurantStats::create_buttons() {
 
   // Only enhanced mode inserts a review into the end-of-day pipeline.
   if (automatic_mode_) {
-    if (daily_review_) {
+    if (daily_review_ || financial_review_) {
       input_panel_->add_button(Icon::ARROW_BACK, BT::Square,
                                ButtonPosition::BottomLeft, "Back", [this] {
-                                 daily_review_ = false;
+                                 if (financial_review_) {
+                                   financial_review_ = false;
+                                   daily_review_ = true;
+                                 } else {
+                                   daily_review_ = false;
+                                 }
                                  refresh_report_buttons_ = true;
                                  mark_dirty();
                                });
     }
     input_panel_->add_button(
         Icon::SELL, BT::Horizontal, ButtonPosition::BottomCenter,
-        daily_review_ || !state_.options().qol_improvements ? "Continue" : "Next",
+        financial_review_ || !state_.options().qol_improvements ? "Continue" : "Next",
         [this] {
           if (!daily_review_ && state_.options().qol_improvements) {
             daily_review_ = true;
+            refresh_report_buttons_ = true;
+            mark_dirty();
+            return;
+          }
+          if (daily_review_ && !financial_review_ && state_.options().qol_improvements) {
+            financial_review_ = true;
             refresh_report_buttons_ = true;
             mark_dirty();
             return;
@@ -238,7 +254,7 @@ void RestaurantStats::render_daily_balance(const RenderContext& ctx) {
                                   TextAnchor::Start);
 
   if (automatic_mode_ && state_.options().qol_improvements) {
-    context_.font->render_line_onto(*ctx.surface, "1 / 2",
+    context_.font->render_line_onto(*ctx.surface, "1 / 3",
                                     ViewPoint{center_x, 70}, FontFace::SUPERSMA,
                                     11, TextAnchor::Middle);
   }
@@ -458,7 +474,46 @@ void RestaurantStats::render_daily_review(const RenderContext& ctx) {
          "Review the production screen.");
   }
 
-  line("2 / 2", 312, 11);
+  line("2 / 3", 312, 11);
+}
+
+void RestaurantStats::render_financial_review(const RenderContext& ctx) {
+  views::ui::render_cork_background(*ctx.surface,
+                                    context_.vga->get("gfx/permap"));
+  render_paper(ctx, ViewRect{10, 14, 360, 328});
+  const int center = ctx.surface->width() / 2;
+  auto line = [&](const std::string& text, int y, int color = 240,
+                  FontFace font = FontFace::PIZ_NUMB) {
+    context_.font->render_line_onto(*ctx.surface, text, ViewPoint{center, y},
+                                    font, color, TextAnchor::Middle);
+  };
+  line(restaurant_->name(), 24, 11);
+  line("financial review", 50, 11, FontFace::RUBY);
+  gfx::draw::line(*ctx.surface, {36, 80}, {346, 80}, 14, 2);
+  const auto* player = state_.restaurant_owner(*restaurant_);
+  if (!player) return;
+  const auto estimate = views::finance_review::estimate(
+      state_, *player, restaurant_->property().city().id());
+  const auto& day = restaurant_->stats().yesterday;
+  const auto projected_cash = player->cash_balance() + day.revenue;
+  line(compat::format("Gross profit: {}", day.gross_profit), 94);
+  line(compat::format("Cash after this sale: {}", projected_cash), 116);
+  line(compat::format("City advertising/day: {}", estimate.daily_ads), 138);
+  line(compat::format("Ads remaining: {}", estimate.remaining_ads), 160);
+  line(compat::format("City weekly payroll: {}", estimate.weekly_wages), 182);
+  if (estimate.has_history) {
+    line(compat::format("Est. city profit/day: {}",
+        estimate.daily_operating - estimate.daily_ads), 204);
+  }
+  if (projected_cash < estimate.weekly_wages) {
+    line("Warning: payroll not covered", 232, 11);
+  }
+  if (estimate.has_history && estimate.daily_ads.cents > 0 &&
+      estimate.daily_ads > estimate.daily_operating) {
+    line("Advertising exceeds earnings!", 254, 11);
+  }
+  line("Estimate excludes other overheads.", 282, 11, FontFace::SUPERSMA);
+  line("3 / 3", 312, 11);
 }
 
 void RestaurantStats::render_paper(const RenderContext& ctx, ViewRect box) {

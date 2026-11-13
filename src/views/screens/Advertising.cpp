@@ -14,6 +14,9 @@
 #include "magic_enum/magic_enum.hpp"
 #include "resources/FontTypes.h"
 #include "views/base/ViewDefs.h"
+#include "views/helpers/FinancialReview.h"
+#include "views/ui/PopupManager.h"
+#include "views/ui/popups/ConfirmPopup.h"
 
 #include <array>
 #include <cassert>
@@ -204,6 +207,16 @@ void Advertising::render_overview(const RenderContext& ctx) {
           *ctx.surface, compat::format("{} %", effectiveness),
           ViewPoint{ADVERTISING_INFO_PCT_RIGHT_X, text_y}, FontFace::PIZ_NUMB,
           ADVERTISING_INFO_TEXT_COLOR, TextAnchor::End);
+    }
+  }
+  if (state_.options().qol_improvements && channel_) {
+    const auto campaign = state_.active_player()->get_campaign(
+        state_.active_city_id(), *channel_);
+    if (campaign && campaign->days_remaining > 0) {
+      context_.font->render_line_onto(
+          *ctx.surface, compat::format("Per day: {}  Left: {}",
+              campaign->rate.cost, campaign->rate.cost * campaign->days_remaining),
+          ViewPoint{192, 330}, FontFace::SUPERSMA, 240, TextAnchor::Middle);
     }
   }
 }
@@ -766,6 +779,30 @@ void Advertising::finalize_purchase() {
     break;
   }
 
+  if (state_.options().qol_improvements) {
+    const auto* player = state_.active_player();
+    const auto estimate = views::finance_review::estimate(
+        state_, *player, campaign.city_id);
+    const auto total = campaign.rate.cost * campaign.days_remaining;
+    const bool risky = total + estimate.remaining_ads + estimate.weekly_wages >
+                           player->cash_balance() ||
+        (estimate.has_history && estimate.daily_ads + campaign.rate.cost >
+                                     estimate.daily_operating);
+    const auto message = compat::format(
+        "{} per day, {} for {} days. {} Start campaign?",
+        campaign.rate.cost, total, campaign.days_remaining,
+        risky ? "Warning: may exceed available funds or earnings." : "");
+    context_.popup->origin({8, 90});
+    context_.popup->create<ConfirmPopup>(message, [this, campaign](bool yes) {
+      if (yes) commit_campaign(campaign);
+      mark_dirty();
+    });
+    return;
+  }
+  commit_campaign(campaign);
+}
+
+void Advertising::commit_campaign(const AdvertisingCampaign& campaign) {
   // Store campaign with player
   state_.active_player()->add_campaign(campaign);
 
@@ -797,6 +834,7 @@ void Advertising::post_purchase_status() {
   }
 
   StatusDisplayRecipe recipe;
+  Money daily_cost{0};
   switch (*channel_) {
   case AdvertisingChannel::FLYERS: {
     if (!flyer_count_) {
@@ -805,7 +843,8 @@ void Advertising::post_purchase_status() {
     int count_index = (*flyer_count_ / FLYERS_STEP_SIZE) - 1;
     Money cost{static_cast<int64_t>((count_index + 1) * 50 * 100)};
     recipe.add_two_column("Output:", compat::format("{}", *flyer_count_));
-    recipe.add_two_column("Costs:", compat::format("{:w}", cost));
+    daily_cost = cost;
+    recipe.add_two_column(state_.options().qol_improvements ? "Cost/day:" : "Costs:", compat::format("{:w}", cost));
     break;
   }
   case AdvertisingChannel::POSTERS: {
@@ -814,7 +853,8 @@ void Advertising::post_purchase_status() {
     }
     const auto& option =
         state_.active_city()->poster_option(*poster_selection_);
-    recipe.add_two_column("Costs:", compat::format("{:w}", option.cost));
+    daily_cost = option.cost;
+    recipe.add_two_column(state_.options().qol_improvements ? "Cost/day:" : "Costs:", compat::format("{:w}", option.cost));
     break;
   }
   case AdvertisingChannel::TV_ADS: {
@@ -822,7 +862,8 @@ void Advertising::post_purchase_status() {
       return;
     }
     const auto& option = state_.active_city()->tv_ad_option(*tv_ad_selection_);
-    recipe.add_two_column("Costs:", compat::format("{:w}", option.cost));
+    daily_cost = option.cost;
+    recipe.add_two_column(state_.options().qol_improvements ? "Cost/day:" : "Costs:", compat::format("{:w}", option.cost));
     break;
   }
   case AdvertisingChannel::NEWSPAPER_ADS: {
@@ -831,14 +872,19 @@ void Advertising::post_purchase_status() {
     }
     // e.g. "half page 2 colours" headline, then the cost line.
     recipe.add_header(newspaper_game_.size_label());
-    recipe.add_two_column("Costs:",
-                          compat::format("{:w}", newspaper_game_.cost()));
+    daily_cost = newspaper_game_.cost();
+    recipe.add_two_column(state_.options().qol_improvements ? "Cost/day:" : "Costs:",
+                          compat::format("{:w}", daily_cost));
     break;
   }
   default:
     return;
   }
 
+  if (state_.options().qol_improvements) {
+    recipe.add_two_column("Days:", compat::format("{}", campaign_duration_));
+    recipe.add_two_column("Total:", compat::format("{:w}", daily_cost * campaign_duration_));
+  }
   state_.status().set_baseline(
       [recipe = std::move(recipe)]() { return recipe; });
 }

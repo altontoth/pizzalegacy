@@ -39,6 +39,7 @@ private:
   void create_buttons();
   void render_daily_balance(const RenderContext& ctx);
   void render_daily_review(const RenderContext& ctx);
+  void render_financial_review(const RenderContext& ctx);
   void render_week_review(const RenderContext& ctx);
   void render_month_review(const RenderContext& ctx);
   void render_customer_stats(const RenderContext& ctx);
@@ -51,6 +52,7 @@ private:
   RestaurantStatsScreen current_screen_{RestaurantStatsScreen::Daily_Balance};
   bool automatic_mode_{false};
   bool daily_review_{false};
+  bool financial_review_{false};
   bool refresh_report_buttons_{false};
   Bob& stanbobs_;
   Blitmap<Blitmap2Icon>& blitmap2_;
