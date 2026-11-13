@@ -21,7 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: development
+          ref: ${{ github.ref_name == 'development' && github.sha || 'development' }}
       - name: Initialize Visual Studio x64 compiler
         shell: pwsh
         run: |
@@ -48,6 +48,7 @@ jobs:
           }
       - name: Set up compiler cache
         uses: mozilla-actions/sccache-action@v0.0.9
+        continue-on-error: true
       - name: Prepare dependency cache
         shell: pwsh
         run: New-Item -ItemType Directory -Force -Path $env:VCPKG_DEFAULT_BINARY_CACHE | Out-Null
@@ -77,16 +78,24 @@ jobs:
       - name: Configure
         shell: pwsh
         run: |
-          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DUSE_CCACHE=OFF "-DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-windows "-DCMAKE_C_COMPILER_LAUNCHER=$env:SCCACHE_PATH" "-DCMAKE_CXX_COMPILER_LAUNCHER=$env:SCCACHE_PATH" -DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded -DCMAKE_POLICY_CMP0141=NEW
+          $args = @('-S', '.', '-B', 'build', '-G', 'Ninja', '-DCMAKE_BUILD_TYPE=Release', '-DUSE_CCACHE=OFF', "-DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake", '-DVCPKG_TARGET_TRIPLET=x64-windows')
+          $cache = Get-Command sccache -ErrorAction SilentlyContinue
+          if ($cache) {
+            $launcher = $cache.Source.Replace('\', '/')
+            $args += @("-DCMAKE_C_COMPILER_LAUNCHER=$launcher", "-DCMAKE_CXX_COMPILER_LAUNCHER=$launcher")
+          }
+          cmake @args
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Verify compiler launcher
         shell: pwsh
         run: |
-          $rules = Get-Content build/CMakeFiles/rules.ninja
-          $matches = $rules | Select-String -Pattern 'sccache'
-          if (-not $matches) { throw 'Ninja compiler rules do not invoke sccache' }
-          $matches | Select-Object -First 4
-          sccache --zero-stats
+          $matches = Get-ChildItem build -Recurse -Filter '*.ninja' | Select-String -Pattern 'sccache'
+          if ($matches) {
+            $matches | Select-Object -First 4
+            sccache --zero-stats
+          } else {
+            Write-Warning 'No sccache launcher found in Ninja files; proceeding without compiler caching.'
+          }
       - name: Compile
         shell: pwsh
         run: |
@@ -96,6 +105,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Compiler cache statistics
         if: always()
+        continue-on-error: true
         run: sccache --show-stats
       - name: Package Windows build
         shell: pwsh
