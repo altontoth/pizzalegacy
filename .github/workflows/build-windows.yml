@@ -1,0 +1,63 @@
+name: Windows development build
+
+on:
+  push:
+    branches: [development]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+      - name: Install dependencies
+        shell: pwsh
+        run: |
+          & "$env:VCPKG_INSTALLATION_ROOT/vcpkg.exe" install sdl3:x64-windows zlib:x64-windows
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          git clone --depth 1 --branch v1.6.1 https://github.com/Wohlstand/libADLMIDI.git third_party/libadlmidi
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Set development version
+        shell: pwsh
+        run: |
+          $path = 'CMakeLists.txt'
+          $source = Get-Content $path -Raw
+          $pattern = 'set\(PLEGACY_VERSION_SUFFIX "([^"]*)"\)'
+          if ($source -notmatch $pattern) { throw 'Version suffix not found' }
+          $source = $source -replace $pattern, 'set(PLEGACY_VERSION_SUFFIX "$1-dev")'
+          Set-Content $path $source -NoNewline
+      - name: Configure
+        shell: pwsh
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DUSE_CCACHE=OFF "-DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-windows
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Compile
+        run: cmake --build build --parallel 2
+      - name: Package Windows build
+        shell: pwsh
+        run: |
+          $out = 'PizzaLegacy-win64-dev'
+          New-Item -ItemType Directory -Path $out | Out-Null
+          Copy-Item 'build/Pizza Legacy.exe' $out
+          Copy-Item 'build/*.dll' $out
+          Copy-Item 'build/data' $out -Recurse
+          Copy-Item 'build/dist/README-Windows.txt' "$out/README.txt"
+          Copy-Item 'build/dist/THIRD_PARTIES.txt' $out
+          Copy-Item 'LICENSES' $out -Recurse
+          Copy-Item 'LICENSES/GPL-3.0-or-later.txt' "$out/LICENSE.txt"
+          $sha = $env:GITHUB_SHA.Substring(0, 7)
+          Set-Content "$out/BUILD-COMMIT.txt" $env:GITHUB_SHA
+          Compress-Archive -Path $out -DestinationPath "PizzaLegacy-win64-dev-$sha.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PizzaLegacy-Windows-development
+          path: PizzaLegacy-win64-dev-*.zip
+          if-no-files-found: error
+          retention-days: 30
