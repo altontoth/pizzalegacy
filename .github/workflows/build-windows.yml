@@ -29,77 +29,14 @@ jobs:
           $vars = & cmd.exe /d /c $bat
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           foreach ($line in $vars) {
-            if ($line -match '^([^=]+)=(.*)
-      - name: Set up compiler cache
-        uses: mozilla-actions/sccache-action@v0.0.9
-      - name: Prepare dependency cache
-        shell: pwsh
-        run: New-Item -ItemType Directory -Force -Path $env:VCPKG_DEFAULT_BINARY_CACHE | Out-Null
-      - name: Restore dependency cache
-        uses: actions/cache@v5
-        with:
-          path: vcpkg-cache
-          key: vcpkg-windows-x64-${{ runner.os }}-${{ hashFiles('.github/workflows/build-windows.yml') }}
-          restore-keys: |
-            vcpkg-windows-x64-${{ runner.os }}-
-      - name: Install dependencies
-        shell: pwsh
-        run: |
-          & "$env:VCPKG_INSTALLATION_ROOT/vcpkg.exe" install sdl3:x64-windows zlib:x64-windows
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          git clone --depth 1 --branch v1.6.1 https://github.com/Wohlstand/libADLMIDI.git third_party/libadlmidi
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Set development version
-        shell: pwsh
-        run: |
-          $path = 'CMakeLists.txt'
-          $source = Get-Content $path -Raw
-          $pattern = 'set\(PLEGACY_VERSION_SUFFIX "([^"]*)"\)'
-          if ($source -notmatch $pattern) { throw 'Version suffix not found' }
-          $source = $source -replace $pattern, 'set(PLEGACY_VERSION_SUFFIX "$1-dev")'
-          Set-Content $path $source -NoNewline
-      - name: Configure
-        shell: pwsh
-        run: |
-          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DUSE_CCACHE=OFF "-DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-windows -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Compile
-        shell: pwsh
-        run: |
-          $jobs = [Math]::Min(4, [Environment]::ProcessorCount)
-          Write-Host "Building with $jobs parallel jobs"
-          cmake --build build --parallel $jobs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Compiler cache statistics
-        if: always()
-        run: sccache --show-stats
-      - name: Package Windows build
-        shell: pwsh
-        run: |
-          $out = 'PizzaLegacy-win64-dev'
-          New-Item -ItemType Directory -Path $out | Out-Null
-          Copy-Item 'build/Pizza Legacy.exe' $out
-          Copy-Item 'build/*.dll' $out
-          Copy-Item 'build/data' $out -Recurse
-          Copy-Item 'build/dist/README-Windows.txt' "$out/README.txt"
-          Copy-Item 'build/dist/THIRD_PARTIES.txt' $out
-          Copy-Item 'LICENSES' $out -Recurse
-          Copy-Item 'LICENSES/GPL-3.0-or-later.txt' "$out/LICENSE.txt"
-          $sha = $env:GITHUB_SHA.Substring(0, 7)
-          Set-Content "$out/BUILD-COMMIT.txt" $env:GITHUB_SHA
-          Compress-Archive -Path $out -DestinationPath "PizzaLegacy-win64-dev-$sha.zip"
-      - uses: actions/upload-artifact@v6
-        with:
-          name: PizzaLegacy-Windows-development
-          path: PizzaLegacy-win64-dev-*.zip
-          if-no-files-found: error
-          retention-days: 30
-) {
+            if ($line -match '^([^=]+)=(.*)$') {
               $name = $Matches[1]
               $value = $Matches[2]
               if ($name -eq 'Path') {
-                $value -split ';' | Where-Object { $_ } | Select-Object -Unique | ForEach-Object { $_ >> $env:GITHUB_PATH }
-              } elseif ($name -notmatch '^(GITHUB_|RUNNER_|NODE_OPTIONS$)') {
+                $paths = @($value -split ';' | Where-Object { $_ } | Select-Object -Unique)
+                [array]::Reverse($paths)
+                $paths | ForEach-Object { $_ >> $env:GITHUB_PATH }
+              } elseif ($name -notmatch '^(GITHUB_|RUNNER_|NODE_OPTIONS$)' -and [Environment]::GetEnvironmentVariable($name) -ne $value) {
                 "$name=$value" >> $env:GITHUB_ENV
               }
             }
