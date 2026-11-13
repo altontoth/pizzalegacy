@@ -47,6 +47,7 @@
 #include "views/ui/PopupManager.h"
 #include "views/ui/popups/AlertPopup.h"
 #include "views/ui/popups/ConfirmPopup.h"
+#include "views/ui/popups/BusinessHoursPopup.h"
 #include "views/ui/popups/GuestTalkPopup.h"
 #include "views/ui/popups/JukeboxPopup.h"
 #include "views/ui/popups/NumberInputPopup.h"
@@ -311,6 +312,77 @@ bool RestaurantView::on_action(const input::ActionEvent& ev) {
   return false;
 }
 
+void RestaurantView::confirm_open_close() {
+  context_.popup->origin(ViewPoint{52, 80});
+  if (restaurant_->wants_open()) {
+    context_.popup->create<ConfirmPopup>(
+        "Close restaurant?", [this](bool close) {
+          Logger::debug("Closing restaurant: {}", close ? "Yes" : "No");
+          if (close) {
+            restaurant_->close_for_business();
+            restaurant_->add_reputation_damage(-16, 16);
+            update_restaurant_noise();
+          }
+          mark_dirty();
+        });
+  }
+  else {
+    if (restaurant_->is_force_closed()) {
+      context_.popup->create<AlertPopup>(
+          "You can not open the restaurant|right now!", []() {});
+      return;
+    }
+
+    const auto oven_count = restaurant_->count_ovens();
+    if (oven_count <= 0) {
+      context_.popup->create<AlertPopup>(
+          "You still need ovens|before you can open the|restaurant!",
+          []() {});
+      return;
+    }
+
+    const auto cook_count = restaurant_->count_cooks();
+    if (cook_count == 0) {
+      context_.popup->create<AlertPopup>(
+          "You still need kitchen|staff before you can open|the "
+          "restaurant!",
+          []() {});
+      return;
+    }
+
+    const auto waiter_count = restaurant_->count_waiters();
+    if (waiter_count == 0) {
+      context_.popup->create<AlertPopup>(
+          "You still need waiters|before you can open the|restaurant!",
+          []() {});
+      return;
+    }
+
+    const auto menu_count = restaurant_->count_menu_items();
+    if (menu_count == 0) {
+      context_.popup->create<AlertPopup>(
+          "You still need some pizzas|on the menu before you|can open "
+          "the restaurant!",
+          []() {});
+      return;
+    }
+
+    context_.popup->create<ConfirmPopup>(
+        "Open restaurant?", [this](bool open) {
+          Logger::debug("Opening restaurant: {}", open ? "Yes" : "No");
+          if (open) {
+            restaurant_->open_for_business(state_);
+            update_restaurant_noise();
+            if (auto* player = state_.active_player()) {
+              state_.milestones().check_restaurant_milestones(*player);
+            }
+          }
+
+          mark_dirty();
+        });
+  }
+}
+
 void RestaurantView::set_up_buttons() {
   input_panel_->delete_buttons();
   if (view_mode_ == RestaurantViewMode::OPPONENT_VIEW) {
@@ -347,75 +419,24 @@ void RestaurantView::set_up_buttons() {
   }
 
   input_panel_->add_button(
-      Icon::KEY, ButtonType::Square, ButtonPosition::TopLeft, "Open/close",
+      Icon::KEY, ButtonType::Square, ButtonPosition::TopLeft,
+      state_.options().qol_improvements ? "Business hours / Open-close" : "Open/close",
       [this]() {
-        context_.popup->origin(ViewPoint{52, 80});
-        if (restaurant_->wants_open()) {
-          context_.popup->create<ConfirmPopup>(
-              "Close restaurant?", [this](bool close) {
-                Logger::debug("Closing restaurant: {}", close ? "Yes" : "No");
-                if (close) {
-                  restaurant_->close_for_business();
-                  restaurant_->add_reputation_damage(-16, 16);
-                  update_restaurant_noise();
-                }
+        if (state_.options().qol_improvements) {
+          context_.popup->origin({12, 70});
+          context_.popup->create<BusinessHoursPopup>(
+              restaurant_->opening_time(), restaurant_->closing_time(),
+              restaurant_->wants_open(),
+              [this](core::time::TimeOfDay opening, core::time::TimeOfDay closing) {
+                restaurant_->opening_time(opening);
+                restaurant_->closing_time(closing);
+                restaurant_->recalculate_economy_metrics(state_);
+                update_restaurant_noise();
                 mark_dirty();
-              });
-        }
-        else {
-          if (restaurant_->is_force_closed()) {
-            context_.popup->create<AlertPopup>(
-                "You can not open the restaurant|right now!", []() {});
-            return;
-          }
-
-          const auto oven_count = restaurant_->count_ovens();
-          if (oven_count <= 0) {
-            context_.popup->create<AlertPopup>(
-                "You still need ovens|before you can open the|restaurant!",
-                []() {});
-            return;
-          }
-
-          const auto cook_count = restaurant_->count_cooks();
-          if (cook_count == 0) {
-            context_.popup->create<AlertPopup>(
-                "You still need kitchen|staff before you can open|the "
-                "restaurant!",
-                []() {});
-            return;
-          }
-
-          const auto waiter_count = restaurant_->count_waiters();
-          if (waiter_count == 0) {
-            context_.popup->create<AlertPopup>(
-                "You still need waiters|before you can open the|restaurant!",
-                []() {});
-            return;
-          }
-
-          const auto menu_count = restaurant_->count_menu_items();
-          if (menu_count == 0) {
-            context_.popup->create<AlertPopup>(
-                "You still need some pizzas|on the menu before you|can open "
-                "the restaurant!",
-                []() {});
-            return;
-          }
-
-          context_.popup->create<ConfirmPopup>(
-              "Open restaurant?", [this](bool open) {
-                Logger::debug("Opening restaurant: {}", open ? "Yes" : "No");
-                if (open) {
-                  restaurant_->open_for_business(state_);
-                  update_restaurant_noise();
-                  if (auto* player = state_.active_player()) {
-                    state_.milestones().check_restaurant_milestones(*player);
-                  }
-                }
-
-                mark_dirty();
-              });
+              },
+              [this] { confirm_open_close(); });
+        } else {
+          confirm_open_close();
         }
       });
 

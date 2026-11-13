@@ -81,6 +81,7 @@ private:
   void apply_view_camera();
   void calculate_background_dimensions();
   void set_up_buttons();
+  void confirm_open_close();
 
   struct CompetitionFlow {
     core::PlayerId human_pid;
