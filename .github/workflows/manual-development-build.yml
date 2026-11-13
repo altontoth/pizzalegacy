@@ -1,0 +1,11 @@
+name: Build Pizza Legacy development manually
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    uses: altontoth/pizzalegacy/.github/workflows/build-windows.yml@development
