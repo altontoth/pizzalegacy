@@ -730,8 +730,6 @@ void Advertising::finalize_purchase() {
     return;
   }
 
-  last_purchased_type_ = channel_;
-
   AdvertisingCampaign campaign;
   campaign.channel = *channel_;
   campaign.city_id = state_.active_city_id();
@@ -789,9 +787,9 @@ void Advertising::finalize_purchase() {
         (estimate.has_history && estimate.daily_ads + campaign.rate.cost >
                                      estimate.daily_operating);
     const auto message = compat::format(
-        "{} per day, {} for {} days. {} Start campaign?",
+        "{} / day. {} for {} days. {} Start?",
         campaign.rate.cost, total, campaign.days_remaining,
-        risky ? "Warning: may exceed available funds or earnings." : "");
+        risky ? "Warning: funds or earnings may be too low." : "");
     context_.popup->origin({8, 90});
     context_.popup->create<ConfirmPopup>(message, [this, campaign](bool yes) {
       if (yes) commit_campaign(campaign);
@@ -803,6 +801,7 @@ void Advertising::finalize_purchase() {
 }
 
 void Advertising::commit_campaign(const AdvertisingCampaign& campaign) {
+  last_purchased_type_ = campaign.channel;
   // Store campaign with player
   state_.active_player()->add_campaign(campaign);
 

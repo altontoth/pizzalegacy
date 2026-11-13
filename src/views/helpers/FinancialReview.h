@@ -2,6 +2,7 @@
 #pragma once
 #include "core/character/Player.h"
 #include "core/city/Property.h"
+#include "core/city/City.h"
 #include "core/finance/TurnInvoices.h"
 #include "core/restaurant/Restaurant.h"
 #include "core/state/GameState.h"
