@@ -42,6 +42,11 @@ void RestaurantStats::render(const RenderContext& ctx) {
   uint8_t bg_color = 21;
   ctx.surface->fill(bg_color);
 
+  if (automatic_mode_ && daily_review_) {
+    render_daily_review(ctx);
+    return;
+  }
+
   switch (current_screen_) {
   case RestaurantStatsScreen::Daily_Balance:
     render_daily_balance(ctx);
@@ -69,10 +74,15 @@ void RestaurantStats::create_buttons() {
   using RS = RestaurantStatsScreen;
   using BT = ButtonType;
 
-  // In automatic mode (end of day report), only show the dismiss button
+  // The first click opens the review; only the second advances the turn.
   if (automatic_mode_) {
     input_panel_->add_button(Icon::SELL, BT::Horizontal,
-                             ButtonPosition::BottomCenter, "", [this]() {
+                             ButtonPosition::BottomCenter, "Next", [this]() {
+                               if (!daily_review_) {
+                                 daily_review_ = true;
+                                 mark_dirty();
+                                 return;
+                               }
                                state_.ui().pop();
                                state_.turn().advance_pipeline();
                              });
@@ -210,6 +220,12 @@ void RestaurantStats::render_daily_balance(const RenderContext& ctx) {
                                   ViewPoint{268, 84}, FontFace::PIZ_NUMB, 14,
                                   TextAnchor::Start);
 
+  if (automatic_mode_) {
+    context_.font->render_line_onto(*ctx.surface, "1 / 2",
+                                    ViewPoint{center_x, 70}, FontFace::SUPERSMA,
+                                    11, TextAnchor::Middle);
+  }
+
   // Get stats data
   const auto& yesterday = restaurant_->stats().yesterday;
   const auto& day_before = restaurant_->stats().day_before_yesterday;
@@ -339,6 +355,61 @@ void RestaurantStats::render_daily_balance(const RenderContext& ctx) {
       *ctx.surface, compat::format("{}", day_before.total_expenditure()),
       ViewPoint{money_day_before_x, y}, FontFace::PIZ_NUMB, day_before_color,
       TextAnchor::End);
+}
+
+void RestaurantStats::render_daily_review(const RenderContext& ctx) {
+  views::ui::render_cork_background(*ctx.surface,
+                                    context_.vga->get("gfx/permap"));
+  render_paper(ctx, ViewRect{10, 14, 360, 328});
+
+  const int center = ctx.surface->width() / 2;
+  auto line = [&](std::string text, int y, int color = 240,
+                  FontFace font = FontFace::PIZ_NUMB) {
+    context_.font->render_line_onto(*ctx.surface, text, ViewPoint{center, y},
+                                    font, color, TextAnchor::Middle);
+  };
+  line(restaurant_->name(), 24, 11);
+  line(restaurant_->manager() ? "manager's report" : "owner's daily review",
+       50, 11, FontFace::RUBY);
+  gfx::draw::line(*ctx.surface, {36, 80}, {346, 80}, 14, 2);
+
+  // Like the financial settlement, use the archived day, not today's
+  // freshly reset counters or the stock remaining after service.
+  const auto& day = restaurant_->stats().yesterday;
+  line(compat::format("Orders served: {} / {}", day.orders_fulfilled,
+                      day.orders_generated), 94);
+  int y = 124;
+  auto note = [&](const std::string& title, const std::string& advice) {
+    line(title, y, 11);
+    line(advice, y + 22);
+    y += 56;
+  };
+
+  if (day.lost_due_to_ingredients > 0) {
+    note(compat::format("{} orders: ingredient shortage",
+                        day.lost_due_to_ingredients),
+         "Restock ingredients before opening.");
+  }
+  if (day.lost_due_to_capacity > 0) {
+    note(compat::format("{} orders: capacity shortage",
+                        day.lost_due_to_capacity),
+         "Review ovens, cooks and waiters.");
+  }
+  if (day.orders_generated == 0) {
+    note("No orders recorded",
+         "Review your menu, prices and appeal.");
+  }
+  else if (day.orders_fulfilled >= day.orders_generated) {
+    note("All orders fulfilled",
+         "Keep enough stock for tomorrow.");
+  }
+  else if (day.lost_due_to_ingredients == 0 &&
+           day.lost_due_to_capacity == 0) {
+    note("Some orders went unfulfilled",
+         "Review the production screen.");
+  }
+
+  line("2 / 2", 312, 11);
 }
 
 void RestaurantStats::render_paper(const RenderContext& ctx, ViewRect box) {
