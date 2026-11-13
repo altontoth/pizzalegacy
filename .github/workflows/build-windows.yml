@@ -1,8 +1,7 @@
 name: Windows development build
 
 on:
-  push:
-    branches: [development]
+  workflow_call:
   workflow_dispatch:
 
 permissions:
@@ -18,6 +17,8 @@ jobs:
       VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}\vcpkg-cache
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: development
       - name: Initialize Visual Studio x64 compiler
         shell: pwsh
         run: |
@@ -105,8 +106,9 @@ jobs:
           Copy-Item 'build/dist/THIRD_PARTIES.txt' $out
           Copy-Item 'LICENSES' $out -Recurse
           Copy-Item 'LICENSES/GPL-3.0-or-later.txt' "$out/LICENSE.txt"
-          $sha = $env:GITHUB_SHA.Substring(0, 7)
-          Set-Content "$out/BUILD-COMMIT.txt" $env:GITHUB_SHA
+          $commit = git rev-parse HEAD
+          $sha = $commit.Substring(0, 7)
+          Set-Content "$out/BUILD-COMMIT.txt" $commit
           Compress-Archive -Path $out -DestinationPath "PizzaLegacy-win64-dev-$sha.zip"
       - uses: actions/upload-artifact@v6
         with:
