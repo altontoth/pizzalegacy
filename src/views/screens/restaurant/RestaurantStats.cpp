@@ -408,9 +408,41 @@ void RestaurantStats::render_daily_review(const RenderContext& ctx) {
          "Restock ingredients before opening.");
   }
   if (day.lost_due_to_capacity > 0) {
-    note(compat::format("{} orders: capacity shortage",
-                        day.lost_due_to_capacity),
-         "Review ovens, cooks and waiters.");
+    line(compat::format("{} orders: capacity shortage",
+                        day.lost_due_to_capacity), y, 11);
+    y += 22;
+    if (day.oven_capacity >= 0 && day.cook_capacity >= 0 &&
+        day.waiter_capacity >= 0) {
+      const int bottleneck = std::min(
+          {day.oven_capacity, day.cook_capacity, day.waiter_capacity});
+      // Show every tied limiting role, then any other role below demand.
+      auto capacity_line = [&](const char* role, int capacity) {
+        if (capacity >= day.orders_generated) {
+          return;
+        }
+        line(compat::format("{}: {} / {}{}", role, capacity,
+                            day.orders_generated,
+                            capacity == bottleneck ? " *" : ""), y);
+        y += 20;
+      };
+      capacity_line("Ovens", day.oven_capacity);
+      capacity_line("Cooks", day.cook_capacity);
+      capacity_line("Waiters", day.waiter_capacity);
+      line("* Main bottleneck", y, 11, FontFace::SUPERSMA);
+      y += 18;
+      if (day.cook_capacity == bottleneck) {
+        line("Hire or train more cooks.", y);
+      }
+      else if (day.oven_capacity == bottleneck) {
+        line("Add or upgrade ovens.", y);
+      }
+      else {
+        line("Hire or train more waiters.", y);
+      }
+    }
+    else {
+      line("Review ovens, cooks and waiters.", y);
+    }
   }
   if (day.orders_generated == 0) {
     note("No orders recorded",

@@ -52,6 +52,11 @@ struct DailyStats {
   int orders_lost{0};
   int lost_due_to_capacity{0};
   int lost_due_to_ingredients{0};
+  // Effective throughput at settlement, including manager fill-ins.
+  // -1 means unavailable (e.g. older saved games).
+  int oven_capacity{-1};
+  int cook_capacity{-1};
+  int waiter_capacity{-1};
 
   // Financial
   Money revenue{0};          // Total sales
@@ -137,6 +142,7 @@ struct DailyStats {
     orders_lost = 0;
     lost_due_to_capacity = 0;
     lost_due_to_ingredients = 0;
+    oven_capacity = cook_capacity = waiter_capacity = -1;
     revenue = Money{0};
     ingredient_costs = Money{0};
     gross_profit = Money{0};

@@ -1287,6 +1287,9 @@ void Restaurant::eod_batch_order_fulfillment(class GameState& game_state) {
   stats_.today.orders_generated = total_orders;
   stats_.today.lost_due_to_ingredients = lost_to_ingredients;
   stats_.today.lost_due_to_capacity = lost_to_capacity;
+  stats_.today.oven_capacity = oven_capacity;
+  stats_.today.cook_capacity = chef_capacity;
+  stats_.today.waiter_capacity = waiter_capacity;
   stats_.today.orders_lost = lost_to_ingredients + lost_to_capacity;
 
   // Demand cache: written from the day's orders like the original (in grams).

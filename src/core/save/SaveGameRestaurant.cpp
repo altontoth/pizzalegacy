@@ -793,6 +793,9 @@ json daily_stats_to_json(const core::restaurant::DailyStats& stats) {
   j["orders_lost"] = stats.orders_lost;
   j["lost_due_to_capacity"] = stats.lost_due_to_capacity;
   j["lost_due_to_ingredients"] = stats.lost_due_to_ingredients;
+  j["oven_capacity"] = stats.oven_capacity;
+  j["cook_capacity"] = stats.cook_capacity;
+  j["waiter_capacity"] = stats.waiter_capacity;
 
   // Financial
   j["revenue"] = stats.revenue.cents;
@@ -850,6 +853,9 @@ core::restaurant::DailyStats json_to_daily_stats(const json& j) {
   stats.orders_lost = j.value("orders_lost", 0);
   stats.lost_due_to_capacity = j.value("lost_due_to_capacity", 0);
   stats.lost_due_to_ingredients = j.value("lost_due_to_ingredients", 0);
+  stats.oven_capacity = j.value("oven_capacity", -1);
+  stats.cook_capacity = j.value("cook_capacity", -1);
+  stats.waiter_capacity = j.value("waiter_capacity", -1);
 
   // Financial
   stats.revenue = Money{j.value("revenue", 0LL)};
