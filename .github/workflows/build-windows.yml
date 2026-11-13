@@ -2,6 +2,9 @@ name: Windows development build
 
 on:
   workflow_call:
+  push:
+    branches: [development]
+    paths: ['.github/build-request.txt']
   workflow_dispatch:
 
 permissions:
