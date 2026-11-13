@@ -35,7 +35,13 @@ RestaurantStats::RestaurantStats(GameContext& context, GameState& state,
   create_buttons();
 }
 
-void RestaurantStats::tick() {}
+void RestaurantStats::tick() {
+  if (refresh_report_buttons_) {
+    refresh_report_buttons_ = false;
+    input_panel_->delete_buttons();
+    create_buttons();
+  }
+}
 
 void RestaurantStats::render(const RenderContext& ctx) {
   ctx.surface->palette(PaletteHandle{8});
@@ -74,18 +80,29 @@ void RestaurantStats::create_buttons() {
   using RS = RestaurantStatsScreen;
   using BT = ButtonType;
 
-  // The first click opens the review; only the second advances the turn.
+  // Only enhanced mode inserts a review into the end-of-day pipeline.
   if (automatic_mode_) {
-    input_panel_->add_button(Icon::SELL, BT::Horizontal,
-                             ButtonPosition::BottomCenter, "Next", [this]() {
-                               if (!daily_review_) {
-                                 daily_review_ = true;
+    if (daily_review_) {
+      input_panel_->add_button(Icon::ARROW_BACK, BT::Square,
+                               ButtonPosition::BottomLeft, "Back", [this] {
+                                 daily_review_ = false;
+                                 refresh_report_buttons_ = true;
                                  mark_dirty();
-                                 return;
-                               }
-                               state_.ui().pop();
-                               state_.turn().advance_pipeline();
-                             });
+                               });
+    }
+    input_panel_->add_button(
+        Icon::SELL, BT::Horizontal, ButtonPosition::BottomCenter,
+        daily_review_ || !state_.options().qol_improvements ? "Continue" : "Next",
+        [this] {
+          if (!daily_review_ && state_.options().qol_improvements) {
+            daily_review_ = true;
+            refresh_report_buttons_ = true;
+            mark_dirty();
+            return;
+          }
+          state_.ui().pop();
+          state_.turn().advance_pipeline();
+        });
     return;
   }
 
@@ -220,7 +237,7 @@ void RestaurantStats::render_daily_balance(const RenderContext& ctx) {
                                   ViewPoint{268, 84}, FontFace::PIZ_NUMB, 14,
                                   TextAnchor::Start);
 
-  if (automatic_mode_) {
+  if (automatic_mode_ && state_.options().qol_improvements) {
     context_.font->render_line_onto(*ctx.surface, "1 / 2",
                                     ViewPoint{center_x, 70}, FontFace::SUPERSMA,
                                     11, TextAnchor::Middle);
