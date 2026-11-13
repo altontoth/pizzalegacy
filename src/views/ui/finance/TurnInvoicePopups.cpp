@@ -79,6 +79,7 @@ void show_electricity_slot_invoice_popup(
   cfg.lines.push_back({"ELECTRICITY:", invoice.electricity});
   cfg.lines.push_back(empty_line);
   if (invoice.detailed) {
+    cfg.show_cents = true;
     constexpr std::array<const char*, 5> labels{
         "Cigarettes:", "Chocolate:", "Chewing gum:", "Telephone:", "Arcade games:"};
     for (std::size_t i = 0; i < labels.size(); ++i) {

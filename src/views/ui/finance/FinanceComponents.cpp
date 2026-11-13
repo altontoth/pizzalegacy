@@ -99,7 +99,8 @@ Surface render_invoice(FontManager& font, const InvoiceConfig& config) {
     }
 
     if (has_value) {
-      font.render_text_onto(invoice, compat::format("{}", *line.value),
+      font.render_text_onto(invoice, (config.show_cents ? compat::format("{:s}", *line.value)
+                                               : compat::format("{}", *line.value)),
                             ViewPoint{config.value_x, y}, config.line_font,
                             COLOR_BLACK, TextAnchor::End);
     }

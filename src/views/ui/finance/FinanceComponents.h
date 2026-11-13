@@ -62,6 +62,7 @@ struct InvoiceConfig {
   int line_spacing = 14;
   int label_x = 16;
   int value_x = 276;
+  bool show_cents = false;
   std::function<void()> on_dismiss;
 };
 

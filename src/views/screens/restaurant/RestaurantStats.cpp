@@ -764,7 +764,7 @@ void RestaurantStats::render_month_review(const RenderContext& ctx) {
 
   if (state_.options().qol_improvements) {
     context_.font->render_line_onto(*ctx.surface,
-        compat::format("Machine takings pending: {}", restaurant_->pending_machine_income()),
+        compat::format("Machine takings pending: {:s}", restaurant_->pending_machine_income()),
         ViewPoint{20, 130}, FontFace::SUPERSMA, text_color, TextAnchor::Start);
   }
 

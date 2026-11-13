@@ -299,6 +299,15 @@ void RealEstate::close_restaurant(Player& player, Property& property) {
   const auto restaurant_id = *property.restaurant_id();
   auto* restaurant = gs_->restaurant(restaurant_id);
   if (restaurant && player.is_human_controlled()) {
+    // Collect already-earned machine takings before destroying the restaurant.
+    const auto takings = restaurant->pending_machine_income();
+    if (takings.cents > 0) {
+      player.financials().transfer(gs_->time().current_date(),
+                                   Account::ProfitAndLoss, Account::Cash,
+                                   takings, restaurant_id,
+                                   MonthlyCategory::CoinMachines);
+      restaurant->machine_takings({});
+    }
     // Closing the restaurant means firing the entire staff.
     auto& city = property.city();
     auto fire_staff = [&](const Staff& staff) {
