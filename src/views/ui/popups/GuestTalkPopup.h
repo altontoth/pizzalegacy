@@ -33,7 +33,7 @@ struct GuestInfo {
 class GuestTalkPopup : public BasePopup {
 public:
   GuestTalkPopup(const GameContext& ctx, GuestInfo info,
-                 const Restaurant* restaurant);
+                 const Restaurant* restaurant, bool enhanced = false);
   void add_interactions(views::ui::InteractionContext ictx,
                         ViewPoint origin) override;
   void render(Surface& surface, ViewPoint origin) override;
@@ -61,5 +61,6 @@ private:
   PopupButton btn_ok_{{101, 168, 100, 24}, "OK", [this] { finished(); }};
 
   std::string select_dialogue(const Restaurant* restaurant,
-                              const std::vector<std::string>& lines) const;
+                              const std::vector<std::string>& lines,
+                              bool enhanced, bool formal) const;
 };

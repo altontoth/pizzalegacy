@@ -1074,7 +1074,8 @@ std::optional<int> RestaurantView::click_guest(core::FurnitureId chair_id) {
       }
 
       context_.popup->origin({62, 60});
-      context_.popup->create<GuestTalkPopup>(info, restaurant_);
+      context_.popup->create<GuestTalkPopup>(info, restaurant_,
+                                             state_.options().qol_improvements);
       guest_talked_to_[chair_id] = true;
       return i;
     }

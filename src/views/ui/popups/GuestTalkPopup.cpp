@@ -5,6 +5,7 @@
  */
 
 #include "views/ui/popups/GuestTalkPopup.h"
+#include "views/ui/popups/EnhancedGuestDialogue.h"
 
 #include <algorithm>
 
@@ -59,12 +60,12 @@ std::vector<std::string> load_gtalk(bool formal) {
 } // namespace
 
 GuestTalkPopup::GuestTalkPopup(const GameContext& ctx, GuestInfo info,
-                               const Restaurant* restaurant)
+                               const Restaurant* restaurant, bool enhanced)
     : BasePopup(ctx), info_(info) {
   // Demographic groups 0-2 -> casual (GTALK0), 3-5 -> formal (GTALK1)
   const bool formal = (static_cast<int>(info_.demographic) / 3) != 0;
   const auto lines = load_gtalk(formal);
-  text_ = select_dialogue(restaurant, lines);
+  text_ = select_dialogue(restaurant, lines, enhanced, formal);
 
   // Prime the mouth state machine (initial blink happens first)
   mouth_tick_ = MOUTH_SEQ[0].second;
@@ -75,9 +76,17 @@ GuestTalkPopup::GuestTalkPopup(const GameContext& ctx, GuestInfo info,
 
 std::string
 GuestTalkPopup::select_dialogue(const Restaurant* restaurant,
-                                const std::vector<std::string>& lines) const {
+                                const std::vector<std::string>& lines,
+                                bool enhanced, bool formal) const {
 
   auto line = [&](int n) -> std::string {
+    if (enhanced && engine::random::presentation::coin_flip()) {
+      const auto extra = enhanced_guest_dialogue::variant(
+          n, formal, engine::random::presentation::rand_max_n(2));
+      if (!extra.empty()) {
+        return std::string(extra);
+      }
+    }
     if (n >= 1 && n < static_cast<int>(lines.size())) {
       return lines[n];
     }
@@ -148,7 +157,6 @@ GuestTalkPopup::select_dialogue(const Restaurant* restaurant,
   case 0: {
     // Taste
     const int rating = std::min(info_.pizza_taste / 19, 4);
-    printf("rating %d, piz taste %d\n", rating, info_.pizza_taste);
     return pizza_line(std::clamp(9 + variation - (rating * 2), 1, 10));
   }
   case 1: {
@@ -157,16 +165,12 @@ GuestTalkPopup::select_dialogue(const Restaurant* restaurant,
     const int excess = static_cast<int>(
         std::max(int64_t{0}, info_.pizza_price.cents - threshold));
     const int base_line = std::min(excess / 300, 3) + 11;
-    printf("Thres %d, excess %d, base %d, dis price level %d\n", threshold,
-           excess, base_line, info_.district_price_level);
     return pizza_line(base_line + (variation * 4));
   }
   default: {
     // Quality
     const int diff = info_.pizza_quality - 25;
     const int rating = (diff < 0) ? 0 : std::min(diff / 14, 5);
-    printf("Diff %d, rating %d, piz qual %d\n", diff, rating,
-           info_.pizza_quality);
     return pizza_line(std::clamp(19 + variation + ((5 - rating) * 2), 19, 30));
   }
   }
