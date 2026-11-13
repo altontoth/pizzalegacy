@@ -88,11 +88,13 @@ int ai_demographic_bias(Property& property, int intelligence) {
   return bias;
 }
 
-// Which prebuilt AI restaurant a premise gets. This never comes to more than
-// 18, so the last few layout files never come up.
-int ai_layout_index(const Property& property, int bias) {
+// The original chooses three styles (F1-F18). The additional six original
+// layouts form a fourth small/large pair for each demographic group.
+int ai_layout_index(const Property& property, int bias, bool enhanced) {
   const bool large = property.size().w * property.size().h > large_premise_area;
-  return (engine::random::rand_max_n(3) * 6) + 1 + (bias * 2) + (large ? 1 : 0);
+  const int styles = enhanced ? RestaurantLayoutFactory::ai_layout_count / 6 : 3;
+  return (engine::random::rand_max_n(styles) * 6) + 1 + (bias * 2) +
+         (large ? 1 : 0);
 }
 
 } // namespace
@@ -382,7 +384,8 @@ Restaurant* RealEstate::create_ai_restaurant(Player& player, Property& property,
                                              Tenure tenure) {
   const int bias =
       ai_demographic_bias(property, player.character().intelligence());
-  const int layout_index = ai_layout_index(property, bias);
+  const int layout_index =
+      ai_layout_index(property, bias, gs_->options().qol_improvements);
 
   auto* rest =
       furnish_new_restaurant(player, property,
