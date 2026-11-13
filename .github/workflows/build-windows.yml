@@ -14,6 +14,7 @@ jobs:
     timeout-minutes: 60
     env:
       SCCACHE_GHA_ENABLED: 'true'
+      SCCACHE_IDLE_TIMEOUT: '0'
       VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}\vcpkg-cache
     steps:
       - uses: actions/checkout@v6
@@ -72,8 +73,16 @@ jobs:
       - name: Configure
         shell: pwsh
         run: |
-          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DUSE_CCACHE=OFF "-DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-windows -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DUSE_CCACHE=OFF "-DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-windows "-DCMAKE_C_COMPILER_LAUNCHER=$env:SCCACHE_PATH" "-DCMAKE_CXX_COMPILER_LAUNCHER=$env:SCCACHE_PATH" -DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded -DCMAKE_POLICY_CMP0141=NEW
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Verify compiler launcher
+        shell: pwsh
+        run: |
+          $rules = Get-Content build/CMakeFiles/rules.ninja
+          $matches = $rules | Select-String -Pattern 'sccache'
+          if (-not $matches) { throw 'Ninja compiler rules do not invoke sccache' }
+          $matches | Select-Object -First 4
+          sccache --zero-stats
       - name: Compile
         shell: pwsh
         run: |
