@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include <array>
+
 #include "core/common/Ids.h"
 #include "core/finance/Money.h"
 
@@ -41,8 +43,11 @@ struct ElectricitySlotInvoice {
   Money electricity;
   Money slot_income;
   Money total; // electricity - slot_income
+  std::array<Money, 5> machine_breakdown{};
+  bool detailed{false};
 };
-ElectricitySlotInvoice collect_electricity_slot_invoice(const Restaurant& rest);
+ElectricitySlotInvoice collect_electricity_slot_invoice(const Restaurant& rest,
+                                                        bool enhanced);
 void apply_electricity_slot_invoice(GameState& gs, Player& player,
                                     const ElectricitySlotInvoice& invoice);
 

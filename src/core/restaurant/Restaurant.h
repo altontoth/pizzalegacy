@@ -337,6 +337,12 @@ public:
 
   Money calculate_electricity_cost() const;
   Money calculate_slot_machine_income() const;
+  // Enhanced monthly takings: cigarettes, chocolate, gum, telephone, games.
+  using MachineTakings = std::array<Money, 5>;
+  const MachineTakings& machine_takings() const { return machine_takings_; }
+  void machine_takings(MachineTakings value) { machine_takings_ = value; }
+  Money pending_machine_income() const;
+  void accrue_machine_income(int served);
 
   // (seat_count * operating minutes) / avg_seating_time
   int calculate_seating_capacity(const ServiceTimeData* service_data) const;
@@ -552,6 +558,7 @@ private:
   core::restaurant::Menu menu_;
   core::restaurant::RestaurantInventory inventory_;
   core::restaurant::RestaurantStats stats_;
+  MachineTakings machine_takings_{};
   RestaurantEconomy economy_;
   core::time::TimeOfDay opening_time_{DEFAULT_OPENING_TIME};
   core::time::TimeOfDay closing_time_{DEFAULT_CLOSING_TIME};

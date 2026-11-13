@@ -78,8 +78,18 @@ void show_electricity_slot_invoice_popup(
   cfg.lines.push_back(empty_line);
   cfg.lines.push_back({"ELECTRICITY:", invoice.electricity});
   cfg.lines.push_back(empty_line);
-  cfg.lines.push_back({"SLOT MACHINES", {}, TextAnchor::Start});
-  cfg.lines.push_back({"INCOME:", invoice.slot_income});
+  if (invoice.detailed) {
+    constexpr std::array<const char*, 5> labels{
+        "Cigarettes:", "Chocolate:", "Chewing gum:", "Telephone:", "Arcade games:"};
+    for (std::size_t i = 0; i < labels.size(); ++i) {
+      if (invoice.machine_breakdown[i].cents > 0)
+        cfg.lines.push_back({labels[i], invoice.machine_breakdown[i]});
+    }
+    cfg.lines.push_back({"MACHINE INCOME:", invoice.slot_income});
+  } else {
+    cfg.lines.push_back({"SLOT MACHINES", {}, TextAnchor::Start});
+    cfg.lines.push_back({"INCOME:", invoice.slot_income});
+  }
   cfg.lines.push_back(empty_line);
   cfg.lines.push_back({"TOTAL:", invoice.total});
 
@@ -187,7 +197,7 @@ void push_weekly_restaurant_reports(GameContext& context, GameState& gs,
           }
           return;
         }
-        auto invoice = core::finance::collect_electricity_slot_invoice(*rest);
+        auto invoice = core::finance::collect_electricity_slot_invoice(*rest, gs.options().qol_improvements);
         show_electricity_slot_invoice_popup(
             context, gs, invoice,
             [&gs, invoice, owner = *owner, next = std::move(next)]() mutable {

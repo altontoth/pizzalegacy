@@ -327,6 +327,9 @@ json restaurant_to_json(const Restaurant& restaurant) {
   j["wants_open"] = restaurant.wants_open();
   j["ever_opened"] = restaurant.ever_opened();
   j["forced_days_remaining"] = restaurant.forced_days_remaining();
+  j["machine_takings"] = json::array();
+  for (auto amount : restaurant.machine_takings())
+    j["machine_takings"].push_back(amount.cents);
   j["ai_layout_index"] = restaurant.ai_layout_index();
   j["ai_furniture_count"] = restaurant.ai_furniture_count();
   j["ai_tier"] = restaurant.ai_tier();
@@ -483,6 +486,14 @@ std::unique_ptr<Restaurant> json_to_restaurant(const json& j,
 
   auto restaurant =
       std::make_unique<Restaurant>(property, kitchen_size, rid, name);
+
+  if (j.contains("machine_takings")) {
+    Restaurant::MachineTakings takings{};
+    const auto& amounts = j["machine_takings"];
+    for (std::size_t i = 0; i < takings.size() && i < amounts.size(); ++i)
+      takings[i] = Money{amounts[i].get<int64_t>()};
+    restaurant->machine_takings(takings);
+  }
 
   if (j.contains("ai_layout_index")) {
     restaurant->ai_layout(j["ai_layout_index"].get<int>(),

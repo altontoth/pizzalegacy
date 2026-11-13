@@ -762,6 +762,12 @@ void RestaurantStats::render_month_review(const RenderContext& ctx) {
       ViewPoint{curr_month_col, coin_machines_y}, FontFace::PIZ_NUMB,
       text_color, TextAnchor::End);
 
+  if (state_.options().qol_improvements) {
+    context_.font->render_line_onto(*ctx.surface,
+        compat::format("Machine takings pending: {}", restaurant_->pending_machine_income()),
+        ViewPoint{20, 130}, FontFace::SUPERSMA, text_color, TextAnchor::Start);
+  }
+
   // Total receipts (both already negated)
   auto prev_receipts = prev_sales + prev_coins;
   auto curr_receipts = curr_sales + curr_coins;

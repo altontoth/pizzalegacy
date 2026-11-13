@@ -1149,7 +1149,7 @@ TurnOrchestrator::execute_pipeline_step(const turn::Step& step) {
               return StepResult::Done;
             }
             auto invoice =
-                core::finance::collect_electricity_slot_invoice(*rest);
+                core::finance::collect_electricity_slot_invoice(*rest, gs_->options().qol_improvements);
             gs_->turn_presenter().show_electricity_slot_invoice(
                 invoice, [this, invoice, owner = *owner]() {
                   if (auto* player = gs_->player(owner)) {

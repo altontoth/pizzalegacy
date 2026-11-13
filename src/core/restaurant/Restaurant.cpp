@@ -403,6 +403,57 @@ Money Restaurant::calculate_electricity_cost() const {
   return Money{static_cast<int64_t>(oven_cap) * 300};
 }
 
+Money Restaurant::pending_machine_income() const {
+  Money total{0};
+  for (const auto amount : machine_takings_) total += amount;
+  return total;
+}
+
+void Restaurant::accrue_machine_income(int served) {
+  if (!layout_ || served <= 0) return;
+  std::array<int, 5> installed{};
+  for (const auto& pf : layout_->placed_furniture()) {
+    if (!pf || !pf->furniture()) continue;
+    const auto* f = pf->furniture();
+    switch (f->type()) {
+    case FurnitureType::CIGARETTE_MACHINE: ++installed[0]; break;
+    case FurnitureType::CHOCOLATE_MACHINE: ++installed[1]; break;
+    case FurnitureType::CHEWING_GUM_MACH: ++installed[2]; break;
+    case FurnitureType::TELEPHONE: ++installed[3]; break;
+    default:
+      if (f->category() == FurnitureCategory::GAMES) ++installed[4];
+      break;
+    }
+  }
+  // Percentage chance per served guest, by demographic. Vending amounts
+  // are net takings (refill cost abstracted); games and phone are receipts.
+  constexpr std::array<std::array<int, 6>, 5> rates{{
+      {{0, 5, 12, 8, 10, 4}},
+      {{22, 14, 6, 6, 4, 5}},
+      {{20, 12, 4, 4, 2, 3}},
+      {{1, 4, 5, 8, 14, 3}},
+      {{25, 30, 12, 8, 5, 4}},
+  }};
+  constexpr std::array<int, 5> cents{{50, 35, 15, 25, 25}};
+  const auto& customers = economy_.customer_counts();
+  int total = 0;
+  for (auto d : ALL_CONSUMER_TYPES) total += customers[d];
+  if (total <= 0) return;
+  for (std::size_t k = 0; k < installed.size(); ++k) {
+    if (installed[k] == 0) continue;
+    int weighted = 0;
+    for (auto d : ALL_CONSUMER_TYPES)
+      weighted += customers[d] * rates[k][static_cast<std::size_t>(d)];
+    // More machines improve availability with diminishing returns. At most
+    // one paid use per guest per category, and 30 uses per machine per day.
+    const int chance = std::min(100, weighted * (installed[k] + 3) / (4 * total));
+    int uses = 0;
+    for (int i = 0; i < served && uses < installed[k] * 30; ++i)
+      if (engine::random::rand_percentage_chance(chance)) ++uses;
+    machine_takings_[k] += Money{static_cast<int64_t>(uses) * cents[k]};
+  }
+}
+
 Money Restaurant::calculate_slot_machine_income() const {
   int young_adults = economy_.customer_counts()[ConsumerType::YoungPeople];
   Money income{0};
@@ -1315,6 +1366,9 @@ void Restaurant::eod_batch_order_fulfillment(class GameState& game_state) {
     fulfillment_rate_ = 100;
   }
 
+  if (game_state.options().qol_improvements) {
+    accrue_machine_income(total_fulfilled);
+  }
   stats_.end_of_day(effective_capacity);
   calculate_pizza_quality_rating(recipes);
 }

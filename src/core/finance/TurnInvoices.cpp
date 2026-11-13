@@ -75,10 +75,14 @@ void apply_daily_sales(GameState& gs, Restaurant& rest) {
 }
 
 ElectricitySlotInvoice
-collect_electricity_slot_invoice(const Restaurant& rest) {
+collect_electricity_slot_invoice(const Restaurant& rest, bool enhanced) {
   Money electricity = rest.calculate_electricity_cost();
-  Money slot_income = rest.calculate_slot_machine_income();
-  return {rest.id(), electricity, slot_income, electricity - slot_income};
+  // Pay accumulated takings even if the interface preference was switched.
+  const bool detailed = enhanced || rest.pending_machine_income().cents > 0;
+  Money slot_income = detailed ? rest.pending_machine_income()
+                               : rest.calculate_slot_machine_income();
+  return {rest.id(), electricity, slot_income, electricity - slot_income,
+          rest.machine_takings(), detailed};
 }
 
 void apply_electricity_slot_invoice(GameState& gs, Player& player,
@@ -93,6 +97,11 @@ void apply_electricity_slot_invoice(GameState& gs, Player& player,
     player.financials().transfer(date, Account::ProfitAndLoss, Account::Cash,
                                  invoice.slot_income, invoice.restaurant_id,
                                  MonthlyCategory::CoinMachines);
+  }
+  if (invoice.detailed) {
+    if (auto* rest = gs.restaurant(invoice.restaurant_id)) {
+      rest->machine_takings({});
+    }
   }
   gs.status().refresh_header();
 }
@@ -207,7 +216,7 @@ void apply_weekly_settlement(GameState& gs, core::PlayerId player_id,
     gs.deduct_staff_wages_for_restaurant(rest->id());
     if (with_electricity) {
       apply_electricity_slot_invoice(gs, *player,
-                                     collect_electricity_slot_invoice(*rest));
+                                     collect_electricity_slot_invoice(*rest, gs.options().qol_improvements));
     }
   }
   apply_weekly_city_profits(gs, *player,
