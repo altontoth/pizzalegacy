@@ -12,11 +12,26 @@ jobs:
   build:
     runs-on: windows-2022
     timeout-minutes: 60
+    env:
+      SCCACHE_GHA_ENABLED: 'true'
+      VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}\vcpkg-cache
     steps:
       - uses: actions/checkout@v6
       - uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: x64
+      - name: Set up compiler cache
+        uses: mozilla-actions/sccache-action@v0.0.9
+      - name: Prepare dependency cache
+        shell: pwsh
+        run: New-Item -ItemType Directory -Force -Path $env:VCPKG_DEFAULT_BINARY_CACHE | Out-Null
+      - name: Restore dependency cache
+        uses: actions/cache@v4
+        with:
+          path: vcpkg-cache
+          key: vcpkg-windows-x64-${{ runner.os }}-${{ hashFiles('.github/workflows/build-windows.yml') }}
+          restore-keys: |
+            vcpkg-windows-x64-${{ runner.os }}-
       - name: Install dependencies
         shell: pwsh
         run: |
@@ -36,10 +51,18 @@ jobs:
       - name: Configure
         shell: pwsh
         run: |
-          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DUSE_CCACHE=OFF "-DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-windows
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DUSE_CCACHE=OFF "-DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-windows -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Compile
-        run: cmake --build build --parallel 2
+        shell: pwsh
+        run: |
+          $jobs = [Math]::Min(4, [Environment]::ProcessorCount)
+          Write-Host "Building with $jobs parallel jobs"
+          cmake --build build --parallel $jobs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Compiler cache statistics
+        if: always()
+        run: sccache --show-stats
       - name: Package Windows build
         shell: pwsh
         run: |
