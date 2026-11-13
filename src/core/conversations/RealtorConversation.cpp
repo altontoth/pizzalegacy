@@ -388,9 +388,14 @@ std::vector<ConversationLine<RealtorLine>> RealtorConversation::lines() const {
     };
   case RealtorLine::YOU_WANT_TO_RENT_THESE_ROOMS_MONTHLY_RENT_IS: {
     return {
-        make_proposal(
+        make_line(
             RealtorLine::YOU_WANT_TO_RENT_THESE_ROOMS_MONTHLY_RENT_IS,
-            compat::format(" {}", active_property()->get_monthly_rent())),
+            {
+                .is_proposal = true,
+                .easy_accept = false,
+                .custom_text = compat::format(
+                    " {}", active_property()->get_monthly_rent())
+            }),
     };
   }
   case RealtorLine::YOU_HAVE_TO_SELECT_A_PLACE:
