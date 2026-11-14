@@ -37,6 +37,12 @@ struct DailySettlement {
   core::RestaurantId id;
 };
 
+// A single consolidated report after every daily sales posting.
+struct CompanyFinancialReview {
+  static constexpr const char* name = "CompanyFinancialReview";
+  core::RestaurantId anchor;
+};
+
 // Lets the status display repaint between restaurants so the player sees
 // the money change per restaurant, like the original.
 struct Delay {
@@ -140,7 +146,7 @@ struct SetActivity {
 };
 
 using Step =
-    std::variant<ProcessRestaurant, DailySettlement, Delay, FinishTurn,
+    std::variant<ProcessRestaurant, DailySettlement, CompanyFinancialReview, Delay, FinishTurn,
                  FloorEditingBonus, TickCities, EndOfWeekProcessing,
                  EndOfYearProcessing, EndOfMonthProcessing, AnnualCompetition,
                  MonthlyCompetition, FadeTransition, AdvanceDate, SetTimeOfDay,

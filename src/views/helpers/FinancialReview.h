@@ -47,4 +47,17 @@ inline CityEstimate estimate(const GameState& state, const Player& player,
   }
   return result;
 }
+inline CityEstimate company_estimate(const GameState& state, const Player& player) {
+  CityEstimate total;
+  for (int i = 0; i < NUMBER_OF_CITIES; ++i) {
+    const auto city = estimate(state, player, core::CityId{i});
+    total.daily_ads += city.daily_ads;
+    total.remaining_ads += city.remaining_ads;
+    total.weekly_wages += city.weekly_wages;
+    total.daily_operating += city.daily_operating;
+    total.restaurants += city.restaurants;
+    total.has_history = total.has_history || city.has_history;
+  }
+  return total;
+}
 } // namespace views::finance_review

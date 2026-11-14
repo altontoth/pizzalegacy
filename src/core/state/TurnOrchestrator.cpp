@@ -230,6 +230,10 @@ void TurnOrchestrator::end_of_turn(EndOfDayCause cause) {
           turn::Delay{delay_frames_between_restaurants});
     }
   }
+  if (interactive && gs_->options().automatic_report &&
+      gs_->options().qol_improvements && !in_scope_ids.empty()) {
+    turn_pipeline_.emplace_back(turn::CompanyFinancialReview{in_scope_ids.front()});
+  }
   turn_pipeline_.emplace_back(
       turn::FinishTurn{std::move(all_ids), interactive});
 
@@ -962,6 +966,13 @@ TurnOrchestrator::execute_pipeline_step(const turn::Step& step) {
               core::finance::apply_daily_sales(*gs_, *rest);
             }
             return StepResult::Done;
+          },
+
+          [&](const turn::CompanyFinancialReview& s) {
+            if (!gs_->restaurant(s.anchor)) return StepResult::Done;
+            gs_->status().refresh_header();
+            gs_->ui().push<RestaurantStatsState>(s.anchor, std::nullopt, true, true);
+            return StepResult::Waiting;
           },
 
           [&](const turn::Delay& s) {

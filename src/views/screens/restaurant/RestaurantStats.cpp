@@ -25,10 +25,11 @@
 RestaurantStats::RestaurantStats(GameContext& context, GameState& state,
                                  core::RestaurantId restaurant_id,
                                  std::optional<RestaurantStatsScreen> screen,
-                                 bool automatic_mode)
+                                 bool automatic_mode, bool company_review)
     : RestaurantSubView(context, state, restaurant_id),
       current_screen_(screen.value_or(RestaurantStatsScreen::Daily_Balance)),
       automatic_mode_(automatic_mode),
+      financial_review_(company_review),
       stanbobs_(context_.bob->get("bob/stanbobs.bob")),
       blitmap2_(context_.blitmap->get<Blitmap2Icon>()) {
 
@@ -87,31 +88,20 @@ void RestaurantStats::create_buttons() {
 
   // Only enhanced mode inserts a review into the end-of-day pipeline.
   if (automatic_mode_) {
-    if (daily_review_ || financial_review_) {
+    if (daily_review_ && !financial_review_) {
       input_panel_->add_button(Icon::ARROW_BACK, BT::Square,
                                ButtonPosition::BottomLeft, "Back", [this] {
-                                 if (financial_review_) {
-                                   financial_review_ = false;
-                                   daily_review_ = true;
-                                 } else {
-                                   daily_review_ = false;
-                                 }
+                                 daily_review_ = false;
                                  refresh_report_buttons_ = true;
                                  mark_dirty();
                                });
     }
     input_panel_->add_button(
         Icon::SELL, BT::Horizontal, ButtonPosition::BottomCenter,
-        financial_review_ || !state_.options().qol_improvements ? "Continue" : "Next",
+        financial_review_ || daily_review_ || !state_.options().qol_improvements ? "Continue" : "Next",
         [this] {
-          if (!daily_review_ && state_.options().qol_improvements) {
+          if (!financial_review_ && !daily_review_ && state_.options().qol_improvements) {
             daily_review_ = true;
-            refresh_report_buttons_ = true;
-            mark_dirty();
-            return;
-          }
-          if (daily_review_ && !financial_review_ && state_.options().qol_improvements) {
-            financial_review_ = true;
             refresh_report_buttons_ = true;
             mark_dirty();
             return;
@@ -254,7 +244,7 @@ void RestaurantStats::render_daily_balance(const RenderContext& ctx) {
                                   TextAnchor::Start);
 
   if (automatic_mode_ && state_.options().qol_improvements) {
-    context_.font->render_line_onto(*ctx.surface, "1 / 3",
+    context_.font->render_line_onto(*ctx.surface, "1 / 2",
                                     ViewPoint{center_x, 70}, FontFace::SUPERSMA,
                                     11, TextAnchor::Middle);
   }
@@ -476,7 +466,7 @@ void RestaurantStats::render_daily_review(const RenderContext& ctx) {
          "Review the production screen.");
   }
 
-  line("2 / 3", 312, 11);
+  line("2 / 2", 312, 11);
 }
 
 void RestaurantStats::render_financial_review(const RenderContext& ctx) {
@@ -489,33 +479,41 @@ void RestaurantStats::render_financial_review(const RenderContext& ctx) {
     context_.font->render_line_onto(*ctx.surface, text, ViewPoint{center, y},
                                     font, color, TextAnchor::Middle);
   };
-  line(restaurant_->name(), 24, 11);
+  const auto* player = state_.active_player();
+  if (!player) return;
+  line(player->name(), 24, 11);
   line("financial review", 50, 11, FontFace::RUBY);
   gfx::draw::line(*ctx.surface, {36, 80}, {346, 80}, 14, 2);
-  const auto* player = state_.restaurant_owner(*restaurant_);
-  if (!player) return;
-  const auto estimate = views::finance_review::estimate(
-      state_, *player, restaurant_->property().city().id());
-  const auto& day = restaurant_->stats().yesterday;
-  const auto projected_cash = player->cash_balance() + day.revenue;
-  line(compat::format("Gross profit: {}", day.gross_profit), 94);
-  line(compat::format("Cash after this sale: {}", projected_cash), 116);
-  line(compat::format("City advertising/day: {}", estimate.daily_ads), 138);
-  line(compat::format("Ads remaining: {}", estimate.remaining_ads), 160);
-  line(compat::format("City weekly payroll: {}", estimate.weekly_wages), 182);
+  const auto estimate = views::finance_review::company_estimate(state_, *player);
+  const auto cities = state_.simulated_cities_for(player->id());
+  Money settled_gross{0};
+  int settled_count = 0;
+  for (const auto* rest : state_.restaurants_for(player->id())) {
+    if (!rest || std::find(cities.begin(), cities.end(),
+                          rest->property().city().id()) == cities.end()) continue;
+    settled_gross += rest->stats().yesterday.gross_profit;
+    ++settled_count;
+  }
+  line(compat::format("Settled today: {} restaurant(s)", settled_count),
+       90, 11, FontFace::SUPERSMA);
+  line(compat::format("Today's gross profit: {}", settled_gross), 108);
+  line(compat::format("Company cash: {}", player->cash_balance()), 130);
+  line(compat::format("Company restaurants: {}", estimate.restaurants), 152);
+  line(compat::format("Daily advertising: {}", estimate.daily_ads), 174);
+  line(compat::format("Ads remaining: {}", estimate.remaining_ads), 196);
+  line(compat::format("Weekly payroll: {}", estimate.weekly_wages), 218);
   if (estimate.has_history) {
-    line(compat::format("Est. city profit/day: {}",
-        estimate.daily_operating - estimate.daily_ads), 204);
+    line(compat::format("Est. daily profit: {}",
+        estimate.daily_operating - estimate.daily_ads), 240);
   }
-  if (projected_cash < estimate.weekly_wages) {
-    line("Warning: payroll not covered", 232, 11);
+  if (player->cash_balance() < estimate.weekly_wages) {
+    line("Warning: payroll not covered", 262, 11, FontFace::SUPERSMA);
+  } else if (estimate.has_history && estimate.daily_ads.cents > 0 &&
+             estimate.daily_ads > estimate.daily_operating) {
+    line("Advertising exceeds earnings!", 262, 11, FontFace::SUPERSMA);
   }
-  if (estimate.has_history && estimate.daily_ads.cents > 0 &&
-      estimate.daily_ads > estimate.daily_operating) {
-    line("Advertising exceeds earnings!", 254, 11);
-  }
-  line("Estimate excludes other overheads.", 282, 11, FontFace::SUPERSMA);
-  line("3 / 3", 312, 11);
+  line("Estimates exclude other overheads.", 284, 11, FontFace::SUPERSMA);
+  line("Other cities settle weekly.", 302, 11, FontFace::SUPERSMA);
 }
 
 void RestaurantStats::render_paper(const RenderContext& ctx, ViewRect box) {
@@ -1143,6 +1141,7 @@ void RestaurantStats::render_sales_curve(const RenderContext& ctx) {
 }
 
 void RestaurantStats::navigate_to_restaurant(core::RestaurantId new_id) {
+  if (automatic_mode_) return;
   state_.active_restaurant(new_id);
   std::optional<int> screen_idx;
   if (current_screen_ != RestaurantStatsScreen::None) {

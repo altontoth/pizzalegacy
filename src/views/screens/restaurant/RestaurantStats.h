@@ -29,7 +29,8 @@ public:
   RestaurantStats(GameContext& context, GameState& state,
                   core::RestaurantId restaurant_id,
                   std::optional<RestaurantStatsScreen> screen = std::nullopt,
-                  bool automatic_mode = false);
+                  bool automatic_mode = false,
+                  bool company_review = false);
   void tick() override;
   void render(const RenderContext& ctx) override;
 

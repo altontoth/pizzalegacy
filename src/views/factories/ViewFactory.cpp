@@ -470,7 +470,7 @@ ViewFactory::Result ViewFactory::create(GameContext& context, GameState& gs) {
                   static_cast<RestaurantStatsScreen>(rss.screen_index.value());
             }
             view = std::make_unique<RestaurantStats>(
-                context, gs, rss.id, screen, rss.automatic_mode);
+                context, gs, rss.id, screen, rss.automatic_mode, rss.company_review);
           },
           [&](const WeeksTakingsState& wts) {
             view = std::make_unique<WeeksTakings>(

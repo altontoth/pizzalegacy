@@ -94,6 +94,7 @@ struct RestaurantStatsState {
   std::optional<int> screen_index = std::nullopt; // RestaurantStatsScreen index
   bool automatic_mode =
       false; // End of day automatic report (changes today/yesterday labels)
+  bool company_review = false; // Separate consolidated end-of-turn screen
 };
 struct WeeksTakingsState {
   core::RestaurantId id;
