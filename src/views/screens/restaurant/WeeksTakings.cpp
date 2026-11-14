@@ -44,6 +44,19 @@ void WeeksTakings::render(const RenderContext& ctx) {
 
   render_background(ctx);
 
+  // Identify the restaurant on every page, including weekly settlement.
+  if (restaurant_) {
+    context_.font->render_line_onto(*ctx.surface, restaurant_->name(),
+        ViewPoint{192, 8}, FontFace::SUPERSMA, 11, TextAnchor::Middle);
+    const auto date = state_.time().current_date();
+    const auto start = date.add_days(-date.week_day_index());
+    const auto end = start.add_days(6);
+    context_.font->render_line_onto(*ctx.surface,
+        compat::format("{} {} - {} {}", start.day(), start.month_name_short(),
+                       end.day(), end.month_name_short()),
+        ViewPoint{192, 326}, FontFace::SUPERSMA, 11, TextAnchor::Middle);
+  }
+
   auto weekly = aggregate_weekly_takings();
 
   if (current_page_ <= 1) {

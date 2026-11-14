@@ -547,6 +547,9 @@ void RestaurantStats::render_week_review(const RenderContext& ctx) {
                                   ViewPoint{192, 14}, FontFace::RUBY, dark_text,
                                   TextAnchor::Middle);
 
+  context_.font->render_line_onto(*ctx.surface, restaurant_->name(),
+      ViewPoint{192, 44}, FontFace::SUPERSMA, 11, TextAnchor::Middle);
+
   // Column headers
   context_.font->render_line_onto(
       *ctx.surface, "guests pizzas sales    profit    %", ViewPoint{50, 102},
@@ -703,6 +706,9 @@ void RestaurantStats::render_month_review(const RenderContext& ctx) {
   context_.font->render_line_onto(*ctx.surface, "monthly overview",
                                   ViewPoint{14, 40}, FontFace::PIZ_NUMB, 11,
                                   TextAnchor::Start);
+
+  context_.font->render_line_onto(*ctx.surface, restaurant_->name(),
+      ViewPoint{192, 14}, FontFace::SUPERSMA, 11, TextAnchor::Middle);
 
   auto date = state_.time().current_date();
   std::string current_month{date.month_name()};
@@ -873,6 +879,9 @@ void RestaurantStats::render_customer_stats(const RenderContext& ctx) {
 
   context_.font->render_line_onto(*ctx.surface, "Customers", ViewPoint{192, 24},
                                   FontFace::RUBY, 12, TextAnchor::Middle);
+
+  context_.font->render_line_onto(*ctx.surface, restaurant_->name(),
+      ViewPoint{192, 8}, FontFace::SUPERSMA, 12, TextAnchor::Middle);
 
   // Get customer data
   // potential = raw customers from location (yellow bar)
