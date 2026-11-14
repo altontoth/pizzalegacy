@@ -674,34 +674,9 @@ void Advertising::handle_back_click() {
     return;
   }
 
-  // Enhanced mode: Back always discards the unpurchased draft, including
-  // partially completed newspaper ads. Only Buy can confirm a campaign.
-  if (state_.options().qol_improvements) {
-    return_to_overview();
-    return;
-  }
-
-  // Newspaper slogan game: you can only back out before the first pick. Once
-  // building has started, back is locked until all 5 lines are chosen; at that
-  // point back and buy both finalize the current ad selection.
-  if (channel_ == AdvertisingChannel::NEWSPAPER_ADS) {
-    if (newspaper_game_.phase() == NewspaperAdGame::Phase::FormatSelect) {
-      finalize_purchase();
-      mark_dirty();
-      return;
-    }
-    if (!newspaper_game_.chosen_fragments().empty()) {
-      // Mid-build: cannot cancel.
-      return;
-    }
-    // Nothing picked yet: fall through to the normal cancel.
-  }
-
-  if (channel_) {
-    reset_new_campaign(channel_.value());
-  }
-  view_mode_ = ViewMode::OVERVIEW;
-  mark_dirty();
+  // Back cancels any unpurchased draft, including partially completed
+  // newspaper ads. Only Buy can finalize a campaign in either mode.
+  return_to_overview();
 }
 
 void Advertising::set_up_input_panel() {
