@@ -18,10 +18,14 @@
 #include "views/ui/PopupManager.h"
 #include "views/ui/popups/ConfirmPopup.h"
 #include "views/ui/popups/AlertPopup.h"
-#include "views/ui/popups/NumberInputPopup.h"
+#include "views/ui/popups/BasePopup.h"
+#include "views/ui/popups/PopupButton.h"
 #include "core/restaurant/Restaurant.h"
 
+#include <algorithm>
 #include <array>
+#include <functional>
+#include <utility>
 #include <cassert>
 #include <cstdint>
 #include <memory>
@@ -115,6 +119,46 @@ inline constexpr std::array<NewspaperAdStyle, NewspaperAdGame::NUM_AD_SIZES>
          .lines_y = NEWSPAPER_PREVIEW_LINES_FULL_Y,
          .line_height = NEWSPAPER_PREVIEW_LINE_H_LARGE},
     }};
+
+namespace {
+class CampaignDurationPopup : public BasePopup {
+public:
+  CampaignDurationPopup(const GameContext& ctx, int days, std::function<void(int)> next)
+      : BasePopup(ctx), days_(std::clamp(days, DEFAULT_CAMPAIGN_RUNTIME, MAX_CAMPAIGN_RUNTIME)),
+        next_(std::move(next)),
+        less_({24, 54, 54, 34}, "-", [this] { adjust(-1); }),
+        more_({284, 54, 54, 34}, "+", [this] { adjust(1); }),
+        accept_({24, 112, 138, 36}, "Next", [this] { next_(days_); finished(); }),
+        cancel_({200, 112, 138, 36}, "Cancel", [this] { finished(); }) {
+    add_shortcut(input::Action::MoveDown, &less_);
+    add_shortcut(input::Action::MoveUp, &more_);
+    add_shortcut(input::Action::SubmitInput, &accept_);
+    add_shortcut(input::Action::Exit, &cancel_);
+  }
+  Size popup_size() const override { return {362, 166}; }
+  void add_interactions(views::ui::InteractionContext ctx, ViewPoint origin) override {
+    for (auto* button : buttons()) button->add_interactions(ctx, origin);
+  }
+  void render(Surface& surface, ViewPoint origin) override {
+    auto pop = popup_surface(362, 166);
+    font_->render_line_onto(pop, "Campaign duration", {181, 18},
+                            FontFace::ASTANDAR, 6, TextAnchor::Middle);
+    font_->render_line_onto(pop, compat::format("{} days", days_), {181, 62},
+                            FontFace::ASTANDAR, 6, TextAnchor::Middle);
+    for (auto* button : buttons()) button->render_with(*this, pop);
+    surface.blit_raw(pop, origin);
+  }
+private:
+  void adjust(int change) {
+    days_ = std::clamp(days_ + change, DEFAULT_CAMPAIGN_RUNTIME, MAX_CAMPAIGN_RUNTIME);
+    mark_dirty();
+  }
+  std::array<PopupButton*, 4> buttons() { return {&less_, &more_, &accept_, &cancel_}; }
+  int days_;
+  std::function<void(int)> next_;
+  PopupButton less_, more_, accept_, cancel_;
+};
+} // namespace
 
 Advertising::Advertising(GameContext& context, GameState& state)
     : MainPanelView(context, state), tv_ads_(context.font, context.vga) {
@@ -338,9 +382,13 @@ void Advertising::render_flyer(const RenderContext& ctx, int flyer_count) {
       ViewPoint{176, 84}, FontFace::CSTANDAR);
   context_.font->render_text_onto(*ctx.surface, "Come to", ViewPoint{184, 100},
                                   FontFace::ASTANDAR);
-  const auto id = view_mode_ == ViewMode::VIEWING
-      ? (displayed_campaign(AdvertisingChannel::FLYERS) ? displayed_campaign(AdvertisingChannel::FLYERS)->target_restaurant : std::nullopt)
-      : (state_.options().qol_improvements ? selected_location() : std::nullopt);
+  std::optional<core::RestaurantId> id;
+  if (view_mode_ == ViewMode::VIEWING) {
+    if (const auto campaign = displayed_campaign(AdvertisingChannel::FLYERS))
+      id = campaign->target_restaurant;
+  } else if (state_.options().qol_improvements) {
+    id = selected_location();
+  }
   const auto* rest = id ? state_.restaurant(*id) : nullptr;
   context_.font->render_text_onto(*ctx.surface, rest ? rest->name() : state_.active_player()->name(),
                                   ViewPoint{184, 120}, FontFace::ASTANDAR);
@@ -714,8 +762,8 @@ void Advertising::handle_shop_click() {
       return;
     }
     if (state_.options().qol_improvements) {
-      context_.popup->create<NumberInputPopup>("Campaign duration (days)", " days",
-          campaign_duration_, DEFAULT_CAMPAIGN_RUNTIME, MAX_CAMPAIGN_RUNTIME, 1,
+      context_.popup->origin({12, 80});
+      context_.popup->create<CampaignDurationPopup>(campaign_duration_,
           [this](int days) {
             campaign_duration_ = days;
             post_purchase_status();
