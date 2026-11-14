@@ -506,9 +506,18 @@ int Player::enhanced_advertising_bonus(core::CityId city,
                                        core::RestaurantId restaurant) const {
   int bonus = 0;
   for (const auto& c : enhanced_campaigns_)
-    if (c.city_id == city && (!c.target_restaurant || *c.target_restaurant == restaurant))
+    if (c.city_id == city && c.channel != AdvertisingChannel::POSTERS &&
+        (!c.target_restaurant || *c.target_restaurant == restaurant))
       bonus += c.awareness;
   return std::min(100, bonus);
+}
+
+int Player::poster_awareness(core::CityId city, core::RestaurantId restaurant) const {
+  for (const auto& c : enhanced_campaigns_)
+    if (c.city_id == city && c.channel == AdvertisingChannel::POSTERS &&
+        c.target_restaurant && *c.target_restaurant == restaurant)
+      return c.awareness;
+  return 0;
 }
 
 void Player::remove_restaurant_advertising(core::RestaurantId restaurant) {

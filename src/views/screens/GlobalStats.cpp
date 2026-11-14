@@ -285,7 +285,8 @@ void GlobalStats::render_month_overview(const RenderContext& ctx) {
     }
   }
 
-  // Advertising is city-wide, so it has no per-restaurant drill-down.
+  // City-wide advertising is a shared expense; local campaigns are attributed
+  // to their restaurant in the ledger.
   const bool enhanced = state_.options().qol_improvements;
   const int expense_spacing = enhanced ? 16 : line_spacing;
   // Draw expenditure section with clickable rows
@@ -404,6 +405,8 @@ void GlobalStats::render_month_overview_popup(
       }
       else {
         add_up(expenditure_categories);
+        if (state_.options().qol_improvements)
+          value += financials.current_month(MonthlyCategory::Advertising, current_date, restaurant->id());
       }
     }
     else {

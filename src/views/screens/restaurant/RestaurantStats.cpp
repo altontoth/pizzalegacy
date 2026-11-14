@@ -786,13 +786,17 @@ void RestaurantStats::render_month_review(const RenderContext& ctx) {
       *ctx.surface, "expenditure:", ViewPoint{20, expenditure_y},
       FontFace::PIZ_NUMB, text_color, TextAnchor::Start);
 
-  const std::vector<MonthlyCategory> exp_categories = {
+  std::vector<MonthlyCategory> exp_categories = {
       MonthlyCategory::Staff,     MonthlyCategory::Rents,
       MonthlyCategory::Stock,     MonthlyCategory::Machines,
       MonthlyCategory::Furniture, MonthlyCategory::Protection};
-  const std::vector<std::string> exp_labels = {
+  std::vector<std::string> exp_labels = {
       "staff:", "rents:", "stock:", "machines:", "furniture:", "protection:"};
 
+  if (state_.options().qol_improvements) {
+    exp_categories.push_back(MonthlyCategory::Advertising);
+    exp_labels.push_back("advertising:");
+  }
   const int line_height = 20;
   int y = expenditure_y + line_height;
   Money prev_total_exp{0};

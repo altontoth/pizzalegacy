@@ -212,6 +212,33 @@ void Property::calculate_demographics(const Restaurant* restaurant) {
   total_population_ = static_cast<int>(std::round(total_pop));
 }
 
+// Sample the two rings outside the normal catchment without changing the
+// property's baseline demographics or consuming the simulation RNG.
+CustomerCounts Property::poster_reach_customers(int radius, int awareness) const {
+  CustomerCounts extra{};
+  if (awareness <= 0) return extra;
+  const int cx = City::index_to_x(index_);
+  const int cy = City::index_to_y(index_);
+  const auto& demand = district().demographic_demand();
+  for (auto demo : ALL_CONSUMER_TYPES) {
+    const int d = static_cast<int>(demo);
+    float population = 0;
+    for (int y = std::max(0, cy - radius - 2);
+         y <= std::min(MAP_TILES_PER_COLUMN - 1, cy + radius + 2); ++y) {
+      for (int x = std::max(0, cx - radius - 2);
+           x <= std::min(MAP_TILES_PER_ROW - 1, cx + radius + 2); ++x) {
+        const int ring = std::abs(cx - x) + std::abs(cy - y) - radius;
+        if (ring < 1 || ring > 2) continue;
+        const int coverage = std::clamp(awareness * 5 - (ring - 1) * 100, 0, 100);
+        population += calculate_tile_population(city_.type(City::x_y_to_index(x, y)),
+            d, demand.at(d) * 0.5f) * coverage / 100.0f;
+      }
+    }
+    extra[demo] = static_cast<int>(std::round(population));
+  }
+  return extra;
+}
+
 float Property::calculate_tile_population(uint8_t tile_type,
                                           int demographic_type,
                                           float district_percentage) {

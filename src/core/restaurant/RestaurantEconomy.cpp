@@ -284,11 +284,16 @@ void RestaurantEconomy::calculate_demand_with_competition(
 
   // Apply competition to calculate actual customer counts
   const auto& property_demand = property.potential_customers();
+  const int poster_reach = owner_player && owner_player->is_human_controlled()
+      ? owner_player->poster_awareness(city.id(), restaurant.id()) : 0;
+  const auto extra_customers = property.poster_reach_customers(range_tiles_, poster_reach);
+  const int advertising_bonus = owner_player && owner_player->is_human_controlled()
+      ? owner_player->enhanced_advertising_bonus(city.id(), restaurant.id()) : 0;
 
   for (ConsumerType demo : ALL_CONSUMER_TYPES) {
     int our_base_demand = competitive_strength_[demo];
     int comp_score = competition_scores[static_cast<size_t>(demo)];
-    int prop_demand = property_demand[demo];
+    int prop_demand = property_demand[demo] + extra_customers[demo];
 
     int customer_count;
     if (our_base_demand >= comp_score) {
@@ -307,10 +312,7 @@ void RestaurantEconomy::calculate_demand_with_competition(
 
     // Enhanced campaigns bring additional interested customers into the
     // catchment, before the existing seating and production limits apply.
-    if (owner_player && owner_player->is_human_controlled()) {
-      const int bonus = owner_player->enhanced_advertising_bonus(city.id(), restaurant.id());
-      customer_count += customer_count * bonus / 100;
-    }
+    customer_count += customer_count * advertising_bonus / 100;
 
     customer_counts_[demo] = customer_count;
   }

@@ -338,7 +338,11 @@ void Advertising::render_flyer(const RenderContext& ctx, int flyer_count) {
       ViewPoint{176, 84}, FontFace::CSTANDAR);
   context_.font->render_text_onto(*ctx.surface, "Come to", ViewPoint{184, 100},
                                   FontFace::ASTANDAR);
-  context_.font->render_text_onto(*ctx.surface, state_.active_player()->name(),
+  const auto id = view_mode_ == ViewMode::VIEWING
+      ? (displayed_campaign(AdvertisingChannel::FLYERS) ? displayed_campaign(AdvertisingChannel::FLYERS)->target_restaurant : std::nullopt)
+      : (state_.options().qol_improvements ? selected_location() : std::nullopt);
+  const auto* rest = id ? state_.restaurant(*id) : nullptr;
+  context_.font->render_text_onto(*ctx.surface, rest ? rest->name() : state_.active_player()->name(),
                                   ViewPoint{184, 120}, FontFace::ASTANDAR);
   context_.font->render_text_onto(*ctx.surface, "and try", ViewPoint{184, 140},
                                   FontFace::ASTANDAR);
@@ -694,7 +698,7 @@ void Advertising::handle_shop_click() {
           active = true;
     }
     if (active) {
-      // TODO: Show error message "There is already a campaign in this category"
+      context_.popup->create<AlertPopup>("A campaign is already active here.");
       return;
     }
     // When entering purchase mode, lock any previously purchased campaign

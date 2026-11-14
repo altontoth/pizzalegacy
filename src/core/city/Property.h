@@ -64,6 +64,7 @@ public:
   void purchase_price(Money price);
   Money get_monthly_rent() const;
   void calculate_demographics(const Restaurant* restaurant = nullptr);
+  CustomerCounts poster_reach_customers(int radius, int awareness) const;
   // The original fills the pool once and leaves it until the weekly
   // settlement, so a reader recomputes only an empty pool.
   void ensure_demographics(const Restaurant* restaurant = nullptr);
@@ -89,8 +90,8 @@ public:
   const District& district() const;
 
 private:
-  float calculate_tile_population(uint8_t tile_type, int demographic_type,
-                                  float district_percentage);
+  static float calculate_tile_population(uint8_t tile_type, int demographic_type,
+                                         float district_percentage);
 
   const int index_;
   PropertyType type_;
