@@ -144,6 +144,11 @@ public:
   // Advertising campaigns
   using CityCampaigns = std::array<std::optional<AdvertisingCampaign>, 4>;
   void add_campaign(const AdvertisingCampaign& campaign);
+  const std::vector<AdvertisingCampaign>& enhanced_campaigns() const { return enhanced_campaigns_; }
+  void restore_enhanced_campaign(AdvertisingCampaign campaign);
+  std::optional<AdvertisingCampaign> enhanced_campaign(core::CityId city, AdvertisingChannel channel, std::optional<core::RestaurantId> target) const;
+  int enhanced_advertising_bonus(core::CityId city, core::RestaurantId restaurant) const;
+  void remove_restaurant_advertising(core::RestaurantId restaurant);
   std::optional<AdvertisingCampaign>
   get_campaign(core::CityId city, AdvertisingChannel channel) const;
   bool has_active_campaign(core::CityId city, AdvertisingChannel channel) const;
@@ -272,6 +277,7 @@ private:
   void process_contracts(class GameState& game_state);
 
   std::map<core::CityId, CityCampaigns> campaigns_;
+  std::vector<AdvertisingCampaign> enhanced_campaigns_;
   // Live per-channel advertising effectiveness (indexed by AdvertisingChannel),
   // per city. Starts at campaign's rate when it starts, then decays after the
   // campaign expires.

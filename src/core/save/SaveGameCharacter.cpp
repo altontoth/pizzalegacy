@@ -341,6 +341,23 @@ json player_to_json(const Player& player) {
       campaigns_array.push_back(std::move(cj));
     }
   }
+  for (const auto& c : player.enhanced_campaigns()) {
+    json cj;
+    cj["channel"] = static_cast<int>(c.channel);
+    cj["city_id"] = c.city_id.value;
+    cj["days_remaining"] = c.days_remaining;
+    cj["effectiveness"] = c.rate.effectiveness;
+    cj["cost"] = c.rate.cost.cents;
+    cj["enhanced"] = true;
+    cj["awareness"] = c.awareness;
+    if (c.target_restaurant) cj["target_restaurant"] = c.target_restaurant->value;
+    if (c.flyer_count) cj["flyer_count"] = *c.flyer_count;
+    if (c.poster_id) cj["poster_id"] = *c.poster_id;
+    if (c.newspaper_ad_format) cj["newspaper_ad_format"] = static_cast<int>(*c.newspaper_ad_format);
+    if (!c.newspaper_lines.empty()) cj["newspaper_lines"] = c.newspaper_lines;
+    if (c.tv_ad_id) cj["tv_ad_id"] = *c.tv_ad_id;
+    campaigns_array.push_back(std::move(cj));
+  }
   j["campaigns"] = std::move(campaigns_array);
 
   // Per-city gross turnover accumulator (backs the competitor turnover chart;
@@ -566,7 +583,15 @@ json_to_player(const json& j, GameContext& context,
       if (cj.contains("tv_ad_id")) {
         c.tv_ad_id = cj["tv_ad_id"].get<int>();
       }
-      player->add_campaign(c);
+      c.enhanced = cj.value("enhanced", false);
+      if (c.enhanced) {
+        if (cj.contains("target_restaurant"))
+          c.target_restaurant = core::RestaurantId{cj["target_restaurant"].get<int>()};
+        c.awareness = cj.value("awareness", enhanced_advertising_awareness(c));
+        player->restore_enhanced_campaign(std::move(c));
+      } else {
+        player->add_campaign(c);
+      }
     }
   }
 

@@ -305,6 +305,13 @@ void RestaurantEconomy::calculate_demand_with_competition(
 
     customer_count = (customer_count * imitation) / 100;
 
+    // Enhanced campaigns bring additional interested customers into the
+    // catchment, before the existing seating and production limits apply.
+    if (owner_player && owner_player->is_human_controlled()) {
+      const int bonus = owner_player->enhanced_advertising_bonus(city.id(), restaurant.id());
+      customer_count += customer_count * bonus / 100;
+    }
+
     customer_counts_[demo] = customer_count;
   }
 

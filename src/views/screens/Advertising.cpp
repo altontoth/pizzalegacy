@@ -17,6 +17,9 @@
 #include "views/helpers/FinancialReview.h"
 #include "views/ui/PopupManager.h"
 #include "views/ui/popups/ConfirmPopup.h"
+#include "views/ui/popups/AlertPopup.h"
+#include "views/ui/popups/NumberInputPopup.h"
+#include "core/restaurant/Restaurant.h"
 
 #include <array>
 #include <cassert>
@@ -149,6 +152,43 @@ void Advertising::render(const RenderContext& ctx) {
   }
 }
 
+std::optional<core::RestaurantId> Advertising::selected_location() const {
+  const auto locations = state_.restaurants_in_city(state_.active_player()->id(), state_.active_city_id());
+  for (const auto* r : locations)
+    if (location_ && r->id() == *location_) return location_;
+  if (!locations.empty()) return locations.front()->id();
+  return std::nullopt;
+}
+
+void Advertising::cycle_location() {
+  const auto locations = state_.restaurants_in_city(state_.active_player()->id(), state_.active_city_id());
+  const auto current = selected_location();
+  if (locations.empty()) return;
+  for (std::size_t i = 0; i < locations.size(); ++i) {
+    if (current && locations[i]->id() == *current) {
+      location_ = locations[(i + 1) % locations.size()]->id();
+      mark_dirty();
+      return;
+    }
+  }
+}
+
+std::optional<AdvertisingCampaign> Advertising::displayed_campaign(AdvertisingChannel channel) const {
+  const auto* player = state_.active_player();
+  const auto city = state_.active_city_id();
+  if (state_.options().qol_improvements) {
+    const auto target = local_advertising(channel) ? selected_location() : std::nullopt;
+    if (auto c = player->enhanced_campaign(city, channel, target)) return c;
+  }
+  return player->get_campaign(city, channel);
+}
+
+AdvertisingRate Advertising::quoted_rate(AdvertisingChannel channel, AdvertisingRate original) const {
+  if (!state_.options().qol_improvements) return original;
+  return enhanced_advertising_rate(channel, original, static_cast<int>(
+      state_.restaurants_in_city(state_.active_player()->id(), state_.active_city_id()).size()));
+}
+
 void Advertising::render_overview(const RenderContext& ctx) {
   gfx::blit::blit_raw_with_palette(*ctx.surface,
                                    context_.vga->get("gfx/back27"));
@@ -188,7 +228,7 @@ void Advertising::render_overview(const RenderContext& ctx) {
 
     // Render campaign info if we have an active campaign
     auto campaign =
-        state_.active_player()->get_campaign(state_.active_city_id(), channel);
+        displayed_campaign(channel);
     if (campaign.has_value()) {
       auto days = campaign->days_remaining;
       auto cost = campaign->rate.cost;
@@ -210,9 +250,19 @@ void Advertising::render_overview(const RenderContext& ctx) {
     }
   }
   if (state_.options().qol_improvements && channel_) {
-    const auto campaign = state_.active_player()->get_campaign(
-        state_.active_city_id(), *channel_);
-    if (campaign && campaign->days_remaining > 0) {
+    const auto campaign = displayed_campaign(*channel_);
+    if (local_advertising(*channel_)) {
+      const auto id = selected_location();
+      const auto* rest = id ? state_.restaurant(*id) : nullptr;
+      context_.font->render_line_onto(*ctx.surface,
+          rest ? compat::format("Location: {} >", rest->name()) : "No restaurant in city",
+          ViewPoint{192, 330}, FontFace::SUPERSMA, 240, TextAnchor::Middle);
+      interactions_.create_frame_item(ViewRect{10, 318, 364, 26}, "ad_location",
+          [this](views::ui::InteractionEvent ev) {
+            if (ev.type == views::ui::InteractionEvent::Type::Click &&
+                ev.button == views::ui::MouseButton::Left) cycle_location();
+          });
+    } else if (campaign && campaign->days_remaining > 0) {
       context_.font->render_line_onto(
           *ctx.surface, compat::format("Per day: {}  Left: {}",
               campaign->rate.cost, campaign->rate.cost * campaign->days_remaining),
@@ -400,7 +450,7 @@ void Advertising::render_viewing(const RenderContext& ctx) {
     return;
   }
   const auto campaign =
-      state_.active_player()->get_campaign(state_.active_city_id(), *channel_);
+      displayed_campaign(*channel_);
   if (!campaign) {
     return;
   }
@@ -571,7 +621,7 @@ void Advertising::handle_view_click() {
     return;
   }
   const auto campaign =
-      state_.active_player()->get_campaign(state_.active_city_id(), *channel_);
+      displayed_campaign(*channel_);
   if (!campaign) {
     return;
   }
@@ -633,8 +683,17 @@ void Advertising::handle_shop_click() {
 
   // Check if player already has an active campaign in this category
   if (view_mode_ == ViewMode::OVERVIEW) {
-    if (state_.active_player()->has_active_campaign(state_.active_city_id(),
-                                                    channel_.value())) {
+    if (state_.options().qol_improvements && !selected_location()) {
+      context_.popup->create<AlertPopup>("You need a restaurant in this city.");
+      return;
+    }
+    bool active = displayed_campaign(*channel_).has_value();
+    if (!state_.options().qol_improvements) {
+      for (const auto& c : state_.active_player()->enhanced_campaigns())
+        if (c.city_id == state_.active_city_id() && c.channel == *channel_ && c.days_remaining > 0)
+          active = true;
+    }
+    if (active) {
       // TODO: Show error message "There is already a campaign in this category"
       return;
     }
@@ -650,7 +709,17 @@ void Advertising::handle_shop_click() {
         newspaper_game_.phase() != NewspaperAdGame::Phase::FormatSelect) {
       return;
     }
-    finalize_purchase();
+    if (state_.options().qol_improvements) {
+      context_.popup->create<NumberInputPopup>("Campaign duration (days)", " days",
+          campaign_duration_, DEFAULT_CAMPAIGN_RUNTIME, MAX_CAMPAIGN_RUNTIME, 1,
+          [this](int days) {
+            campaign_duration_ = days;
+            post_purchase_status();
+            finalize_purchase();
+          });
+    } else {
+      finalize_purchase();
+    }
   }
   mark_dirty();
 }
@@ -760,6 +829,12 @@ void Advertising::finalize_purchase() {
   }
 
   if (state_.options().qol_improvements) {
+    campaign.enhanced = true;
+    if (local_advertising(campaign.channel)) {
+      campaign.target_restaurant = selected_location();
+      if (!campaign.target_restaurant) return;
+    }
+    campaign.rate = quoted_rate(campaign.channel, campaign.rate);
     const auto* player = state_.active_player();
     const auto estimate = views::finance_review::estimate(
         state_, *player, campaign.city_id);
@@ -787,7 +862,7 @@ void Advertising::commit_campaign(const AdvertisingCampaign& campaign) {
   // Store campaign with player
   state_.active_player()->add_campaign(campaign);
 
-  campaign_editable_ = true;
+  campaign_editable_ = !campaign.enhanced;
 
   if (*channel_ == AdvertisingChannel::TV_ADS) {
     tv_ads_.start_playback();
@@ -824,8 +899,8 @@ void Advertising::post_purchase_status() {
     int count_index = (*flyer_count_ / FLYERS_STEP_SIZE) - 1;
     Money cost{static_cast<int64_t>((count_index + 1) * 50 * 100)};
     recipe.add_two_column("Output:", compat::format("{}", *flyer_count_));
-    daily_cost = cost;
-    recipe.add_two_column(state_.options().qol_improvements ? "Cost/day:" : "Costs:", compat::format("{:w}", cost));
+    daily_cost = quoted_rate(*channel_, { (count_index + 1) * 2, cost }).cost;
+    recipe.add_two_column(state_.options().qol_improvements ? "Cost/day:" : "Costs:", compat::format("{:w}", daily_cost));
     break;
   }
   case AdvertisingChannel::POSTERS: {
@@ -834,8 +909,8 @@ void Advertising::post_purchase_status() {
     }
     const auto& option =
         state_.active_city()->poster_option(*poster_selection_);
-    daily_cost = option.cost;
-    recipe.add_two_column(state_.options().qol_improvements ? "Cost/day:" : "Costs:", compat::format("{:w}", option.cost));
+    daily_cost = quoted_rate(*channel_, option).cost;
+    recipe.add_two_column(state_.options().qol_improvements ? "Cost/day:" : "Costs:", compat::format("{:w}", daily_cost));
     break;
   }
   case AdvertisingChannel::TV_ADS: {
@@ -843,8 +918,8 @@ void Advertising::post_purchase_status() {
       return;
     }
     const auto& option = state_.active_city()->tv_ad_option(*tv_ad_selection_);
-    daily_cost = option.cost;
-    recipe.add_two_column(state_.options().qol_improvements ? "Cost/day:" : "Costs:", compat::format("{:w}", option.cost));
+    daily_cost = quoted_rate(*channel_, option).cost;
+    recipe.add_two_column(state_.options().qol_improvements ? "Cost/day:" : "Costs:", compat::format("{:w}", daily_cost));
     break;
   }
   case AdvertisingChannel::NEWSPAPER_ADS: {
@@ -853,7 +928,7 @@ void Advertising::post_purchase_status() {
     }
     // e.g. "half page 2 colours" headline, then the cost line.
     recipe.add_header(newspaper_game_.size_label());
-    daily_cost = newspaper_game_.cost();
+    daily_cost = quoted_rate(*channel_, {newspaper_game_.effectiveness(), newspaper_game_.cost()}).cost;
     recipe.add_two_column(state_.options().qol_improvements ? "Cost/day:" : "Costs:",
                           compat::format("{:w}", daily_cost));
     break;
@@ -863,6 +938,13 @@ void Advertising::post_purchase_status() {
   }
 
   if (state_.options().qol_improvements) {
+    if (local_advertising(*channel_)) {
+      const auto id = selected_location();
+      if (const auto* rest = id ? state_.restaurant(*id) : nullptr)
+        recipe.add_header(rest->name());
+    } else {
+      recipe.add_header("City-wide");
+    }
     recipe.add_two_column("Days:", compat::format("{}", campaign_duration_));
     recipe.add_two_column("Total:", compat::format("{:w}", daily_cost * campaign_duration_));
   }

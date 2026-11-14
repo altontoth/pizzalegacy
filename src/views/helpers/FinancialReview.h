@@ -40,6 +40,11 @@ inline CityEstimate estimate(const GameState& state, const Player& player,
       result.remaining_ads += campaign->rate.cost * campaign->days_remaining;
     }
   }
+  for (const auto& campaign : player.enhanced_campaigns()) {
+    if (campaign.city_id != city || campaign.days_remaining <= 0) continue;
+    result.daily_ads += campaign.rate.cost;
+    result.remaining_ads += campaign.rate.cost * campaign.days_remaining;
+  }
   return result;
 }
 } // namespace views::finance_review

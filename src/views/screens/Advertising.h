@@ -50,6 +50,11 @@ private:
                                 const std::vector<std::string>& fragments,
                                 NewspaperAdFormat ad_format);
   void finalize_purchase();
+  std::optional<AdvertisingCampaign> displayed_campaign(AdvertisingChannel channel) const;
+  std::optional<core::RestaurantId> selected_location() const;
+  void cycle_location();
+  AdvertisingRate quoted_rate(AdvertisingChannel channel, AdvertisingRate original) const;
+  std::optional<core::RestaurantId> location_;
   void commit_campaign(const AdvertisingCampaign& campaign);
 
   void set_up_input_panel();

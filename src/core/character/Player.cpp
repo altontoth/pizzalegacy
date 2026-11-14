@@ -212,6 +212,14 @@ void Player::end_of_day_human(GameState& game_state, EndOfDayCause cause) {
     }
   }
 
+  for (const auto& campaign : enhanced_campaigns_) {
+    if (campaign.city_id != active_city_id || campaign.days_remaining <= 0) continue;
+    financials_.transfer(current_date, Account::Cash, Account::ProfitAndLoss,
+                         campaign.rate.cost, campaign.target_restaurant,
+                         MonthlyCategory::Advertising);
+    financials_.add_to_profit_today(-campaign.rate.cost.whole());
+  }
+
   for (const auto* depot : game_state.real_estate().depots_for(id_)) {
     if (depot->is_rented() && depot->city().id() == active_city_id) {
       financials_.add_to_profit_today(-depot->get_monthly_rent().whole() /
@@ -477,7 +485,45 @@ int Player::buy_weapons(const GameDate& date, core::item::Item id, int qty,
   return added;
 }
 
+void Player::restore_enhanced_campaign(AdvertisingCampaign campaign) {
+  std::erase_if(enhanced_campaigns_, [&](const auto& old) {
+    return old.city_id == campaign.city_id && old.channel == campaign.channel &&
+           old.target_restaurant == campaign.target_restaurant;
+  });
+  enhanced_campaigns_.push_back(std::move(campaign));
+}
+
+std::optional<AdvertisingCampaign> Player::enhanced_campaign(
+    core::CityId city, AdvertisingChannel channel,
+    std::optional<core::RestaurantId> target) const {
+  for (const auto& c : enhanced_campaigns_)
+    if (c.city_id == city && c.channel == channel &&
+        c.target_restaurant == target && c.days_remaining > 0) return c;
+  return std::nullopt;
+}
+
+int Player::enhanced_advertising_bonus(core::CityId city,
+                                       core::RestaurantId restaurant) const {
+  int bonus = 0;
+  for (const auto& c : enhanced_campaigns_)
+    if (c.city_id == city && (!c.target_restaurant || *c.target_restaurant == restaurant))
+      bonus += c.awareness;
+  return std::min(100, bonus);
+}
+
+void Player::remove_restaurant_advertising(core::RestaurantId restaurant) {
+  std::erase_if(enhanced_campaigns_, [&](const auto& c) {
+    return c.target_restaurant && *c.target_restaurant == restaurant;
+  });
+}
+
 void Player::add_campaign(const AdvertisingCampaign& campaign) {
+  if (campaign.enhanced) {
+    auto c = campaign;
+    c.awareness = enhanced_advertising_awareness(c);
+    restore_enhanced_campaign(std::move(c));
+    return;
+  }
   int channel_index = static_cast<int>(campaign.channel);
   campaigns_[campaign.city_id][channel_index] = campaign;
   ad_effectiveness_[campaign.city_id][channel_index] =
@@ -504,6 +550,19 @@ bool Player::has_active_campaign(core::CityId city,
 }
 
 void Player::update_campaigns(core::CityId city) {
+  for (auto& c : enhanced_campaigns_) {
+    if (c.city_id != city) continue;
+    if (c.days_remaining > 0) {
+      --c.days_remaining;
+    } else {
+      // Local flyers fade fastest; city media leave longer-lived awareness.
+      constexpr int decay[] = {5, 3, 2, 1};
+      c.awareness = std::max(0, c.awareness - decay[static_cast<int>(c.channel)]);
+    }
+  }
+  std::erase_if(enhanced_campaigns_, [](const auto& c) {
+    return c.days_remaining <= 0 && c.awareness <= 0;
+  });
   // Campaigns expiring today do not begin losing effectiveness until the next
   // daily update.
   constexpr int decay_per_day = 8;

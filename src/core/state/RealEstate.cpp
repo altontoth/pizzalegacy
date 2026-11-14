@@ -332,6 +332,7 @@ void RealEstate::close_restaurant(Player& player, Property& property) {
     }
 
     player.cancel_restaurant_contracts(*gs_, restaurant_id);
+    player.remove_restaurant_advertising(restaurant_id);
 
     Money furniture_amount;
     Money oven_amount;
