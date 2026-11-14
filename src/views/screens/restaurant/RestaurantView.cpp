@@ -420,7 +420,7 @@ void RestaurantView::set_up_buttons() {
 
   input_panel_->add_button(
       Icon::KEY, ButtonType::Square, ButtonPosition::TopLeft,
-      state_.options().qol_improvements ? "Business hours / Open-close" : "Open/close",
+      state_.options().qol_improvements ? "Business hours" : "Open/close",
       [this]() {
         if (state_.options().qol_improvements) {
           context_.popup->origin({12, 70});

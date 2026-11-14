@@ -674,6 +674,13 @@ void Advertising::handle_back_click() {
     return;
   }
 
+  // Enhanced mode: Back always discards the unpurchased draft, including
+  // partially completed newspaper ads. Only Buy can confirm a campaign.
+  if (state_.options().qol_improvements) {
+    return_to_overview();
+    return;
+  }
+
   // Newspaper slogan game: you can only back out before the first pick. Once
   // building has started, back is locked until all 5 lines are chosen; at that
   // point back and buy both finalize the current ad selection.
@@ -787,9 +794,9 @@ void Advertising::finalize_purchase() {
         (estimate.has_history && estimate.daily_ads + campaign.rate.cost >
                                      estimate.daily_operating);
     const auto message = compat::format(
-        "{} / day. {} for {} days. {} Start?",
-        campaign.rate.cost, total, campaign.days_remaining,
-        risky ? "Warning: funds or earnings may be too low." : "");
+        "{} / day. {} days: {}. {}",
+        campaign.rate.cost, campaign.days_remaining, total,
+        risky ? "Risk: low funds. Start?" : "Start campaign?");
     context_.popup->origin({8, 90});
     context_.popup->create<ConfirmPopup>(message, [this, campaign](bool yes) {
       if (yes) commit_campaign(campaign);
