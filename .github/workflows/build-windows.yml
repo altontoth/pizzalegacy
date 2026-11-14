@@ -96,6 +96,46 @@ jobs:
           } else {
             Write-Warning 'No sccache launcher found in Ninja files; proceeding without compiler caching.'
           }
+      - name: Check compiler cache reuse
+        shell: pwsh
+        run: |
+          $cache = Get-Command sccache -ErrorAction SilentlyContinue
+          if (-not $cache) {
+            Write-Warning 'sccache unavailable; continuing without cache probe.'
+            exit 0
+          }
+          $probe = Join-Path $env:GITHUB_WORKSPACE 'build/cache-probe'
+          New-Item -ItemType Directory -Force -Path $probe | Out-Null
+          Push-Location $probe
+          try {
+            Set-Content -Path 'probe.cpp' -Encoding ascii -Value 'int pizza_cache_probe() { return 42; }'
+            $compiler = (Get-Command cl.exe).Source
+            $before = (& sccache --show-stats --stats-format=json | ConvertFrom-Json).stats
+            & sccache $compiler /nologo /O2 /c probe.cpp /Foprobe.obj
+            if ($LASTEXITCODE -ne 0) { throw 'First cache probe compilation failed' }
+            $first = (& sccache --show-stats --stats-format=json | ConvertFrom-Json).stats
+            Remove-Item probe.obj
+            & sccache $compiler /nologo /O2 /c probe.cpp /Foprobe.obj
+            if ($LASTEXITCODE -ne 0) { throw 'Second cache probe compilation failed' }
+            $second = (& sccache --show-stats --stats-format=json | ConvertFrom-Json).stats
+            function Get-Hits($stats) {
+              $total = 0
+              foreach ($property in $stats.cache_hits.counts.PSObject.Properties) { $total += [int]$property.Value }
+              return $total
+            }
+            $firstHits = (Get-Hits $first) - (Get-Hits $before)
+            $secondHits = (Get-Hits $second) - (Get-Hits $first)
+            Write-Host "Cache probe: first compilation hits=$firstHits; second compilation hits=$secondHits"
+            if ($secondHits -lt 1) {
+              Write-Warning 'Cache probe did not reuse the first compilation. Inspect sccache statistics.'
+            } else {
+              Write-Host 'Cache probe passed: repeated compilation reused a cached object.'
+            }
+          } finally {
+            Pop-Location
+          }
+          # Exclude probe requests from the game build statistics.
+          sccache --zero-stats
       - name: Compile
         shell: pwsh
         run: |
