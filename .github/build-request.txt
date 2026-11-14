@@ -1,2 +1,2 @@
-1.0.0-beta.4-dev
-Build requested: business hours, AI layouts, financial reporting, coin machine simulation and capacity diagnostics.
+Beta 5 Windows development build
+2026-11-14

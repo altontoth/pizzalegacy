@@ -73,7 +73,7 @@ jobs:
           $source = Get-Content $path -Raw
           $pattern = 'set\(PLEGACY_VERSION_SUFFIX "([^"]*)"\)'
           if ($source -notmatch $pattern) { throw 'Version suffix not found' }
-          $source = $source -replace $pattern, 'set(PLEGACY_VERSION_SUFFIX "-beta.4-dev")'
+          $source = $source -replace $pattern, 'set(PLEGACY_VERSION_SUFFIX "-beta.5-dev")'
           Set-Content $path $source -NoNewline
       - name: Configure
         shell: pwsh
